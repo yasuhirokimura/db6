@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -1804,6 +1804,7 @@ __log_put_record_int(env, dbp, txnp, ret_lsnp,
 	DB_TXNLOGREC *lr;
 	LOG *lp;
 	PAGE *pghdrstart;
+	u_int64_t ulltmp;
 	u_int32_t hdrsize, op, zero, uinttmp, txn_num;
 	u_int npad;
 	u_int8_t *bp;
@@ -1921,6 +1922,11 @@ __log_put_record_int(env, dbp, txnp, ret_lsnp,
 			uinttmp = va_arg(argp, u_int32_t);
 			LOGCOPY_32(env, bp, &uinttmp);
 			bp += sizeof(uinttmp);
+			break;
+		case LOGREC_LONGARG:
+			ulltmp = va_arg(argp, u_int64_t);
+			LOGCOPY_64(env, bp, &ulltmp);
+			bp += sizeof(ulltmp);
 			break;
 		case LOGREC_OP:
 			op = va_arg(argp, u_int32_t);

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2005, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2005, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -25,6 +25,7 @@ static void marshal_site_key __P((ENV *,
 static int message_loop __P((ENV *, REPMGR_RUNNABLE *));
 static int process_message __P((ENV*, DBT*, DBT*, int));
 static int reject_fwd __P((ENV *, REPMGR_CONNECTION *));
+static int rejoin_deferred_election(ENV *);
 static int rescind_pending __P((ENV *,
 	DB_THREAD_INFO *, int, u_int32_t, u_int32_t));
 static int resolve_limbo_int __P((ENV *, DB_THREAD_INFO *));
@@ -658,12 +659,14 @@ serve_repmgr_request(env, msg)
 	ENV *env;
 	REPMGR_MESSAGE *msg;
 {
+	DB_REP *db_rep;
 	DBT *dbt;
 	DB_THREAD_INFO *ip;
 	REPMGR_CONNECTION *conn;
 	u_int32_t mtype;
 	int ret, t_ret;
 
+	db_rep = env->rep_handle;
 	ENV_GET_THREAD_INFO(env, ip);
 	conn = msg->v.gmdb_msg.conn;
 	mtype = REPMGR_OWN_MSG_TYPE(msg->msg_hdr);
@@ -676,6 +679,12 @@ serve_repmgr_request(env, msg)
 		    "One try at rejoining group automatically"));
 		if ((ret = __repmgr_join_group(env)) == DB_REP_UNAVAIL)
 			ret = __repmgr_bow_out(env);
+		else if (ret == 0 && db_rep->rejoin_pending) {
+			RPRINT(env, (env, DB_VERB_REPMGR_MISC,
+			    "Calling deferred election after rejoin"));
+			ret = rejoin_deferred_election(env);
+		}
+		db_rep->rejoin_pending = FALSE;
 		break;
 	case REPMGR_REMOVE_REQUEST:
 		ret = serve_remove_request(env, ip, msg);
@@ -1743,4 +1752,51 @@ __repmgr_set_sites(env)
 	}
 	ret = __rep_set_nsites_int(env, n);
 	DB_ASSERT(env, ret == 0);
+}
+
+/*
+ * If a site is rejoining a 2-site repgroup with 2SITE_STRICT off
+ * and has a rejection because it needs to catch up with the latest
+ * group membership database, it cannot call an election right away
+ * because it would win with only its own vote and ignore an existing
+ * master in the repgroup.  Instead, this routine is used to call the
+ * deferred election after the site has rejoined the repgroup successfully.
+ */
+static int
+rejoin_deferred_election(env)
+	ENV *env;
+{
+	DB_REP *db_rep;
+	u_int32_t flags;
+	int eid, ret;
+
+	db_rep = env->rep_handle;
+	LOCK_MUTEX(db_rep->mutex);
+
+	/*
+	 * First, retry all connections so that the election can communicate
+	 * with the other sites.  Normally there should only be one other
+	 * site in the repgroup, but it is safest to retry all remote sites
+	 * found in case the group membership changed while we were gone.
+	 */
+	FOR_EACH_REMOTE_SITE_INDEX(eid) {
+		if ((ret =
+		    __repmgr_schedule_connection_attempt(env, eid, TRUE)) != 0)
+			break;
+	}
+
+	/*
+	 * Call an immediate, but not a fast, election because a fast
+	 * election reduces the number of votes needed by 1.
+	 */
+	flags = ELECT_F_EVENT_NOTIFY;
+	if (FLD_ISSET(db_rep->region->config, REP_C_ELECTIONS))
+		LF_SET(ELECT_F_IMMED);
+	else
+		RPRINT(env, (env, DB_VERB_REPMGR_MISC,
+		    "Deferred rejoin election, but no elections"));
+	ret = __repmgr_init_election(env, flags);
+
+	UNLOCK_MUTEX(db_rep->mutex);
+	return (ret);
 }

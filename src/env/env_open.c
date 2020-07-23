@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -171,8 +171,10 @@ __env_open(dbenv, db_home, flags, mode)
 			dbenv->is_alive = __envreg_isalive;
 		}
 
-		if ((ret =
-		    __envreg_register(env, &register_recovery, flags)) != 0)
+		F_SET(dbenv, DB_ENV_NOPANIC);
+		ret = __envreg_register(env, &register_recovery, flags);
+		dbenv->flags = orig_flags;
+		if (ret != 0)
 			goto err;
 		if (register_recovery) {
 			if (!LF_ISSET(DB_RECOVER)) {
@@ -531,36 +533,30 @@ __env_close_pp(dbenv, flags)
 	 * the important resources.
 	 */
 	if (PANIC_ISSET(env)) {
+		flags_orig = dbenv->flags;
+		F_SET(dbenv, DB_ENV_NOPANIC);
+		ENV_ENTER(env, ip);
 		/* clean up from registry file */
 		if (dbenv->registry != NULL) {
 			/*
 			 * Temporarily set no panic so we do not trigger the
-			 * LAST_PANIC_CHECK_BEFORE_IO check in __os_physwr
+			 * LAST_PANIC_CHECK_BEFORE_IO check in __os_physwrite
 			 * thus allowing the unregister to happen correctly.
 			 */
-			flags_orig = F_ISSET(dbenv, DB_ENV_NOPANIC);
-			F_SET(dbenv, DB_ENV_NOPANIC);
-			ENV_ENTER(env, ip);
 			(void)__envreg_unregister(env, 0);
-			ENV_LEAVE(env, ip);
 			dbenv->registry = NULL;
-			if (!flags_orig)
-				F_CLR(dbenv, DB_ENV_NOPANIC);
 		}
 
 		/* Close all underlying threads and sockets. */
 		(void)__repmgr_close(env);
 
 		/* Close all underlying file handles. */
-		flags_orig = F_ISSET(dbenv, DB_ENV_NOPANIC);
-		F_SET(dbenv, DB_ENV_NOPANIC);
-		ENV_ENTER(env, ip);
 		(void)__file_handle_cleanup(env);
-		ENV_ENTER(env, ip);
-		if (!flags_orig)
-			F_CLR(dbenv, DB_ENV_NOPANIC);
+		dbenv->flags = flags_orig;
+		(void)__env_region_cleanup(env);
+		ENV_LEAVE(env, ip);
 
-		PANIC_CHECK(env);
+		return (__env_panic_msg(env));
 	}
 
 	ENV_ENTER(env, ip);
@@ -945,17 +941,35 @@ __file_handle_cleanup(env)
 	ENV *env;
 {
 	DB_FH *fhp;
+	DB_MPOOL *dbmp;
+	u_int i;
 
-	if (TAILQ_FIRST(&env->fdlist) == NULL)
+	if (TAILQ_EMPTY(&env->fdlist))
 		return (0);
 
-	__db_errx(env, DB_STR("1581",
-	    "File handles still open at environment close"));
+	__db_errx(env,
+	    DB_STR("1581", "File handles still open at environment close"));
 	while ((fhp = TAILQ_FIRST(&env->fdlist)) != NULL) {
-		__db_errx(env, DB_STR_A("1582", "Open file handle: %s", "%s"),
-		    fhp->name);
+		__db_errx(env,
+		    DB_STR_A("1582", "Open file handle: %s", "%s"), fhp->name);
 		(void)__os_closehandle(env, fhp);
 	}
+	if (env->lockfhp != NULL)
+		env->lockfhp = NULL;
+	/* Invalidate saved pointers to the regions' files: all are closed. */
+	if (env->reginfo != NULL)
+		env->reginfo->fhp = NULL;
+	if (env->lg_handle != NULL)
+		env->lg_handle->reginfo.fhp = NULL;
+	if (env->lk_handle != NULL)
+		env->lk_handle->reginfo.fhp = NULL;
+	if (env->mutex_handle != NULL)
+		env->mutex_handle->reginfo.fhp = NULL;
+	if (env->tx_handle != NULL)
+		env->tx_handle->reginfo.fhp = NULL;
+	if ((dbmp = env->mp_handle) != NULL && dbmp->reginfo != NULL)
+		for (i = 0; i < env->dbenv->mp_ncache; ++i)
+			dbmp->reginfo[i].fhp = NULL;
 	return (EINVAL);
 }
 

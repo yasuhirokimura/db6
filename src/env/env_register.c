@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2004, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2004, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -222,11 +222,11 @@ __envreg_add(env, need_recoveryp, flags)
 	size_t nr, nw;
 	u_int lcnt;
 	u_int32_t bytes, mbytes, orig_flags;
-	int need_recovery, ret, t_ret;
+	int need_failchk, ret, t_ret;
 	char *p, buf[PID_LEN + 10], pid_buf[PID_LEN + 10];
 
 	dbenv = env->dbenv;
-	need_recovery = 0;
+	need_failchk = 0;
 	COMPQUIET(dead, 0);
 	COMPQUIET(p, NULL);
 	ip = NULL;
@@ -269,7 +269,7 @@ kill_all:	/*
 		 * registering.
 		 */
 		if (nr != PID_LEN) {
-			need_recovery = 1;
+			need_failchk = 1;
 			break;
 		}
 
@@ -299,7 +299,7 @@ kill_all:	/*
 		}
 
 #if DB_ENVREG_KILL_ALL
-		if (need_recovery) {
+		if (need_failchk) {
 			pid = (pid_t)strtoul(buf, NULL, 10);
 			(void)kill(pid, SIGKILL);
 
@@ -318,7 +318,7 @@ kill_all:	/*
 				__db_msg(env, DB_STR_A("1530",
 				    "%02u: %s: FAILED", "%02u %s"), lcnt, p);
 
-			need_recovery = 1;
+			need_failchk = 1;
 			dead = pos;
 #if DB_ENVREG_KILL_ALL
 			goto kill_all;
@@ -330,15 +330,26 @@ kill_all:	/*
 				__db_msg(env, DB_STR_A("1531",
 				    "%02u: %s: LOCKED", "%02u %s"), lcnt, p);
 	}
+	
+	/* Check for a panic; if so there's no need to call failchk. */
+	if (__env_attach(env, NULL, 0, 0) != 0)
+		goto sig_proc;
+	infop = env->reginfo;
+	renv = infop->primary;
+	if (renv->panic) {
+		*need_recoveryp = 1;
+		need_failchk = 1;
+	}
+	(void)__env_detach(env, 0);
 
 	/*
-	 * If we have to perform recovery...
+	 * If we have to perform failchk...
 	 *
 	 * Mark all slots empty.  Registry ignores empty slots we can't lock,
 	 * so it doesn't matter if any of the processes are in the middle of
 	 * exiting Berkeley DB -- they'll discard their lock when they exit.
 	 */
-	if (need_recovery) {
+	if (need_failchk) {
 		if (FLD_ISSET(dbenv->verbose, DB_VERB_REGISTER))
 			__db_msg(env, "%lu: recovery required", (u_long)pid);
 
@@ -358,7 +369,7 @@ kill_all:	/*
 			 * passed in by value.  Save original dbenv flags in
 			 * case we need to recover/remove existing environment.
 			 * Set DB_ENV_FAILCHK before attach to help ensure we
-			 * dont block on a mutex held by the dead process.
+			 * don't block on a mutex held by the dead process.
 			 */
 			LF_CLR(DB_CREATE | DB_RECOVER | DB_RECOVER_FATAL);
 			orig_flags = dbenv->flags;
@@ -371,8 +382,7 @@ kill_all:	/*
 			    __env_set_state(env, &ip, THREAD_FAILCHK)) != 0 &&
 			    ret == 0)
 				ret = t_ret;
-			if ((t_ret =
-			    __env_failchk_int(dbenv)) != 0 && ret == 0)
+			if (ret == 0 && (t_ret = __env_failchk_int(dbenv)) != 0)
 				ret = t_ret;
 
 			/* Free active pid array if used. */
@@ -393,7 +403,7 @@ kill_all:	/*
 				    (ret = __os_write(env, dbenv->registry,
 				    PID_EMPTY, PID_LEN, &nw)) != 0)
 					return (ret);
-				need_recovery = 0;
+				need_failchk = 0;
 				goto add;
 			}
 
@@ -402,9 +412,10 @@ kill_all:	/*
 sig_proc:	if (__env_attach(env, NULL, 0, 0) == 0) {
 			infop = env->reginfo;
 			renv = infop->primary;
-			/* Indicate DB_REGSITER panic.  Also, set environment
-			 * panic as this is the panic trigger mechanism in
-			 * the code that everything looks for.
+			/*
+			 * Indicate DB_REGISTER panic.  Also, set (or re-set)
+			 * environment panic as this is the panic trigger
+			 * mechanism in the code that everything looks for.
 			 */
 			renv->reg_panic = 1;
 			renv->panic = 1;
@@ -484,7 +495,7 @@ add:	if ((ret = __os_seek(env, dbenv->registry, 0, 0, 0)) != 0)
 		}
 	}
 
-	if (need_recovery)
+	if (need_failchk)
 		*need_recoveryp = 1;
 
 	return (ret);

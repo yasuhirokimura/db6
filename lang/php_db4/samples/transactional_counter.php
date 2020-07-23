@@ -3,8 +3,8 @@
 // Open a new Db4Env.  By default it is transactional.  The directory
 // path in the open() call must exist.
 $dbenv = new Db4Env();
-$dbenv->set_data_dir("/var/tmp/dbhome");
-$dbenv->open("/var/tmp/dbhome");
+$dbenv->set_data_dir(".");
+$dbenv->open(".");
 
 // Open a database in $dbenv.
 $db = new Db4($dbenv);

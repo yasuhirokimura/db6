@@ -321,6 +321,7 @@
       <file name="src/heap/heap_rec.c"/>
       <file name="src/heap/heap_reclaim.c"/>
       <file name="src/heap/heap_stat.c"/>
+      <file name="src/heap/heap_upgrade.c"/>
       <file name="src/heap/heap_verify.c"/>
       <file name="src/hmac/hmac.c"/>
       <file name="lang/hsearch/hsearch.c"/>
@@ -393,6 +394,7 @@
       <file name="src/os_windows/os_map.c"/>
       <file name="src/os_windows/os_mkdir.c"/>
       <file name="src/os_windows/os_open.c"/>
+      <file name="src/os_windows/os_rmdir.c"/>
       <file name="src/os/os_path.c"/>
       <file name="src/os/os_pid.c"/>
       <file name="src/os_windows/os_rename.c"/>
@@ -658,6 +660,7 @@
       <file name="src\os_windows\os_map.c"/>
       <file name="src\os_windows\os_mkdir.c"/>
       <file name="src\os_windows\os_open.c"/>
+      <file name="src/os_windows/os_rmdir.c"/>
       <file name="src\os\os_path.c"/>
       <file name="src\os_windows\os_rename.c"/>
       <file name="src\os_windows\os_rw.c"/>

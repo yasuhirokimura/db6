@@ -60,6 +60,7 @@ int __txn_recover __P((ENV *, DB_PREPLIST *, long, long *, u_int32_t));
 int __txn_get_prepared __P((ENV *, XID *, DB_PREPLIST *, long, long *, u_int32_t));
 int __txn_openfiles __P((ENV *, DB_THREAD_INFO *, DB_LSN *, int));
 int __txn_open __P((ENV *));
+int __txn_region_detach __P((ENV *, DB_TXNMGR *));
 int __txn_findlastckp __P((ENV *, DB_LSN *, DB_LSN *));
 int __txn_env_refresh __P((ENV *));
 u_int32_t __txn_region_mutex_count __P((ENV *));

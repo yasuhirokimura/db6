@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
  */
 /*
  * Copyright (c) 1990, 1993, 1994
@@ -51,7 +51,6 @@
 #include "db_config.h"
 
 #include "db_int.h"
-#include "dbinc/blob.h"
 #include "dbinc/db_page.h"
 #include "dbinc/hash.h"
 #include "dbinc/btree.h"
@@ -1056,7 +1055,7 @@ __ham_del_pair(dbc, flags, ppg)
 	HASH_CURSOR *hcp;
 	PAGE *n_pagep, *nn_pagep, *p, *p_pagep;
 	db_ham_mode op;
-	uintmax_t blob_id;
+	db_seq_t blob_id;
 	db_indx_t ndx;
 	db_pgno_t chg_pgno, pgno, tmp_pgno;
 	u_int32_t data_type, key_type, order;
@@ -1096,7 +1095,7 @@ __ham_del_pair(dbc, flags, ppg)
 		case H_BLOB:
 			memcpy(&hblob,
 			    P_ENTRY(dbp, p, H_DATAINDEX(ndx)), HBLOB_SIZE);
-			GET_BLOB_ID(dbp->env, hblob, blob_id, ret);
+			blob_id = (db_seq_t)hblob.id;
 			ret = __blob_del(dbc, blob_id);
 			break;
 		case H_OFFPAGE:
@@ -2491,7 +2490,7 @@ __ham_add_el(dbc, key, val, type)
 	PAGE *new_pagep;
 	db_pgno_t next_pgno, pgno;
 	off_t file_size;
-	uintmax_t blob_id;
+	db_seq_t blob_id;
 	u_int32_t data_size, data_type, key_size, key_type;
 	u_int32_t pages, pagespace, pairsize;
 	int do_expand, is_keybig, match, ret;
@@ -2631,8 +2630,6 @@ __ham_add_el(dbc, key, val, type)
 	} else if (data_type == H_BLOB) {
 		memset(&dblob, 0, HBLOB_SIZE);
 		dblob.type = H_BLOB;
-		UMRW_SET(dblob.unused[0]);
-		UMRW_SET(dblob.unused[1]);
 		blob_id = 0;
 		file_size = 0;
 		if ((ret = __blob_put(
@@ -2640,11 +2637,8 @@ __ham_add_el(dbc, key, val, type)
 			return (ret);
 		SET_BLOB_ID(&dblob, blob_id, HBLOB);
 		SET_BLOB_SIZE(&dblob, file_size, HBLOB);
-		SET_LO_HI(
-		    &dblob, dbp->blob_file_id, HBLOB, file_id_lo, file_id_hi);
-		SET_LO_HI(
-		    &dblob, dbp->blob_sdb_id, HBLOB, sdb_id_lo, sdb_id_hi);
-		dblob.lsn = blob_lsn;
+		SET_BLOB_FILE_ID(&dblob, dbp->blob_file_id, HBLOB);
+		SET_BLOB_SDB_ID(&dblob, dbp->blob_sdb_id, HBLOB);
 		data_dbt.data = &dblob;
 		data_dbt.size = sizeof(dblob);
 		pdata = &data_dbt;

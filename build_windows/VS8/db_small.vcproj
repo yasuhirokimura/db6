@@ -262,6 +262,7 @@
     <File RelativePath="..\..\src\os_windows\os_map.c"/>
     <File RelativePath="..\..\src\os_windows\os_mkdir.c"/>
     <File RelativePath="..\..\src\os_windows\os_open.c"/>
+    <File RelativePath="..\..\src\os_windows\os_rmdir.c"/>
     <File RelativePath="..\..\src\os\os_path.c"/>
     <File RelativePath="..\..\src\os_windows\os_rename.c"/>
     <File RelativePath="..\..\src\os_windows\os_rw.c"/>

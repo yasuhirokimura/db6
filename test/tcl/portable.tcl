@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2011, 2013 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2011, 2014 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 
@@ -88,16 +88,19 @@ foreach version [glob $portable_dir/*] {
 			foreach file [lsort -dictionary \
 			    [glob -nocomplain \
 			    $portable_dir/$version/$method/*]] {
-				regexp (\[^\/\]*)\.tar$ \
+				regexp (\[^\/\]*)\.tar\.gz$ \
 				    $file dummy name
 
 				cleanup $testdir NULL 1
 				set curdir [pwd]
 				cd $testdir
-				eval exec tar xf \
-				    $portable_dir/$version/$method/$name.tar
+				set tarfd [open "|tar xf -" w]
+				cd $curdir 
 
-				cd $curdir
+				catch {exec gunzip -c \
+	    "$portable_dir/$version/$method/$name.tar.gz" >@$tarfd}
+				close $tarfd
+
 				set f [open $testdir/$name.tcldump \
 				    {RDWR CREAT}]
 				close $f
@@ -347,13 +350,12 @@ proc save_portable_files { dir } {
 			set dest [pwd]
 			cd $cwd
 			cd $dir
-puts "in dir $dir, running tar"
+
 			if { [catch {
-				eval exec tar -cvf $dest/$basename.tar \
+				eval exec tar -cf $dest/$basename.tar \
 				    [glob -nocomplain *.db *.db1 *.db2 \
 				    __db_bl log.* __dbq.$basename-$en.db.*]
-puts "skip gzip"
-#				exec gzip --fast -r $dest/$basename.tar
+				exec gzip --fast -r $dest/$basename.tar
 			} res ] } {
 				puts "FAIL: tar/gzip of $basename failed\
 				    with message $res"

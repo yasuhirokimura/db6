@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -21,7 +21,7 @@
 
 #ifndef lint
 static const char copyright[] =
-    "Copyright (c) 1996, 2013 Oracle and/or its affiliates.  All rights reserved.\n";
+    "Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.\n";
 #endif
 
 int db_printlog_print_app_record __P((DB_ENV *, DBT *, DB_LSN *, db_recops));
@@ -31,6 +31,7 @@ int env_init_print_43 __P((ENV *, DB_DISTAB *));
 int env_init_print_47 __P((ENV *, DB_DISTAB *));
 int env_init_print_48 __P((ENV *, DB_DISTAB *));
 int env_init_print_53 __P((ENV *, DB_DISTAB *));
+int env_init_print_60 __P((ENV *, DB_DISTAB *));
 int lsn_arg __P((char *, DB_LSN *));
 int main __P((int, char *[]));
 int open_rep_db __P((DB_ENV *, DB **, DBC **));
@@ -153,9 +154,6 @@ main(argc, argv)
 	dbenv->set_errpfx(dbenv, progname);
 	dbenv->set_msgfile(dbenv, stdout);
 
-	if (data_len != NULL)
-		(void)dbenv->set_data_len(dbenv, (u_int32_t)atol(data_len));
-
 	if (nflag) {
 		if ((ret = dbenv->set_flags(dbenv, DB_NOLOCKING, 1)) != 0) {
 			dbenv->err(dbenv, ret, "set_flags: DB_NOLOCKING");
@@ -207,6 +205,17 @@ main(argc, argv)
 		dbenv->err(dbenv, ret, "DB_ENV->open");
 		goto err;
 	}
+
+	/*
+	 * Set data_len after environment opens. We want the value passed
+	 * by -D takes priority.
+	 */
+	if (data_len != NULL && (ret = dbenv->set_data_len(dbenv,
+	    (u_int32_t)atol(data_len))) != 0) {
+		dbenv->err(dbenv, ret, "set_data_len");
+		goto err;
+	}
+
 	env = dbenv->env;
 
 	/* Allocate a log cursor. */
@@ -396,7 +405,16 @@ env_init_print(env, version, dtabp)
 
 	if (version == DB_LOGVERSION)
 		goto done;
+
+	/* DB_LOGVERSION_60p1 changed the fop_write_file log. */
+	if (version > DB_LOGVERSION_60)
+		goto done;
+	if ((ret = env_init_print_60(env, dtabp)) != 0)
+		goto err;
+
 	/* DB_LOGVERSION_53 changed the heap addrem log record. */
+	if (version > DB_LOGVERSION_53)
+		goto done;
 	if ((ret = env_init_print_53(env, dtabp)) != 0)
 		goto err;
 	/*
@@ -582,10 +600,24 @@ env_init_print_53(env, dtabp)
 }
 
 int
+env_init_print_60(env, dtabp)
+	ENV *env;
+	DB_DISTAB *dtabp;
+{
+	int ret;
+
+	ret = __db_add_recovery_int(env,
+	     dtabp,__fop_write_file_60_print, DB___fop_write_file_60);
+
+	return (ret);
+}
+
+int
 usage()
 {
-	fprintf(stderr, "usage: %s %s\n", progname,
-	    "[-NrV] [-b file/offset] [-e file/offset] [-h home] [-P password]");
+	fprintf(stderr, "usage: %s %s%s\n", progname,
+	    "[-NrV] [-b file/offset] [-D data_len] ",
+	    "[-e file/offset] [-h home] [-P password]");
 	return (EXIT_FAILURE);
 }
 

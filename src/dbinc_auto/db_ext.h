@@ -72,7 +72,7 @@ int __dbc_count __P((DBC *, db_recno_t *));
 int __dbc_del __P((DBC *, u_int32_t));
 int __dbc_idel __P((DBC *, u_int32_t));
 int __dbc_db_stream __P((DBC *, DB_STREAM **, u_int32_t));
-int __dbc_get_blob_id __P((DBC *, uintmax_t *));
+int __dbc_get_blob_id __P((DBC *, db_seq_t *));
 int __dbc_get_blob_size __P((DBC *, off_t *));
 int __dbc_set_blob_size __P((DBC *, off_t));
 #ifdef HAVE_COMPRESSION

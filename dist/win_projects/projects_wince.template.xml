@@ -267,6 +267,7 @@
       <file name="src\os_windows\os_mkdir.c"/>
       <file name="src\os_windows\os_open.c"/>
       <file name="src\os_windows\os_rename.c"/>
+      <file name="src\os_windows\os_rmdir.c"/>
       <file name="src\os_windows\os_rw.c"/>
       <file name="src\os_windows\os_seek.c"/>
       <file name="src\os_windows\os_stat.c"/>
@@ -476,6 +477,7 @@
       <file name="src\os_windows\os_mkdir.c"/>
       <file name="src\os_windows\os_open.c"/>
       <file name="src\os_windows\os_rename.c"/>
+      <file name="src\os_windows\os_rmdir.c"/>
       <file name="src\os_windows\os_rw.c"/>
       <file name="src\os_windows\os_seek.c"/>
       <file name="src\os_windows\os_stat.c"/>

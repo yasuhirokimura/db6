@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2009, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2009, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 using System;
@@ -325,7 +325,7 @@ namespace CsharpAPITest
 			Assert.AreEqual(4096, stats.PageSize);
 			Assert.AreEqual(4000, stats.RecordLength);
 			Assert.AreEqual(256, stats.RecordPadByte);
-			Assert.AreEqual(9, stats.Version);
+			Assert.AreEqual(10, stats.Version);
 		}
 
 		public void ConfirmStatsPart2Case1(RecnoStats stats)

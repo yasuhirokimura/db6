@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2006, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2006, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -552,7 +552,7 @@ __repmgr_takeover_thread(argsp)
 	ENV *env;
 	REP *rep;
 	REPMGR_RUNNABLE *th;
-	int nthreads, ret;
+	int nthreads, ret, save_policy;
 
 	th = argsp;
 	env = th->env;
@@ -580,6 +580,15 @@ __repmgr_takeover_thread(argsp)
 	nthreads = db_rep->config_nthreads == 0 ? (int)rep->listener_nthreads :
 	    db_rep->config_nthreads;
 	/*
+	 * It is possible that this subordinate process does not have intact
+	 * connections to the other sites.  For most ack policies, restarting
+	 * repmgr will wait for acks when it commits its transaction to reload
+	 * the gmdb.  Temporarily set the ack policy to NONE for the takeover
+	 * so that it is not delayed waiting for acks that can never come.  
+	 */
+	save_policy = rep->perm_policy;
+	rep->perm_policy = DB_REPMGR_ACKS_NONE;
+	/*
 	 * Restart the repmgr as listener.  If DB_REP_IGNORE is returned,
 	 * the current process has become listener.  If DB_REP_UNAVAIL is
 	 * returned, the site has been removed from the group and no listener
@@ -602,6 +611,7 @@ __repmgr_takeover_thread(argsp)
 		/* The current process is not changed to listener. */
 		RPRINT(env, (env, DB_VERB_REPMGR_MISC, "failed to take over"));
 	}
+	rep->perm_policy = save_policy;
 	RPRINT(env, (env, DB_VERB_REPMGR_MISC, "takeover thread is exiting"));
 	ENV_LEAVE(env, ip);
 out:	th->finished = TRUE;
@@ -1744,9 +1754,21 @@ process_own_msg(env, conn)
 		    reject.gen, reject.version) > 0) {
 			if (db_rep->seen_repmsg && reject.status != SITE_ADDING)
 				ret = DB_DELETED;
-			else if ((ret = __repmgr_defer_op(env,
-			    REPMGR_REJOIN)) == 0)
-				ret = DB_REP_UNAVAIL;
+			else {
+				/*
+				 * If 2SITE_STRICT is off, we are likely to
+				 * win an election with our own vote before 
+				 * discovering there is already a master.
+				 * Set indicator to defer the election until
+				 * after rejoining group.
+				 */
+				if (!FLD_ISSET(db_rep->region->config,
+				    REP_C_2SITE_STRICT))
+					db_rep->rejoin_pending = TRUE;
+				if ((ret = __repmgr_defer_op(env,
+				    REPMGR_REJOIN)) == 0)
+					ret = DB_REP_UNAVAIL;
+			}
 		} else
 			ret = DB_REP_UNAVAIL;
 		DB_ASSERT(env, ret != 0);

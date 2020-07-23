@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
  */
 /*
  * Copyright (c) 1990, 1993, 1994
@@ -60,6 +60,17 @@ extern "C" {
 	((u_int8_t *)&(a))[6] = ((u_int8_t *)&_tmp)[1];			\
 	((u_int8_t *)&(a))[7] = ((u_int8_t *)&_tmp)[0];			\
 }
+#undef	P_64_COPYSWAP
+#define	P_64_COPYSWAP(a, b) do {					\
+	((u_int8_t *)b)[0] = ((u_int8_t *)a)[7];			\
+	((u_int8_t *)b)[1] = ((u_int8_t *)a)[6];			\
+	((u_int8_t *)b)[2] = ((u_int8_t *)a)[5];			\
+	((u_int8_t *)b)[3] = ((u_int8_t *)a)[4];			\
+	((u_int8_t *)b)[4] = ((u_int8_t *)a)[3];			\
+	((u_int8_t *)b)[5] = ((u_int8_t *)a)[2];			\
+	((u_int8_t *)b)[6] = ((u_int8_t *)a)[1];			\
+	((u_int8_t *)b)[7] = ((u_int8_t *)a)[0];			\
+} while (0)
 #undef	P_64_COPY
 #define	P_64_COPY(a, b) {						\
 	((u_int8_t *)b)[0] = ((u_int8_t *)a)[0];			\
@@ -141,6 +152,11 @@ extern "C" {
 #undef	M_16_SWAP
 #define	M_16_SWAP(a) P_16_SWAP(&(a))
 
+#undef	SWAP64
+#define	SWAP64(p) {							\
+	P_64_SWAP(p);							\
+	(p) += sizeof(u_int64_t);					\
+}
 #undef	SWAP32
 #define	SWAP32(p) {							\
 	P_32_SWAP(p);							\
@@ -228,6 +244,13 @@ extern "C" {
  * platform-independent logs.
  */
 #define	LOG_SWAPPED(env) !F_ISSET(env, ENV_LITTLEENDIAN)
+
+#define	LOGCOPY_64(env, x, p) do {					\
+	if (LOG_SWAPPED(env))						\
+		P_64_COPYSWAP((p), (x));				\
+	else								\
+		memcpy((x), (p), sizeof(u_int64_t));			\
+} while (0)
 
 #define	LOGCOPY_32(env, x, p) do {					\
 	if (LOG_SWAPPED(env))						\

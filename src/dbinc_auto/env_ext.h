@@ -95,6 +95,7 @@ void __env_panic_set __P((ENV *, int));
 int __env_ref_increment __P((ENV *));
 int __env_ref_decrement __P((ENV *));
 int __env_ref_get __P((DB_ENV *, u_int32_t *));
+int __env_region_cleanup __P((ENV *));
 int __env_detach __P((ENV *, int));
 int __env_remove_env __P((ENV *));
 int __env_region_attach __P((ENV *, REGINFO *, size_t, size_t));

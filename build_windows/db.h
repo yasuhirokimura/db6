@@ -2,7 +2,7 @@
 /*
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  *
@@ -61,9 +61,9 @@ extern "C" {
 #define	DB_VERSION_RELEASE	1
 #define	DB_VERSION_MAJOR	6
 #define	DB_VERSION_MINOR	0
-#define	DB_VERSION_PATCH	20
-#define	DB_VERSION_STRING	"Berkeley DB 6.0.20: (June 24, 2013)"
-#define	DB_VERSION_FULL_STRING	"Berkeley DB 12c Release 1, library version 12.1.6.0.20: (June 24, 2013)"
+#define	DB_VERSION_PATCH	30
+#define	DB_VERSION_STRING	"Berkeley DB 6.0.30: (January 23, 2014)"
+#define	DB_VERSION_FULL_STRING	"Berkeley DB 12c Release 1, library version 12.1.6.0.30: (January 23, 2014)"
 
 /*
  * !!!
@@ -506,7 +506,7 @@ struct __db_lockreq {
 /*******************************************************
  * Logging.
  *******************************************************/
-#define	DB_LOGVERSION	20		/* Current log version. */
+#define	DB_LOGVERSION	21		/* Current log version. */
 #define	DB_LOGVERSION_LATCHING 15	/* Log version using latching: db-4.8 */
 #define	DB_LOGCHKSUM	12		/* Check sum headers: db-4.5 */
 #define	DB_LOGOLDVER	8		/* Oldest version supported: db-4.2 */
@@ -632,7 +632,8 @@ typedef enum {
 	LOGREC_PGDDBT,
 	LOGREC_PGLIST,
 	LOGREC_POINTER,
-	LOGREC_TIME
+	LOGREC_TIME,
+	LOGREC_LONGARG
 } log_rec_type_t;
 
 typedef const struct __log_rec_spec {
@@ -1349,15 +1350,15 @@ typedef enum {
 
 #define	DB_RENAMEMAGIC	0x030800	/* File has been renamed. */
 
-#define	DB_BTREEVERSION	9		/* Current btree version. */
+#define	DB_BTREEVERSION	10		/* Current btree version. */
 #define	DB_BTREEOLDVER	8		/* Oldest btree version supported. */
 #define	DB_BTREEMAGIC	0x053162
 
-#define	DB_HASHVERSION	9		/* Current hash version. */
+#define	DB_HASHVERSION	10		/* Current hash version. */
 #define	DB_HASHOLDVER	7		/* Oldest hash version supported. */
 #define	DB_HASHMAGIC	0x061561
 
-#define	DB_HEAPVERSION	1		/* Current heap version. */
+#define	DB_HEAPVERSION	2		/* Current heap version. */
 #define	DB_HEAPOLDVER	1		/* Oldest heap version supported. */
 #define	DB_HEAPMAGIC	0x074582
 
@@ -1647,8 +1648,8 @@ struct __db {
 	DB		*blob_meta_db;	/* Databases holding blob metadata. */
 	DB_SEQUENCE	*blob_seq;	/* Sequence of blob ids. */
 	char		*blob_sub_dir;	/* Subdirectory for blob files */
-	uintmax_t	blob_file_id;	/* Id of the file blob directory. */
-	uintmax_t	blob_sdb_id;	/* Id of the subdb blob directory. */
+	db_seq_t	blob_file_id;	/* Id of the file blob directory. */
+	db_seq_t	blob_sdb_id;	/* Id of the subdb blob directory. */
 
 	/* API-private structure: used by DB 1.85, C++, Java, Perl and Tcl */
 	void	*api_internal;
@@ -1895,7 +1896,7 @@ struct __db_stream {
 #define	DB_STREAM_READ		0x00000001 /* Stream is read only. */
 #define	DB_STREAM_WRITE		0x00000002 /* Stream is writeable. */
 #define	DB_STREAM_SYNC_WRITE	0x00000004 /* Sync file on each write. */
-	uintmax_t	blob_id;
+	db_seq_t	blob_id;
 	db_off_t	file_size;
 };
 

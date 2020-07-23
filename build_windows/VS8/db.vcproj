@@ -216,6 +216,7 @@
     <File RelativePath="..\..\src\heap\heap_rec.c"/>
     <File RelativePath="..\..\src\heap\heap_reclaim.c"/>
     <File RelativePath="..\..\src\heap\heap_stat.c"/>
+    <File RelativePath="..\..\src\heap\heap_upgrade.c"/>
     <File RelativePath="..\..\src\heap\heap_verify.c"/>
     <File RelativePath="..\..\src\hmac\hmac.c"/>
     <File RelativePath="..\..\lang\hsearch\hsearch.c"/>
@@ -297,6 +298,7 @@
     <File RelativePath="..\..\src\os_windows\os_map.c"/>
     <File RelativePath="..\..\src\os_windows\os_mkdir.c"/>
     <File RelativePath="..\..\src\os_windows\os_open.c"/>
+    <File RelativePath="..\..\src\os_windows\os_rmdir.c"/>
     <File RelativePath="..\..\src\os\os_path.c"/>
     <File RelativePath="..\..\src\os\os_pid.c"/>
     <File RelativePath="..\..\src\os_windows\os_rename.c"/>

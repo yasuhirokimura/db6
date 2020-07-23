@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2010, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2010, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -145,7 +145,7 @@ __heap_bulk(dbc, data, flags)
 	int is_key, ret;
 	int32_t *offp;
 	off_t blob_size;
-	uintmax_t blob_id;
+	db_seq_t blob_id;
 	u_int32_t data_size, key_size, needed, space;
 	u_int8_t *dbuf, *np;
 
@@ -266,9 +266,7 @@ next_pg:
 				return (ret);
 		} else if (F_ISSET(hdr, HEAP_RECBLOB)) {
 			memcpy(&bhdr, hdr, HEAPBLOBREC_SIZE);
-			GET_BLOB_ID(dbp->env, bhdr, blob_id, ret);
-			if (ret != 0)
-				return (ret);
+			blob_id = bhdr.id;
 			if ((ret = __blob_bulk(
 			    dbc, data_size, blob_id, np)) != 0)
 				return (ret);
@@ -353,7 +351,7 @@ __heapc_del(dbc, flags)
 	HEAP_CURSOR *cp;
 	db_pgno_t region_pgno;
 	int oldspacebits, ret, spacebits, t_ret;
-	uintmax_t blob_id;
+	db_seq_t blob_id;
 	u_int16_t data_size, size;
 
 	dbp = dbc->dbp;
@@ -405,9 +403,7 @@ start:	if (STD_LOCKING(dbc) && (ret = __db_lget(dbc,
 	/* Delete the blob file. */
 	if (F_ISSET(hdr, HEAP_RECBLOB)) {
 		memcpy(&bhdr, hdr, HEAPBLOBREC_SIZE);
-		GET_BLOB_ID(dbc->env, bhdr, blob_id, ret);
-		if (ret != 0)
-			return (ret);
+		blob_id = bhdr.id;
 		if ((ret = __blob_del(dbc, blob_id)) != 0)
 			return (ret);
 	}
@@ -583,7 +579,7 @@ __heapc_get(dbc, key, data, flags, pgnop)
 	db_pgno_t pgno;
 	int cmp, np_inc, f_indx, found, getpage, indx, ret;
 	off_t blob_size;
-	uintmax_t blob_id;
+	db_seq_t blob_id;
 
 	dbp = dbc->dbp;
 	mpf = dbp->mpf;
@@ -873,9 +869,7 @@ last:		pgno = PGNO_BASE_MD;
 					goto err;
 			} else if (F_ISSET(hdr, HEAP_RECBLOB)) {
 				memcpy(&bhdr, hdr, HEAPBLOBREC_SIZE);
-				GET_BLOB_ID(dbc->env, bhdr, blob_id, ret);
-				if (ret != 0)
-					goto err;
+				blob_id = bhdr.id;
 				GET_BLOB_SIZE(dbc->env, bhdr, blob_size, ret);
 				if (ret != 0)
 					goto err;
@@ -1648,7 +1642,7 @@ __heapc_put(dbc, key, data, flags, pgnop)
 	db_pgno_t region_pgno;
 	int oldspace, ret, space, t_ret;
 	off_t blob_size;
-	uintmax_t blob_id, new_blob_id;
+	db_seq_t blob_id, new_blob_id;
 	u_int32_t data_size, dlen, new_size, old_flags, old_size, tot_size;
 	u_int8_t *buf, *olddata, *src, *dest;
 
@@ -1792,9 +1786,7 @@ __heapc_put(dbc, key, data, flags, pgnop)
 			new_data.data = HEAPBLOBREC_DATA(data->data);
 		} else {
 			memcpy(&bhdr, old_hdr, HEAPBLOBREC_SIZE);
-			GET_BLOB_ID(dbp->env, bhdr, blob_id, ret);
-			if (ret != 0)
-				goto err;
+			blob_id = bhdr.id;
 			GET_BLOB_SIZE(dbp->env, bhdr, blob_size, ret);
 			if (ret != 0)
 				goto err;
@@ -2268,7 +2260,7 @@ __heap_append(dbc, key, data)
 	db_pgno_t region_pgno;
 	int is_blob, ret, space, t_ret;
 	off_t blob_size;
-	uintmax_t blob_id;
+	db_seq_t blob_id;
 	u_int8_t avail;
 	u_int32_t data_size;
 
@@ -2314,8 +2306,7 @@ __heap_append(dbc, key, data)
 		bhdr.std_hdr.size = HEAPBLOBREC_DSIZE;
 		SET_BLOB_SIZE(&bhdr, blob_size, HEAPBLOBHDR);
 		SET_BLOB_ID(&bhdr, blob_id, HEAPBLOBHDR);
-		SET_LO_HI(&bhdr,
-		    dbp->blob_file_id, HEAPBLOBHDR, file_id_lo, file_id_hi);
+		SET_BLOB_FILE_ID(&bhdr, dbp->blob_file_id, HEAPBLOBHDR);
 		tmp_dbt.data = &bhdr;
 		tmp_dbt.size = sizeof(HEAPHDR);
 		memset(&data_dbt, 0, sizeof(DBT));

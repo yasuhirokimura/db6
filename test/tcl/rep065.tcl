@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2006, 2013 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2006, 2014 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -292,7 +292,7 @@ proc method_version { } {
 	# For 5.2 and later versions select a method at random
 	# from the list of all methods except heap.  Always
 	# set up one pair using heap with 5.2 or 5.3.
-	set post52_versions {db-5.2.42 db-5.3.21}
+	set post52_versions {db-5.2.42 db-5.3.21 db-6.0.22}
 	set heap_version [lindex $post52_versions [berkdb random_int 0 1]] 
 	lappend mv [list heap $heap_version]
 	set methods\

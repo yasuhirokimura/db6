@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -28,7 +28,7 @@ static void	 __db_proff __P((ENV *, DB_MSGBUF *, void *));
 static int	 __db_qmeta __P((ENV *, DB *, QMETA *, u_int32_t));
 static int	 __db_prblob __P((DBC *, DBT *, DBT *, int, const char *,
     void *, int (*callback) __P((void *, const void *)), int, int));
-static int	 __db_prblob_id __P((DB *, uintmax_t,
+static int	 __db_prblob_id __P((DB *, db_seq_t,
 		    off_t, DBT *, int, const char *, void *,
 		    int (*callback) __P((void *, const void *))));
 #ifdef HAVE_STATISTICS
@@ -713,7 +713,7 @@ __db_prpage_int(env, mbp, dbp, lead, h, pagesize, data, flags)
 	db_pgno_t pgno;
 	db_recno_t recno;
 	off_t blob_size;
-	uintmax_t blob_id;
+	db_seq_t blob_id;
 	u_int32_t qlen;
 	u_int8_t *ep, *hk, *p;
 	int deleted, ret;
@@ -925,18 +925,15 @@ __db_prpage_int(env, mbp, dbp, lead, h, pagesize, data, flags)
 				break;
 			case H_BLOB:
 				memcpy(&hblob, hk, HBLOB_SIZE);
-				GET_BLOB_ID(env, hblob, blob_id, ret);
-				if (ret != 0)
-					__db_msgadd(env, mbp,
-					    "blob: blob_id overflow. ");
+				blob_id = (db_seq_t)hblob.id;
 				__db_msgadd(env, mbp, "blob: id: %llu ",
-				    (unsigned long long)blob_id);
+				    (long long)blob_id);
 				GET_BLOB_SIZE(env, hblob, blob_size, ret);
 				if (ret != 0)
 					__db_msgadd(env, mbp,
 					    "blob: blob_size overflow. ");
 				__db_msgadd(env, mbp, "blob: size: %llu",
-				    (unsigned long long)blob_size);
+				    (long long)blob_size);
 				/*
 				 * No point printing the blob file, it is
 				 * likely not readable by humans.
@@ -997,18 +994,15 @@ __db_prpage_int(env, mbp, dbp, lead, h, pagesize, data, flags)
 				break;
 			case B_BLOB:
 				memcpy(&bl, bk, BBLOB_SIZE);
-				GET_BLOB_ID(env, bl, blob_id, ret);
-				if (ret != 0)
-					__db_msgadd(env, mbp,
-					    "blob: blob_id overflow. ");
+				blob_id = (db_seq_t)bl.id;
 				__db_msgadd(env, mbp, "blob: id: %llu ",
-				    (unsigned long long)blob_id);
+				    (long long)blob_id);
 				GET_BLOB_SIZE(env, bl, blob_size, ret);
 				if (ret != 0)
 					__db_msgadd(env, mbp,
 					    "blob: blob_size overflow. ");
 				__db_msgadd(env, mbp, "blob: size: %llu",
-				    (unsigned long long)blob_size);
+				    (long long)blob_size);
 				DB_MSGBUF_FLUSH(env, mbp);
 				break;
 			default:
@@ -1027,18 +1021,15 @@ __db_prpage_int(env, mbp, dbp, lead, h, pagesize, data, flags)
 				hdata = (u_int8_t *)hh + sizeof(HEAPHDR);
 			else if (F_ISSET(hh, HEAP_RECBLOB)) {
 				memcpy(&bhdr, hh, HEAPBLOBREC_SIZE);
-				GET_BLOB_ID(env, bhdr, blob_id, ret);
-				if (ret != 0)
-					__db_msgadd(env, mbp,
-					    "blob: blob_id overflow. ");
+				blob_id = (db_seq_t)bhdr.id;
 				__db_msgadd(env, mbp, "blob: id: %llu ",
-				    (unsigned long long)blob_id);
+				    (long long)blob_id);
 				GET_BLOB_SIZE(env, bhdr, blob_size, ret);
 				if (ret != 0)
 					__db_msgadd(env, mbp,
 					    "blob: blob_size overflow. ");
 				__db_msgadd(env, mbp, "blob: size: %llu",
-				    (unsigned long long)blob_size);
+				    (long long)blob_size);
 				/*
 				 * No point printing the blob file, it is
 				 * likely not readable by humans.
@@ -1480,7 +1471,7 @@ __db_prblob(dbc, key, data, checkprint,
 	DBT partial;
 	int ret, t_ret;
 	off_t blob_size;
-	uintmax_t blob_id;
+	db_seq_t blob_id;
 
 	local = NULL;
 	memset(&partial, 0, sizeof(DBT));
@@ -1549,7 +1540,7 @@ static int
 __db_prblob_id(dbp, blob_id,
     blob_size, data, checkprint, prefix, handle, callback)
 	DB *dbp;
-	uintmax_t blob_id;
+	db_seq_t blob_id;
 	off_t blob_size;
 	DBT *data;
 	int checkprint;

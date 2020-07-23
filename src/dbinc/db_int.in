@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -635,20 +635,15 @@ typedef enum {
 
 #define	ENV_GET_THREAD_INFO(env, ip) ENV_ENTER(env, ip)
 
-#ifdef DIAGNOSTIC
 #define	ENV_LEAVE(env, ip) do {						\
 	if ((ip) != NULL) {						\
-		DB_ASSERT(env, ((ip)->dbth_state == THREAD_ACTIVE  ||	\
+		DB_ASSERT((env), ((ip)->dbth_state == THREAD_ACTIVE  ||	\
 		    (ip)->dbth_state == THREAD_FAILCHK));		\
 		(ip)->dbth_state = THREAD_OUT;				\
 	}								\
 } while (0)
-#else
-#define	ENV_LEAVE(env, ip) do {						\
-	if ((ip) != NULL)						\
-		(ip)->dbth_state = THREAD_OUT;				\
-} while (0)
-#endif
+
+
 #ifdef DIAGNOSTIC
 #define	CHECK_THREAD(env) do {						\
 	if ((env)->thr_hashtab != NULL)					\
@@ -884,7 +879,8 @@ struct __env {
 #define	ENV_REF_COUNTED		0x00000100 /* Region references this handle */
 #define	ENV_SYSTEM_MEM		0x00000200 /* DB_SYSTEM_MEM set */
 #define	ENV_THREAD		0x00000400 /* DB_THREAD set */
-#define ENV_FORCE_TXN_BULK	0x00000800 /* Txns use bulk mode-for testing */
+#define	ENV_FORCE_TXN_BULK	0x00000800 /* Txns use bulk mode-for testing */
+#define	ENV_REMEMBER_PANIC	0x00001000 /* Panic was on during cleanup. */
 	u_int32_t flags;
 };
 

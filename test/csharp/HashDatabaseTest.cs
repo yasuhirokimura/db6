@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2009, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2009, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 using System;
@@ -27,7 +27,8 @@ namespace CsharpAPITest
 
 	[Test]
 	public void TestBlob() {
-
+		testName = "TestBlob";
+		SetUpTest(false);
 		// Test opening the blob database without environment.
 		TestBlobHashDatabase(0, null, 6, null, false);
 
@@ -68,11 +69,10 @@ namespace CsharpAPITest
 		if (env_threshold == 0 && db_threshold == 0)
 			return;
 
-		testName = "TestBlob";
-		SetUpTest(true);
 		string hashDBName =
 		    testHome + "/" + testName + ".db";
 
+		Configuration.ClearDir(testHome);
 		HashDatabaseConfig cfg = new HashDatabaseConfig();
 		cfg.Creation = CreatePolicy.ALWAYS;
 		string blrootdir = "__db_bl";
@@ -699,7 +699,7 @@ namespace CsharpAPITest
 		{
 			Assert.AreEqual(10, stats.FillFactor);
 			Assert.AreEqual(4096, stats.PageSize);
-			Assert.AreNotEqual(0, stats.Version);
+			Assert.AreEqual(10, stats.Version);
 		}
 
 		public void ConfirmStatsPart2Case1(HashStats stats)

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -116,11 +116,11 @@ typedef struct _btmeta33 {
 	u_int32_t root;		/* 88-91: Root page. */
 	u_int32_t blob_threshold;
 				/* 92-95: Minimum blob file size. */
-	u_int32_t blob_file_lo;	/* 96-99: Blob subdir ids. */
-	u_int32_t blob_file_hi;
-	u_int32_t blob_sdb_lo;
-	u_int32_t blob_sdb_hi;
-	u_int32_t unused2[87];	/* 100-459: Unused space. */
+	u_int32_t blob_file_lo;	/* 96-99: Blob file dir id lo. */
+	u_int32_t blob_file_hi;	/* 100-103: Blob file dir id hi. */
+	u_int32_t blob_sdb_lo;	/* 104-107: Blob sdb dir id lo */
+	u_int32_t blob_sdb_hi;	/* 108-111: Blob sdb dir id hi */
+	u_int32_t unused2[87];	/* 112-459: Unused space. */
 	u_int32_t crypto_magic;		/* 460-463: Crypto magic number */
 	u_int32_t trash[3];		/* 464-475: Trash space - Do not use */
 	u_int8_t iv[DB_IV_BYTES];	/* 476-495: Crypto IV */
@@ -151,11 +151,11 @@ typedef struct _hashmeta33 {
 	u_int32_t spares[NCACHED];
 	u_int32_t blob_threshold;
 				/* 224-227: Minimum blob file size. */
-	u_int32_t blob_file_lo;	/* 228-231: Blob subdir ids. */
-	u_int32_t blob_file_hi;
-	u_int32_t blob_sdb_lo;
-	u_int32_t blob_sdb_hi;
-	u_int32_t unused[54];	/* 232-459: Unused space */
+	u_int32_t blob_file_lo;	/* 228-231: Blob file dir id lo. */
+	u_int32_t blob_file_hi;	/* 232-235: Blob file dir id hi. */
+	u_int32_t blob_sdb_lo;	/* 236-239: Blob sdb dir id lo. */
+	u_int32_t blob_sdb_hi;	/* 240-243: Blob sdb dir id hi. */
+	u_int32_t unused[54];	/* 244-459: Unused space */
 	u_int32_t crypto_magic;	/* 460-463: Crypto magic number */
 	u_int32_t trash[3];	/* 464-475: Trash space - Do not use */
 	u_int8_t iv[DB_IV_BYTES];	/* 476-495: Crypto IV */
@@ -182,9 +182,9 @@ typedef struct _heapmeta {
 	u_int32_t bytes;		/* 84-87: Bytes for fixed size heap. */
 	u_int32_t region_size;		/* 88-91: Max region size. */
 	u_int32_t blob_threshold;	/* 92-95: Minimum blob file size. */
-	u_int32_t blob_file_lo;		/* 96-97: Blob subdir id. */
-	u_int32_t blob_file_hi;
-	u_int32_t unused2[89];		/* 98-459: Unused space.*/
+	u_int32_t blob_file_lo;		/* 96-97: Blob file dir id lo. */
+	u_int32_t blob_file_hi;		/* 98-101: Blob file dir id hi. */
+	u_int32_t unused2[89];		/* 102-459: Unused space.*/
 	u_int32_t crypto_magic;		/* 460-463: Crypto magic number */
 	u_int32_t trash[3];		/* 464-475: Trash space - Do not use */
 	u_int8_t  iv[DB_IV_BYTES];	/* 476-495: Crypto IV */
@@ -414,18 +414,14 @@ typedef struct __heaphdrsplt {
 typedef struct _heapblob {
 	HEAPHDR std_hdr;		/* 00-03: The standard data header */
 	u_int8_t  encoding;		/*    04: Encoding of blob file. */
-	u_int8_t  unused[3];		/* 05-07: Padding, unused. */
-	u_int32_t id_lo;		/* 08-11: Blob file identifier. */
-	u_int32_t id_hi;		/* 12-15: Blob file identifier. */
-	u_int32_t size_lo;		/* 16-19: Blob file size. */
-	u_int32_t size_hi;		/* 20-23: Blob file size. */
-	u_int8_t  unused2[4];		/* 24-27: Padding, unused. */
-	u_int8_t  chksum[DB_MAC_KEY];	/* 28-47: Checksum */
-	u_int8_t  iv[DB_IV_BYTES];	/* 48-63: IV */
-	DB_LSN    lsn;			/* 64-67: LSN for blob file update. */
-	u_int32_t file_id_lo;		/* 68-71: File directory lo. */
-	u_int32_t file_id_hi;		/* 72-75: File directory hi. */
-} HEAPBLOBHDR;
+	u_int8_t  unused[7];		/* 05-11: Padding, unused. */
+	u_int8_t  chksum[DB_MAC_KEY];	/* 12-31: Checksum */
+	u_int8_t  iv[DB_IV_BYTES];	/* 32-47: IV */
+	DB_LSN    lsn;			/* 48-55: LSN for blob file update. */
+	u_int64_t id;			/* 56-63: Blob file identifier. */
+	u_int64_t size;			/* 64-71: Blob file size. */
+	u_int64_t file_id;		/* 72-80: File directory. */
+} HEAPBLOBHDR, HEAPBLOBHDR60P1;
 
 #define HEAP_HDRSIZE(hdr) 					\
 	(F_ISSET((hdr), HEAP_RECSPLIT) ? sizeof(HEAPSPLITHDR) :	\
@@ -741,96 +737,61 @@ typedef struct _hoffdup {
  * contention for blobs. Using blobs implies storing large items, thus slightly
  * more per-item overhead is acceptable.
  * If this proves untrue, the crypto section of the record could be optional.
- * encoding, lsn, encryption, and checksum fields are unused at the moment, but
+ * encoding, encryption, and checksum fields are unused at the moment, but
  * included to make adding those features easier.
  */
 typedef struct _hblob {
 	u_int8_t  type;			/*    00: Page type and delete flag. */
 	u_int8_t  encoding;		/*    01: Encoding of blob file. */
-	u_int8_t  unused[2];		/* 02-03: Padding, unused. */
-	u_int32_t id_lo;		/* 04-07: Blob file identifier. */
-	u_int32_t id_hi;		/* 04-11: Blob file identifier. */
-	u_int32_t size_lo;		/* 12-15: Blob file size. */
-	u_int32_t size_hi;		/* 15-19: Blob file size. */
-	DB_LSN    lsn;			/* 20-27: LSN for blob file update. */
-	u_int8_t  chksum[DB_MAC_KEY];	/* 28-47: Checksum */
-	u_int8_t  iv[DB_IV_BYTES];	/* 48-63: IV */
-	u_int32_t file_id_lo;		/* 64-67: File directory lo. */
-	u_int32_t file_id_hi;		/* 68-71: File directory hi. */
-	u_int32_t sdb_id_lo;		/* 72-75: Subdb that owns this blob. */
-	u_int32_t sdb_id_hi;		/* 76-79: Subdb that owns this blob. */
-} HBLOB;
+	u_int8_t  unused[10];		/* 02-11: Padding, unused. */
+	u_int8_t  chksum[DB_MAC_KEY];	/* 12-31: Checksum */
+	u_int8_t  iv[DB_IV_BYTES];	/* 32-47: IV */
+	u_int64_t id;			/* 48-55: Blob file identifier. */
+	u_int64_t size;			/* 56-63: Blob file size. */
+	u_int64_t file_id;		/* 64-71: File directory. */
+	u_int64_t sdb_id;		/* 72-79: Subdb that owns this blob. */
+} HBLOB, HBLOB60P1;
 
-#define	HBLOB_ID_LO(p)	(((u_int8_t *)p) + SSZ(HBLOB, id_lo))
-#define	HBLOB_FILE_ID_LO(p)	(((u_int8_t *)p) + SSZ(HBLOB, file_id_lo))
-/* Return a uintmax_t version of blob_id. */
-#define GET_BLOB_ID(e, p, o, ret)	do {				\
+#define	HBLOB_ID(p)	(((u_int8_t *)p) + SSZ(HBLOB, id))
+#define	HBLOB_FILE_ID(p)	(((u_int8_t *)p) + SSZ(HBLOB, file_id))
+
+/*
+ * Return a off_t version of the u_int64_t blob size.
+ * Since off_t can be a 32 or 64 integer on different systems, this macro
+ * is used to catch cases of overflow.
+ */
+#define	GET_BLOB_SIZE(e, p, o, ret)	do {				\
 	DB_ASSERT((e), sizeof(o) <= 8);					\
 	if (sizeof(o) == 8) {						\
-		(o) = (p).id_hi;					\
-		(o) = (o) << 32;					\
-		(o) += (p).id_lo;					\
+		(o) = (off_t)(p).size;					\
 	} else {							\
-		if ((p).id_hi > 0) {					\
-			__db_errx((e), DB_STR("0766",			\
-			    "Blob identifier overflow."));		\
-			(ret) = EINVAL;					\
-		}							\
-		(o) = (p).id_lo;					\
-	}								\
-} while (0);
-
-#define SET_BLOB_ID(p, v, type)	do {					\
-	u_int32_t tmp;							\
-	if (sizeof((v)) == 8) {						\
-		tmp = (u_int32_t)((v) >> 32);				\
-		memcpy(((u_int8_t *)p) + SSZ(type, id_hi),		\
-		    &tmp, sizeof(u_int32_t));				\
-	} else {							\
-		memset(((u_int8_t *)p) + SSZ(type, id_hi),		\
-		    0, sizeof(u_int32_t));				\
-	}								\
-	tmp = (u_int32_t)(v);						\
-	memcpy(((u_int8_t *)p) + SSZ(type, id_lo),			\
-	    &tmp, sizeof(u_int32_t));					\
-} while (0);
-
-/* Return a off_t version of blob size. */
-#define GET_BLOB_SIZE(e, p, o, ret)	do {				\
-	DB_ASSERT((e), sizeof(o) <= 8);					\
-	if (sizeof(o) == 8) {						\
-		(o) = (p).size_hi;					\
-		(o) = (o) << 32;					\
-		(o) += (p).size_lo;					\
-	} else {							\
-		if ((p).size_hi > 0) {					\
-			__db_errx((e), DB_STR("0767",			\
-			    "Blob size overflow."));			\
-			(ret) = EINVAL;					\
-		}							\
-		if ((p).size_lo > INT_MAX) {				\
+		if ((p).size > INT_MAX) {				\
 			__db_errx((e), DB_STR("0768",			\
 			    "Blob size overflow."));			\
 			(ret) = EINVAL;					\
 		}							\
-		(o) = (int32_t)(p).size_lo;				\
+		(o) = (int32_t)(p).size;				\
 	}								\
 } while (0);
 
-#define SET_BLOB_SIZE(p, v, type)	do {				\
-	u_int32_t tmp;							\
-	if (sizeof((v)) == 8) {						\
-		tmp = (u_int32_t)((v) >> 32);				\
-		memcpy(((u_int8_t *)p) + SSZ(type, size_hi),		\
-		    &tmp, sizeof(u_int32_t));				\
-	} else {							\
-		memset(((u_int8_t *)p) + SSZ(type, size_hi),		\
-		    0, sizeof(u_int32_t));				\
-	}								\
-	tmp = (u_int32_t)(v);						\
-	memcpy(((u_int8_t *)p) + SSZ(type, size_lo),			\
-	    &tmp, sizeof(u_int32_t));					\
+#define	SET_BLOB_FIELD(p, v, type, field)	do {			\
+	u_int64_t tmp;							\
+	tmp = (u_int64_t)(v);						\
+	memcpy((u_int8_t *)(p) + SSZ(type, field),			\
+	    &tmp, sizeof(u_int64_t));					\
 } while (0);
+
+#define	SET_BLOB_ID(p, v, type)						\
+    SET_BLOB_FIELD(p, v, type, id)
+
+#define	SET_BLOB_SIZE(p, v, type)					\
+    SET_BLOB_FIELD(p, v, type, size)
+
+#define	SET_BLOB_FILE_ID(p, v, type)					\
+    SET_BLOB_FIELD(p, v, type, file_id)
+
+#define	SET_BLOB_SDB_ID(p, v, type)					\
+    SET_BLOB_FIELD(p, v, type, sdb_id)
 
 /*
  * Page space required to add a new HBLOB item to the page, with and
@@ -919,18 +880,14 @@ typedef struct _bblob {
 	db_indx_t len;			/* 00-01: BBLOB_DSIZE. */
 	u_int8_t  type;			/*    02: Page type and delete flag. */
 	u_int8_t  encoding;		/*    03: Encoding of blob file. */
-	u_int32_t id_lo;		/* 04-07: Blob file identifier. */
-	u_int32_t id_hi;		/* 08-11: Blob file identifier. */
-	u_int32_t size_lo;		/* 12-15: Blob file size. */
-	u_int32_t size_hi;		/* 15-19: Blob file size. */
-	DB_LSN    lsn;			/* 20-27: LSN for blob file update. */
-	u_int8_t  chksum[DB_MAC_KEY];	/* 28-47: Checksum */
-	u_int8_t  iv[DB_IV_BYTES];	/* 48-63: IV */
-	u_int32_t file_id_lo;		/* 64-67: File directory lo. */
-	u_int32_t file_id_hi;		/* 68-71: File directory hi. */
-	u_int32_t sdb_id_lo;		/* 72-75: Subdb that owns this blob. */
-	u_int32_t sdb_id_hi;		/* 76-79: Subdb that owns this blob. */
-} BBLOB;
+	u_int8_t  unused[8];		/* 04-11: Padding, unused. */
+	u_int8_t  chksum[DB_MAC_KEY];	/* 12-31: Checksum */
+	u_int8_t  iv[DB_IV_BYTES];	/* 32-47: IV */
+	u_int64_t id;			/* 48-55: Blob file identifier. */
+	u_int64_t size;			/* 56-63: Blob file size. */
+	u_int64_t file_id;		/* 64-71: File directory. */
+	u_int64_t sdb_id;		/* 72-79: Subdb that owns this blob. */
+} BBLOB, BBLOB60P1;
 #define	BBLOB_DATA(p)	((u_int8_t *)((BKEYDATA *)p)->data)
 
 /* Get a BOVERFLOW item for a specific index. */

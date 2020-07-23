@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -2368,6 +2368,35 @@ out:
 
 err:
 
+	__os_free(env, argp);
+	return (ret);
+}
+
+/*
+ * PUBLIC: int __fop_write_file_60_verify __P((ENV *, DBT *, DB_LSN *,
+ * PUBLIC:     db_recops, void *));
+ */
+int
+__fop_write_file_60_verify(env, dbtp, lsnp, notused2, lvhp)
+	ENV *env;
+	DBT *dbtp;
+	DB_LSN *lsnp;
+	db_recops notused2;
+	void *lvhp;
+{
+	__fop_write_file_60_args *argp;
+	DB_LOG_VRFY_INFO *lvh;
+	int ret;
+
+	COMPQUIET(notused2, DB_TXN_LOG_VERIFY);
+	lvh = (DB_LOG_VRFY_INFO *)lvhp;
+
+	if ((ret = __fop_write_file_60_read(env, dbtp->data, &argp)) != 0)
+		return (ret);
+
+	ON_NOT_SUPPORTED(env, lvh, *lsnp, argp->type);
+	/*LOG_VRFY_PROC(lvh, *lsnp, argp, INVAL_DBREGID);*/
+err:
 	__os_free(env, argp);
 	return (ret);
 }

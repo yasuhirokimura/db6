@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2013, 2014 Oracle and/or its affiliates.  All rights reserved.
  */
 
 #include "db_config.h"
@@ -30,14 +30,14 @@ static int __blob_copy_dir __P((DB *, const char *, const char *));
  *	Create the name of the subdirectory in the blob directory
  * for the given database file and subdatabase ids.
  *
- * PUBLIC: int __blob_make_sub_dir __P((ENV *, char **, uintmax_t, uintmax_t));
+ * PUBLIC: int __blob_make_sub_dir __P((ENV *, char **, db_seq_t, db_seq_t));
  */
 int
 __blob_make_sub_dir(env, blob_sub_dir, file_id, db_id)
 	ENV *env;
 	char **blob_sub_dir;
-	uintmax_t file_id;
-	uintmax_t db_id;
+	db_seq_t file_id;
+	db_seq_t db_id;
 {
 	char fname[MAX_BLOB_PATH_SZ], dname[MAX_BLOB_PATH_SZ];
 	int ret;
@@ -49,6 +49,9 @@ __blob_make_sub_dir(env, blob_sub_dir, file_id, db_id)
 
 	if (db_id == 0 && file_id == 0)
 		return (0);
+
+	if (db_id < 0 || file_id < 0)
+		return (EINVAL);
 
 	/* The master db has no subdb id. */
 	if (db_id != 0)
@@ -172,7 +175,7 @@ __blob_open_meta_db(dbp, txn, meta_db, seq, file)
 	DB_THREAD_INFO *ip;
 	DB_TXN *local_txn;
 	char *fullname, *fname, *dname, *path;
-	int free_paths, ret;
+	int free_paths, ret, use_txn;
 	u_int32_t flags, oflags;
 
 	flags = 0;
@@ -181,7 +184,7 @@ __blob_open_meta_db(dbp, txn, meta_db, seq, file)
 	blob_seq = NULL;
 	local_txn = NULL;
 	env = dbp->env;
-	free_paths = 0;
+	free_paths = use_txn = 0;
 	memset(&key, 0, sizeof(DBT));
 
 	/*
@@ -238,10 +241,27 @@ __blob_open_meta_db(dbp, txn, meta_db, seq, file)
 	if ((ret = __db_set_blob_threshold(blob_meta_db, 0, 0)) != 0)
 		goto err;
 
+	/*
+	 * To avoid concurrency issues, the blob meta database is
+	 * opened and operated on in a local transaction.  The one
+	 * exception is when the blob meta database is created in the
+	 * same txn as the parent db.  Then the blob meta database
+	 * shares the given txn, so if the txn is rolled back, the
+	 * creation of the blob meta database will also be rolled back.
+	 */
+	if (!file && IS_REAL_TXN(dbp->cur_txn))
+		use_txn = 1;
+
 	ENV_GET_THREAD_INFO(env, ip);
-	if (IS_REAL_TXN(txn) &&
-	    (ret = __db_txn_auto_init(env, ip, &local_txn)) != 0)
-		goto err;
+	if (IS_REAL_TXN(txn)) {
+		if (use_txn)
+			local_txn = txn;
+		else {
+			if ((ret =
+			    __db_txn_auto_init(env, ip, &local_txn)) != 0)
+				goto err;
+		}
+	}
 	if ((ret = __db_open(blob_meta_db, ip, local_txn, fname, dname,
 	    DB_BTREE, flags | DB_INTERNAL_BLOB_DB, 0, PGNO_BASE_MD)) != 0)
 		goto err;
@@ -256,7 +276,7 @@ __blob_open_meta_db(dbp, txn, meta_db, seq, file)
 	if ((ret = __seq_open(blob_seq, local_txn, &key, flags)) != 0)
 		goto err;
 
-	if (local_txn != NULL &&
+	if (local_txn != NULL && use_txn == 0 &&
 	    (ret = __db_txn_auto_resolve(env, local_txn, 0, ret)) != 0) {
 		local_txn = NULL;
 		goto err;
@@ -273,7 +293,7 @@ err:
 		__os_free(env, fullname);
 	if (fname != NULL && free_paths)
 		__os_free(env, fname);
-	if (local_txn != NULL)
+	if (local_txn != NULL && use_txn == 0)
 		(void)__db_txn_auto_resolve(env, local_txn, 0, ret);
 	if (blob_seq != NULL)
 		__seq_close(blob_seq, 0);
@@ -298,19 +318,18 @@ err:
  * subdatabase id.
  *
  * PUBLIC: int __blob_generate_dir_ids
- * PUBLIC:	__P((DB *, DB_TXN *, uintmax_t *));
+ * PUBLIC:	__P((DB *, DB_TXN *, db_seq_t *));
  */
 int
 __blob_generate_dir_ids(dbp, txn, id)
 	DB *dbp;
 	DB_TXN *txn;
-	uintmax_t *id;
+	db_seq_t *id;
 {
 	DB *blob_meta_db;
 	DB_SEQUENCE *blob_seq;
 	int ret;
 	u_int32_t flags;
-	db_seq_t val;
 
 #ifdef HAVE_64BIT_TYPES
 	flags = 0;
@@ -324,16 +343,10 @@ __blob_generate_dir_ids(dbp, txn, id)
 	if (IS_REAL_TXN(txn))
 		LF_SET(DB_AUTO_COMMIT | DB_TXN_NOSYNC);
 
-	/*
-	 * __seq_get returns a signed 64 bit integer instead of uint, but
-	 * it will throw an error before it rolls over, so there is no
-	 * rollover danger here.
-	 */
 	DB_ASSERT(dbp->env, id != NULL);
 	if (*id == 0) {
-		if ((ret = __seq_get(blob_seq, 0, 1, &val, flags)) != 0)
+		if ((ret = __seq_get(blob_seq, 0, 1, id, flags)) != 0)
 			goto err;
-		*id = (uintmax_t)val;
 	}
 
 err:	if (blob_seq != NULL)
@@ -354,20 +367,20 @@ err:	if (blob_seq != NULL)
  * __blob_generate_id --
  * Generate a new blob ID.
  *
- * PUBLIC: int __blob_generate_id __P((DB *, DB_TXN *, uintmax_t *));
+ * PUBLIC: int __blob_generate_id __P((DB *, DB_TXN *, db_seq_t *));
  */
 int
 __blob_generate_id(dbp, txn, blob_id)
 	DB *dbp;
 	DB_TXN *txn;
-	uintmax_t *blob_id;
+	db_seq_t *blob_id;
 {
 #ifdef HAVE_64BIT_TYPES
+	DB_TXN *ltxn;
 	int ret;
 	u_int32_t flags;
-	db_seq_t val;
-
 	flags = 0;
+	ltxn = NULL;
 
 	if (dbp->blob_seq == NULL) {
 		if ((ret = __blob_open_meta_db(dbp, txn,
@@ -375,17 +388,14 @@ __blob_generate_id(dbp, txn, blob_id)
 			goto err;
 	}
 
-	if (IS_REAL_TXN(txn))
+	if (IS_REAL_TXN(dbp->cur_txn))
+		ltxn = txn;
+
+	if (IS_REAL_TXN(txn) && ltxn == NULL)
 		LF_SET(DB_AUTO_COMMIT | DB_TXN_NOSYNC);
 
-	/*
-	 * __seq_get returns a signed 64 bit integer instead of uint, but
-	 * it will throw an error before it rolls over, so there is no
-	 * rollover danger here.
-	 */
-	if ((ret = __seq_get(dbp->blob_seq, 0, 1, &val, flags)) != 0)
+	if ((ret = __seq_get(dbp->blob_seq, ltxn, 1, blob_id, flags)) != 0)
 		goto err;
-	*blob_id = (uintmax_t)val;
 
 err:	return (ret);
 #else /*HAVE_64BIT_TYPES*/
@@ -402,22 +412,27 @@ err:	return (ret);
  * blob_id. The __db_appname API is used to generate a fully qualified path.
  * The caller must deallocate the path.
  *
- * PUBLIC: int __blob_id_to_path __P((ENV *, const char *, uintmax_t, char **));
+ * PUBLIC: int __blob_id_to_path __P((ENV *, const char *, db_seq_t, char **));
  */
 int
 __blob_id_to_path(env, blob_sub_dir, blob_id, ppath)
 	ENV *env;
 	const char *blob_sub_dir;
-	uintmax_t blob_id;
+	db_seq_t blob_id;
 	char **ppath;
 {
 	char *path, *tmp_path;
 	int depth, i, name_len, ret;
 	size_t len;
-	uintmax_t factor, tmp;
+	db_seq_t factor, tmp;
 
 	name_len = 0;
 	path = tmp_path = *ppath = NULL;
+
+	if (blob_id < 1) {
+		ret = EINVAL;
+		goto err;
+	}
 
 	len = MAX_BLOB_PATH_SZ + strlen(blob_sub_dir) + 1;
 	if ((ret = __os_malloc(env, len, &path)) != 0)
@@ -477,17 +492,17 @@ err:
  * Print a blob file during salvage.  The function assumes the DBT already has
  * a buffer large enough to hold "size" bytes.
  *
- * PUBLIC: int __blob_salvage __P((ENV *, uintmax_t, off_t, size_t,
- * PUBLIC:	uintmax_t, uintmax_t, DBT *));
+ * PUBLIC: int __blob_salvage __P((ENV *, db_seq_t, off_t, size_t,
+ * PUBLIC:	db_seq_t, db_seq_t, DBT *));
  */
 int
 __blob_salvage(env, blob_id, offset, size, file_id, sdb_id, dbt)
 	ENV *env;
-	uintmax_t blob_id;
+	db_seq_t blob_id;
 	off_t offset;
 	size_t size;
-	uintmax_t file_id;
-	uintmax_t sdb_id;
+	db_seq_t file_id;
+	db_seq_t sdb_id;
 	DBT *dbt;
 {
 	DB_FH *fhp;
@@ -542,16 +557,16 @@ err:	if (fhp != NULL)
  *
  * Checks that a blob file for the given blob id exists, and is the given size.
  *
- * PUBLIC: int __blob_vrfy __P((ENV *, uintmax_t, off_t,
- * PUBLIC:	uintmax_t, uintmax_t, db_pgno_t, u_int32_t));
+ * PUBLIC: int __blob_vrfy __P((ENV *, db_seq_t, off_t,
+ * PUBLIC:	db_seq_t, db_seq_t, db_pgno_t, u_int32_t));
  */
 int
 __blob_vrfy(env, blob_id, blob_size, file_id, sdb_id, pgno, flags)
 	ENV *env;
-	uintmax_t blob_id;
+	db_seq_t blob_id;
 	off_t blob_size;
-	uintmax_t file_id;
-	uintmax_t sdb_id;
+	db_seq_t file_id;
+	db_seq_t sdb_id;
 	db_pgno_t pgno;
 	u_int32_t flags;
 {
@@ -630,7 +645,9 @@ err:	if (fhp != NULL)
  * __blob_del_all --
  *
  * Deletes all the blob files and meta databases in a database's blob
- * directory.  Does not delete the directories.
+ * directory.  Does not delete the directories if the delete is transactionally
+ * protected, since there is no current way to undo a directory delete in case
+ * the operation is aborted.
  *
  * PUBLIC: int __blob_del_all __P((DB *, DB_TXN *, int));
  */
@@ -657,7 +674,8 @@ __blob_del_all(dbp, txn, istruncate)
 	}
 
 	/* Do nothing if blobs are not enabled. */
-	if (dbp->blob_sub_dir == NULL || dbp->blob_threshold == 0)
+	if (dbp->blob_sub_dir == NULL 
+	    || (dbp->blob_file_id == 0 && dbp->blob_sdb_id == 0))
 		goto err;
 
 	if ((ret = __blob_get_dir(dbp, &path)) != 0)
@@ -685,6 +703,11 @@ __blob_del_all(dbp, txn, istruncate)
 	if ((ret = __blob_clean_dir(dbp, txn, path, istruncate)) != 0)
 		goto err;
 
+	if (!IS_REAL_TXN(txn) && !istruncate) {
+		if ((ret = __os_rmdir(env, path)) != 0)
+			goto err;
+	}
+
 err:	if (path != NULL)
 		__os_free(env, path);
 	return (ret);
@@ -701,7 +724,8 @@ err:	if (path != NULL)
  * __blob_clean_dir --
  *
  * Delete all files in the given directory, and all files
- * in all sub-directories.  Does not remove directories.
+ * in all sub-directories.  Does not remove directories if the operation is
+ * transactionally protected.
  */
 static int
 __blob_clean_dir(dbp, txn, dir, istruncate)
@@ -713,7 +737,7 @@ __blob_clean_dir(dbp, txn, dir, istruncate)
 	DB *meta;
 	DB_THREAD_INFO *ip;
 	ENV *env;
-	char **dirs, *fname, full_path[DB_MAXPATHLEN];
+	char *blob_dir, **dirs, *fname, full_path[DB_MAXPATHLEN];
 	int count, i, isdir, ret, t_ret;
 
 	env = dbp->env;
@@ -738,14 +762,23 @@ __blob_clean_dir(dbp, txn, dir, istruncate)
 			if ((ret = __blob_clean_dir(
 			    dbp, txn, full_path, istruncate)) != 0)
 				goto err;
+			/* Delete the top directory. */
+			if (!IS_REAL_TXN(txn)) {
+				if ((ret = __os_rmdir(env, full_path)) != 0)
+					goto err;
+			}
 		} else if (strcmp(dirs[i], BLOB_META_FILE_NAME) == 0 ) {
 			/* Ignore the meta db when truncating. */
 			if (istruncate)
 				continue;
-			__blob_make_meta_fname(env, dbp, &fname);
-			ENV_GET_THREAD_INFO(env, ip);
+			blob_dir = (env->dbenv->db_blob_dir != NULL ?
+			    env->dbenv->db_blob_dir : BLOB_DEFAULT_DIR);
+			if ((fname = strstr(full_path, blob_dir)) == NULL)
+				goto err;
+			fname += strlen(blob_dir) + 1;
 			if ((ret = __db_create_internal(&meta, env, 0)) != 0)
 				goto err;
+			ENV_GET_THREAD_INFO(env, ip);
 			if ((ret = __db_remove_int(meta,
 			    ip, txn, fname, NULL, 0)) != 0)
 				goto err;
@@ -780,8 +813,6 @@ err:	if (meta != NULL) {
 		    meta, NULL, DB_NOSYNC)) != 0 && ret == 0)
 			ret = t_ret;
 	}
-	if (fname != NULL)
-		__os_free(env, fname);
 
 	return (ret);
 }

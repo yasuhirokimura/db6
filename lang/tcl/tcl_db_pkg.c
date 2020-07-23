@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1999, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1999, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -4855,23 +4855,27 @@ bdb_DbUpgrade(interp, objc, objv)
 	Tcl_Obj *CONST objv[];		/* The argument objects */
 {
 	static const char *bdbupg[] = {
-		"-dupsort", "-env", "--", NULL
+		"-dupsort", "-env", "-P", "--", NULL
 	};
 	enum bdbupg {
 		TCL_DBUPG_DUPSORT,
 		TCL_DBUPG_ENV,
+		TCL_DBUPG_PASSWORD,
 		TCL_DBUPG_ENDARG
 	};
 	DB_ENV *dbenv;
 	DB *dbp;
+	ENV *env;
 	u_int32_t flags;
 	int endarg, i, optindex, result, ret;
-	char *arg, *db;
+	char *arg, *db, *dbr, *passwd;
+	size_t nlen;
 
 	dbenv = NULL;
 	dbp = NULL;
+	env = NULL;
 	result = TCL_OK;
-	db = NULL;
+	db = dbr = passwd = NULL;
 	flags = endarg = 0;
 
 	if (objc < 2) {
@@ -4905,6 +4909,16 @@ bdb_DbUpgrade(interp, objc, objv)
 				    TCL_STATIC);
 				return (TCL_ERROR);
 			}
+			env = dbenv->env;
+			break;
+		case TCL_DBUPG_PASSWORD:
+			/* Make sure we have an arg to check against! */
+			if (i >= objc) {
+				Tcl_WrongNumArgs(interp, 2, objv,
+				    "?-P passwd?");
+				return (TCL_ERROR);
+			}
+			passwd = Tcl_GetStringFromObj(objv[i++], NULL);
 			break;
 		case TCL_DBUPG_ENDARG:
 			endarg = 1;
@@ -4950,11 +4964,40 @@ bdb_DbUpgrade(interp, objc, objv)
 		dbp->set_errpfx(dbp, "DbUpgrade");
 		dbp->set_errcall(dbp, _ErrorFunc);
 	}
+	if (passwd != NULL) {
+		if ((ret = dbp->set_encrypt(
+		    dbp, passwd, DB_ENCRYPT_AES)) != 0 ) {
+			result = _ReturnSetup(interp, ret, DB_RETOK_STD(ret),
+			    "set_encrypt");
+			goto error;
+		}
+	}
 	ret = dbp->upgrade(dbp, db, flags);
-	result = _ReturnSetup(interp, ret, DB_RETOK_STD(ret), "db upgrade");
+
+	if (ret == 0 && db != NULL) {
+		nlen = strlen(db);
+		if ((ret = __os_malloc(env, nlen + 2, &dbr)) != 0) {
+			Tcl_SetResult(interp, db_strerror(ret),
+			    TCL_STATIC);
+			return (0);
+		}
+		memcpy(dbr, db, nlen);
+		dbr[nlen] = '1';
+		dbr[nlen+1] = '\0';
+		/* If the associated heap databases exist, upgrade them. */
+		if (__os_exists(env, dbr, NULL) == 0) {
+			if ((ret = dbp->upgrade(dbp, dbr, flags)) != 0)
+				goto end;
+			dbr[nlen] = '2';
+			ret = dbp->upgrade(dbp, dbr, flags);
+		}
+	}
+end:	result = _ReturnSetup(interp, ret, DB_RETOK_STD(ret), "db upgrade");
 error:
 	if (dbp)
 		(void)dbp->close(dbp, 0);
+	if (dbr)
+		__os_free(env, dbr);
 	return (result);
 }
 

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2001, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2001, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -3140,6 +3140,8 @@ __rep_conv_vers(env, log_ver)
 	 * We can't use a switch statement, some of the DB_LOGVERSION_XX
 	 * constants are the same.
 	 */
+	if (log_ver == DB_LOGVERSION_60p1)
+		return (DB_REPVERSION_60);
 	if (log_ver == DB_LOGVERSION_60)
 		return (DB_REPVERSION_60);
 	if (log_ver == DB_LOGVERSION_53)

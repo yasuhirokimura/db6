@@ -116,6 +116,8 @@ int __ham_31_hashmeta __P((DB *, char *, u_int32_t, DB_FH *, PAGE *, int *));
 int __ham_31_hash __P((DB *, char *, u_int32_t, DB_FH *, PAGE *, int *));
 int __ham_46_hashmeta __P((DB *, char *, u_int32_t, DB_FH *, PAGE *, int *));
 int __ham_46_hash __P((DB *, char *, u_int32_t, DB_FH *, PAGE *, int *));
+int __ham_60_hashmeta __P((DB *, char *, u_int32_t, DB_FH *, PAGE *, int *));
+int __ham_60_hash __P((DB *, char *, u_int32_t, DB_FH *, PAGE *, int *));
 int __ham_vrfy_meta __P((DB *, VRFY_DBINFO *, HMETA *, db_pgno_t, u_int32_t));
 int __ham_vrfy __P((DB *, VRFY_DBINFO *, PAGE *, db_pgno_t, u_int32_t));
 int __ham_vrfy_structure __P((DB *, VRFY_DBINFO *, db_pgno_t, u_int32_t));

@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 1996, 2013 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id: test.tcl,v fa50617a1e4c 2012/08/17 09:59:58 carol $
 

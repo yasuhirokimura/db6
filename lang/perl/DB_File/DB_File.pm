@@ -2,7 +2,7 @@
 #
 # Written by Paul Marquess (pmqs@cpan.org)
 #
-#     Copyright (c) 1995-2013 Paul Marquess. All rights reserved.
+#     Copyright (c) 1995-2014 Paul Marquess. All rights reserved.
 #     This program is free software; you can redistribute it and/or
 #     modify it under the same terms as Perl itself.
 

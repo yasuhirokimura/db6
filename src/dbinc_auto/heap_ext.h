@@ -48,6 +48,8 @@ void __heap_print_cursor __P((DBC *));
 int __heap_stat_callback __P((DBC *, PAGE *, void *, int *));
 int __heap_traverse __P((DBC *, int (*)(DBC *, PAGE *, void *, int *), void *));
 int __db_no_heap_am __P((ENV *));
+int __heap_60_heapmeta __P((DB *, char *, u_int32_t, DB_FH *, PAGE *, int *));
+int __heap_60_heap __P((DB *, char *, u_int32_t, DB_FH *, PAGE *, int *));
 int __heap_vrfy_meta __P((DB *, VRFY_DBINFO *, HEAPMETA *, db_pgno_t, u_int32_t));
 int __heap_vrfy __P((DB *, VRFY_DBINFO *, PAGE *, db_pgno_t, u_int32_t));
 int __heap_vrfy_structure __P((DB *, VRFY_DBINFO *, u_int32_t));

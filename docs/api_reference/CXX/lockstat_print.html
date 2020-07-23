@@ -71,7 +71,7 @@ DbEnv::lock_stat_print(u_int32_t flags);</pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp61249096"></a>Parameters</h3>
+              <h3 class="title"><a id="idp2721120"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -79,7 +79,7 @@ DbEnv::lock_stat_print(u_int32_t flags);</pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp61230496"></a>flags</h4>
+                <h4 class="title"><a id="idp2713232"></a>flags</h4>
               </div>
             </div>
           </div>
@@ -92,11 +92,15 @@ DbEnv::lock_stat_print(u_int32_t flags);</pre>
             <ul type="disc">
               <li>
                 <p><a id="lockstat_print_DB_STAT_ALL"></a>
-                  <code class="literal">DB_STAT_ALL</code>
-            </p>
+                          <code class="literal">DB_STAT_ALL</code>
+                     </p>
                 <p>
-                Display all available information.
-            </p>
+                        Display all available information. For each object,
+                        the amount of data displayed is limited to 100
+                        bytes, unless some other limit is set
+                        
+                        using the DB_CONFIG "set_data_len" parameter.
+                     </p>
               </li>
               <li>
                 <p><a id="envsat_print_DB_STAT_CLEAR"></a>
@@ -124,11 +128,16 @@ DbEnv::lock_stat_print(u_int32_t flags);</pre>
               </li>
               <li>
                 <p><a id="envsat_print_DB_STAT_LOCK_OBJECTS"></a>
-                  <code class="literal">DB_STAT_LOCK_OBJECTS</code>
-            </p>
+                          <code class="literal">DB_STAT_LOCK_OBJECTS</code>
+                     </p>
                 <p>
-                Display the lock objects within hash chains.
-            </p>
+                        Display the lock objects within hash chains. For
+                        each object, the amount of data displayed is
+                        limited to 100 bytes, unless some other limit is
+                        set
+                        
+                        using the DB_CONFIG "set_data_len" parameter.
+                     </p>
               </li>
               <li>
                 <p><a id="envsat_print_DB_STAT_LOCK_PARAMS"></a>
@@ -146,7 +155,7 @@ DbEnv::lock_stat_print(u_int32_t flags);</pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp61281664"></a>Class</h3>
+              <h3 class="title"><a id="idp2756016"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -159,7 +168,7 @@ DbEnv::lock_stat_print(u_int32_t flags);</pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp61282992"></a>See Also</h3>
+              <h3 class="title"><a id="idp2688440"></a>See Also</h3>
             </div>
           </div>
         </div>

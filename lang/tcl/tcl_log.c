@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1999, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1999, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -801,7 +801,7 @@ tcl_LogConfig(interp, dbenv, which, onoff)
 	}
 	ret = dbenv->log_set_config(dbenv, wh, on);
 	return (_ReturnSetup(interp, ret, DB_RETOK_STD(ret),
-	    "env rep_config"));
+	    "env log_config"));
 }
 
 /*

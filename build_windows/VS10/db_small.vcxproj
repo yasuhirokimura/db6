@@ -329,6 +329,7 @@
     <ClCompile Include="..\..\src\os_windows\os_map.c"/>
     <ClCompile Include="..\..\src\os_windows\os_mkdir.c"/>
     <ClCompile Include="..\..\src\os_windows\os_open.c"/>
+    <ClCompile Include="..\..\src\os_windows\os_rmdir.c"/>
     <ClCompile Include="..\..\src\os\os_path.c"/>
     <ClCompile Include="..\..\src\os_windows\os_rename.c"/>
     <ClCompile Include="..\..\src\os_windows\os_rw.c"/>

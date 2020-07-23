@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1999, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1999, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -48,7 +48,7 @@ __ham_vrfy_meta(dbp, vdp, m, pgno, flags)
 	int i, ret, t_ret, isbad;
 	u_int32_t pwr, mbucket;
 	u_int32_t (*hfunc) __P((DB *, const void *, u_int32_t));
-	uintmax_t blob_id;
+	db_seq_t blob_id;
 
 	env = dbp->env;
 	isbad = 0;
@@ -166,19 +166,44 @@ __ham_vrfy_meta(dbp, vdp, m, pgno, flags)
 		}
 	}
 
-	GET_LO_HI(env, m->blob_file_lo, m->blob_file_hi, blob_id, ret);
+/*
+ * Where 64-bit integer support is not available,
+ * return an error if the file has any blobs.
+ */
+#ifdef HAVE_64BIT_TYPES
+	GET_BLOB_FILE_ID(env, m, blob_id, ret);
 	if (ret != 0) {
 		isbad = 1;
 		EPRINT((env, DB_STR_A("1178",
 		    "Page %lu: blob file id overflow.", "%lu"), (u_long)pgno));
 	}
-	GET_LO_HI(env, m->blob_sdb_lo, m->blob_sdb_hi, blob_id, ret);
+	GET_BLOB_SDB_ID(env, m, blob_id, ret);
 	if (ret != 0) {
 		isbad = 1;
 		EPRINT((env, DB_STR_A("1179",
 		    "Page %lu: blob subdatabase id overflow.",
 		    "%lu"), (u_long)pgno));
 	}
+#else /* HAVE_64BIT_TYPES */
+	/*
+	 * db_seq_t is an int on systems that do not have 64 integer types, so
+	 * this will compile and run.
+	 */
+	GET_BLOB_FILE_ID(env, m, blob_id, ret);
+	if (ret != 0 || blob_id != 0) {
+		isbad = 1;
+		EPRINT((env, DB_STR_A("1203",
+		    "Page %lu: blobs require 64 integer compiler support.",
+		    "%lu"), (u_long)pgno));
+	}
+	GET_BLOB_SDB_ID(env, m, blob_id, ret);
+	if (ret != 0 || blob_id != 0) {
+		isbad = 1;
+		EPRINT((env, DB_STR_A("1204",
+		    "Page %lu: blobs require 64 integer compiler support.",
+		    "%lu"), (u_long)pgno));
+	}
+#endif
 
 err:	if ((t_ret = __db_vrfy_putpageinfo(env, vdp, pip)) != 0 && ret == 0)
 		ret = t_ret;
@@ -296,7 +321,7 @@ __ham_vrfy_item(dbp, vdp, pgno, h, i, flags)
 	db_indx_t offset, len, dlen, elen;
 	int ret, t_ret;
 	off_t blob_size;
-	uintmax_t blob_id, file_id, sdb_id;
+	db_seq_t blob_id, file_id, sdb_id;
 	u_int8_t *databuf;
 
 	if ((ret = __db_vrfy_getpageinfo(vdp, pgno, &pip)) != 0)
@@ -312,40 +337,17 @@ __ham_vrfy_item(dbp, vdp, pgno, h, i, flags)
 		 * file size as is stored in the database record.
 		 */
 		memcpy(&hblob, P_ENTRY(dbp, h, i), HBLOB_SIZE);
-		GET_BLOB_ID(dbp->env, hblob, blob_id, ret);
-		if (ret != 0) {
-			EPRINT((dbp->env, DB_STR_A("1180",
-			    "Page %lu: blob id value has overflowed",
-			    "%lu"), (u_long)pip->pgno));
-			ret = DB_VERIFY_BAD;
-			goto err;
-		}
+		blob_id = (db_seq_t)hblob.id;
 		GET_BLOB_SIZE(dbp->env, hblob, blob_size, ret);
-		if (ret != 0) {
+		if (ret != 0 || blob_size < 0) {
 			EPRINT((dbp->env, DB_STR_A("1181",
 			    "Page %lu: blob file size value has overflowed",
 			    "%lu"), (u_long)pip->pgno));
 			ret = DB_VERIFY_BAD;
 			goto err;
 		}
-		GET_LO_HI(dbp->env,
-		    hblob.file_id_lo, hblob.file_id_hi, file_id, ret);
-		if (ret != 0) {
-			EPRINT((dbp->env, DB_STR_A("1182",
-		"Page %lu: blob file id value has overflowed at item %lu",
-			    "%lu %lu"), (u_long)pip->pgno, (u_long)i));
-			ret = DB_VERIFY_BAD;
-			goto err;
-		}
-		GET_LO_HI(dbp->env,
-		    hblob.sdb_id_lo, hblob.sdb_id_hi, sdb_id, ret);
-		if (ret != 0) {
-			EPRINT((dbp->env, DB_STR_A("1183",
-		"Page %lu: blob subdb id value has overflowed at item %lu",
-			    "%lu %lu"), (u_long)pip->pgno, (u_long)i));
-			ret = DB_VERIFY_BAD;
-			goto err;
-		}
+		file_id = (db_seq_t)hblob.file_id;
+		sdb_id = (db_seq_t)hblob.sdb_id;
 		if (file_id == 0 && sdb_id == 0) {
 			EPRINT((dbp->env, DB_STR_A("1184",
 		"Page %lu: invalid blob dir ids %llu %llu at item %lu",
@@ -904,7 +906,7 @@ __ham_salvage(dbp, vdp, pgno, h, handle, callback, flags)
 	off_t blob_size, blob_offset, remaining;
 	u_int32_t blob_buf_size, himark, i, ovfl_bufsz;
 	u_int8_t *blob_buf, *hk, *p;
-	uintmax_t blob_id, file_id, sdb_id;
+	db_seq_t blob_id, file_id, sdb_id;
 	void *buf, *key_buf;
 	db_indx_t dlen, len, tlen;
 
@@ -970,24 +972,14 @@ keydata:			memcpy(buf, HKEYDATA_DATA(hk), len);
 				break;
 			case H_BLOB:
 				memcpy(&hblob, hk, HBLOB_SIZE);
-				GET_BLOB_ID(env, hblob, blob_id, ret);
-				if (ret != 0) {
-					err_ret = ret;
-					continue;
-				}
+				blob_id = (db_seq_t)hblob.id;
 				GET_BLOB_SIZE(env, hblob, blob_size, ret);
-				GET_LO_HI(env, hblob.file_id_lo,
-				    hblob.file_id_hi, file_id, ret);
-				if (ret != 0) {
-					err_ret = ret;
-					continue;
-				};
-				GET_LO_HI(env, hblob.sdb_id_lo,
-				    hblob.sdb_id_hi, sdb_id, ret);
-				if (ret != 0) {
-					err_ret = ret;
+				if (ret != 0 || blob_size < 0) {
+					err_ret = DB_VERIFY_BAD;
 					continue;
 				}
+				file_id = (db_seq_t)hblob.file_id;
+				sdb_id = (db_seq_t)hblob.sdb_id;
 				/* Read the blob, in pieces if too large.*/
 				blob_offset = 0;
 				if (blob_size > MEGABYTE) {

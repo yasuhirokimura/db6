@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2001, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2001, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -126,6 +126,7 @@ extern "C" {
 #define	DB_LOGVERSION_52	18
 #define	DB_LOGVERSION_53	19
 #define	DB_LOGVERSION_60	20
+#define	DB_LOGVERSION_60p1	21
 #define	DB_LOGVERSION_MIN	DB_LOGVERSION_44
 #define	DB_REPVERSION_INVALID	0
 #define	DB_REPVERSION_44	3
@@ -849,6 +850,7 @@ struct __db_rep {
 	int		new_connection;	  /* Since last master seek attempt. */
 	int		demotion_pending; /* We're being demoted to a view. */
 	int		takeover_pending; /* We've been elected master. */
+	int		rejoin_pending; /* Join group retry after rejection. */
 	int		gmdb_busy;
 	int		client_intent;	/* Will relinquish master role. */
 	int		gmdb_dirty;

@@ -69,7 +69,7 @@ DB_ENV-&gt;lock_stat_print(DB_ENV *env, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp2392592"></a>Parameters</h3>
+              <h3 class="title"><a id="idp52747816"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -77,7 +77,7 @@ DB_ENV-&gt;lock_stat_print(DB_ENV *env, u_int32_t flags);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp2432072"></a>flags</h4>
+                <h4 class="title"><a id="idp52746888"></a>flags</h4>
               </div>
             </div>
           </div>
@@ -90,11 +90,19 @@ DB_ENV-&gt;lock_stat_print(DB_ENV *env, u_int32_t flags);  </pre>
             <ul type="disc">
               <li>
                 <p><a id="lockstat_print_DB_STAT_ALL"></a>
-                  <code class="literal">DB_STAT_ALL</code>
-            </p>
+                          <code class="literal">DB_STAT_ALL</code>
+                     </p>
                 <p>
-                Display all available information.
-            </p>
+                        Display all available information. For each object,
+                        the amount of data displayed is limited to 100
+                        bytes, unless some other limit is set
+                        <span>
+                            by calling
+                            <a class="xref" href="envset_data_len.html" title="DB_ENV-&gt;set_data_len()">DB_ENV-&gt;set_data_len()</a>,
+                            or by
+                        </span>
+                        using the DB_CONFIG "set_data_len" parameter.
+                     </p>
               </li>
               <li>
                 <p><a id="envsat_print_DB_STAT_CLEAR"></a>
@@ -122,11 +130,20 @@ DB_ENV-&gt;lock_stat_print(DB_ENV *env, u_int32_t flags);  </pre>
               </li>
               <li>
                 <p><a id="envsat_print_DB_STAT_LOCK_OBJECTS"></a>
-                  <code class="literal">DB_STAT_LOCK_OBJECTS</code>
-            </p>
+                          <code class="literal">DB_STAT_LOCK_OBJECTS</code>
+                     </p>
                 <p>
-                Display the lock objects within hash chains.
-            </p>
+                        Display the lock objects within hash chains. For
+                        each object, the amount of data displayed is
+                        limited to 100 bytes, unless some other limit is
+                        set
+                        <span>
+                            by calling
+                            <a class="xref" href="envset_data_len.html" title="DB_ENV-&gt;set_data_len()">DB_ENV-&gt;set_data_len()</a>,
+                            or by
+                        </span>
+                        using the DB_CONFIG "set_data_len" parameter.
+                     </p>
               </li>
               <li>
                 <p><a id="envsat_print_DB_STAT_LOCK_PARAMS"></a>
@@ -144,7 +161,7 @@ DB_ENV-&gt;lock_stat_print(DB_ENV *env, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp2456112"></a>Class</h3>
+              <h3 class="title"><a id="idp52773640"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -157,7 +174,7 @@ DB_ENV-&gt;lock_stat_print(DB_ENV *env, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp2457440"></a>See Also</h3>
+              <h3 class="title"><a id="idp52760432"></a>See Also</h3>
             </div>
           </div>
         </div>

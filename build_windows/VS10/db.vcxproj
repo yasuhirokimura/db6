@@ -283,6 +283,7 @@
     <ClCompile Include="..\..\src\heap\heap_rec.c"/>
     <ClCompile Include="..\..\src\heap\heap_reclaim.c"/>
     <ClCompile Include="..\..\src\heap\heap_stat.c"/>
+    <ClCompile Include="..\..\src\heap\heap_upgrade.c"/>
     <ClCompile Include="..\..\src\heap\heap_verify.c"/>
     <ClCompile Include="..\..\src\hmac\hmac.c"/>
     <ClCompile Include="..\..\lang\hsearch\hsearch.c"/>
@@ -353,6 +354,7 @@
     <ClCompile Include="..\..\src\os_windows\os_map.c"/>
     <ClCompile Include="..\..\src\os_windows\os_mkdir.c"/>
     <ClCompile Include="..\..\src\os_windows\os_open.c"/>
+    <ClCompile Include="..\..\src\os_windows\os_rmdir.c"/>
     <ClCompile Include="..\..\src\os\os_path.c"/>
     <ClCompile Include="..\..\src\os\os_pid.c"/>
     <ClCompile Include="..\..\src\os_windows\os_rename.c"/>

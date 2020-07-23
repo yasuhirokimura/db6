@@ -223,6 +223,7 @@
     <File RelativePath="..\..\src\os_windows\os_mkdir.c"/>
     <File RelativePath="..\..\src\os_windows\os_open.c"/>
     <File RelativePath="..\..\src\os_windows\os_rename.c"/>
+    <File RelativePath="..\..\src\os_windows\os_rmdir.c"/>
     <File RelativePath="..\..\src\os_windows\os_rw.c"/>
     <File RelativePath="..\..\src\os_windows\os_seek.c"/>
     <File RelativePath="..\..\src\os_windows\os_stat.c"/>

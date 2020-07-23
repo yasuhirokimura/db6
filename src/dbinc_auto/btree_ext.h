@@ -115,6 +115,8 @@ int __bam_traverse __P((DBC *, db_lockmode_t, db_pgno_t, int (*)(DBC *, PAGE *, 
 int __bam_30_btreemeta __P((DB *, char *, u_int8_t *));
 int __bam_31_btreemeta __P((DB *, char *, u_int32_t, DB_FH *, PAGE *, int *));
 int __bam_31_lbtree __P((DB *, char *, u_int32_t, DB_FH *, PAGE *, int *));
+int __bam_60_btreemeta __P((DB *, char *, u_int32_t, DB_FH *, PAGE *, int *));
+int __bam_60_lbtree __P((DB *, char *, u_int32_t, DB_FH *, PAGE *, int *));
 int __bam_vrfy_meta __P((DB *, VRFY_DBINFO *, BTMETA *, db_pgno_t, u_int32_t));
 int __ram_vrfy_leaf __P((DB *, VRFY_DBINFO *, PAGE *, db_pgno_t, u_int32_t));
 int __bam_vrfy __P((DB *, VRFY_DBINFO *, PAGE *, db_pgno_t, u_int32_t));

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2013, 2014 Oracle and/or its affiliates.  All rights reserved.
  */
 
 #include "db_config.h"
@@ -28,13 +28,13 @@
  *	larger than UINT32MAX then DB_BUFFER_SMALL would have already
  *	been returned.
  * PUBLIC: int __blob_bulk
- * PUBLIC:    __P((DBC *, u_int32_t, uintmax_t, u_int8_t *));
+ * PUBLIC:    __P((DBC *, u_int32_t, db_seq_t, u_int8_t *));
  */
 int
 __blob_bulk(dbc, len, blob_id, dp)
 	DBC *dbc;
 	u_int32_t len;
-	uintmax_t blob_id;
+	db_seq_t blob_id;
 	u_int8_t *dp;
 {
 	DBT dbt;
@@ -70,13 +70,13 @@ err:	if (fhp != NULL) {
  *	Get a blob file item. Analogous to db_overflow.c:__db_goff.
  *
  * PUBLIC: int __blob_get __P((DBC *,
- * PUBLIC:     DBT *, uintmax_t, off_t, void **, u_int32_t *));
+ * PUBLIC:     DBT *, db_seq_t, off_t, void **, u_int32_t *));
  */
 int
 __blob_get(dbc, dbt, blob_id, file_size, bpp, bpsz)
 	DBC *dbc;
 	DBT *dbt;
-	uintmax_t blob_id;
+	db_seq_t blob_id;
 	off_t file_size;
 	void **bpp;
 	u_int32_t *bpsz;
@@ -131,13 +131,13 @@ err:	if (fhp != NULL) {
  *	Put a blob file item.
  *
  * PUBLIC: int __blob_put __P((
- * PUBLIC:    DBC *, DBT *, uintmax_t *, off_t *size, DB_LSN *));
+ * PUBLIC:    DBC *, DBT *, db_seq_t *, off_t *size, DB_LSN *));
  */
 int
 __blob_put(dbc, dbt, blob_id, size, plsn)
 	DBC *dbc;
 	DBT *dbt;
-	uintmax_t *blob_id;
+	db_seq_t *blob_id;
 	off_t *size;
 	DB_LSN *plsn;
 {
@@ -200,14 +200,14 @@ err:	if (fhp != NULL) {
  *	truncate would require a lot of logging, so it is performed by
  *	deleting the old blob file, and creating a new one.
  *
- * PUBLIC: int __blob_repl __P((DBC *, DBT *, uintmax_t, uintmax_t *,off_t *));
+ * PUBLIC: int __blob_repl __P((DBC *, DBT *, db_seq_t, db_seq_t *,off_t *));
  */
 int
 __blob_repl(dbc, nval, blob_id, new_blob_id, size)
 	DBC *dbc;
 	DBT *nval;
-	uintmax_t blob_id;
-	uintmax_t *new_blob_id;
+	db_seq_t blob_id;
+	db_seq_t *new_blob_id;
 	off_t *size;
 {
 	DBT partial;
@@ -361,12 +361,12 @@ err:	if (fhp != NULL) {
  * __blob_del --
  *	Delete a blob file. The onpage record is handled separately..
  *
- * PUBLIC: int __blob_del __P((DBC *, uintmax_t));
+ * PUBLIC: int __blob_del __P((DBC *, db_seq_t));
  */
 int
 __blob_del(dbc, blob_id)
 	DBC *dbc;
-	uintmax_t blob_id;
+	db_seq_t blob_id;
 {
 	int ret;
 

@@ -1,16 +1,20 @@
 /*-
- * Copyright (c) 2010, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2010, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * The following provides the information necessary to build Berkeley
  * DB on native Windows, and other Windows environments such as MinGW.
  */
 
 /*
- * Berkeley DB requires at least Windows 2000, tell Visual Studio of the
- * requirement.
+ * Berkeley DB requires at least Windows 2000, and Windows XP if we are using
+ * Visual Studio 2012. Tell Visual Studio of the requirement.
  */
 #ifndef _WIN32_WINNT
+#if _MSC_VER >= 1700
+#define _WIN32_WINNT 0x0501
+#else
 #define	_WIN32_WINNT 0x0500
+#endif
 #endif
 
 #ifndef DB_WINCE

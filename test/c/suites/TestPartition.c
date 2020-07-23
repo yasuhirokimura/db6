@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2012, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2012, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -30,7 +30,7 @@
 #include "test_util.h"
 
 static int close_db(DB_ENV *, DB *, CuTest *);
-static int create_db(DB_ENV **, DB **dbpp, CuTest *);
+static int create_db(DB_ENV **, DB **dbpp, int bigcache, CuTest *);
 static u_int32_t partitionCallback(DB *, DBT *);
 static int put_data(DB *);
 
@@ -85,7 +85,7 @@ int TestPartOneKeyNoData(CuTest *ct) {
 	}
 
 	/* Do not set any database flags. */
-	CuAssertTrue(ct, create_db(&dbenv, &dbp, ct) == 0);
+	CuAssertTrue(ct, create_db(&dbenv, &dbp, 0, ct) == 0);
 	/*
 	 * Verify that before the database is opened, DB->set_partition can
 	 * be called multiple times regardless of its return code.
@@ -104,7 +104,7 @@ int TestPartOneKeyNoData(CuTest *ct) {
 	/* Set DB_DUPSORT flags. */
 	setup_envdir(TEST_ENV, 1);
 	errfp = fopen("TESTDIR/errfile", "w");
-	CuAssertTrue(ct, create_db(&dbenv, &dbp, ct) == 0);
+	CuAssertTrue(ct, create_db(&dbenv, &dbp, 0, ct) == 0);
 	CuAssertTrue(ct, dbp->set_partition(dbp, nparts, keys, NULL) == 0);
 	CuAssertTrue(ct, dbp->set_flags(dbp, DB_DUPSORT) == 0);
 	CuAssertTrue(ct, dbp->open(dbp, NULL,
@@ -115,7 +115,7 @@ int TestPartOneKeyNoData(CuTest *ct) {
 
 	/* Set DB_DUP flags. */
 	setup_envdir(TEST_ENV, 1);
-	CuAssertTrue(ct, create_db(&dbenv, &dbp, ct) == 0);
+	CuAssertTrue(ct, create_db(&dbenv, &dbp, 0, ct) == 0);
 	CuAssertTrue(ct, dbp->set_partition(dbp, nparts, keys, NULL) == 0);
 	CuAssertTrue(ct, dbp->set_flags(dbp, DB_DUP) == 0);
 	CuAssertTrue(ct, dbp->open(dbp, NULL,
@@ -146,7 +146,7 @@ int TestPartTwoKeyNoData(CuTest *ct) {
 	}
 
 	/* Do not set any database flags. */
-	CuAssertTrue(ct, create_db(&dbenv, &dbp, ct) == 0);
+	CuAssertTrue(ct, create_db(&dbenv, &dbp, 0, ct) == 0);
 	CuAssertTrue(ct, dbp->set_partition(dbp, nparts, keys, NULL) == 0);
 	CuAssertTrue(ct, dbp->open(dbp, NULL,
 	    "test.db", NULL, DB_BTREE, DB_CREATE, 0644) != 0);
@@ -157,7 +157,7 @@ int TestPartTwoKeyNoData(CuTest *ct) {
 	/* Set DB_DUPSORT flags. */
 	setup_envdir(TEST_ENV, 1);
 	errfp = fopen("TESTDIR/errfile", "w");
-	CuAssertTrue(ct, create_db(&dbenv, &dbp, ct) == 0);
+	CuAssertTrue(ct, create_db(&dbenv, &dbp, 0, ct) == 0);
 	CuAssertTrue(ct, dbp->set_partition(dbp, nparts, keys, NULL) == 0);
 	CuAssertTrue(ct, dbp->set_flags(dbp, DB_DUPSORT) == 0);
 	CuAssertTrue(ct, dbp->open(dbp, NULL,
@@ -168,7 +168,7 @@ int TestPartTwoKeyNoData(CuTest *ct) {
 
 	/* Set DB_DUP flags. */
 	setup_envdir(TEST_ENV, 1);
-	CuAssertTrue(ct, create_db(&dbenv, &dbp, ct) == 0);
+	CuAssertTrue(ct, create_db(&dbenv, &dbp, 0, ct) == 0);
 	CuAssertTrue(ct, dbp->set_partition(dbp, nparts, keys, NULL) == 0);
 	CuAssertTrue(ct, dbp->set_flags(dbp, DB_DUP) == 0);
 	CuAssertTrue(ct, dbp->open(dbp, NULL,
@@ -203,7 +203,7 @@ int TestPartDuplicatedKey(CuTest *ct) {
 	}
 
 	/* Do not set any database flags. */
-	CuAssertTrue(ct, create_db(&dbenv, &dbp, ct) == 0);
+	CuAssertTrue(ct, create_db(&dbenv, &dbp, 0, ct) == 0);
 	CuAssertTrue(ct, dbp->set_partition(dbp, nparts, keys, NULL) == 0);
 	CuAssertTrue(ct, dbp->open(dbp, NULL,
 	    "test.db", NULL, DB_BTREE, DB_CREATE, 0644) != 0);
@@ -214,7 +214,7 @@ int TestPartDuplicatedKey(CuTest *ct) {
 	/* Set DB_DUPSORT flags. */
 	setup_envdir(TEST_ENV, 1);
 	errfp = fopen("TESTDIR/errfile", "w");
-	CuAssertTrue(ct, create_db(&dbenv, &dbp, ct) == 0);
+	CuAssertTrue(ct, create_db(&dbenv, &dbp, 0, ct) == 0);
 	CuAssertTrue(ct, dbp->set_partition(dbp, nparts, keys, NULL) == 0);
 	CuAssertTrue(ct, dbp->set_flags(dbp, DB_DUPSORT) == 0);
 	CuAssertTrue(ct, dbp->open(dbp, NULL,
@@ -225,7 +225,7 @@ int TestPartDuplicatedKey(CuTest *ct) {
 
 	/* Set DB_DUP flags. */
 	setup_envdir(TEST_ENV, 1);
-	CuAssertTrue(ct, create_db(&dbenv, &dbp, ct) == 0);
+	CuAssertTrue(ct, create_db(&dbenv, &dbp, 0, ct) == 0);
 	CuAssertTrue(ct, dbp->set_partition(dbp, nparts, keys, NULL) == 0);
 	CuAssertTrue(ct, dbp->set_flags(dbp, DB_DUP) == 0);
 	CuAssertTrue(ct, dbp->open(dbp, NULL,
@@ -262,7 +262,7 @@ int TestPartUnsortedKey(CuTest *ct) {
 		keys[i].size = sizeof(char);
 	}
 
-	CuAssertTrue(ct, create_db(&dbenv, &dbp, ct) == 0);
+	CuAssertTrue(ct, create_db(&dbenv, &dbp, 0, ct) == 0);
 	CuAssertTrue(ct,
 	    dbp->set_partition(dbp, nparts - 1, &keys[1], NULL) == 0);
 	CuAssertTrue(ct, dbp->open(dbp, NULL,
@@ -302,26 +302,39 @@ int TestPartNumber(CuTest *ct) {
 	dbenv = NULL;
 	dbp = NULL;
 	keys = NULL;
-	nparts = 5;
+	nparts = 1000000;
 
 	CuAssertTrue(ct, (keys = malloc((nparts - 1) * sizeof(DBT))) != NULL);
 	memset(keys, 0, (nparts - 1) * sizeof(DBT));
 	/* Assign data to the keys. */
 	for (i = 0 ; i < (nparts - 1); i++) {
-		keys[i].data = &content[(i + 1) * (strlen(content) / nparts)];
-		keys[i].size = sizeof(char);
+		CuAssertTrue(ct,
+		    (keys[i].data = malloc(sizeof(u_int32_t))) != NULL);
+		memcpy(keys[i].data, &i, sizeof(u_int32_t));
+		keys[i].size = sizeof(u_int32_t);
 	}
 
 	/* Partition number is less than 2. */
-	CuAssertTrue(ct, create_db(&dbenv, &dbp, ct) == 0);
+	CuAssertTrue(ct, create_db(&dbenv, &dbp, 1, ct) == 0);
 	CuAssertTrue(ct, dbp->set_partition(dbp, 1, keys, NULL) != 0);
 
-	/* Partition number is less than key array length plus 1. */
-	CuAssertTrue(ct, dbp->set_partition(dbp, nparts - 1, keys, NULL) == 0);
+	/* Partition number is bigger than the limit 1000000. */
+	CuAssertTrue(ct,
+	    dbp->set_partition(dbp, nparts + 1, keys, NULL) == EINVAL);
+
+	/* Partition number is equal to the limit 1000000. */
+	CuAssertTrue(ct, dbp->set_partition(dbp, nparts, keys, NULL) == 0);
+
+	/* Partition keys do not fix into a single database page. */
+	CuAssertTrue(ct, dbp->set_pagesize(dbp, 512) == 0);
+	CuAssertTrue(ct, dbp->set_partition(dbp, 800, keys, NULL) == 0);
 	CuAssertTrue(ct, dbp->open(dbp, NULL,
 	    "test.db", NULL, DB_BTREE, DB_CREATE, 0644) == 0);
 	CuAssertTrue(ct, put_data(dbp) == 0);
 	CuAssertTrue(ct, close_db(dbenv, dbp, ct) == 0);
+
+	for (i = 0 ; i < (nparts - 1); i++)
+		free(keys[i].data);
 	free(keys);
 	return (0);
 }
@@ -346,7 +359,7 @@ int TestPartKeyCallBothSet(CuTest *ct) {
 	}
 
 	/* Set both partition key and callback, expect it fails. */
-	CuAssertTrue(ct, create_db(&dbenv, &dbp, ct) == 0);
+	CuAssertTrue(ct, create_db(&dbenv, &dbp, 0, ct) == 0);
 	CuAssertTrue(ct,
 	    dbp->set_partition(dbp, nparts, keys, partitionCallback) != 0);
 
@@ -370,7 +383,7 @@ int TestPartKeyCallBothSet(CuTest *ct) {
 	/* Set partition by callback and open the database. */
 	setup_envdir(TEST_ENV, 1);
 	errfp = fopen("TESTDIR/errfile", "w");
-	CuAssertTrue(ct, create_db(&dbenv, &dbp, ct) == 0);
+	CuAssertTrue(ct, create_db(&dbenv, &dbp, 0, ct) == 0);
 	CuAssertTrue(ct,
 	    dbp->set_partition(dbp, nparts, NULL, partitionCallback) == 0);
 	CuAssertTrue(ct, dbp->open(dbp, NULL,
@@ -395,7 +408,7 @@ int TestPartKeyCallNeitherSet(CuTest *ct) {
 	dbenv = NULL;
 	dbp = NULL;
 
-	CuAssertTrue(ct, create_db(&dbenv, &dbp, ct) == 0);
+	CuAssertTrue(ct, create_db(&dbenv, &dbp, 0, ct) == 0);
 	CuAssertTrue(ct, dbp->set_partition(dbp, nparts, NULL, NULL) != 0);
 	CuAssertTrue(ct, close_db(dbenv, dbp, ct) == 0);
 
@@ -403,9 +416,10 @@ int TestPartKeyCallNeitherSet(CuTest *ct) {
 }
 
 static int
-create_db(dbenvp, dbpp, ct)
+create_db(dbenvp, dbpp, bigcache, ct)
 	DB_ENV **dbenvp;
 	DB **dbpp;
+	int bigcache;
 	CuTest *ct;
 {
 	DB_ENV *dbenv;
@@ -416,6 +430,10 @@ create_db(dbenvp, dbpp, ct)
 
 	CuAssertTrue(ct, db_env_create(&dbenv, 0) == 0);
 	*dbenvp = dbenv;
+	/* Big cache size is needed in some test case. */
+	if (bigcache != 0 )
+		CuAssertTrue(ct, dbenv->set_cachesize(dbenv,
+		0, 128 * 1048576, 1) == 0);
 	CuAssertTrue(ct, dbenv->open(dbenv, TEST_ENV,
 	    DB_CREATE | DB_INIT_LOCK |DB_INIT_LOG |
 	    DB_INIT_MPOOL | DB_INIT_TXN, 0666) == 0);

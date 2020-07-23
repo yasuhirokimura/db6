@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -398,15 +398,33 @@ __lock_env_refresh(env)
 		    R_ADDR(reginfo, lr->locker_mem_off));
 	}
 
-	/* Detach from the region. */
-	ret = __env_region_detach(env, reginfo, 0);
-
-	/* Discard DB_LOCKTAB. */
-	__os_free(env, lt);
-	env->lk_handle = NULL;
+	ret = __lock_region_detach(env, lt);
 
 	return (ret);
 }
+
+/*
+ * __lock_region_detach --
+ *
+ * PUBLIC: int __lock_region_detach __P((ENV *, DB_LOCKTAB *));
+ */
+int
+__lock_region_detach(env, lt)
+	ENV *env;
+	DB_LOCKTAB *lt;
+{
+	int ret;
+
+	ret = 0;
+	if (lt != NULL) {
+		ret = __env_region_detach(env, &lt->reginfo, 0);
+		/* Discard DB_LOCKTAB. */
+		__os_free(env, lt);
+		env->lk_handle = NULL;
+	}
+	return (ret);
+}
+
 
 /*
  * __lock_region_mutex_count --

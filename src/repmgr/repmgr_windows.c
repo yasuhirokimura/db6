@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2005, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2005, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -826,7 +826,16 @@ handle_completion(env, conn)
 	/* Check both writing and reading. */
 	if (events.lNetworkEvents & FD_CLOSE) {
 		error = events.iErrorCode[FD_CLOSE_BIT];
-		goto report;
+
+		/* 
+		 * There could be data for reading when we see FD_CLOSE,
+		 * so we should try reading in this case.
+		 */
+		if (error != 0)
+			goto report;
+		else if ((ret =
+		    __repmgr_read_from_site(env, conn)) != 0)
+			goto err;
 	}
 
 	if (events.lNetworkEvents & FD_WRITE) {
@@ -834,7 +843,7 @@ handle_completion(env, conn)
 			error = events.iErrorCode[FD_WRITE_BIT];
 			goto report;
 		} else if ((ret =
-			__repmgr_write_some(env, conn)) != 0)
+		    __repmgr_write_some(env, conn)) != 0)
 			goto err;
 	}
 
@@ -843,7 +852,7 @@ handle_completion(env, conn)
 			error = events.iErrorCode[FD_READ_BIT];
 			goto report;
 		} else if ((ret =
-			__repmgr_read_from_site(env, conn)) != 0)
+		    __repmgr_read_from_site(env, conn)) != 0)
 			goto err;
 	}
 

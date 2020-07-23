@@ -224,7 +224,7 @@ HASH_VRFY_OBJS=\
 	hash_verify@o@
 HEAP_OBJS=\
 	heap@o@ heap_auto@o@ heap_backup@o@ heap_conv@o@ heap_method@o@ \
-	heap_open@o@ heap_rec@o@ heap_reclaim@o@ heap_stat@o@
+	heap_open@o@ heap_rec@o@ heap_reclaim@o@ heap_stat@o@ heap_upgrade@o@
 HEAP_VRFY_OBJS=\
 	heap_verify@o@
 QUEUE_OBJS=\
@@ -286,7 +286,7 @@ DTRACE_OBJS= @ADDITIONAL_OBJS@ @REPLACEMENT_OBJS@ @CRYPTO_OBJS@ \
 	os_alloc@o@ os_clock@o@ os_cpu@o@ os_ctime@o@ os_config@o@ \
 	os_dir@o@ os_errno@o@ os_fid@o@ os_flock@o@ os_fsync@o@ \
 	os_getenv@o@ os_handle@o@ os_map@o@ os_method@o@ os_mkdir@o@ \
-	os_open@o@ os_path@o@ os_pid@o@ os_rename@o@ os_root@o@ \
+	os_open@o@ os_path@o@ os_pid@o@ os_rename@o@ os_rmdir@o@ os_root@o@ \
 	os_rpath@o@ os_rw@o@ os_seek@o@ os_stack@o@ os_stat@o@ \
 	os_tmpdir@o@ os_truncate@o@ os_uid@o@ os_unlink@o@ os_yield@o@ \
 	partition@o@ seq_stat@o@ sequence@o@ sha1@o@ snprintf@o@ txn@o@ \
@@ -2132,6 +2132,8 @@ heap_stat@o@: $(srcdir)/heap/heap_stat.c
 	 $(CC) $(CFLAGS) $?
 heap_stub@o@: $(srcdir)/heap/heap_stub.c
 	 $(CC) $(CFLAGS) $?
+heap_upgrade@o@: $(srcdir)/heap/heap_upgrade.c
+	 $(CC) $(CFLAGS) $?
 heap_verify@o@: $(srcdir)/heap/heap_verify.c
 	 $(CC) $(CFLAGS) $?
 hmac@o@: $(srcdir)/hmac/hmac.c
@@ -2295,6 +2297,8 @@ os_qnx_fsync@o@: $(srcdir)/os_qnx/os_qnx_fsync.c
 os_qnx_open@o@: $(srcdir)/os_qnx/os_qnx_open.c
 	 $(CC) $(CFLAGS) $?
 os_rename@o@: $(srcdir)/@OSDIR@/os_rename.c
+	 $(CC) $(CFLAGS) $?
+os_rmdir@o@: $(srcdir)/@OSDIR@/os_rmdir.c
 	 $(CC) $(CFLAGS) $?
 os_root@o@: $(srcdir)/os/os_root.c
 	 $(CC) $(CFLAGS) $?

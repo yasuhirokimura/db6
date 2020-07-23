@@ -1906,10 +1906,13 @@ repmgr010
 repmgr011
 	repmgr two site strict majority test.
 
-	Start an appointed master and one client with 2 site strict
-	majority set. Shut down the master site, wait and verify that
-	the client site was not elected master. Start up master site
-	and verify that transactions are processed as expected.
+	Test each 2site_strict option's behavior for master loss and for
+	client site removal.  With 2site_strict=on, make sure remaining
+	site does not take over as master and that the client site can be
+	removed and rejoin the group.  With 2site_strict=off, make sure
+	remaining site does take over as master and make sure the deferred
+	election logic prevents the rejoining site from immediately taking
+	over as master before fully rejoining the repgroup. 
 
 	Run for btree only because access method shouldn't matter.
 

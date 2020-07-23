@@ -43,6 +43,9 @@ case `uname` in
 	CP_SEP=":"
 	LD_LIBRARY_PATH="`pwd`/$DB_LIB_DIR:$LD_LIBRARY_PATH"
 	export LD_LIBRARY_PATH
+	# Systems like Darwin use DYLD_LIBRARY_PATH.
+	DYLD_LIBRARY_PATH="`pwd`/$DB_LIB_DIR:$DYLD_LIBRARY_PATH"
+	export DYLD_LIBRARY_PATH
 	;;
 esac
 DB_JAR="$d/db.jar"

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2001, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2001, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -9,7 +9,6 @@
 #include "db_config.h"
 
 #include "db_int.h"
-#include "dbinc/blob.h"
 #include "dbinc/db_page.h"
 #include "dbinc/fop.h"
 #include "dbinc/mp.h"
@@ -294,8 +293,8 @@ __fop_write_file(env, txn,
 	DB_LSN lsn;
 	off_t cur_off;
 	int local_open, ret, t_ret;
-	size_t cur_size, nbytes;
-	u_int32_t lflags, lgbuf_size, lgsize, lgfile_size, off_hi, off_lo;
+	size_t cur_size, nbytes, tmp_size;
+	u_int32_t lflags, lgbuf_size, lgsize, lgfile_size;
 	char *real_name;
 	void *cur_ptr;
 
@@ -415,9 +414,7 @@ __fop_write_file(env, txn,
 				    old_data.size, &nbytes)) != 0)
 					goto err;
 			}
-			/* Turn the offset into two u_int32_t values. */
-log:			SET_LO_HI_VAR(off_lo, off_hi, cur_off)
-			cur_off += new_data.size;
+log:			tmp_size = new_data.size;
 			/*
 			 * No need to log the new data if this operation
 			 * cannot be redone from logs.
@@ -426,10 +423,10 @@ log:			SET_LO_HI_VAR(off_lo, off_hi, cur_off)
 				memset(&new_data, 0, sizeof(new_data));
 			if ((ret = __fop_write_file_log(
 			    env, txn, &lsn, flags, &namedbt, &dirdbt,
-			    (u_int32_t)appname, off_lo, off_hi,
+			    (u_int32_t)appname, (u_int64_t)cur_off,
 			    &old_data, &new_data, lflags)) != 0)
 				goto err;
-
+			cur_off += tmp_size;
 		}
 		/*
 		 * If not creating, we have to flush the logs so that they

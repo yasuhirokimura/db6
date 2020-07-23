@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -69,8 +69,8 @@ extern "C" {
 typedef struct __db_lockregion { /* SHARED */
 	db_mutex_t	mtx_region;	/* Region mutex. */
 
-	u_int32_t	need_dd;	/* flag for deadlock detector */
-	u_int32_t	detect;		/* run dd on every conflict */
+	u_int32_t	need_dd;	/* run dd on every conflict */
+	u_int32_t	detect;		/* flag for deadlock detector */
 	db_timespec	next_timeout;	/* next time to expire a lock */
 	db_mutex_t	mtx_dd;		/* mutex for lock object dd list. */
 	db_mutex_t	mtx_lockers;	/* mutex for locker allocation. */

@@ -1,16 +1,66 @@
 = Berkeley DB 6.0 Changelog =
 
+== Changes between 12.1.6.0.21 and 12.1.6.0.30  ==
+
+The database record format for databases containing BLOBs 
+has changed in 12.1.6.0.30.  Any database from version 12.1.6.0.21 
+or earlier that contains BLOBs must be upgraded before it can 
+be opened by this or any later version of Berkeley DB.  
+Databases without BLOBs do not require upgrading. 
+
+Correct a problem with DB_LOCKDOWN which would cause an mlock error ENOMEM
+on some operating systems. [#21379]
+
+Fixed an error which prevented encrypted databases from being upgraded 
+correctly.  [#22215]
+
+Fixed a bug where opening a partition database would fail if the range
+keys did not fit within a single database page. [#22280]
+
+Fixed several build failures for different configurations on QNX. [#22310]
+
+Databases containing BLOBs are now portable between machines of
+opposite endianness. [#22455]
+
+Fixed a bug that would prevent a client from rejoining the group
+when it had been deleted from the replication group earlier. [#22460]
+
+Update the db_dump and db_printlog utilities to use a -D option to control
+the amount of data printed. [#22485]
+
+Old log files will once again be automatically removed in the SQL API. [#22521]
+
+When a removed site rejoins a two-site replication group with
+DB_REPMGR_CONF_2SITE_STRICT turned off, defer its election so that the
+rejoining site does not prematurely elect itself master with only its own
+vote when the other site is already master. [#22683]
+
+DB_ENV->close() now detaches from the environment's mmap and shared memory
+regions even when a panic error (DB_RUNRECOVERY) has been returned. [#22805]
+
+Fixed a bug the would cause an environment panick when creating in-memory heap databases on certain endian machines. [#22929]
+
+Empty directories in the BLOB directory will now be deleted after executing a non-transaction protected remove operation on a BLOB enabled database. [#22935]
+
+All BLOB files will now be deleted when removing a BLOB enabled database that contains subdatabases. [#22938]
+
+Fixed a bug where a Replication Manager subordinate process could fail its
+automatic takeover as the replication process because it is unnecessarily
+waiting for acknowledgements from other sites before the connections to
+these sites are properly established. [#22998]
+
+Aborting the creation of a BLOB-enabled database will no longer leave
+various support files in the environment. [#23000]
+
+== Changes between 12.1.6.0.20 and 12.1.6.0.21  ==
+
+Updated the PHP API to work with PHP 5.4 and above. [#22594]
+
 == Changes between 12.1.6.0.19 and 12.1.6.0.20  ==
 
 Updated LICENSE file to reflect change to AGPL. [#22590]
 
-
-== Database or Log File On-Disk Format Changes ==
-
-The log file format changed in 12.1.6.0.
-
-
-== New Features ==
+== New Features in 6.0.19 ==
 
 Added an alternate storage format called blobs, which improves the read and 
 update performance of very large data items. Interface available through
@@ -58,15 +108,24 @@ Added support for localizing error messages in UTF-8 characters, and added a
 section about how to build localized library and an ICU example in 
 Programmer's Reference Guide. [#21280] 
 
+== Database or Log File On-Disk Format Changes ==
+
+The log file format changed between 12.1.5.3 and 12.1.6.0.
+
 == Database Environment Changes ==
 
 Redundant whitespaces are now ignored in DB_CONFIG lines pertaining to 
 directories. [#20158]
 
+
 Fixed bugs when attempting to open non-DB files as if they were databases.
 If encryption was active, an assertion failure would occur. If encryption was 
 not active, the error message "BDB0178 Encrypted database: no encryption flag" 
 would incorrectly imply that a password was required.  [#21408]
+
+DB_ENV->open(DB_REGISTER) now detects whether a panic has occurred in the
+environment. If so it returns DB_RUNRECOVERY. Prior to this, the panic state
+was not detected, which might have caused a hang. [#22805]
 
 == Concurrent Data Store Changes ==
 
@@ -355,7 +414,6 @@ Improved the randomness of the 20 byte unique fileid generator on Windows.
 Fixed a possible assertion failure in the XA Transaction Manager feature.
 [#22450]
 
-
 == Deprecated Features ==
 
 Tornado 2.0 is not supported, and VxWorks versions older than 6.9 are not
@@ -365,9 +423,6 @@ supported. [#21877]
 
 Prepared transactions may not remove databases. An error EINVAL message will be
 returned by TXN->prepare() if the transaction removed any databases.
-
-Databases containing BLOBs are not portable between machines of
-opposite endianness. 
 
 The latest version of the ADO.NET driver uses a new database connection 
 close function that does not clean up the database completely, leaving 

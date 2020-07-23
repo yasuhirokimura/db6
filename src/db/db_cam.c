@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2000, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2000, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -576,15 +576,14 @@ err:	return (ret);
  * Returns the blob id stored in the data record to which the cursor currently
  * points.  Returns EINVAL if the cursor does not point to a blob record.
  *
- * PUBLIC: int __dbc_get_blob_id __P((DBC *, uintmax_t *));
+ * PUBLIC: int __dbc_get_blob_id __P((DBC *, db_seq_t *));
  */
 int
 __dbc_get_blob_id(dbc, blob_id)
 	DBC *dbc;
-	uintmax_t *blob_id;
+	db_seq_t *blob_id;
 {
 	DBT key, data;
-	ENV *env;
 	BBLOB bl;
 	HBLOB hbl;
 	HEAPBLOBHDR bhdr;
@@ -595,7 +594,6 @@ __dbc_get_blob_id(dbc, blob_id)
 		return (EINVAL);
 	}
 
-	env = dbc->env;
 	ret = 0;
 	memset(&key, 0, sizeof(DBT));
 	memset(&data, 0, sizeof(DBT));
@@ -622,7 +620,7 @@ __dbc_get_blob_id(dbc, blob_id)
 			ret = EINVAL;
 			goto err;
 		}
-		GET_BLOB_ID(env, bl, *blob_id, ret);
+		*blob_id = (db_seq_t)bl.id;
 		break;
 	case DB_HEAP:
 		if (data.size != HEAPBLOBREC_SIZE) {
@@ -634,7 +632,7 @@ __dbc_get_blob_id(dbc, blob_id)
 			ret = EINVAL;
 			goto err;
 		}
-		GET_BLOB_ID(env, bhdr, *blob_id, ret);
+		*blob_id = (db_seq_t)bhdr.id;
 		break;
 	case DB_HASH:
 		if (data.size != HBLOB_SIZE) {
@@ -646,7 +644,7 @@ __dbc_get_blob_id(dbc, blob_id)
 			ret = EINVAL;
 			goto err;
 		}
-		GET_BLOB_ID(env, hbl, *blob_id, ret);
+		*blob_id = (db_seq_t)hbl.id;
 		break;
 	default:
 		ret = EINVAL;

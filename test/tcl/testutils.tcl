@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 1996, 2013 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -1237,24 +1237,30 @@ proc cleanup { dir env { quiet 0 } } {
 			# it fails, try again a few times.  HFS is found on
 			# Mac OS X machines only (although not all of them)
 			# so we can limit the extra delete attempts to that 
-			# platform.  
+			# platform.
 			#
 			# This bug has been compensated for in Tcl with a fix
 			# checked into Tcl 8.4.  When Berkeley DB requires
 			# Tcl 8.5, we can remove this while loop and replace
 			# it with a simple 'fileremove -f $remfiles'.
 			#
+			# QNX file system has the same issue, and using Tcl 8.5
+			# does not fix that.
+			#
 			set count 0
-			if { $is_osx_test } {
+			if { $is_osx_test || $is_qnx_test } {
 				while { [catch {eval fileremove \
 				    -f $remfiles}] == 1 && $count < 5 } {
 					incr count
 				}
+				# The final attempt to remove files should
+				# only be performed when previous try fails.
+				if {$count >= 5} {
+					eval fileremove -f $remfiles
+				}
+			} else {
+				eval fileremove -f $remfiles
 			}
-			# The final attempt to remove files can be for all
-			# OSes including Darwin.  Don't catch failures, we'd
-			# like to notice them.
-			eval fileremove -f $remfiles 
 		}
 
 		if { $is_je_test } {
@@ -4246,4 +4252,11 @@ proc my_isalive { pid } {
 		return 0
 	}
 	return 1
+}
+
+# Tests if a directory in the blob directory structure exists
+proc check_blob_sub_exists { blobdir blobsubdir expected } {
+	set blob_subdir $blobdir/$blobsubdir
+	error_check_good "blob subdir exists" \
+	    [file exists $blob_subdir] $expected
 }

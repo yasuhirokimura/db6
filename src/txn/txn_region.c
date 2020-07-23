@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -58,12 +58,30 @@ __txn_open(env)
 	env->tx_handle = mgr;
 	return (0);
 
-err:	env->tx_handle = NULL;
-	if (mgr->reginfo.addr != NULL)
-		(void)__env_region_detach(env, &mgr->reginfo, 0);
+err:	(void)__mutex_free(env, &mgr->mutex);
+	(void)__txn_region_detach(env, mgr);
 
-	(void)__mutex_free(env, &mgr->mutex);
-	__os_free(env, mgr);
+	return (ret);
+}
+
+/*
+ * __txn_region_detach --
+ *
+ * PUBLIC: int __txn_region_detach __P((ENV *, DB_TXNMGR *));
+ */
+int
+__txn_region_detach(env, mgr)
+	ENV *env;
+	DB_TXNMGR *mgr;
+{
+	int ret;
+
+	ret = 0;
+	if (mgr != NULL) {
+		ret = __env_region_detach(env, &mgr->reginfo, 0);
+		__os_free(env, mgr);
+		env->tx_handle = NULL;
+	}
 	return (ret);
 }
 

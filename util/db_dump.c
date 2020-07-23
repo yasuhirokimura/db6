@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -14,7 +14,7 @@
 
 #ifndef lint
 static const char copyright[] =
-    "Copyright (c) 1996, 2013 Oracle and/or its affiliates.  All rights reserved.\n";
+    "Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.\n";
 #endif
 
 int	 db_init __P((DB_ENV *, char *, int, u_int32_t, int *));
@@ -206,8 +206,6 @@ retry:	if ((ret = db_env_create(&dbenv, 0)) != 0) {
 
 	dbenv->set_errfile(dbenv, stderr);
 	dbenv->set_errpfx(dbenv, progname);
-	if (data_len != NULL)
-		(void)dbenv->set_data_len(dbenv, (u_int32_t)atol(data_len));
 
 	if (nflag) {
 		if ((ret = dbenv->set_flags(dbenv, DB_NOLOCKING, 1)) != 0) {
@@ -236,6 +234,16 @@ retry:	if ((ret = db_env_create(&dbenv, 0)) != 0) {
 	/* Initialize the environment. */
 	if (db_init(dbenv, home, rflag, cache, &private) != 0)
 		goto err;
+
+	/*
+	 * Set data_len after environment opens. We want the value passed
+	 * by -D takes priority.
+	 */
+	if (data_len != NULL && (ret = dbenv->set_data_len(dbenv,
+	    (u_int32_t)atol(data_len))) != 0) {
+		dbenv->err(dbenv, ret, "set_data_len");
+		goto err;
+	}
 
 	/* Create the DB object and open the file. */
 	if ((ret = db_create(&dbp, dbenv, 0)) != 0) {
@@ -529,11 +537,13 @@ show_subs(dbp)
 int
 usage()
 {
-	(void)fprintf(stderr, "usage: %s [-bklNprRV]\n\t%s\n",
+	(void)fprintf(stderr, "usage: %s [-bklNprRV]\n\t%s%s\n",
 	    progname,
-"[-b blob_dir] [-d ahr] [-f output] [-h home] [-P password] [-s database] db_file");
+	    "[-b blob_dir] [-d ahr] [-f output] [-h home] ",
+	    "[-P password] [-s database] db_file");
 	(void)fprintf(stderr, "usage: %s [-kNpV] %s\n",
-	    progname, "[-d ahr] [-f output] [-h home] -m database");
+	    progname,
+	    "[-d ahr] [-D data_len] [-f output] [-h home] -m database");
 	return (EXIT_FAILURE);
 }
 

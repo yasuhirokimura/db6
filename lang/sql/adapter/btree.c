@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2010, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2010, 2014 Oracle and/or its affiliates.  All rights reserved.
  */
 
 /*
@@ -1492,6 +1492,11 @@ static int btreePrepareEnvironment(Btree *p)
 #endif
 		if ((ret = pDbEnv->set_lg_max(pDbEnv, pBt->logFileSize)) != 0)
 			goto err;
+ #ifndef BDBSQL_OMIT_LOG_REMOVE
+		if ((ret = pDbEnv->log_set_config(pDbEnv,
+		    DB_LOG_AUTO_REMOVE, 1)) != 0)
+			goto err;
+#endif
 		/*
 		 * Set the directory where the database file will be created
 		 * to the parent of the environment directory.
@@ -1932,11 +1937,6 @@ int btreeOpenEnvironment(Btree *p, int needLock)
 		goto err;
 
 	if (creating) {
- #ifndef BDBSQL_OMIT_LOG_REMOVE
-		if ((ret = pDbEnv->log_set_config(pDbEnv,
-		    DB_LOG_AUTO_REMOVE, 1)) != 0)
-			goto err;
-#endif
 		/*
 		 * Update the fileid now that the file has been created.
 		 * Ignore error returns - the fileid isn't critical.
@@ -7620,7 +7620,11 @@ static int openPrivateEnvironment(Btree *p, int startFamily)
 	pDbEnv->app_private = pBt;
 	pDbEnv->set_errcall(pDbEnv, btreeHandleDbError);
 	pDbEnv->set_event_notify(pDbEnv, btreeEventNotification);
-
+#ifndef BDBSQL_OMIT_LOG_REMOVE
+	if ((ret = pDbEnv->log_set_config(pDbEnv,
+	    DB_LOG_AUTO_REMOVE, 1)) != 0)
+		goto err;
+#endif
 	ret = pDbEnv->open(pDbEnv, pBt->dir_name, pBt->env_oflags, 0);
 	/* There is no acceptable failure for this reopen. */
 	if (ret != 0)
@@ -7629,12 +7633,6 @@ static int openPrivateEnvironment(Btree *p, int startFamily)
 	pBt->env_opened = newEnv = 1;
 	assert(!p->connected);
 	p->connected = 1;
-
-#ifndef BDBSQL_OMIT_LOG_REMOVE
-	if ((ret = pDbEnv->log_set_config(pDbEnv,
-	    DB_LOG_AUTO_REMOVE, 1)) != 0)
-		goto err;
-#endif
 
 	if (!IS_ENV_READONLY(pBt) && p->vfsFlags & SQLITE_OPEN_CREATE)
 		pBt->db_oflags |= DB_CREATE;

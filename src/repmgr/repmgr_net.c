@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2005, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2005, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -1277,7 +1277,9 @@ __repmgr_bust_connection(env, conn)
 	} else			/* Subordinate connection. */
 		goto out;
 
-	if ((ret = __repmgr_schedule_connection_attempt(env, eid, FALSE)) != 0)
+	/* Defer connection attempt if rejoining 2SITE_STRICT=off repgroup. */
+	if (!db_rep->rejoin_pending &&
+	    (ret = __repmgr_schedule_connection_attempt(env, eid, FALSE)) != 0)
 		goto out;
 
 	/*
@@ -1317,6 +1319,13 @@ __repmgr_bust_connection(env, conn)
 					return (0);
 				}
 			}
+		}
+
+		/* Defer election if rejoining 2SITE_STRICT=off repgroup. */
+		if (db_rep->rejoin_pending) {
+			RPRINT(env, (env, DB_VERB_REPMGR_MISC,
+			    "Deferring election after rejoin rejection"));
+			goto out;
 		}
 
 		/*

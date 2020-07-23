@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -26,6 +26,8 @@ int db_teardown __P((const char *, const char *, FILE *, const char *));
 static int usage __P((void));
 
 const char *progname = "ex_env";		/* Program name. */
+int EnvFlags = 
+    DB_CREATE | DB_INIT_LOCK | DB_INIT_LOG | DB_INIT_MPOOL | DB_INIT_TXN;
 
 /*
  * An example of a program creating/configuring a Berkeley DB environment.
@@ -38,21 +40,24 @@ main(argc, argv)
 	extern char *optarg;
 	extern int optind;
 	const char *data_dir, *home;
-
 	int ch;
+
 	/*
 	 * All of the shared database files live in home, but
 	 * data files will live in data_dir.
 	 */
 	home = "TESTDIR";
 	data_dir = "data";
-	while ((ch = getopt(argc, argv, "h:d:")) != EOF)
+	while ((ch = getopt(argc, argv, "h:d:l")) != EOF)
 		switch (ch) {
 		case 'h':
 			home = optarg;
 			break;
 		case 'd':
 			data_dir = optarg;
+			break;
+		case 'l':
+			EnvFlags |= DB_LOCKDOWN;
 			break;
 		case '?':
 		default:
@@ -109,13 +114,11 @@ db_setup(home, data_dir, errfp, progname)
 	(void)dbenv->set_data_dir(dbenv, data_dir);
 
 	/* Open the environment with full transactional support. */
-	if ((ret = dbenv->open(dbenv, home,
-	    DB_CREATE | DB_INIT_LOCK | DB_INIT_LOG | DB_INIT_MPOOL |
-	    DB_INIT_TXN, 0644)) != 0) {
+	if ((ret = dbenv->open(dbenv, home, EnvFlags, 0644)) != 0) {
 		dbenv->err(dbenv, ret, "environment open: %s", home);
-		if (ret == ENOENT){
-			printf("Please check whether "
-			    "home dir \"%s\" existed.\n", home);
+		if (ret == ENOENT) {
+		    printf("Please check whether home dir \"%s\" existed.\n",
+		        home);
 		}
 		dbenv->close(dbenv, 0);
 		return (1);
@@ -134,11 +137,11 @@ db_setup(home, data_dir, errfp, progname)
 
 	/* Open a database with DB_BTREE access method. */
 	if ((ret = dbp->open(dbp, NULL, "exenv_db1.db", NULL,
-	    DB_BTREE, DB_CREATE,0644)) != 0) {
+	    DB_BTREE, DB_CREATE, 0644)) != 0) {
 		fprintf(stderr, "database open: %s\n", db_strerror(ret));
-		if (ret == ENOENT){
+		if (ret == ENOENT) {
 			printf("Please check whether data dir \"%s\" "
-			    "existed under \"%s\".\n", data_dir, home);
+			    "exists under \"%s\".\n", data_dir, home);
 		}
 		return (1);
 	}
@@ -187,6 +190,6 @@ static int
 usage()
 {
 	(void)fprintf(stderr,
-	    "usage: %s [-h home] [-d data_dir]\n", progname);
+	    "usage: %s [-l] [-h home] [-d data_dir]\n", progname);
 	return (EXIT_FAILURE);
 }

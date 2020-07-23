@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2010, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2010, 2014 Oracle and/or its affiliates.  All rights reserved.
  */
 
 #include "db_config.h"
@@ -94,6 +94,7 @@ __heap_metachk(dbp, name, hm)
 		M_32_SWAP(vers);
 	switch (vers) {
 	case 1:
+	case 2:
 		break;
 	default:
 		__db_errx(env,
@@ -119,10 +120,24 @@ __heap_metachk(dbp, name, hm)
 	dbp->pgsize = hm->dbmeta.pagesize;
 
 	dbp->blob_threshold = hm->blob_threshold;
-	GET_LO_HI(env,
-	    hm->blob_file_lo, hm->blob_file_hi, dbp->blob_file_id, ret);
+	GET_BLOB_FILE_ID(env, hm, dbp->blob_file_id, ret);
 	if (ret != 0)
 		return (ret);
+	/* Blob databases must be upgraded. */
+	if (vers == 1 && dbp->blob_file_id != 0) {
+	    __db_errx(env, DB_STR_A("1209",
+"%s: databases that support blobs must be upgraded.", "%s"),
+		    name);
+		return (EINVAL);
+	}
+#ifndef HAVE_64BIT_TYPES
+	if (dbp->blob_file_id != 0) {
+		__db_errx(env, DB_STR_A("1205",
+		    "%s: blobs require 64 integer compiler support.", "%s"),
+		    name);
+		return (EINVAL);
+	}
+#endif
 
 	/* Copy the file's ID. */
 	memcpy(dbp->fileid, hm->dbmeta.uid, DB_FILE_ID_LEN);
@@ -453,6 +468,5 @@ __heap_init_meta(dbp, meta, pgno, lsnp)
 	meta->nregions = 1;
 	meta->curregion = 1;
 	meta->blob_threshold = dbp->blob_threshold;
-	SET_LO_HI(
-	    meta, dbp->blob_file_id, HEAPMETA, blob_file_lo, blob_file_hi);
+	SET_BLOB_META_FILE_ID(meta, dbp->blob_file_id, HEAPMETA);
 }

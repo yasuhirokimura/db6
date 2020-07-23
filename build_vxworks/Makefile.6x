@@ -382,6 +382,8 @@ bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/heap/heap_reclaim.o  : $(BDB_RO
 	$(TRACE_FLAG)if [ ! -d "`dirname "$@"`" ]; then mkdir -p "`dirname "$@"`"; fi;echo "building $@"; $(TOOL_PATH)dcc $(DEBUGFLAGS_C-Compiler) $(CC_ARCH_SPEC) -W:c:,-Xclib-optim-off -Xansi -Xlocal-data-area-static-only -Xforce-declarations  -Xmake-dependency=0xd $(ADDED_CFLAGS) $(IDE_INCLUDES) $(ADDED_INCLUDES) -DCPU=$(CPU) -DTOOL_FAMILY=$(TOOL_FAMILY) -DTOOL=$(TOOL) -D_WRS_KERNEL   $(DEFINES) -o "$@" -c "$<"
 bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/heap/heap_stat.o  : $(BDB_ROOT)/src/heap/heap_stat.c
 	$(TRACE_FLAG)if [ ! -d "`dirname "$@"`" ]; then mkdir -p "`dirname "$@"`"; fi;echo "building $@"; $(TOOL_PATH)dcc $(DEBUGFLAGS_C-Compiler) $(CC_ARCH_SPEC) -W:c:,-Xclib-optim-off -Xansi -Xlocal-data-area-static-only -Xforce-declarations  -Xmake-dependency=0xd $(ADDED_CFLAGS) $(IDE_INCLUDES) $(ADDED_INCLUDES) -DCPU=$(CPU) -DTOOL_FAMILY=$(TOOL_FAMILY) -DTOOL=$(TOOL) -D_WRS_KERNEL   $(DEFINES) -o "$@" -c "$<"
+bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/heap/heap_upgrade.o  : $(BDB_ROOT)/src/heap/heap_upgrade.c
+	$(TRACE_FLAG)if [ ! -d "`dirname "$@"`" ]; then mkdir -p "`dirname "$@"`"; fi;echo "building $@"; $(TOOL_PATH)dcc $(DEBUGFLAGS_C-Compiler) $(CC_ARCH_SPEC) -W:c:,-Xclib-optim-off -Xansi -Xlocal-data-area-static-only -Xforce-declarations  -Xmake-dependency=0xd $(ADDED_CFLAGS) $(IDE_INCLUDES) $(ADDED_INCLUDES) -DCPU=$(CPU) -DTOOL_FAMILY=$(TOOL_FAMILY) -DTOOL=$(TOOL) -D_WRS_KERNEL   $(DEFINES) -o "$@" -c "$<"
 bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/heap/heap_verify.o  : $(BDB_ROOT)/src/heap/heap_verify.c
 	$(TRACE_FLAG)if [ ! -d "`dirname "$@"`" ]; then mkdir -p "`dirname "$@"`"; fi;echo "building $@"; $(TOOL_PATH)dcc $(DEBUGFLAGS_C-Compiler) $(CC_ARCH_SPEC) -W:c:,-Xclib-optim-off -Xansi -Xlocal-data-area-static-only -Xforce-declarations  -Xmake-dependency=0xd $(ADDED_CFLAGS) $(IDE_INCLUDES) $(ADDED_INCLUDES) -DCPU=$(CPU) -DTOOL_FAMILY=$(TOOL_FAMILY) -DTOOL=$(TOOL) -D_WRS_KERNEL   $(DEFINES) -o "$@" -c "$<"
 bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/hmac/hmac.o  : $(BDB_ROOT)/src/hmac/hmac.c
@@ -513,6 +515,8 @@ bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/os/os_path.o  : $(BDB_ROOT)/src
 bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/os/os_pid.o  : $(BDB_ROOT)/src/os/os_pid.c
 	$(TRACE_FLAG)if [ ! -d "`dirname "$@"`" ]; then mkdir -p "`dirname "$@"`"; fi;echo "building $@"; $(TOOL_PATH)dcc $(DEBUGFLAGS_C-Compiler) $(CC_ARCH_SPEC) -W:c:,-Xclib-optim-off -Xansi -Xlocal-data-area-static-only -Xforce-declarations  -Xmake-dependency=0xd $(ADDED_CFLAGS) $(IDE_INCLUDES) $(ADDED_INCLUDES) -DCPU=$(CPU) -DTOOL_FAMILY=$(TOOL_FAMILY) -DTOOL=$(TOOL) -D_WRS_KERNEL   $(DEFINES) -o "$@" -c "$<"
 bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/os/os_rename.o  : $(BDB_ROOT)/src/os/os_rename.c
+	$(TRACE_FLAG)if [ ! -d "`dirname "$@"`" ]; then mkdir -p "`dirname "$@"`"; fi;echo "building $@"; $(TOOL_PATH)dcc $(DEBUGFLAGS_C-Compiler) $(CC_ARCH_SPEC) -W:c:,-Xclib-optim-off -Xansi -Xlocal-data-area-static-only -Xforce-declarations  -Xmake-dependency=0xd $(ADDED_CFLAGS) $(IDE_INCLUDES) $(ADDED_INCLUDES) -DCPU=$(CPU) -DTOOL_FAMILY=$(TOOL_FAMILY) -DTOOL=$(TOOL) -D_WRS_KERNEL   $(DEFINES) -o "$@" -c "$<"
+bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/os/os_rmdir.o  : $(BDB_ROOT)/src/os/os_rmdir.c
 	$(TRACE_FLAG)if [ ! -d "`dirname "$@"`" ]; then mkdir -p "`dirname "$@"`"; fi;echo "building $@"; $(TOOL_PATH)dcc $(DEBUGFLAGS_C-Compiler) $(CC_ARCH_SPEC) -W:c:,-Xclib-optim-off -Xansi -Xlocal-data-area-static-only -Xforce-declarations  -Xmake-dependency=0xd $(ADDED_CFLAGS) $(IDE_INCLUDES) $(ADDED_INCLUDES) -DCPU=$(CPU) -DTOOL_FAMILY=$(TOOL_FAMILY) -DTOOL=$(TOOL) -D_WRS_KERNEL   $(DEFINES) -o "$@" -c "$<"
 bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/os/os_root.o  : $(BDB_ROOT)/src/os/os_root.c
 	$(TRACE_FLAG)if [ ! -d "`dirname "$@"`" ]; then mkdir -p "`dirname "$@"`"; fi;echo "building $@"; $(TOOL_PATH)dcc $(DEBUGFLAGS_C-Compiler) $(CC_ARCH_SPEC) -W:c:,-Xclib-optim-off -Xansi -Xlocal-data-area-static-only -Xforce-declarations  -Xmake-dependency=0xd $(ADDED_CFLAGS) $(IDE_INCLUDES) $(ADDED_INCLUDES) -DCPU=$(CPU) -DTOOL_FAMILY=$(TOOL_FAMILY) -DTOOL=$(TOOL) -D_WRS_KERNEL   $(DEFINES) -o "$@" -c "$<"
@@ -879,6 +883,7 @@ OBJECTS_bdbvxw = \
 	bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/heap/heap_rec.o \
 	bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/heap/heap_reclaim.o \
 	bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/heap/heap_stat.o \
+	bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/heap/heap_upgrade.o \
 	bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/heap/heap_verify.o \
 	bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/hmac/hmac.o \
 	bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/hmac/sha1.o \
@@ -945,6 +950,7 @@ OBJECTS_bdbvxw = \
 	bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/os/os_path.o \
 	bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/os/os_pid.o \
 	bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/os/os_rename.o \
+	bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/os/os_rmdir.o \
 	bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/os/os_root.o \
 	bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/os/os_rw.o \
 	bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/os/os_seek.o \
@@ -1205,6 +1211,7 @@ DEP_FILES := \
 	bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/heap/heap_rec.d \
 	bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/heap/heap_reclaim.d \
 	bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/heap/heap_stat.d \
+	bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/heap/heap_upgrade.d \
 	bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/heap/heap_verify.d \
 	bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/hmac/hmac.d \
 	bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/hmac/sha1.d \
@@ -1271,6 +1278,7 @@ DEP_FILES := \
 	bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/os/os_path.d \
 	bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/os/os_pid.d \
 	bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/os/os_rename.d \
+	bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/os/os_rmdir.d \
 	bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/os/os_root.d \
 	bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/os/os_rw.d \
 	bdbvxw/$(MODE_DIR)/Objects/$(BDB_OBJECT_DIR)/src/os/os_seek.d \

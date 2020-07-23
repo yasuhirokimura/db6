@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -213,6 +213,15 @@ __os_attach(env, infop, rp)
 	if (rp->max < rp->size)
 		rp->max = rp->size;
 	if (ret == 0 && F_ISSET(infop, REGION_CREATE)) {
+#ifdef HAVE_MLOCK
+		/*
+		 * When locking the region in memory extend it fully so that it
+		 * can all be mlock()'d now, and not later when paging could
+		 * interfere with the application. [#21379]
+		 */
+		if (F_ISSET(env, ENV_LOCKDOWN))
+			rp->size = rp->max;
+#endif
 		if (F_ISSET(dbenv, DB_ENV_REGION_INIT))
 			ret = __db_file_write(env, infop->fhp,
 			    rp->size / MEGABYTE, rp->size % MEGABYTE, 0x00);
@@ -264,7 +273,14 @@ __os_detach(env, infop, destroy)
 	DB_ASSERT(env, env != NULL && env->dbenv != NULL);
 	dbenv = env->dbenv;
 
+	/*
+	 * Don't use a region which is no longer valid, e.g., after the
+	 * env has been removed.
+	 */
 	rp = infop->rp;
+	if ((rp->id != 0 && rp->id != infop->id) ||
+	    rp->type <= INVALID_REGION_TYPE || rp->type > REGION_TYPE_MAX) 
+		return (EINVAL);
 
 	/* If the user replaced the unmap call, call through their interface. */
 	if (DB_GLOBAL(j_region_unmap) != NULL)

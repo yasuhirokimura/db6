@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
  */
 /*
  * Copyright (c) 1990, 1993, 1994, 1995, 1996
@@ -138,6 +138,7 @@ __bam_metachk(dbp, name, btm)
 		return (DB_OLD_VERSION);
 	case 8:
 	case 9:
+	case 10:
 		break;
 	default:
 		__db_errx(env, DB_STR_A("1009",
@@ -272,14 +273,27 @@ __bam_metachk(dbp, name, btm)
 	dbp->pgsize = btm->dbmeta.pagesize;
 
 	dbp->blob_threshold = btm->blob_threshold;
-	GET_LO_HI(env,
-	    btm->blob_file_lo, btm->blob_file_hi, dbp->blob_file_id, ret);
+	GET_BLOB_FILE_ID(env, btm, dbp->blob_file_id, ret);
 	if (ret != 0)
 		return (ret);
-	GET_LO_HI(env,
-	    btm->blob_sdb_lo, btm->blob_sdb_hi, dbp->blob_sdb_id, ret);
+	GET_BLOB_SDB_ID(env, btm, dbp->blob_sdb_id, ret);
 	if (ret != 0)
 		return (ret);
+	/* Blob databases must be upgraded. */
+	if (vers == 9 && (dbp->blob_file_id != 0 || dbp->blob_sdb_id != 0)) {
+	    __db_errx(env, DB_STR_A("1207",
+"%s: databases that support blobs must be upgraded.", "%s"),
+		    name);
+		return (EINVAL);
+	}
+#ifndef HAVE_64BIT_TYPES
+	if (dbp->blob_file_id != 0 || dbp->blob_sdb_id != 0) {
+		__db_errx(env, DB_STR_A("1199",
+		    "%s: blobs require 64 integer compiler support.", "%s"),
+		    name);
+		return (EINVAL);
+	}
+#endif
 
 	/* Copy the file's ID. */
 	memcpy(dbp->fileid, btm->dbmeta.uid, DB_FILE_ID_LEN);
@@ -455,8 +469,8 @@ __bam_init_meta(dbp, meta, pgno, lsnp)
 	meta->re_len = t->re_len;
 	meta->re_pad = (u_int32_t)t->re_pad;
 	meta->blob_threshold = dbp->blob_threshold;
-	SET_LO_HI(meta, dbp->blob_file_id, BTMETA, blob_file_lo, blob_file_hi);
-	SET_LO_HI(meta, dbp->blob_sdb_id, BTMETA, blob_sdb_lo, blob_sdb_hi);
+	SET_BLOB_META_FILE_ID(meta, dbp->blob_file_id, BTMETA);
+	SET_BLOB_META_SDB_ID(meta, dbp->blob_sdb_id, BTMETA);
 
 #ifdef HAVE_PARTITION
 	if ((part = dbp->p_internal) != NULL) {

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2013, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -35,8 +35,8 @@ extern "C" {
 
 /*
  * Combines two unsigned 32 bit integers into a 64 bit integer.
- * Blob file ids, and blob database file ids and sub database ids are
- * 64 bit integers, but have to be stored on database pages that must
+ * Blob database file ids and sub database ids are 64 bit integers,
+ * but have to be stored on database metadata pages that must
  * be readable on 32 bit only compilers.  So the ids are split into
  * two 32 bit integers, and combined when needed.
  */
@@ -56,6 +56,12 @@ extern "C" {
 	}								\
 } while (0);
 
+#define GET_BLOB_FILE_ID(e, p, o, ret)					\
+	GET_LO_HI(e, (p)->blob_file_lo, (p)->blob_file_hi, o, ret);
+
+#define GET_BLOB_SDB_ID(e, p, o, ret)					\
+	GET_LO_HI(e, (p)->blob_sdb_lo, (p)->blob_sdb_hi, o, ret);
+
 /* Splits a 64 bit integer into two unsigned 32 bit integers. */
 #define SET_LO_HI(p, v, type, field_lo, field_hi)	do {		\
 	u_int32_t tmp;							\
@@ -72,14 +78,11 @@ extern "C" {
 	    &tmp, sizeof(u_int32_t));					\
 } while (0);
 
-#define SET_LO_HI_VAR(lo, hi, v)	do {				\
-	if (sizeof((v)) == 8)						\
-		(hi) = (u_int32_t)((v) >> 32);				\
-	else								\
-		(hi) = 0;						\
-	(lo) = (u_int32_t)(v);						\
-} while (0);
+#define SET_BLOB_META_FILE_ID(p, v, type)					\
+	SET_LO_HI(p, v, type, blob_file_lo, blob_file_hi);
 
+#define SET_BLOB_META_SDB_ID(p, v, type)					\
+	SET_LO_HI(p, v, type, blob_sdb_lo, blob_sdb_hi);
 
 #if defined(__cplusplus)
 }

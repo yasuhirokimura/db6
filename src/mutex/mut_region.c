@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -124,13 +124,32 @@ __mutex_open(env, create_ok)
 
 	return (0);
 
-err:	env->mutex_handle = NULL;
-	if (mtxmgr->reginfo.addr != NULL)
-		(void)__env_region_detach(env, &mtxmgr->reginfo, 0);
-
-	__os_free(env, mtxmgr);
+err:	__mutex_region_detach(env, mtxmgr);
 	return (ret);
 }
+
+/*
+ * __mutex_region_detach --
+ *
+ * PUBLIC: int __mutex_region_detach __P((ENV *, DB_MUTEXMGR *));
+ */
+int
+__mutex_region_detach(env, mtxmgr)
+	ENV *env;
+	DB_MUTEXMGR *mtxmgr;
+{
+	int ret;
+
+	ret = 0;
+	if (mtxmgr != NULL) {
+		if (mtxmgr->reginfo.addr != NULL)
+			ret = __env_region_detach(env, &mtxmgr->reginfo, 0);
+		__os_free(env, mtxmgr);
+		env->mutex_handle = NULL;
+	}
+	return (ret);
+}
+
 
 /*
  * __mutex_region_init --

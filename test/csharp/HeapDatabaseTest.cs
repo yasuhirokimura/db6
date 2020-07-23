@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2011, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2011, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 using System;
@@ -96,7 +96,8 @@ namespace CsharpAPITest {
 
 	[Test]
 	public void TestBlob() {
-
+		testName = "TestBlob";
+		SetUpTest(false);
 		// Test opening the blob database without environment.
 		TestBlobHeapDatabase(0, null, 6, null, false);
 
@@ -135,11 +136,10 @@ namespace CsharpAPITest {
 		if (env_threshold == 0 && db_threshold == 0)
 			return;
 
-		testName = "TestBlob";
-		SetUpTest(true);
 		string heapDBName =
 		    testHome + "/" + testName + ".db";
 
+		Configuration.ClearDir(testHome);
 		HeapDatabaseConfig cfg = new HeapDatabaseConfig();
 		cfg.Creation = CreatePolicy.ALWAYS;
 		string blrootdir = "__db_bl";
@@ -607,7 +607,7 @@ namespace CsharpAPITest {
             Assert.AreNotEqual(0, stats.MagicNumber);
             Assert.AreEqual(4096, stats.PageSize);
             Assert.AreNotEqual(0, stats.RegionSize);
-            Assert.AreNotEqual(0, stats.Version);
+            Assert.AreEqual(2, stats.Version);
         }
 
         public void ConfirmStatsPart2Case1(HeapStats stats) {

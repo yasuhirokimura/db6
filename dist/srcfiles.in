@@ -204,6 +204,7 @@ src/heap/heap_rec.c						vx
 src/heap/heap_reclaim.c						vx
 src/heap/heap_stat.c						vx
 src/heap/heap_stub.c						android vxsmall
+src/heap/heap_upgrade.c						vx
 src/heap/heap_verify.c						vx
 src/hmac/hmac.c							android vx vxsmall 
 src/hmac/sha1.c							android vx vxsmall 
@@ -276,6 +277,7 @@ src/os/os_open.c						android vx vxsmall
 src/os/os_path.c						android vx vxsmall 
 src/os/os_pid.c							android vx vxsmall 
 src/os/os_rename.c						android vx vxsmall 
+src/os/os_rmdir.c						android vx vxsmall 
 src/os/os_root.c						android vx vxsmall 
 src/os/os_rpath.c						android 
 src/os/os_rw.c							android vx vxsmall 

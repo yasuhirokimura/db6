@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2007, 2013 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2007, 2014 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -83,9 +83,9 @@ proc repmgr012_sub { method niter tnum largs } {
 	# Timeouts are in microseconds, heartbeat monitor should be
 	# longer than heartbeat_send.
 	# If we have a machine that's really slow, like our AIX hosts
-	# are, double the times. 
+	# and QNX hosts are, double the times. 
 	puts "\tRepmgr$tnum.e: Set heartbeat timeouts."
-	if { $is_aix_test } {
+	if { $is_aix_test || $is_qnx_test } {
 		$masterenv repmgr -timeout {heartbeat_send 200000}
 		$clientenv repmgr -timeout {heartbeat_monitor 360000}
 	} else {

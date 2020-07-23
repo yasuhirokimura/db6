@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
  */
 /*
  * Copyright (c) 1990, 1993, 1994
@@ -658,7 +658,7 @@ __ham_bulk(dbc, data, flags)
 	db_pgno_t pgno;
 	off_t blob_size;
 	int32_t *endp, *offp, *saveoff;
-	uintmax_t blob_id;
+	db_seq_t blob_id;
 	u_int32_t key_off, key_size, pagesize, size, space;
 	u_int8_t *dbuf, *dp, *hk, *np, *tmp;
 	int is_dup, is_key;
@@ -997,9 +997,7 @@ get_space:
 				goto back_up;
 
 			memcpy(&hblob, hk, HBLOB_SIZE);
-			GET_BLOB_ID(dbp->env, hblob, blob_id, ret);
-			if (ret != 0)
-				return (ret);
+			blob_id = (db_seq_t)hblob.id;
 			GET_BLOB_SIZE(dbc->env, hblob, blob_size, ret);
 			if (ret != 0)
 				return (ret);
@@ -1715,7 +1713,7 @@ __ham_overwrite(dbc, nval, flags)
 	void *newrec;
 	u_int8_t *hk, *p;
 	u_int32_t len, nondup_size;
-	uintmax_t blob_id, new_blob_id;
+	db_seq_t blob_id, new_blob_id;
 	db_indx_t newsize;
 	off_t blob_size;
 	int ret;
@@ -1941,9 +1939,7 @@ __ham_overwrite(dbc, nval, flags)
 			* That means that we can skip the replpair
 			* call.
 			*/
-			GET_BLOB_ID(env, hblob, blob_id, ret);
-			if (ret != 0)
-				return (ret);
+			blob_id = (db_seq_t)hblob.id;
 			GET_BLOB_SIZE(env, hblob, blob_size, ret);
 			if (ret != 0)
 				return (ret);

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2010, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2010, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -39,7 +39,7 @@ __heap_vrfy_meta(dbp, vdp, meta, pgno, flags)
 	VRFY_PAGEINFO *pip;
 	db_pgno_t last_pgno, max_pgno, npgs;
 	int isbad, ret;
-	uintmax_t blob_id;
+	db_seq_t blob_id;
 
 	if ((ret = __db_vrfy_getpageinfo(vdp, pgno, &pip)) != 0)
 		return (ret);
@@ -103,13 +103,30 @@ __heap_vrfy_meta(dbp, vdp, meta, pgno, flags)
 		h->bytes = meta->bytes;
 	}
 
-	GET_LO_HI(dbp->env,
-	    meta->blob_file_lo, meta->blob_file_hi, blob_id, ret);
+/*
+ * Where 64-bit integer support is not available,
+ * return an error if the file has any blobs.
+ */
+#ifdef HAVE_64BIT_TYPES
+	GET_BLOB_FILE_ID(dbp->env, meta, blob_id, ret);
 	if (ret != 0) {
 		isbad = 1;
 		EPRINT((dbp->env, DB_STR_A("1173",
 		    "Page %lu: blob file id overflow.", "%lu"), (u_long)pgno));
 	}
+#else /* HAVE_64BIT_TYPES */
+	/*
+	 * db_seq_t is an int on systems that do not have 64 integers types, so
+	 * this will compile and run.
+	 */
+	GET_BLOB_FILE_ID(env, meta, blob_id, ret);
+	if (ret != 0 || blob_id != 0) {
+		isbad = 1;
+		EPRINT((env, DB_STR_A("1206",
+		    "Page %lu: blobs require 64 integer compiler support.",
+		    "%lu"), (u_long)pgno));
+	}
+#endif
 
 err:	if (LF_ISSET(DB_SALVAGE))
 		ret = __db_salvage_markdone(vdp, pgno);
@@ -136,7 +153,7 @@ __heap_vrfy(dbp, vdp, h, pgno, flags)
 	HEAPHDR *hdr;
 	int cnt, i, j, ret;
 	off_t blob_size;
-	uintmax_t blob_id, file_id;
+	db_seq_t blob_id, file_id;
 	db_indx_t *offsets, *offtbl, end;
 
 	if ((ret = __db_vrfy_datapage(dbp, vdp, h, pgno, flags)) != 0)
@@ -185,31 +202,16 @@ __heap_vrfy(dbp, vdp, h, pgno, flags)
 			 * file size as is stored in the database record.
 			 */
 			memcpy(&bhdr, hdr, sizeof(HEAPBLOBHDR));
-			GET_BLOB_ID(dbp->env, bhdr, blob_id, ret);
-			if (ret != 0) {
-				EPRINT((dbp->env, DB_STR_A("1174",
-				    "Page %lu: blob id value has overflowed",
-				    "%lu"), (u_long)pgno));
-				ret = DB_VERIFY_BAD;
-				goto err;
-			}
+			blob_id = bhdr.id;
 			GET_BLOB_SIZE(dbp->env, bhdr, blob_size, ret);
-			if (ret != 0) {
+			if (ret != 0 || blob_size < 0) {
 				EPRINT((dbp->env, DB_STR_A("1175",
 			"Page %lu: blob file size value has overflowed",
 				    "%lu"), (u_long)pgno));
 				ret = DB_VERIFY_BAD;
 				goto err;
 			}
-			GET_LO_HI(dbp->env,
-			    bhdr.file_id_lo, bhdr.file_id_hi, file_id, ret);
-			if (ret != 0) {
-				EPRINT((dbp->env, DB_STR_A("1176",
-		"Page %lu: blob file id value has overflowed at item %lu",
-				    "%lu %lu"), (u_long)pgno, (u_long)i));
-				ret = DB_VERIFY_BAD;
-				goto err;
-			}
+			file_id = bhdr.file_id;
 			if (file_id == 0) {
 				EPRINT((dbp->env, DB_STR_A("1177",
 			"Page %lu: invalid blob dir id %llu at item %lu",
@@ -397,7 +399,7 @@ __heap_salvage(dbp, vdp, pgno, h, handle, callback, flags)
 	off_t blob_size, blob_offset, remaining;
 	u_int32_t blob_buf_size;
 	u_int8_t *blob_buf;
-	uintmax_t blob_id, file_id;
+	db_seq_t blob_id, file_id;
 
 	COMPQUIET(flags, 0);
 	memset(&dbt, 0, sizeof(DBT));
@@ -432,16 +434,11 @@ __heap_salvage(dbp, vdp, pgno, h, handle, callback, flags)
 			__heap_safe_gsplit(dbp, vdp, h, i, &dbt);
 		} else if (F_ISSET(hdr, HEAP_RECBLOB)) {
 			memcpy(&bhdr, hdr, HEAPBLOBREC_SIZE);
-			GET_BLOB_ID(env, bhdr, blob_id, ret);
-			if (ret != 0)
-				goto err;
+			blob_id = bhdr.id;
 			GET_BLOB_SIZE(env, bhdr, blob_size, ret);
-			if (ret != 0)
+			if (ret != 0 || blob_size < 0)
 				goto err;
-			GET_LO_HI(env,
-			    bhdr.file_id_lo, bhdr.file_id_hi, file_id, ret);
-			if (ret != 0)
-				goto err;
+			file_id = bhdr.file_id;
 			/* Read the blob, in pieces if it is too large.*/
 			blob_offset = 0;
 			if (blob_size > MEGABYTE) {

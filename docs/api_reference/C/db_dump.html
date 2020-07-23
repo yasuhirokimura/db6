@@ -38,8 +38,8 @@
           </div>
         </div>
       </div>
-      <pre class="programlisting">db_dump [-klNpRrV] [-d ahr]
-	[-f output] [-h home] [-P password] [-s database] file
+      <pre class="programlisting">db_dump [-klNpRrV] [-b blob_dir] [-d ahr]
+    [-f output] [-h home] [-P password] [-s database] [-D bytes] file
 
 db_dump [-kNpV] [-d ahr] [-f output] [-h home] -m database
 
@@ -62,6 +62,15 @@ db_dump185 [-p] [-f output] file  </pre>
         <ul type="disc">
           <li>
             <p>
+                 <span class="bold"><strong>-b</strong></span>
+            </p>
+            <p>
+                Specifies the directory where BLOB data is stored for the
+                database you are dumping.
+            </p>
+          </li>
+          <li>
+            <p>
               <span class="bold"><strong>-d</strong></span>
             </p>
             <p>
@@ -75,7 +84,8 @@ db_dump185 [-p] [-f output] file  </pre>
                         <span class="bold"><strong>a</strong></span>
                     </p>
                   <p>
-                        Display all information.
+                        Display all information. See also the 
+                        <span class="bold"><strong>-D</strong></span> option.
                     </p>
                 </li>
                 <li>
@@ -101,6 +111,19 @@ db_dump185 [-p] [-f output] file  </pre>
                  <span class="bold"><strong>The output format of the <span class="bold"><strong>-d</strong></span> option is not standard and may change,
                  without notice, between releases of the Berkeley DB
                  library.</strong></span>
+            </p>
+          </li>
+          <li>
+            <p>
+                 <span class="bold"><strong>-D</strong></span>
+            </p>
+            <p>
+                Specifies the maximum number of bytes to dump for each
+                key/data item found in the specified database. This option is
+                only valid when
+                <span class="bold"><strong>-da</strong></span> is also specified.
+                This option overrides the value set for the "set_data_len"
+                parameter in your DB_CONFIG file, if any.
             </p>
           </li>
           <li>
@@ -313,7 +336,7 @@ db_dump185 [-p] [-f output] file  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp5047120"></a>Environment Variables</h3>
+              <h3 class="title"><a id="idp55368384"></a>Environment Variables</h3>
             </div>
           </div>
         </div>
@@ -321,7 +344,7 @@ db_dump185 [-p] [-f output] file  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp5047432"></a>DB_HOME</h4>
+                <h4 class="title"><a id="idp55368696"></a>DB_HOME</h4>
               </div>
             </div>
           </div>

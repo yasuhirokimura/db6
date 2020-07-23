@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
  */
 /*
  * Copyright (c) 1990, 1993, 1994, 1995, 1996
@@ -75,7 +75,7 @@ __bam_cmp(dbc, dbt, h, indx, func, cmpp, locp)
 	DBT pg_dbt;
 	off_t blob_size;
 	int ret;
-	uintmax_t blob_id;
+	db_seq_t blob_id;
 
 	dbp = dbc->dbp;
 	ret = 0;
@@ -118,9 +118,7 @@ __bam_cmp(dbc, dbt, h, indx, func, cmpp, locp)
 				pg_dbt.size = UINT32_MAX;
 			else
 				pg_dbt.size = (u_int32_t)blob_size;
-			GET_BLOB_ID(dbc->env, bl, blob_id, ret);
-			if (ret != 0)
-				return (ret);
+			blob_id = (db_seq_t)bl.id;
 			pg_dbt.flags = DB_DBT_USERMEM;
 			if ((ret = __os_malloc(
 			    dbc->env, pg_dbt.size, &pg_dbt.data)) != 0)

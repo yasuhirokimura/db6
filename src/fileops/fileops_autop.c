@@ -95,6 +95,23 @@ __fop_write_print(env, dbtp, lsnp, notused2, info)
 }
 
 /*
+ * PUBLIC: int __fop_write_file_60_print __P((ENV *, DBT *, DB_LSN *,
+ * PUBLIC:     db_recops, void *));
+ */
+int
+__fop_write_file_60_print(env, dbtp, lsnp, notused2, info)
+	ENV *env;
+	DBT *dbtp;
+	DB_LSN *lsnp;
+	db_recops notused2;
+	void *info;
+{
+	COMPQUIET(notused2, DB_TXN_PRINT);
+
+	return (__log_print_record(env, dbtp, lsnp, "__fop_write_file_60", __fop_write_file_60_desc, info));
+}
+
+/*
  * PUBLIC: int __fop_write_file_print __P((ENV *, DBT *, DB_LSN *,
  * PUBLIC:     db_recops, void *));
  */

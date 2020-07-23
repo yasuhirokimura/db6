@@ -506,6 +506,8 @@
 #define	__bam_30_btreemeta __bam_30_btreemeta@DB_VERSION_UNIQUE_NAME@
 #define	__bam_31_btreemeta __bam_31_btreemeta@DB_VERSION_UNIQUE_NAME@
 #define	__bam_31_lbtree __bam_31_lbtree@DB_VERSION_UNIQUE_NAME@
+#define	__bam_60_btreemeta __bam_60_btreemeta@DB_VERSION_UNIQUE_NAME@
+#define	__bam_60_lbtree __bam_60_lbtree@DB_VERSION_UNIQUE_NAME@
 #define	__bam_vrfy_meta __bam_vrfy_meta@DB_VERSION_UNIQUE_NAME@
 #define	__ram_vrfy_leaf __ram_vrfy_leaf@DB_VERSION_UNIQUE_NAME@
 #define	__bam_vrfy __bam_vrfy@DB_VERSION_UNIQUE_NAME@
@@ -855,6 +857,7 @@
 #define	__env_ref_increment __env_ref_increment@DB_VERSION_UNIQUE_NAME@
 #define	__env_ref_decrement __env_ref_decrement@DB_VERSION_UNIQUE_NAME@
 #define	__env_ref_get __env_ref_get@DB_VERSION_UNIQUE_NAME@
+#define	__env_region_cleanup __env_region_cleanup@DB_VERSION_UNIQUE_NAME@
 #define	__env_detach __env_detach@DB_VERSION_UNIQUE_NAME@
 #define	__env_remove_env __env_remove_env@DB_VERSION_UNIQUE_NAME@
 #define	__env_region_attach __env_region_attach@DB_VERSION_UNIQUE_NAME@
@@ -926,6 +929,7 @@
 #define	__fop_remove_desc __fop_remove_desc@DB_VERSION_UNIQUE_NAME@
 #define	__fop_write_42_desc __fop_write_42_desc@DB_VERSION_UNIQUE_NAME@
 #define	__fop_write_desc __fop_write_desc@DB_VERSION_UNIQUE_NAME@
+#define	__fop_write_file_60_desc __fop_write_file_60_desc@DB_VERSION_UNIQUE_NAME@
 #define	__fop_write_file_desc __fop_write_file_desc@DB_VERSION_UNIQUE_NAME@
 #define	__fop_rename_42_desc __fop_rename_42_desc@DB_VERSION_UNIQUE_NAME@
 #define	__fop_rename_noundo_46_desc __fop_rename_noundo_46_desc@DB_VERSION_UNIQUE_NAME@
@@ -938,6 +942,7 @@
 #define	__fop_remove_print __fop_remove_print@DB_VERSION_UNIQUE_NAME@
 #define	__fop_write_42_print __fop_write_42_print@DB_VERSION_UNIQUE_NAME@
 #define	__fop_write_print __fop_write_print@DB_VERSION_UNIQUE_NAME@
+#define	__fop_write_file_60_print __fop_write_file_60_print@DB_VERSION_UNIQUE_NAME@
 #define	__fop_write_file_print __fop_write_file_print@DB_VERSION_UNIQUE_NAME@
 #define	__fop_rename_42_print __fop_rename_42_print@DB_VERSION_UNIQUE_NAME@
 #define	__fop_rename_print __fop_rename_print@DB_VERSION_UNIQUE_NAME@
@@ -953,6 +958,7 @@
 #define	__fop_remove_recover __fop_remove_recover@DB_VERSION_UNIQUE_NAME@
 #define	__fop_write_recover __fop_write_recover@DB_VERSION_UNIQUE_NAME@
 #define	__fop_write_file_recover __fop_write_file_recover@DB_VERSION_UNIQUE_NAME@
+#define	__fop_write_file_60_recover __fop_write_file_60_recover@DB_VERSION_UNIQUE_NAME@
 #define	__fop_write_42_recover __fop_write_42_recover@DB_VERSION_UNIQUE_NAME@
 #define	__fop_write_file_recover __fop_write_file_recover@DB_VERSION_UNIQUE_NAME@
 #define	__fop_rename_recover __fop_rename_recover@DB_VERSION_UNIQUE_NAME@
@@ -1092,6 +1098,8 @@
 #define	__ham_31_hash __ham_31_hash@DB_VERSION_UNIQUE_NAME@
 #define	__ham_46_hashmeta __ham_46_hashmeta@DB_VERSION_UNIQUE_NAME@
 #define	__ham_46_hash __ham_46_hash@DB_VERSION_UNIQUE_NAME@
+#define	__ham_60_hashmeta __ham_60_hashmeta@DB_VERSION_UNIQUE_NAME@
+#define	__ham_60_hash __ham_60_hash@DB_VERSION_UNIQUE_NAME@
 #define	__ham_vrfy_meta __ham_vrfy_meta@DB_VERSION_UNIQUE_NAME@
 #define	__ham_vrfy __ham_vrfy@DB_VERSION_UNIQUE_NAME@
 #define	__ham_vrfy_structure __ham_vrfy_structure@DB_VERSION_UNIQUE_NAME@
@@ -1145,6 +1153,8 @@
 #define	__heap_stat_callback __heap_stat_callback@DB_VERSION_UNIQUE_NAME@
 #define	__heap_traverse __heap_traverse@DB_VERSION_UNIQUE_NAME@
 #define	__db_no_heap_am __db_no_heap_am@DB_VERSION_UNIQUE_NAME@
+#define	__heap_60_heapmeta __heap_60_heapmeta@DB_VERSION_UNIQUE_NAME@
+#define	__heap_60_heap __heap_60_heap@DB_VERSION_UNIQUE_NAME@
 #define	__heap_vrfy_meta __heap_vrfy_meta@DB_VERSION_UNIQUE_NAME@
 #define	__heap_vrfy __heap_vrfy@DB_VERSION_UNIQUE_NAME@
 #define	__heap_vrfy_structure __heap_vrfy_structure@DB_VERSION_UNIQUE_NAME@
@@ -1209,6 +1219,7 @@
 #define	__lock_set_env_timeout __lock_set_env_timeout@DB_VERSION_UNIQUE_NAME@
 #define	__lock_open __lock_open@DB_VERSION_UNIQUE_NAME@
 #define	__lock_env_refresh __lock_env_refresh@DB_VERSION_UNIQUE_NAME@
+#define	__lock_region_detach __lock_region_detach@DB_VERSION_UNIQUE_NAME@
 #define	__lock_region_mutex_count __lock_region_mutex_count@DB_VERSION_UNIQUE_NAME@
 #define	__lock_region_mutex_max __lock_region_mutex_max@DB_VERSION_UNIQUE_NAME@
 #define	__lock_region_max __lock_region_max@DB_VERSION_UNIQUE_NAME@
@@ -1224,6 +1235,7 @@
 #define	__lock_lhash __lock_lhash@DB_VERSION_UNIQUE_NAME@
 #define	__lock_nomem __lock_nomem@DB_VERSION_UNIQUE_NAME@
 #define	__log_open __log_open@DB_VERSION_UNIQUE_NAME@
+#define	__log_region_detach __log_region_detach@DB_VERSION_UNIQUE_NAME@
 #define	__log_find __log_find@DB_VERSION_UNIQUE_NAME@
 #define	__log_valid __log_valid@DB_VERSION_UNIQUE_NAME@
 #define	__log_env_refresh __log_env_refresh@DB_VERSION_UNIQUE_NAME@
@@ -1351,6 +1363,7 @@
 #define	__fop_remove_verify __fop_remove_verify@DB_VERSION_UNIQUE_NAME@
 #define	__fop_write_42_verify __fop_write_42_verify@DB_VERSION_UNIQUE_NAME@
 #define	__fop_write_verify __fop_write_verify@DB_VERSION_UNIQUE_NAME@
+#define	__fop_write_file_60_verify __fop_write_file_60_verify@DB_VERSION_UNIQUE_NAME@
 #define	__fop_write_file_verify __fop_write_file_verify@DB_VERSION_UNIQUE_NAME@
 #define	__fop_rename_42_verify __fop_rename_42_verify@DB_VERSION_UNIQUE_NAME@
 #define	__fop_rename_verify __fop_rename_verify@DB_VERSION_UNIQUE_NAME@
@@ -1492,6 +1505,7 @@
 #define	__memp_bh_freeze __memp_bh_freeze@DB_VERSION_UNIQUE_NAME@
 #define	__memp_bh_thaw __memp_bh_thaw@DB_VERSION_UNIQUE_NAME@
 #define	__memp_open __memp_open@DB_VERSION_UNIQUE_NAME@
+#define	__memp_region_detach __memp_region_detach@DB_VERSION_UNIQUE_NAME@
 #define	__memp_init __memp_init@DB_VERSION_UNIQUE_NAME@
 #define	__memp_max_regions __memp_max_regions@DB_VERSION_UNIQUE_NAME@
 #define	__memp_region_mutex_count __memp_region_mutex_count@DB_VERSION_UNIQUE_NAME@
@@ -1564,6 +1578,7 @@
 #define	__db_pthread_mutex_unlock __db_pthread_mutex_unlock@DB_VERSION_UNIQUE_NAME@
 #define	__db_pthread_mutex_destroy __db_pthread_mutex_destroy@DB_VERSION_UNIQUE_NAME@
 #define	__mutex_open __mutex_open@DB_VERSION_UNIQUE_NAME@
+#define	__mutex_region_detach __mutex_region_detach@DB_VERSION_UNIQUE_NAME@
 #define	__mutex_env_refresh __mutex_env_refresh@DB_VERSION_UNIQUE_NAME@
 #define	__mutex_resource_return __mutex_resource_return@DB_VERSION_UNIQUE_NAME@
 #define	__mutex_stat_pp __mutex_stat_pp@DB_VERSION_UNIQUE_NAME@
@@ -1643,6 +1658,7 @@
 #define	__os_concat_path __os_concat_path@DB_VERSION_UNIQUE_NAME@
 #define	__os_id __os_id@DB_VERSION_UNIQUE_NAME@
 #define	__os_rename __os_rename@DB_VERSION_UNIQUE_NAME@
+#define	__os_rmdir __os_rmdir@DB_VERSION_UNIQUE_NAME@
 #define	__os_isroot __os_isroot@DB_VERSION_UNIQUE_NAME@
 #define	__db_rpath __db_rpath@DB_VERSION_UNIQUE_NAME@
 #define	__os_io __os_io@DB_VERSION_UNIQUE_NAME@
@@ -2334,6 +2350,7 @@
 #define	__txn_get_prepared __txn_get_prepared@DB_VERSION_UNIQUE_NAME@
 #define	__txn_openfiles __txn_openfiles@DB_VERSION_UNIQUE_NAME@
 #define	__txn_open __txn_open@DB_VERSION_UNIQUE_NAME@
+#define	__txn_region_detach __txn_region_detach@DB_VERSION_UNIQUE_NAME@
 #define	__txn_findlastckp __txn_findlastckp@DB_VERSION_UNIQUE_NAME@
 #define	__txn_env_refresh __txn_env_refresh@DB_VERSION_UNIQUE_NAME@
 #define	__txn_region_mutex_count __txn_region_mutex_count@DB_VERSION_UNIQUE_NAME@

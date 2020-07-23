@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -111,7 +111,8 @@ __lock_vec(env, sh_locker, flags, list, nlist, elistp)
 	DB_LOCKREQ *list, **elistp;
 {
 	struct __db_lock *lp, *next_lock;
-	DB_LOCK lock; DB_LOCKOBJ *sh_obj;
+	DB_LOCK lock;
+	DB_LOCKOBJ *sh_obj;
 	DB_LOCKREGION *region;
 	DB_LOCKTAB *lt;
 	DBT *objlist, *np;

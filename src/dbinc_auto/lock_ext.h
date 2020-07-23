@@ -58,6 +58,7 @@ int __lock_get_env_timeout __P((DB_ENV *, db_timeout_t *, u_int32_t));
 int __lock_set_env_timeout __P((DB_ENV *, db_timeout_t, u_int32_t));
 int __lock_open __P((ENV *));
 int __lock_env_refresh __P((ENV *));
+int __lock_region_detach __P((ENV *, DB_LOCKTAB *));
 u_int32_t __lock_region_mutex_count __P((ENV *));
 u_int32_t __lock_region_mutex_max __P((ENV *));
 size_t __lock_region_max __P((ENV *));

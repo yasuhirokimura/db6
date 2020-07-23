@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -1181,7 +1181,7 @@ __bam_bulk(dbc, data, flags)
 	db_indx_t *inp, indx, pg_keyoff;
 	int32_t  *endp, key_off, *offp, *saveoffp;
 	off_t blob_size;
-	uintmax_t blob_id;
+	db_seq_t blob_id;
 	u_int8_t *dbuf, *dp, *np;
 	u_int32_t key_size, pagesize, size, space;
 	int adj, is_key, need_pg, next_key, no_dup, rec_key, ret;
@@ -1421,9 +1421,7 @@ get_key_space:
 			size = (u_int32_t)blob_size;
 			if (size > space)
 				goto back_up;
-			GET_BLOB_ID(dbc->env, bl, blob_id, ret);
-			if (ret != 0)
-				return (ret);
+			blob_id = (db_seq_t)bl.id;
 			if ((ret = __blob_bulk(dbc, size, blob_id, np)) != 0)
 				return (ret);
 			if (is_key) {

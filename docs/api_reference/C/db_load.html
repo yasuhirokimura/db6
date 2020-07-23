@@ -38,8 +38,9 @@
           </div>
         </div>
       </div>
-      <pre class="programlisting">db_load [-nTV] [-c name=value] [-f file]
-    [-h home] [-P password] [-t btree | hash | queue | recno] file
+      <pre class="programlisting">db_load [-nTV] [-b blob_dir] [-c name=value] [-f file]
+    [-h home] [-P password] [-o blob_threshold] 
+    [-t btree | hash | queue | recno] file
 
 db_load [-r lsn | fileid] [-h home] [-P password] file  </pre>
       <p>
@@ -59,6 +60,17 @@ db_load [-r lsn | fileid] [-h home] [-P password] file  </pre>
     </p>
       <div class="itemizedlist">
         <ul type="disc">
+          <li>
+            <p>
+              <span class="bold"><strong>-b</strong></span>
+            </p>
+            <p>
+                Identifies the directory where BLOB data is stored.  If
+                this option is not specified, then BLOB data is placed in a
+                subdirectory within the DB's environment. See also the
+                <span class="bold"><strong>-o</strong></span> option.
+            </p>
+          </li>
           <li>
             <p>
               <span class="bold"><strong>-c</strong></span>
@@ -110,6 +122,20 @@ db_load [-r lsn | fileid] [-h home] [-P password] file  </pre>
                  already existing database.  If a key/data pair cannot be loaded into
                  the database for this reason, a warning message is displayed on the
                  standard error output, and the key/data pair are skipped.
+            </p>
+          </li>
+          <li>
+            <p>
+              <span class="bold"><strong>-o</strong></span>
+            </p>
+            <p>
+                Identifies the BLOB threshold in bytes. This threshold determines
+                when a data item will be stored as a BLOB. Data items sized
+                less than this threshold are stored as normal data within
+                the database. Data items larger than this size are stored
+                on-disk in a subdirectory set aside for the purpose.
+                Use the <span class="bold"><strong>-b</strong></span> command line
+                option to identify where BLOB data is stored.
             </p>
           </li>
           <li>
@@ -242,7 +268,7 @@ db_load [-r lsn | fileid] [-h home] [-P password] file  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp5120176"></a>Examples</h3>
+              <h3 class="title"><a id="idp55417776"></a>Examples</h3>
             </div>
           </div>
         </div>
@@ -264,7 +290,7 @@ db_load [-r lsn | fileid] [-h home] [-P password] file  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp5090304"></a>Environment Variables</h3>
+              <h3 class="title"><a id="idp55414624"></a>Environment Variables</h3>
             </div>
           </div>
         </div>
@@ -272,7 +298,7 @@ db_load [-r lsn | fileid] [-h home] [-P password] file  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp5116008"></a>DB_HOME</h4>
+                <h4 class="title"><a id="idp55432544"></a>DB_HOME</h4>
               </div>
             </div>
           </div>
@@ -288,7 +314,7 @@ db_load [-r lsn | fileid] [-h home] [-P password] file  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp5078616"></a>Supported Keywords</h3>
+              <h3 class="title"><a id="idp55419200"></a>Supported Keywords</h3>
             </div>
           </div>
         </div>

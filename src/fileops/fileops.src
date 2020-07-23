@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2001, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2001, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -97,12 +97,22 @@ END
  *  the case of create, and whether enough information was logged so
  *  that the operation can be redone.
  */
-BEGIN write_file	60	86
+BEGIN_COMPAT write_file	60	86
 DBT	name		DBT		s
 DBT	dirname		DBT		s
 ARG	appname		u_int32_t	lu
 ARG	offset_lo	u_int32_t	lu
 ARG	offset_hi	u_int32_t	lu
+DBT	old_data	DBT		s
+DBT	new_data	DBT		s
+ARG	flag		u_int32_t	lu
+END
+
+BEGIN write_file	60p1	86
+DBT	name		DBT		s
+DBT	dirname		DBT		s
+ARG	appname		u_int32_t	lu
+LONGARG	offset		u_int64_t	llu
 DBT	old_data	DBT		s
 DBT	new_data	DBT		s
 ARG	flag		u_int32_t	lu

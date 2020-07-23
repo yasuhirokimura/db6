@@ -7,6 +7,7 @@ extern "C" {
 #endif
 
 int __log_open __P((ENV *));
+int __log_region_detach __P((ENV *, DB_LOG *));
 int __log_find __P((DB_LOG *, int, u_int32_t *, logfile_validity *));
 int __log_valid __P((DB_LOG *, u_int32_t, int, DB_FH **, u_int32_t, logfile_validity *, u_int32_t *));
 int __log_env_refresh __P((ENV *));
@@ -134,6 +135,7 @@ int __fop_create_verify __P((ENV *, DBT *, DB_LSN *, db_recops, void *));
 int __fop_remove_verify __P((ENV *, DBT *, DB_LSN *, db_recops, void *));
 int __fop_write_42_verify __P((ENV *, DBT *, DB_LSN *, db_recops, void *));
 int __fop_write_verify __P((ENV *, DBT *, DB_LSN *, db_recops, void *));
+int __fop_write_file_60_verify __P((ENV *, DBT *, DB_LSN *, db_recops, void *));
 int __fop_write_file_verify __P((ENV *, DBT *, DB_LSN *, db_recops, void *));
 int __fop_rename_42_verify __P((ENV *, DBT *, DB_LSN *, db_recops, void *));
 int __fop_rename_verify __P((ENV *, DBT *, DB_LSN *, db_recops, void *));

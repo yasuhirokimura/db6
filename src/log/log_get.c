@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -1534,6 +1534,10 @@ __log_read_record(env, dbpp, td, recbuf, spec, size, argpp)
 		case LOGREC_DBOP:
 			LOGCOPY_32(env, ap + sp->offset, bp);
 			bp += sizeof(uinttmp);
+			break;
+		case LOGREC_LONGARG:
+			LOGCOPY_64(env, ap + sp->offset, bp);
+			bp += sizeof(u_int64_t);
 			break;
 		case LOGREC_OP:
 			LOGCOPY_32(env, &op, bp);

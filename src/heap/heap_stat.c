@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2010, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2010, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -201,7 +201,7 @@ __heap_stat_callback(dbc, h, cookie, putp)
 		 * We can't just use NUM_ENT, otherwise we'd mis-count split
 		 * records.
 		 */
-		for (i = 0; i < NUM_ENT(h); i++) {
+		for (i = 0; i <= HEAP_HIGHINDX(h); i++) {
 			hdr = (HEAPHDR *)P_ENTRY(dbp, h, i);
 			if (!F_ISSET(hdr, HEAP_RECSPLIT) ||
 			    F_ISSET(hdr, HEAP_RECFIRST))

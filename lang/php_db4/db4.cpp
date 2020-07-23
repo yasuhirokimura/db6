@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2004, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2004, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * http://www.apache.org/licenses/LICENSE-2.0.txt
  * 
@@ -146,7 +146,7 @@ static struct my_llist *my_llist_del(struct my_llist *list, void *data) {
  *
  * Every user visible function must have an entry in db4_functions[].
  */
-function_entry db4_functions[] = {
+zend_function_entry db4_functions[] = {
     /* PHP_FE(db4_dbenv_create, NULL) */
     {NULL, NULL, NULL}  /* Must be the last line in db4_functions[] */
 };
@@ -341,7 +341,9 @@ static zend_function_entry Db4_functions[] = {
 
 #ifdef COMPILE_DL_DB4
 #ifdef PHP_WIN32
+#if !(PHP_MAJOR_VERSION >= 5 && PHP_MINOR_VERSION >= 3)
 #include "zend_arg_defs.c"
+#endif
 #endif
 BEGIN_EXTERN_C()
 ZEND_GET_MODULE(db4)

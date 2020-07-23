@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
  */
 /*
  * Copyright (c) 1990, 1993, 1994, 1995, 1996
@@ -65,7 +65,7 @@ __bam_ditem(dbc, h, indx)
 	BINTERNAL *bi;
 	BKEYDATA *bk;
 	DB *dbp;
-	uintmax_t blob_id;
+	db_seq_t blob_id;
 	u_int32_t nbytes;
 	int ret;
 	db_indx_t *inp;
@@ -145,9 +145,7 @@ __bam_ditem(dbc, h, indx)
 		case B_BLOB:
 			nbytes = BBLOB_SIZE;
 			memcpy(&bl, bk, BBLOB_SIZE);
-			GET_BLOB_ID(dbp->env, bl, blob_id, ret);
-			if (ret != 0)
-				return (ret);
+			blob_id = (db_seq_t)bl.id;
 			if ((ret = __blob_del(dbc, blob_id)) != 0)
 				return (ret);
 			break;

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -173,18 +173,33 @@ __memp_open(env, create_ok)
 
 	return (0);
 
-err:	env->mp_handle = NULL;
-	if (dbmp->reginfo != NULL && dbmp->reginfo[0].addr != NULL) {
-		for (i = 0; i < dbenv->mp_ncache; ++i)
+err:	(void)__mutex_free(env, &dbmp->mutex);
+	(void)__memp_region_detach(env, dbmp);
+	return (ret);
+}
+
+/* __memp_region_detach
+ *	Detach from any attached mempool regions.
+ *
+ * PUBLIC: int __memp_region_detach __P((ENV *, DB_MPOOL *));
+ */
+int
+__memp_region_detach(env, dbmp)
+	ENV *env;
+	DB_MPOOL *dbmp;
+{
+	u_int i;
+
+	if (dbmp != NULL &&
+	    dbmp->reginfo != NULL && dbmp->reginfo[0].addr != NULL) {
+		for (i = 0; i < env->dbenv->mp_ncache; ++i)
 			if (dbmp->reginfo[i].id != INVALID_REGION_ID)
 				(void)__env_region_detach(
 				    env, &dbmp->reginfo[i], 0);
 		__os_free(env, dbmp->reginfo);
 	}
-
-	(void)__mutex_free(env, &dbmp->mutex);
-	__os_free(env, dbmp);
-	return (ret);
+	env->mp_handle = NULL;
+	return (0);
 }
 
 /*

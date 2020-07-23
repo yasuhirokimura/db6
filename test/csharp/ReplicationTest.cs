@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2009, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2009, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 using System;
@@ -873,7 +873,6 @@ namespace CsharpAPITest
 			} catch(Exception e) {
 				Console.WriteLine(e.Message);
 			} finally {
-				env.Close();
 				/*
 				 * Clean up electionDone and startUpDone to 
 				 * check election for new master and start-up
@@ -881,6 +880,9 @@ namespace CsharpAPITest
 				 */ 
 				electionDone = false;
 				startUpDone = 0;
+
+				env.Close();
+
 				/*
 				 * Need to set signals for three times, each
 				 * site would wait for one.

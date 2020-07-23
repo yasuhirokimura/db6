@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -140,7 +140,8 @@ __log_open(env)
 "Warning: Ignoring maximum log file size when joining the environment"));
 
 		log_flags = dbenv->lg_flags & ~DB_LOG_AUTO_REMOVE;
-		if ((dbenv->lg_flags & DB_LOG_AUTO_REMOVE))
+		if ((dbenv->lg_flags & DB_LOG_AUTO_REMOVE)
+		    && lp->db_log_autoremove == 0)
 			__db_msg(env, DB_STR("2586",
 "Warning: Ignoring DB_LOG_AUTO_REMOVE when joining the environment."));
 		if (log_flags != 0 && (ret =
@@ -151,16 +152,34 @@ __log_open(env)
 
 	return (0);
 
-err:	if (dblp->reginfo.addr != NULL) {
-		if (region_locked)
-			LOG_SYSTEM_UNLOCK(env);
-		(void)__env_region_detach(env, &dblp->reginfo, 0);
-	}
-	env->lg_handle = NULL;
-
+err:	if (region_locked)
+		LOG_SYSTEM_UNLOCK(env);
 	(void)__mutex_free(env, &dblp->mtx_dbreg);
-	__os_free(env, dblp);
+	(void)__log_region_detach(env, dblp);
 
+	return (ret);
+}
+
+/*
+ * __log_region_detach --
+ *
+ * PUBLIC: int __log_region_detach __P((ENV *, DB_LOG *));
+ */
+int
+__log_region_detach(env, dblp)
+	ENV *env;
+	DB_LOG *dblp;
+{
+	int ret;
+
+	ret = 0;
+	if (dblp != NULL) {
+		if (dblp->reginfo.addr != NULL)
+			ret = __env_region_detach(env, &dblp->reginfo, 0);
+		/* Discard DB_LOG. */
+		__os_free(env, dblp);
+		env->lg_handle = NULL;
+	}
 	return (ret);
 }
 

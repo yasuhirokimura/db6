@@ -53,6 +53,7 @@ int __db_hybrid_mutex_suspend __P((ENV *, db_mutex_t, db_timespec *, int));
 int __db_pthread_mutex_unlock __P((ENV *, db_mutex_t));
 int __db_pthread_mutex_destroy __P((ENV *, db_mutex_t));
 int __mutex_open __P((ENV *, int));
+int __mutex_region_detach __P((ENV *, DB_MUTEXMGR *));
 int __mutex_env_refresh __P((ENV *));
 void __mutex_resource_return __P((ENV *, REGINFO *));
 int __mutex_stat_pp __P((DB_ENV *, DB_MUTEX_STAT **, u_int32_t));

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1999, 2013 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1999, 2014 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id: env_method.c,v dabaaeb7d839 2010/08/03 17:28:53 mike $
  */
@@ -1390,6 +1390,11 @@ __env_set_data_len(dbenv, data_len)
 	DB_ENV *dbenv;
 	u_int32_t data_len;
 {
+	if (data_len == 0) {
+		__db_errx(dbenv->env, DB_STR("1593",
+"Maximum number of bytes to display for each key/data item can not be 0."));
+		return (EINVAL);
+	}
 
 	dbenv->env->data_len = data_len;
 	return (0);

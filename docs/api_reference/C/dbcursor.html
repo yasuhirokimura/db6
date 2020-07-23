@@ -61,7 +61,7 @@ DB-&gt;cursor(DB *db, DB_TXN *txnid, DBC **cursorp, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm718424"></a>Parameters</h3>
+              <h3 class="title"><a id="idp50814240"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -69,7 +69,7 @@ DB-&gt;cursor(DB *db, DB_TXN *txnid, DBC **cursorp, u_int32_t flags);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp523432"></a>txnid</h4>
+                <h4 class="title"><a id="idp50813592"></a>txnid</h4>
               </div>
             </div>
           </div>
@@ -94,7 +94,7 @@ DB-&gt;cursor(DB *db, DB_TXN *txnid, DBC **cursorp, u_int32_t flags);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp536432"></a>cursorp</h4>
+                <h4 class="title"><a id="idp50827608"></a>cursorp</h4>
               </div>
             </div>
           </div>
@@ -107,7 +107,7 @@ DB-&gt;cursor(DB *db, DB_TXN *txnid, DBC **cursorp, u_int32_t flags);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp526984"></a>flags</h4>
+                <h4 class="title"><a id="idp50818008"></a>flags</h4>
               </div>
             </div>
           </div>
@@ -186,6 +186,7 @@ DB-&gt;cursor(DB *db, DB_TXN *txnid, DBC **cursorp, u_int32_t flags);  </pre>
                  <a class="link" href="dbopen.html#dbopen_DB_MULTIVERSION">DB_MULTIVERSION</a> 
                  is not set on the underlying database or if a transaction is supplied in
                  the <span class="bold"><strong>txnid</strong></span> parameter.
+                 Snapshot isolation is not supported with replication.
             </p>
               </li>
             </ul>
@@ -196,7 +197,7 @@ DB-&gt;cursor(DB *db, DB_TXN *txnid, DBC **cursorp, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp543368"></a>Errors</h3>
+              <h3 class="title"><a id="idp50834544"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -212,7 +213,7 @@ DB-&gt;cursor(DB *db, DB_TXN *txnid, DBC **cursorp, u_int32_t flags);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp547720"></a>  DB_REP_HANDLE_DEAD</h4>
+                <h4 class="title"><a id="idp50816816"></a>  DB_REP_HANDLE_DEAD</h4>
               </div>
             </div>
           </div>
@@ -231,7 +232,7 @@ DB-&gt;cursor(DB *db, DB_TXN *txnid, DBC **cursorp, u_int32_t flags);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp533424"></a>DB_REP_LOCKOUT</h4>
+                <h4 class="title"><a id="idp50833808"></a>DB_REP_LOCKOUT</h4>
               </div>
             </div>
           </div>
@@ -243,7 +244,7 @@ DB-&gt;cursor(DB *db, DB_TXN *txnid, DBC **cursorp, u_int32_t flags);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp543064"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp50825752"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -256,7 +257,7 @@ DB-&gt;cursor(DB *db, DB_TXN *txnid, DBC **cursorp, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp547320"></a>Class</h3>
+              <h3 class="title"><a id="idp50838032"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -268,7 +269,7 @@ DB-&gt;cursor(DB *db, DB_TXN *txnid, DBC **cursorp, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp543800"></a>See Also</h3>
+              <h3 class="title"><a id="idp50834760"></a>See Also</h3>
             </div>
           </div>
         </div>

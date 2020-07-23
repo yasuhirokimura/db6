@@ -48,12 +48,22 @@ DB_LOG_RECSPEC __fop_write_desc[] = {
 	{LOGREC_ARG, SSZ(__fop_write_args, flag), "flag", "%lu"},
 	{LOGREC_Done, 0, "", ""}
 };
+DB_LOG_RECSPEC __fop_write_file_60_desc[] = {
+	{LOGREC_DBT, SSZ(__fop_write_file_60_args, name), "name", ""},
+	{LOGREC_DBT, SSZ(__fop_write_file_60_args, dirname), "dirname", ""},
+	{LOGREC_ARG, SSZ(__fop_write_file_60_args, appname), "appname", "%lu"},
+	{LOGREC_ARG, SSZ(__fop_write_file_60_args, offset_lo), "offset_lo", "%lu"},
+	{LOGREC_ARG, SSZ(__fop_write_file_60_args, offset_hi), "offset_hi", "%lu"},
+	{LOGREC_DBT, SSZ(__fop_write_file_60_args, old_data), "old_data", ""},
+	{LOGREC_DBT, SSZ(__fop_write_file_60_args, new_data), "new_data", ""},
+	{LOGREC_ARG, SSZ(__fop_write_file_60_args, flag), "flag", "%lu"},
+	{LOGREC_Done, 0, "", ""}
+};
 DB_LOG_RECSPEC __fop_write_file_desc[] = {
 	{LOGREC_DBT, SSZ(__fop_write_file_args, name), "name", ""},
 	{LOGREC_DBT, SSZ(__fop_write_file_args, dirname), "dirname", ""},
 	{LOGREC_ARG, SSZ(__fop_write_file_args, appname), "appname", "%lu"},
-	{LOGREC_ARG, SSZ(__fop_write_file_args, offset_lo), "offset_lo", "%lu"},
-	{LOGREC_ARG, SSZ(__fop_write_file_args, offset_hi), "offset_hi", "%lu"},
+	{LOGREC_LONGARG, SSZ(__fop_write_file_args, offset), "offset", ""},
 	{LOGREC_DBT, SSZ(__fop_write_file_args, old_data), "old_data", ""},
 	{LOGREC_DBT, SSZ(__fop_write_file_args, new_data), "new_data", ""},
 	{LOGREC_ARG, SSZ(__fop_write_file_args, flag), "flag", "%lu"},
