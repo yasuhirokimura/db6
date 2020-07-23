@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2011, 2017 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2011, 2019 Oracle and/or its affiliates.  All rights reserved.
 #
 # TEST	repmgr032
 # TEST	The (undocumented) AUTOROLLBACK config feature.

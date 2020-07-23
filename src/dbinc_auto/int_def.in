@@ -705,6 +705,7 @@
 #endif
 #define	__clock_set_expires __clock_set_expires@DB_VERSION_UNIQUE_NAME@
 #define	__clock_expired __clock_expired@DB_VERSION_UNIQUE_NAME@
+#define	__clock_get_start __clock_get_start@DB_VERSION_UNIQUE_NAME@
 #define	__crypto_region_init __crypto_region_init@DB_VERSION_UNIQUE_NAME@
 #define	__db_isbigendian __db_isbigendian@DB_VERSION_UNIQUE_NAME@
 #define	__db_byteorder __db_byteorder@DB_VERSION_UNIQUE_NAME@
@@ -745,6 +746,7 @@
 #define	__db_check_txn __db_check_txn@DB_VERSION_UNIQUE_NAME@
 #define	__db_txn_deadlock_err __db_txn_deadlock_err@DB_VERSION_UNIQUE_NAME@
 #define	__db_not_txn_env __db_not_txn_env@DB_VERSION_UNIQUE_NAME@
+#define	__db_not_log_env __db_not_log_env@DB_VERSION_UNIQUE_NAME@
 #define	__db_rec_toobig __db_rec_toobig@DB_VERSION_UNIQUE_NAME@
 #define	__db_rec_repl __db_rec_repl@DB_VERSION_UNIQUE_NAME@
 #define	__dbc_logging __dbc_logging@DB_VERSION_UNIQUE_NAME@
@@ -961,7 +963,10 @@
 #define	__env_region_share __env_region_share@DB_VERSION_UNIQUE_NAME@
 #define	__env_region_detach __env_region_detach@DB_VERSION_UNIQUE_NAME@
 #define	__envreg_register __envreg_register@DB_VERSION_UNIQUE_NAME@
+#define	__envreg_unregister_pid __envreg_unregister_pid@DB_VERSION_UNIQUE_NAME@
 #define	__envreg_unregister __envreg_unregister@DB_VERSION_UNIQUE_NAME@
+#define	__envreg_registry_open __envreg_registry_open@DB_VERSION_UNIQUE_NAME@
+#define	__envreg_registry_close __envreg_registry_close@DB_VERSION_UNIQUE_NAME@
 #define	__envreg_xunlock __envreg_xunlock@DB_VERSION_UNIQUE_NAME@
 #define	__envreg_isalive __envreg_isalive@DB_VERSION_UNIQUE_NAME@
 #define	__env_struct_sig __env_struct_sig@DB_VERSION_UNIQUE_NAME@

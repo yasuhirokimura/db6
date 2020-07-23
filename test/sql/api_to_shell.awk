@@ -111,13 +111,13 @@ BEGIN {
 }
 
 /file exists / {
-	sub(/ *file exists/, ".shell test ! -e")
-	print $0 "; echo $?"
+	sub(/ *file exists/, ".shell bash -c \"if [ -f ")
+	print $0 " ] ; then echo 1 ; else echo 0 ; fi\""
 }
 
-/compare_file / {
+/^ *compare_file / {
 	sub(/ *compare_file/, ".shell diff")
-	print $0 "; echo $?"
+	print $0
 }
 
 /set fh \[open .* w\]/ {

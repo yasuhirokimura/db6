@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2000, 2017 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2000, 2019 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -896,6 +896,8 @@ err1:			if (ret == 0)
 			 */
 			if (ret == DB_VERIFY_BAD)
 				isbad = 1;
+			else if (ret == DB_VERIFY_FATAL)
+				return (DB_VERIFY_FATAL);
 			else if (ret != 0)
 				goto err;
 
@@ -1941,6 +1943,13 @@ __db_vrfy_orderchkonly(dbp, vdp, name, subdb, flags)
 			goto err;
 		for (bucket = 0; bucket <= hmeta->max_bucket; bucket++) {
 			pgno = BS_TO_PAGE(bucket, hmeta->spares);
+			if (!IS_VALID_PGNO(pgno)) {
+				EPRINT((env, DB_STR_A("5502",
+				"Page %lu: invalid pgno found in hash bucket",
+					"%lu"), (u_long)pgno));
+				ret = DB_VERIFY_BAD;
+				continue;
+			}
 			while (pgno != PGNO_INVALID) {
 				if ((ret = __memp_fget(mpf, &pgno,
 				    vdp->thread_info, NULL, 0, &currpg)) != 0)

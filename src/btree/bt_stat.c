@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2019 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -524,6 +524,8 @@ __bam_key_range(dbc, dbt, kp, flags)
 	cp->csp->entries /= 2;
 	cp->csp->indx /= 2;
 	for (sp = cp->sp; sp <= cp->csp; ++sp) {
+		if (sp->entries == 0)
+			return (__db_pgfmt(dbc->env, cp->pgno));
 		/*
 		 * At each level we know that pages greater than indx contain
 		 * keys greater than what we are looking for and those less

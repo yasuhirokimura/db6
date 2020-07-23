@@ -3,23 +3,21 @@
 DB_ROOT="`dirname $0`/../.."
 DB_ROOT="`cd $DB_ROOT && pwd`"
 SQLITE="$DB_ROOT/lang/sql/sqlite"
-OS="`uname -o | awk '{print tolower($1)}'`"
 
-if [[ "$OS" == "cygwin" ]] ; then
-	ARCH="`uname -m | grep '64'`"
-	if [ -z "$ARCH" ] ; then
-		ARCH="Win32"
-	else
-		ARCH="x64"
-	fi
-	DBSQL="$DB_ROOT/build_windows/$ARCH/Release/dbsql"
-	TESTFIXTURE="$DB_ROOT/build_windows/$ARCH/Release/testfixture"
-	OUT_DIR="$DB_ROOT/build_windows/sql"	
-else
-	DBSQL="$DB_ROOT/build_unix/dbsql"
-	TESTFIXTURE="$DB_ROOT/build_unix/sql/testfixture"
-	OUT_DIR="$DB_ROOT/build_unix/sql"
+OS="`uname -o | awk '{print tolower($1)}'`"
+if [ -z "$is_win" ] ; then
+	is_win="`test $OS = cygwin`"
 fi
+
+TEST_DIR="${TEST_DIR:-db/build_unix}"
+if (( is_win == 1 )) ; then
+	DBSQL="$DB_ROOT/../$TEST_DIR/$BUILDPATH/dbsql"
+	TESTFIXTURE="$DB_ROOT/../$TEST_DIR/$BUILDPATH/testfixture"
+else
+	DBSQL="$DB_ROOT/../$TEST_DIR/dbsql"
+	TESTFIXTURE="$DB_ROOT/../$TEST_DIR/sql/testfixture"
+fi
+OUT_DIR="$DB_ROOT/../$TEST_DIR/sql"
 
 
 # Check the "-no-clean" option
@@ -34,7 +32,7 @@ fi
 
 # Convert the given Unix-like path name to OS's native path name
 function get_os_path_name() {
-	if [[ "$OS" == "cygwin" ]] ; then
+	if (( is_win == 1 )) ; then
 		echo "`cygpath -w $1`"
 	else
 		echo "$1"
@@ -51,9 +49,9 @@ function is_option_enabled() {
 	$DBSQL test.db "select sqlite_compileoption_used('$1')" | tr -d '\r'
 }
 
-AUTH_ENABLED=`is_option_enabled USER_AUTHENTICATION`
-ENCRYPTION_ENABLED=`is_option_enabled HAS_CODEC`
-KEYSTORE_ENABLED=`is_option_enabled BDBSQL_USER_AUTHENTICATION_KEYSTORE`
+AUTH_ENABLED="`is_option_enabled USER_AUTHENTICATION`"
+ENCRYPTION_ENABLED="`is_option_enabled HAS_CODEC`"
+KEYSTORE_ENABLED="`is_option_enabled BDBSQL_USER_AUTHENTICATION_KEYSTORE`"
 
 echo "AUTH_ENABLED: $AUTH_ENABLED"
 echo "ENCRYPTION_ENABLED: $ENCRYPTION_ENABLED"
@@ -179,17 +177,17 @@ function run_test() {
 	for api in "api" "pragma"
 	do
 		rm -rf test*db*
-		TEST_NAME="`get_os_path_name $OUT_DIR/gen_$1_$api`"
+		TEST_NAME="$OUT_DIR/gen_$1_$api"
 		printf "Running $TEST_NAME.test... \t"
-		$TESTFIXTURE "$TEST_NAME.test" &> "$TEST_NAME.out"
-		result=`grep "errors out of" "$TEST_NAME.out" || echo "fail"`
-		leak=`grep "Unfreed memory:" "$TEST_NAME.out" || echo "no memleaks"`
+		$TESTFIXTURE "`get_os_path_name $TEST_NAME.test`" &> "$TEST_NAME.out"
+		result="`grep 'errors out of' $TEST_NAME.out || echo fail`"
+		leak="`grep 'Unfreed memory:' $TEST_NAME.out || echo 'no memleaks'`"
 		printf "$result\t$leak\n"
 	done
 
 	# Run SQL Shell tests
 	rm -rf test*db*
-	TEST_NAME="`get_os_path_name $OUT_DIR/gen_$1_shell`"
+	TEST_NAME="$OUT_DIR/gen_$1_shell"
 	printf "Running $TEST_NAME.dbsql... \t"
 	$DBSQL < "$TEST_NAME.dbsql" &> "$TEST_NAME.tmp"
 	# Turn absolute paths into relative paths, so file paths stay same across machines
@@ -198,7 +196,7 @@ function run_test() {
 	sed -e "s|${CUR_DIR//\\/\\\\}[/\\]||" \
 	    -e "s/\(Error: near line\) [0-9]\+:/\1 xx:/" "$TEST_NAME.tmp" > "$TEST_NAME.out"
 	# Compare with the expected output
-	DIFF=`diff -wu "$DB_ROOT/test/sql/bdb_$1_shell.expected" "$TEST_NAME.out"`
+	DIFF="`diff -wu $DB_ROOT/test/sql/bdb_$1_shell.expected $TEST_NAME.out`"
 	if (( "$?" == 0 )) ; then
 		echo "ok"
 	else

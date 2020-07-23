@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2019 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -142,7 +142,7 @@ public class BdbServerConfig {
                 new TNonblockingServerSocket(getPort());
 
         THsHaServer.Args args = new THsHaServer.Args(socket);
-        args.workerThreads(getWorkers()).processorFactory(processor);
+        args.maxWorkerThreads(getWorkers()).minWorkerThreads(getWorkers()).processorFactory(processor);
         args.protocolFactory(new TCompactProtocol.Factory());
 
         return new THsHaServer(args);

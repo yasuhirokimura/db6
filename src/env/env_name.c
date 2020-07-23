@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2019 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -232,73 +232,48 @@ __db_tmp_open(env, oflags, fhpp)
 	u_int32_t oflags;
 	DB_FH **fhpp;
 {
+	db_timespec time;
 	pid_t pid;
-	int filenum, i, ipid, ret;
+	int ipid, itime, ret;
 	char *path;
-	char *firstx, *trv;
+	char *trv;
 
 	DB_ASSERT(env, fhpp != NULL);
 	*fhpp = NULL;
-
-#define	DB_TRAIL	"BDBXXXXX"
-	if ((ret = __db_appname(env, DB_APP_TMP, DB_TRAIL, NULL, &path)) != 0)
-		goto done;
-
-	/* Replace the X's with the process ID (in decimal). */
+	timespecclear(&time);
 	__os_id(env->dbenv, &pid, NULL);
+
+#define	DB_TRAIL	"BDBXXXXX_XXXXXXXXX"
+repeat:	if ((ret = __db_appname(env, DB_APP_TMP, DB_TRAIL, NULL, &path)) != 0)
+		goto done;
+	/* Replace the X's with the nanoseconds and process ID (in decimal). */
+	__os_gettime(env, &time, 0);
+	itime = (int)time.tv_nsec;
+	if (itime < 0)
+		itime = -itime;
+	for (trv = path + strlen(path); *--trv == 'X'; itime /= 10)
+		*trv = '0' + (u_char)(itime % 10);
 	ipid = (int)pid;
 	if (ipid < 0)
 		ipid = -ipid;
-	for (trv = path + strlen(path); *--trv == 'X'; ipid /= 10)
+	for (; *--trv == 'X'; ipid /= 10)
 		*trv = '0' + (u_char)(ipid % 10);
-	firstx = trv + 1;
+	
+	if ((ret = __os_open(env, path, 0,
+		oflags | DB_OSO_CREATE | DB_OSO_EXCL | DB_OSO_TEMP,
+		DB_MODE_600, fhpp)) != 0) {
 
-	/* Loop, trying to open a file. */
-	for (filenum = 1;; filenum++) {
-		if ((ret = __os_open(env, path, 0,
-		    oflags | DB_OSO_CREATE | DB_OSO_EXCL | DB_OSO_TEMP,
-		    DB_MODE_600, fhpp)) == 0) {
-			ret = 0;
-			goto done;
+		// If there is a collision, get a new time stamp and repeat.
+		if (ret == EEXIST) {
+			__os_free(env, path);
+			path = NULL;
+			goto repeat;
 		}
-
-		/*
-		 * !!!:
-		 * If we don't get an EEXIST error, then there's something
-		 * seriously wrong.  Unfortunately, if the implementation
-		 * doesn't return EEXIST for O_CREAT and O_EXCL regardless
-		 * of other possible errors, we've lost.
-		 */
-		if (ret != EEXIST) {
-			__db_err(env, ret, DB_STR_A("1586",
-			    "temporary open: %s", "%s"), path);
-			goto done;
-		}
-
-		/*
-		 * Generate temporary file names in a backwards-compatible way.
-		 * If pid == 12345, the result is:
-		 *   <path>/DB12345 (tried above, the first time through).
-		 *   <path>/DBa2345 ...  <path>/DBz2345
-		 *   <path>/DBaa345 ...  <path>/DBaz345
-		 *   <path>/DBba345, and so on.
-		 *
-		 * Note:
-		 * This algorithm is O(n**2) -- that is, creating 100 temporary
-		 * files requires 5,000 opens, creating 1000 files requires
-		 * 500,000.  If applications open a lot of temporary files, we
-		 * could improve performance by switching to timestamp-based
-		 * file names.
-		 */
-		for (i = filenum, trv = firstx; i > 0; i = (i - 1) / 26)
-			if (*trv++ == '\0') {
-				ret = USR_ERR(env, EINVAL);
-				goto done;
-			}
-
-		for (i = filenum; i > 0; i = (i - 1) / 26)
-			*--trv = 'a' + ((i - 1) % 26);
+		__db_err(env, ret, DB_STR_A("1586",
+		    "temporary open: %s", "%s"), path);
+		goto done;
 	}
+
 done:
 	__os_free(env, path);
 	return (ret);

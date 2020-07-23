@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2013, 2017 Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2013, 2019 Oracle and/or its affiliates. All rights reserved.
 #
 # $Id$
 #
@@ -44,6 +44,7 @@ proc test147 { method {tnum "147"} args } {
 		set testfile $testdir/test$tnum.db
 	}
 	set hpargs "-h $testdir"
+	set testfilename test$tnum
 
 	cleanup $testdir $env
 
@@ -81,6 +82,14 @@ proc test147 { method {tnum "147"} args } {
 
 	# Do not acquire shared region mutexes while running.
 	test147_execmd "$binname $stat_file_args -N $hpargs $std_redirect"
+
+	# Test verify
+	if { $eindex == -1 || ![is_repenv $env] } {
+		test147_execmd "$binname $stat_file_args \
+		    -S o $hpargs $std_redirect"
+		test147_execmd "$binname $stat_file_args \
+		    -S v $hpargs $std_redirect"
+	}
 
 	puts "Test$tnum: testing db_stat without -d arg."
 

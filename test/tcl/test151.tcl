@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2013, 2017 Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2013, 2019 Oracle and/or its affiliates. All rights reserved.
 #
 # $Id$
 #
@@ -188,6 +188,8 @@ proc test151 { method {tnum "151"} args } {
 	if { [is_hash $method] == 1 } {
 		test151_execmd "$binname -v v $dump_args $testfile3 $std_redirect"\
 		    [list "DB_VERIFY_BAD"]
+		test151_execmd "$binname -S v $dump_args $testfile3\
+		$std_redirect" [list "DB_VERIFY_BAD"]
 		# Remove the database so the general verification doesn't fail
 		error_check_good dbremove [eval {berkdb dbremove} $dbremove_args\
 		    $testfile3] 0
@@ -197,10 +199,12 @@ proc test151 { method {tnum "151"} args } {
 	file copy $test_path/wordlist $testdir/wordlist
 	test151_execmd "$binname -v o $dump_args $badfile $std_redirect"\
 	    [list "DB_VERIFY_BAD"]
+	test151_execmd "$binname -S o $dump_args $badfile $std_redirect"\
+	    [list "DB_VERIFY_BAD"]
 
 	# All remaining options.
 	set flaglist [list "-d a" "-d h" "-d r" "-f $dump_file" "-N" "-p" "-r"\
-	    "-k" "" "-v o" "-v v"]
+	    "-k" "" "-v o" "-v v" "-S o" "-S v"]
 
 	foreach flag $flaglist {
 		test151_execmd "$binname $flag $dump_args\

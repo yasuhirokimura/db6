@@ -198,9 +198,23 @@
           </div>
         </div>
         <p>
-                Download the ADO.NET package from the
-                <a class="ulink" href="http://www.oracle.com/technetwork/database/database-technologies/berkeleydb/downloads/index.html" target="_top">Oracle Berkeley DB download page</a>.
+					You will create the Berkeley DB ADO.NET package. First download
+					<code class="literal">sqlite-dotnetsrc-1097000.zip</code> 
+					from the SQLite download page 
+					<a class="ulink" href="https://system.data.sqlite.org/index.html/doc/trunk/www/downloads.wiki" target="_top">https://system.data.sqlite.org/index.html/doc/trunk/www/downloads.wiki</a>.
                 </p>
+        <p>
+					Then, in the directory <code class="literal">&lt;db&gt;/dist</code> run this command:
+					</p>
+        <pre class="programlisting">./s_sql_drivers -adodotnet \
+					-ado_package /path/to/sqlite-dotnetsrc-1097000.zip 
+				</pre>
+        <p>
+				</p>
+        <p>
+				This will create the package dbsql-adodotnet-12.1.6.2.zip in the
+				directory <code class="literal">&lt;db&gt;/release</code>.
+				</p>
         <div class="sect3" lang="en" xml:lang="en">
           <div class="titlepage">
             <div>

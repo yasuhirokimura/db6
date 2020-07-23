@@ -1,17 +1,6 @@
-/*-
- * $Id$
- */
 
-The following is the license that applies to this copy of the Berkeley DB
-software.  For a license to use the Berkeley DB software under conditions
-other than those described here, or to purchase support for this software,
-please contact Oracle at berkeleydb-info_us@oracle.com.
-
-If you were looking for the license that applies to Berkeley DB XML, click here.
-http://www.oracle.com/technetwork/products/berkeleydb/downloads/xmloslicense-086890.html
-
-If you were looking for the license that applies to Berkeley DB Java Edition, click here.
-http://www.oracle.com/technetwork/products/berkeleydb/downloads/jeoslicense-086837.html
+The following licenses apply to this copy of Berkeley DB software. To purchase 
+support for this software, please contact Oracle at berkeleydb-info_us@oracle.com.
 
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 /*
@@ -681,6 +670,8 @@ http://www.oracle.com/technetwork/products/berkeleydb/downloads/jeoslicense-0868
  * For more information on this, and how to apply and follow the GNU AGPL, see
  * <http://www.gnu.org/licenses/>.
  */
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
 
 ADDITIONAL THIRD PARTY NOTICES:
 

@@ -38,7 +38,7 @@
           </div>
         </div>
       </div>
-      <pre class="programlisting">db_stat -d file [-fN] [-h home] [-P password] [-s database]
+      <pre class="programlisting">db_stat -d file [-fN] [-h home] [-P password] [-s database] [-S o | v]
 
 db_stat [-acEelmNrtVxZ] [-C Aclop] [-h home] [-L A] [-M Ah] [-R A] 
         [-X A] [-P password]  </pre>
@@ -291,6 +291,40 @@ db_stat [-acEelmNrtVxZ] [-C Aclop] [-h home] [-L A] [-M Ah] [-R A]
           </li>
           <li>
             <p>
+                <span class="bold"><strong>-S</strong></span>
+            </p>
+            <p>
+                Verify the specified database before getting the statistics.
+                No statistics are returned if the database is corrpted. Use
+                this option when you are not sure about the integrity of the
+                database.
+            </p>
+            <div class="itemizedlist">
+              <ul type="circle">
+                <li>
+                  <p>
+                        <span class="bold"><strong>o</strong></span>
+                    </p>
+                  <p>
+                        Skip the database checks for btree and duplicate sort order
+                        and for hashing. See also the 
+                        <span class="bold"><strong>-o</strong></span> option for db_verify.
+                    </p>
+                </li>
+                <li>
+                  <p>
+                        <span class="bold"><strong>v</strong></span>
+                    </p>
+                  <p>
+                        Perform the standard verification on the database as performed
+                        by db_verify without options.
+                    </p>
+                </li>
+              </ul>
+            </div>
+          </li>
+          <li>
+            <p>
                  <span class="bold"><strong>-s</strong></span>
             </p>
             <p>
@@ -386,7 +420,7 @@ db_stat [-acEelmNrtVxZ] [-C Aclop] [-h home] [-L A] [-M Ah] [-R A]
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm140711170936224"></a>Environment Variables</h3>
+              <h3 class="title"><a id="idm139815226542832"></a>Environment Variables</h3>
             </div>
           </div>
         </div>
@@ -394,7 +428,7 @@ db_stat [-acEelmNrtVxZ] [-C Aclop] [-h home] [-L A] [-M Ah] [-R A]
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm140711170858208"></a>DB_HOME</h4>
+                <h4 class="title"><a id="idm139815226545712"></a>DB_HOME</h4>
               </div>
             </div>
           </div>

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2000, 2017 Oracle.  All rights reserved.
+ * Copyright (c) 2000, 2019 Oracle.  All rights reserved.
  *
  */
 package com.sleepycat.client.persist.test;

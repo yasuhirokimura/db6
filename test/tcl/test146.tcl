@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2012, 2017 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2012, 2019 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -211,6 +211,6 @@ proc test146 { method {tnum "146"} args } {
 		error_check_good db_close [$db close] 0
 		error_check_good env_close [$env close] 0
 	}
-
+	env_cleanup $testdir
 
 }	

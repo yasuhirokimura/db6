@@ -30,6 +30,7 @@ CLEAN_ONLY=0
 BUILD_JDBC=0
 BUILD_ODBC=0
 BUILD_NET=0
+NO_ADDONS=0
 while [ $# -gt 0 ]
 do
 	case "$1" in
@@ -38,15 +39,25 @@ do
 	-jdbc)
 		BUILD_ALL=0
 		BUILD_JDBC=1;;
+	-jdbc_package)
+		shift
+		JDBC_PACKAGE=$1
+		NO_ADDONS=1;;
 	-odbc)
 		BUILD_ALL=0
 		BUILD_ODBC=1;;
 	-adodotnet)
 		BUILD_ALL=0
 		BUILD_NET=1;;
+	-ado_package)
+		shift
+		ADO_PACKAGE=$1
+		NO_ADDONS=1;;
 	-addons)
 		shift
 		PKG_ROOT=$1;;
+	-noaddons)
+		NO_ADDONS=1;;
 	esac
 	shift
 done
@@ -183,7 +194,8 @@ mv $JDBC_DIR/Makefile.in $JDBC_DIR/Makefile.in.tmp
 # 2. Add LD_LIBRARY_PATH for runing native/mkconst in JDBC configuration
 # 3. Make the suffix of libsqlite_jni configurable
 cat $JDBC_DIR/Makefile.in.tmp | \
-    sed -e '/native\/mkconst > SQLite\/Constants.java/ i \\t\LD_LIBRARY_PATH=\"\$\$LD_LIBRARY_PATH:\$(PWD)\/..\/.libs\" \\' \
+    sed -e '/native\/mkconst > SQLite\/Constants.java/ i\
+	  LD_LIBRARY_PATH=\"\$\$LD_LIBRARY_PATH:\$(PWD)\/..\/.libs\" \\' \
     -e '/^LIBS=/s/$/ @BDB_LIB@/' -e '/-o libsqlite_jni.la/s/-o/-shrext $(JMODSUFFIX) -o/' > $JDBC_DIR/Makefile.in
 rm -f $JDBC_DIR/Makefile.in.tmp
 
@@ -227,7 +239,7 @@ fi
 # Detect XQilla
 which xqilla  > /dev/null 2>&1
 if [ $? -ne 0 ]; then
- 	echo "Can not find xqilla command."
+ 	echo "s_sql_drivers can not find xqilla command."
     	exit 1
 fi
 
@@ -314,6 +326,23 @@ for dir in dbm hsearch sql cxx
 do
 	cp -r $START_DIR/../lang/$dir $BDB_ROOT/lang
 done
+
+# Prune out 3rd party code we do not ship.
+#
+rm -rf $BDB_ROOT/lang/sql/sqlite/art
+rm -rf $BDB_ROOT/lang/sql/sqlite/autoconf
+rm -rf $BDB_ROOT/lang/sql/sqlite/autom4te.cache
+rm -rf $BDB_ROOT/lang/sql/sqlite/contrib
+rm -rf $BDB_ROOT/lang/sql/sqlite/doc
+rm -rf $BDB_ROOT/lang/sql/sqlite/ext/fts5/test
+rm -rf $BDB_ROOT/lang/sql/sqlite/ext/rbu/*.test
+rm -rf $BDB_ROOT/lang/sql/sqlite/ext/rtree/*.test
+rm -rf $BDB_ROOT/lang/sql/sqlite/ext/session/*.test
+rm -rf $BDB_ROOT/lang/sql/sqlite/mptest
+rm -rf $BDB_ROOT/lang/sql/sqlite/test
+rm -rf $BDB_ROOT/lang/sql/sqlite/tool
+rm -rf $BDB_ROOT/lang/sql/sqlite/vsixtest
+
 mkdir $BDB_ROOT/examples
 for dir in sql cxx
 do
@@ -538,10 +567,13 @@ if [ "$CLEAN_ONLY" != 0 ]; then
 	exit 0
 fi
 
-update_repo
+# If NO_ADDONS is specified, the user must provide the package locations.
+if [ "$NO_ADDONS" = "0" ]; then
+	update_repo
+fi
 
 if [ "$BUILD_ALL" != 0 -o "$BUILD_JDBC" != 0 ]; then
-	JDBC_PACKAGE=`ls $DB_ADDONS_REPO/thirdparty/sql/javasqlite-*.tar.gz | tail -1`
+	test "$JDBC_PACKAGE" = "" && JDBC_PACKAGE=`ls $DB_ADDONS_REPO/thirdparty/sql/javasqlite-*.tar.gz | tail -1`
 	JDBC_DIR=$SQL_DIR/jdbc
 	rm -rf "$JDBC_DIR" && mkdir -p $JDBC_DIR
 	s_sql_jdbc
@@ -553,7 +585,7 @@ if [ "$BUILD_ALL" != 0 -o "$BUILD_ODBC" != 0 ]; then
 	s_sql_odbc
 fi
 if [ "$BUILD_ALL" != 0 -o "$BUILD_NET" != 0 ]; then
-	ADO_PACKAGE=`ls $DB_ADDONS_REPO/thirdparty/sql/sqlite-dotnetsrc*.zip | tail -1`
+	test "$ADO_PACKAGE" = "" && ADO_PACKAGE=`ls $DB_ADDONS_REPO/thirdparty/sql/sqlite-dotnetsrc*.zip | tail -1`
 	s_sql_adodotnet
 fi
 

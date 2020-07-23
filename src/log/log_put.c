@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2019 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -146,10 +146,10 @@ __log_put(env, lsnp, udbt, flags)
 		 * DB_ASSERT would generate a stack if DIAGNOSTIC is true.
 		 */
 		__os_stack(env);
+		return (__env_panic(env, EINVAL));
 #endif
 
 		DB_ASSERT(env, FALSE);
-		return (__env_panic(env, EINVAL));
 	}
 
 	/*

@@ -1,8 +1,9 @@
 @echo off
 
 set CPATH=..\jars\db_thrift_interface.jar;..\jars\db_thrift_server.jar
-set CPATH=..\jars\log4j.jar;..\jars\libthrift.jar;..\jars\db.jar;%CPATH%
-set CPATH=..\jars\slf4j-api.jar;..\jars\slf4j-log4j12.jar;%CPATH%;%CLASSPATH%
+set CPATH=..\jars\log4j-api.jar;..\jars\log4j-1.2-api.jar;%CD%;%CPATH%
+set CPATH=..\jars\log4j-core.jar;..\jars\libthrift.jar;..\jars\db.jar;%CPATH%
+set CPATH=..\jars\slf4j-api.jar;..\jars\log4j-slf4j-impl.jar;%CPATH%;%CLASSPATH%
 
 set LPATH=..\bin;..\..\..\build_windows\Win32\Debug
 set LPATH=..\..\..\build_windows\Win32\Release;%LPATH

@@ -48,7 +48,7 @@
           </dt>
           <dt>
             <span class="sect2">
-              <a href="build_unix_sql.html#idm140188018126512">Enabling Extensions</a>
+              <a href="build_unix_sql.html#idm140553819521536">Enabling Extensions</a>
             </span>
           </dt>
           <dt>
@@ -58,12 +58,12 @@
           </dt>
           <dt>
             <span class="sect2">
-              <a href="build_unix_sql.html#idm140188018072496">Using the JDBC Driver</a>
+              <a href="build_unix_sql.html#idm140553819326576">Using the JDBC Driver</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="build_unix_sql.html#idm140188018034496">Building the ODBC Driver</a>
+              <a href="build_unix_sql.html#idm140553819282656">Building the ODBC Driver</a>
             </span>
           </dt>
           <dt>
@@ -176,23 +176,47 @@
             <span class="term">--enable-test</span>
           </dt>
           <dd>
-                Cause the Berkeley DB SQL interface test suite
-                to be built. This argument can also be used with
-                either <code class="literal">--enable-sql</code> or
-                <code class="literal">--enable-sql_compat</code> to build
-                the SQLite Tcl test runner. 
-            </dd>
+            <p>
+                	Cause the Berkeley DB SQL interface test suite
+                	to be built. This argument can also be used with
+                	either <code class="literal">--enable-sql</code> or
+                	<code class="literal">--enable-sql_compat</code> to build
+                	the SQLite Tcl test runner. 
+				</p>
+            <p>
+					When used with --enable-sql, the --enable-test flag
+					requires that you first download and install the SQLite
+					test code. Request the code on the OTN Forum at
+<a class="ulink" href="https://community.oracle.com/community/database/berkeley_db_family/berkeley_db" target="_top">https://community.oracle.com/community/database/berkeley_db_family/berkeley_db</a>.
+				</p>
+          </dd>
           <dt>
             <span class="term">--enable-jdbc</span>
           </dt>
           <dd>
             <p> 
-                    Causes the JDBC driver to be built. Setting
-                    this option implies that
-                    <code class="literal">--enable-sql</code> is set, which
-                    means that the Berkeley DB SQL API will be built
-                    too.
-                </p>
+                    Causes the JDBC driver to be built. 
+				</p>
+            <p>
+					First you must download the JDBC driver package 
+					<code class="literal">javasqlite-20150419.tar.gz</code> from
+					<a class="ulink" href="http://www.ch-werner.de/javasqlite" target="_top">http://www.ch-werner.de/javasqlite</a>. 
+					Then, in the directory 
+					<code class="literal">&lt;db&gt;/dist</code>,
+					</p>
+            <pre class="programlisting">./s_sql_drivers -jdbc \
+					-jdbc_package /path/to/javasqlite-20150419.tar.gz \
+					-noaddons</pre>
+            <p>
+					This will install the package with a few necessary
+					patches to <code class="literal">&lt;db&gt;/lang/sql/jdbc</code>.
+				</p>
+            <p>
+					Setting this option implies that
+				<code class="literal">--enable-sql</code> is set, which
+				means that the Berkeley DB SQL API will be built
+				too.
+			</p>
           </dd>
           <dt>
             <span class="term">--with-cryptography</span>
@@ -380,7 +404,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm140188018126512"></a>Enabling Extensions</h3>
+              <h3 class="title"><a id="idm140553819521536"></a>Enabling Extensions</h3>
             </div>
           </div>
         </div>
@@ -446,9 +470,23 @@
             code using <code class="literal">autoconf</code>, which is the only
             method supported and tested by the Berkeley DB team. 
         </p>
+        <p>
+			Download the JDBC driver package 
+			<code class="literal">javasqlite-20150419.tar.gz</code> from
+			<a class="ulink" href="http://www.ch-werner.de/javasqlite" target="_top">http://www.ch-werner.de/javasqlite</a>. 
+			Then, in the directory 
+			<code class="literal">&lt;db&gt;/dist</code>,
+			</p>
+        <pre class="programlisting">./s_sql_drivers -jdbc \
+			-jdbc_package /path/to/javasqlite-20150419.tar.gz \
+			-noaddons</pre>
+        <p>
+			This will install the package with a few necessary
+			patches to <code class="literal">&lt;db&gt;/lang/sql/jdbc</code>.
+		</p>
         <p> 
-            To build the JDBC driver, you must have Sun Java
-            Development Kit 1.1 or above installed.
+            To build the JDBC driver, you must have the Java
+            Development Kit installed.
         </p>
         <pre class="programlisting">cd build_unix
     ../dist/configure --enable-jdbc --prefix=&lt;install path&gt;
@@ -472,7 +510,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm140188018072496"></a>Using the JDBC Driver</h3>
+              <h3 class="title"><a id="idm140553819326576"></a>Using the JDBC Driver</h3>
             </div>
           </div>
         </div>
@@ -484,7 +522,7 @@
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm140188018071696"></a>Downloading JDBC Sample Code</h4>
+                <h4 class="title"><a id="idm140553819325776"></a>Downloading JDBC Sample Code</h4>
               </div>
             </div>
           </div>
@@ -501,7 +539,7 @@
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm140188018094288"></a>Modifying Sample Code</h4>
+                <h4 class="title"><a id="idm140553819362480"></a>Modifying Sample Code</h4>
               </div>
             </div>
           </div>
@@ -572,7 +610,7 @@
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm140188018079056"></a>Building and Running the JDBC Sample code</h4>
+                <h4 class="title"><a id="idm140553819327760"></a>Building and Running the JDBC Sample code</h4>
               </div>
             </div>
           </div>
@@ -637,7 +675,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm140188018034496"></a>Building the ODBC Driver</h3>
+              <h3 class="title"><a id="idm140553819282656"></a>Building the ODBC Driver</h3>
             </div>
           </div>
         </div>
@@ -648,7 +686,7 @@
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm140188018046848"></a>Configuring Your System</h4>
+                <h4 class="title"><a id="idm140553819296112"></a>Configuring Your System</h4>
               </div>
             </div>
           </div>
@@ -675,7 +713,7 @@
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm140188018025248"></a>Building the Library</h4>
+                <h4 class="title"><a id="idm140553819273360"></a>Building the Library</h4>
               </div>
             </div>
           </div>
@@ -728,7 +766,7 @@
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm140188018019488"></a>Testing the ODBC Driver</h4>
+                <h4 class="title"><a id="idm140553819267696"></a>Testing the ODBC Driver</h4>
               </div>
             </div>
           </div>

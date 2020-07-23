@@ -2,7 +2,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2019 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -278,7 +278,7 @@ typedef struct __fn {
 #define	DB_PCT(v, total)						\
 	((int)((total) == 0 ? 0 : ((double)(v) * 100) / (total)))
 #define	DB_PCT_PG(v, total, pgsize)					\
-	((int)((total) == 0 ? 0 :					\
+	((int)((total * pgsize) == 0 ? 0 :				\
 	    100 - ((double)(v) * 100) / (((double)total) * (pgsize))))
 
 /*

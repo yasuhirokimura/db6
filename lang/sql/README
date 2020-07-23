@@ -3,20 +3,30 @@ Berkeley DB SQL API
 
 Content overview:
 ===============================================================================
-1) sql/adapter: the source files that implement the changes to SQLite in order
-   to use Berkeley DB as a storage engine, instead of the default btree
-   implementation in SQLite.
+1) sql/adapter: the files that implement the changes to SQLite in order
+   to use Berkeley DB as a storage engine instead of SQLite's default btree
+   implementation.
 
-2) sql/sqlite: The unpacked archive of SQLite source, "as extracted from
-   the version control system", modified to use Berkeley DB as the backend.
+2) sql/sqlite: configuration and other needed files from SQLite source,
+   modified to use Berkeley DB as the backend.
 
-3) sql/generated: Contains pre-generated versions of files used by amalgamated
+3) sql/generated: pre-generated versions of files used by amalgamated
    and Windows builds.
 
 Building
 ===============================================================================
 Linux/Unix/Cygwin:
   Simply add the "--enable-sql" switch to the configure command.
+
+  If you wish to use the SQLite Tcl test runner "testfixture" and the 
+  SQLite test suite, you will have to download the test code as modified
+  for the Berkeley DB backend. You can request it on the OTN Forum at
+
+https://community.oracle.com/community/database/berkeley_db_family/berkeley_db.
+
+  Use of the --enable-test configure flag together with --enable-sql 
+  requires this test code. 
+ 
   In more detail:
 
   It is possible to generate a few different outputs using configure.
@@ -41,7 +51,9 @@ Linux/Unix/Cygwin:
 
 Windows with Visual Studio 2005 or newer:
 
- - Open the build_windows/Berkeley_DB.sln file in Visual Studio.
+ - Open the build_windows/Berkeley_DB.sln (for VS 2005) or 
+	Berkeley_DB_vsYYYY.sln (for the corresponding version of Visual Studio) 
+	file in Visual Studio.
  - There are three project relevant to the SQL API:
    - db_sql - the C API library, output as libdb_sqlXX.dll
    - db_sql_shell - the SQL command line interpreter
@@ -73,5 +85,6 @@ Windows based builds:
 
 More information
 ===============================================================================
-See the Using the Berkeley DB SQL documentation on www.oracle.com.
-
+See the Berkeley DB SQL API documentation distributed with this package or
+available at www.oracle.com/technetwork/database-technologies/berkeleydb/
+documentation/index.html. 

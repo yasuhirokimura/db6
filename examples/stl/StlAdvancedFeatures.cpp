@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2009, 2017 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2009, 2019 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$ 
  */
@@ -171,6 +171,7 @@ void StlAdvancedFeaturesExample::arbitrary_object_storage()
 	dbt.set_flags(DB_DBT_USERMEM);
 	dbt.set_ulen(256);
 	db_map<int, DbstlDbt> msgmap(dbp3, penv);
+	msgmap.clear();
 	for (i = 0; i < 10; i++) {
 		smsdbt(dbt, msgstr, 10, 200);
 		SMSMsg *pmsg = SMSMsg::make_sms_msg(time(NULL), 

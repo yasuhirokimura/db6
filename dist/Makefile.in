@@ -818,16 +818,20 @@ JAVA_DEMOSRCS=\
 
 
 THRIFT_JARDIR=$(langdir)/thrift/jars
-THRIFT_JARS=$(THRIFT_JARDIR)/log4j.jar \
+THRIFT_JARS=$(THRIFT_JARDIR)/log4j-core.jar \
+	$(THRIFT_JARDIR)/log4j-api.jar \
+	$(THRIFT_JARDIR)/log4j-1.2-api.jar \
+	$(THRIFT_JARDIR)/log4j-slf4j-impl.jar \
 	$(THRIFT_JARDIR)/slf4j-api.jar \
-	$(THRIFT_JARDIR)/slf4j-log4j12.jar \
 	$(THRIFT_JARDIR)/libthrift.jar \
 	$(THRIFT_JARDIR)/db_thrift_interface.jar \
 	$(THRIFT_JARDIR)/db_thrift_server.jar \
 	$(THRIFT_JARDIR)/db_thrift_client.jar
-libthrift=log4j.jar \
+libthrift=log4j-core.jar \
+	log4j-api.jar \
+	log4j-1.2-api.jar \
+	log4j-slf4j-impl.jar \
 	slf4j-api.jar \
-	slf4j-log4j12.jar \
 	libthrift.jar \
 	db_thrift_interface.jar \
 	db_thrift_server.jar \
@@ -1248,13 +1252,13 @@ install_server:
 	done
 	$(CP) -f $(langdir)/thrift/bin/start_server.sh $(DESTDIR)$(bindir)
 	$(CP) -f $(langdir)/thrift/server/bdb.properties $(DESTDIR)$(bindir)
-	$(CP) -f $(langdir)/thrift/server/log4j.xml $(DESTDIR)$(bindir)
+	$(CP) -f $(langdir)/thrift/server/log4j2.xml $(DESTDIR)$(bindir)
 	$(CHMOD) $(emode) $(DESTDIR)$(bindir)/start_server.sh
 	$(CHMOD) 400 $(DESTDIR)$(bindir)/bdb.properties
 
 uninstall_server:
 	@cd $(DESTDIR)$(libdir) && $(RM) $(libthrift)
-	@cd $(DESTDIR)$(bindir) && $(RM) start_server.sh bdb.properties log4j.xml
+	@cd $(DESTDIR)$(bindir) && $(RM) start_server.sh bdb.properties log4j2.xml
 
 # We install csharp docs even on UNIX so we don't have a 
 # broken link on the landing page.

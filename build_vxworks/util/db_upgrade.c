@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2019 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -12,7 +12,7 @@
 
 #ifndef lint
 static const char copyright[] =
-    "Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.\n";
+    "Copyright (c) 1996, 2019 Oracle and/or its affiliates.  All rights reserved.\n";
 #endif
 
 int db_upgrade_main __P((int, char *[]));
@@ -41,11 +41,11 @@ db_upgrade_main(argc, argv)
 {
 	extern char *optarg;
 	extern int optind, __db_getopt_reset;
-	DB *dbp;
+	DB *dbp, *dbvp;
 	DB_ENV *dbenv;
-	u_int32_t flags;
+	u_int32_t flags, vflag;
 	int ch, exitval, nflag, ret, t_ret, verbose;
-	char *home, *msgpfx, *passwd;
+	char *home, *msgpfx, *passwd, *vopt;
 
 	progname = __db_util_arg_progname(argv[0]);
 
@@ -55,9 +55,9 @@ db_upgrade_main(argc, argv)
 	dbenv = NULL;
 	flags = nflag = verbose = 0;
 	exitval = EXIT_SUCCESS;
-	home = msgpfx = passwd = NULL;
+	home = msgpfx = passwd = vopt = NULL;
 	__db_getopt_reset = 1;
-	while ((ch = getopt(argc, argv, "h:m:NP:sVv")) != EOF)
+	while ((ch = getopt(argc, argv, "h:m:NP:S:sVv")) != EOF)
 		switch (ch) {
 		case 'h':
 			home = optarg;
@@ -72,6 +72,20 @@ db_upgrade_main(argc, argv)
 			if (__db_util_arg_password(progname, 
  			    optarg, &passwd) != 0)
   				goto err;
+			break;
+		case 'S':
+			vopt = optarg;
+			switch (*vopt) {
+			case 'o':
+				vflag = DB_NOORDERCHK;
+				break;
+			case 'v':
+				vflag = 0;
+				break;
+			default:
+				(void)db_upgrade_usage();
+				goto err;
+			}
 			break;
 		case 's':
 			LF_SET(DB_DUPSORT);
@@ -110,6 +124,10 @@ db_upgrade_main(argc, argv)
 	}
 
 	if (__db_util_env_open(dbenv, home, 0, 1, DB_INIT_MPOOL, 0, NULL) != 0)
+		goto err;
+
+	if (vopt != NULL && (db_create(&dbvp, dbenv, 0) != 0
+	    || dbvp->verify(dbvp, argv[0], NULL, stdout, vflag) != 0))
 		goto err;
 
 	for (; !__db_util_interrupted() && argv[0] != NULL; ++argv) {
@@ -161,5 +179,5 @@ void
 db_upgrade_usage()
 {
 	fprintf(stderr, "usage: %s %s\n", progname,
-	    "[-NsVv] [-h home] [-m msg_pfx] [-P password] db_file ...");
+	    "[-NsVv] [-h home] [-m msg_pfx] [-P password] [-S vo] db_file ...");
 }

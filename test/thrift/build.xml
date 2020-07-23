@@ -11,8 +11,10 @@
 
     <path id="thrift.libs">
       <pathelement location="${thrift.jars}/slf4j-api.jar"/>
-      <pathelement location="${thrift.jars}/slf4j-log4j12.jar"/>
-      <pathelement location="${thrift.jars}/log4j.jar"/>
+      <pathelement location="${thrift.jars}/log4j-1.2-api.jar"/>
+      <pathelement location="${thrift.jars}/log4j-core.jar"/>
+      <pathelement location="${thrift.jars}/log4j-api.jar"/>
+      <pathelement location="${thrift.jars}/log4j-slf4j-impl.jar"/>
       <pathelement location="${thrift.jars}/libthrift.jar"/>
     </path>
     <path id="thrift.server.test.libs">

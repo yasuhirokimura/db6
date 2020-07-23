@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2019 Oracle and/or its affiliates.  All rights reserved.
  */
 /*
  * Copyright (c) 1990, 1993, 1994, 1995, 1996
@@ -538,12 +538,16 @@ __db_byteswap(dbp, pg, h, pagesize, pgin)
 		for (i = 0; i < NUM_ENT(h); i++) {
 			if (pgin)
 				M_16_SWAP(inp[i]);
+			if (inp[i] >= pagesize)
+				break;
 
 			if (P_ENTRY(dbp, h, i) >= pgend)
 				continue;
 
 			switch (HPAGE_TYPE(dbp, h, i)) {
 			case H_BLOB:
+				if ((inp[i] + HBLOB_SIZE) > pagesize)
+					goto out;
 				p = HBLOB_ID(P_ENTRY(dbp, h, i));
 				SWAP64(p);			/* id */
 				SWAP64(p);			/* size */
@@ -572,10 +576,14 @@ __db_byteswap(dbp, pg, h, pagesize, pgin)
 				}
 				break;
 			case H_OFFDUP:
+				if ((inp[i] + HOFFDUP_SIZE) > pagesize)
+					goto out;
 				p = HOFFPAGE_PGNO(P_ENTRY(dbp, h, i));
 				SWAP32(p);			/* pgno */
 				break;
 			case H_OFFPAGE:
+				if ((inp[i] + HOFFPAGE_SIZE) > pagesize)
+					goto out;
 				p = HOFFPAGE_PGNO(P_ENTRY(dbp, h, i));
 				SWAP32(p);			/* pgno */
 				SWAP32(p);			/* tlen */
@@ -600,8 +608,12 @@ __db_byteswap(dbp, pg, h, pagesize, pgin)
 	case P_LDUP:
 	case P_LRECNO:
 		for (i = 0; i < NUM_ENT(h); i++) {
+			if ((u_int8_t *)(inp + i) >= pgend)
+				break;
 			if (pgin)
 				M_16_SWAP(inp[i]);
+			if (inp[i] >= pagesize)
+				break;
 
 			/*
 			 * In the case of on-page duplicates, key information
@@ -650,8 +662,13 @@ __db_byteswap(dbp, pg, h, pagesize, pgin)
 		break;
 	case P_IBTREE:
 		for (i = 0; i < NUM_ENT(h); i++) {
+			if ((u_int8_t *)(inp + i) >= pgend)
+				break;
 			if (pgin)
 				M_16_SWAP(inp[i]);
+			if ((u_int16_t)(inp[i] + 
+			    BINTERNAL_SIZE(0) - 1) >= pagesize)
+				break;
 
 			bi = GET_BINTERNAL(dbp, h, i);
 			if ((u_int8_t *)bi >= pgend)
@@ -666,6 +683,10 @@ __db_byteswap(dbp, pg, h, pagesize, pgin)
 				break;
 			case B_DUPLICATE:
 			case B_OVERFLOW:
+				if ((u_int16_t)(inp[i] + 
+				    BINTERNAL_SIZE(BOVERFLOW_SIZE) - 1) >= 
+				    pagesize)
+					goto out;
 				bo = (BOVERFLOW *)bi->data;
 				M_32_SWAP(bo->pgno);
 				M_32_SWAP(bo->tlen);
@@ -680,8 +701,12 @@ __db_byteswap(dbp, pg, h, pagesize, pgin)
 		break;
 	case P_IRECNO:
 		for (i = 0; i < NUM_ENT(h); i++) {
+			if ((u_int8_t *)(inp + i) >= pgend)
+				break;
 			if (pgin)
 				M_16_SWAP(inp[i]);
+			if (inp[i] >= pagesize)
+				break;
 
 			ri = GET_RINTERNAL(dbp, h, i);
 			if ((u_int8_t *)ri >= pgend)
@@ -696,8 +721,14 @@ __db_byteswap(dbp, pg, h, pagesize, pgin)
 		break;
 	case P_HEAP:
 		for (i = 0; i <= HEAP_HIGHINDX(h); i++) {
+			if (i >= NUM_ENT(h))
+				break;
+			if ((u_int8_t *)(inp + i) >= pgend)
+				break;
 			if (pgin)
 				M_16_SWAP(inp[i]);
+			if (inp[i] >= pagesize)
+				break;
 			if (inp[i] == 0)
 				continue;
 
@@ -705,6 +736,8 @@ __db_byteswap(dbp, pg, h, pagesize, pgin)
 			if ((u_int8_t *)hh >= pgend)
 				continue;
 			M_16_SWAP(hh->size);
+			if (pgin && ((inp[i] + HEAP_HDRSIZE(hh) + hh->size) > pagesize))
+				break;
 			if (F_ISSET(hh, HEAP_RECSPLIT)) {
 				hsh = (HEAPSPLITHDR *)hh;
 				M_32_SWAP(hsh->tsize);

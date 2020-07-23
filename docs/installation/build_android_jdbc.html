@@ -105,6 +105,22 @@ $ cd db-x.y.z</pre>
                     </p>
                 </li>
                 <li>
+                  <p>
+						Download the JDBC driver package 
+						<code class="literal">javasqlite-20150419.tar.gz</code> from
+						<a class="ulink" href="http://www.ch-werner.de/javasqlite" target="_top">http://www.ch-werner.de/javasqlite</a>. 
+						Then, in the directory 
+						<code class="literal">&lt;db&gt;/dist</code>,
+						</p>
+                  <pre class="programlisting">./s_sql_drivers -jdbc \
+						-jdbc_package /path/to/javasqlite-20150419.tar.gz \
+						-noaddons</pre>
+                  <p>
+						This will install the package with a few necessary
+						patches to <code class="literal">&lt;db&gt;/lang/sql/jdbc</code>.
+				    </p>
+                </li>
+                <li>
                   <p> 
                         Build an x86/x64 JDBC package. This is
                         required because the building process will
@@ -115,7 +131,7 @@ $ cd db-x.y.z</pre>
                     </p>
                   <p> 
                         To do this, edit
-                            <code class="literal">&lt;db&gt;/lang/sql/jdbc/SQLit/Database.java</code>
+                            <code class="literal">&lt;db&gt;/lang/sql/jdbc/SQLite/Database.java</code>
                         and replace all instances of
                             <code class="literal">System.loadLibrary("sqlite_jni")</code>
                         with

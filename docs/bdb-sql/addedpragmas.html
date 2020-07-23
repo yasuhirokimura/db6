@@ -65,6 +65,11 @@
           </dt>
           <dt>
             <span class="sect2">
+              <a href="addedpragmas.html#bdbsql_upgrade">PRAGMA bdbsql_upgrade</a>
+            </span>
+          </dt>
+          <dt>
+            <span class="sect2">
               <a href="addedpragmas.html#bdbsql_vacuum_fillpercent">PRAGMA bdbsql_vacuum_fillpercent</a>
             </span>
           </dt>
@@ -282,6 +287,24 @@
                     This PRAGMA may be used to set a [base segment ID]
                     only before the first table is created in the
                     database.
+                </p>
+      </div>
+      <div class="sect2" lang="en" xml:lang="en">
+        <div class="titlepage">
+          <div>
+            <div>
+              <h3 class="title"><a id="bdbsql_upgrade"></a>PRAGMA bdbsql_upgrade</h3>
+            </div>
+          </div>
+        </div>
+        <pre class="programlisting">PRAGMA bdbsql_upgrade</pre>
+        <p>
+                    Upgrades the currently connected database. If the
+                    database is encrypted, the encryption key must be
+                    set before this pragma is called. If the database
+                    uses keystore authentication and the encryption
+                    key is unknown, a user must login before this
+                    pragma is called.
                 </p>
       </div>
       <div class="sect2" lang="en" xml:lang="en">

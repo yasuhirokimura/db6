@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1999, 2017 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1999, 2019 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -49,6 +49,7 @@ __ham_vrfy_meta(dbp, vdp, m, pgno, flags)
 	u_int32_t pwr, mbucket;
 	u_int32_t (*hfunc) __P((DB *, const void *, u_int32_t));
 	db_seq_t blob_id;
+	db_pgno_t dpgno;
 
 	env = dbp->env;
 	isbad = 0;
@@ -167,7 +168,8 @@ __ham_vrfy_meta(dbp, vdp, m, pgno, flags)
 		 * than last_pgno.
 		 */
 		mbucket = (1 << i) - 1;
-		if (BS_TO_PAGE(mbucket, m->spares) > vdp->last_pgno) {
+		dpgno = BS_TO_PAGE(mbucket, m->spares);
+		if (dpgno > vdp->last_pgno || !IS_VALID_PGNO(dpgno)) {
 			EPRINT((env, DB_STR_A("1101",
 			    "Page %lu: spares array entry %d is invalid",
 			    "%lu %d"), (u_long)pgno, i));
@@ -190,6 +192,12 @@ __ham_vrfy_meta(dbp, vdp, m, pgno, flags)
 		if (ret == 0)
 			ret = t_ret;
 	}
+	if (blob_id < 0) {
+		isbad = 1;
+		EPRINT((env, DB_STR_A("5505",
+			"Page %lu: invalid external file id.", "%lu"),
+			(u_long)pgno));
+	}
 	t_ret = 0;
 	GET_BLOB_SDB_ID(env, m, blob_id, t_ret);
 	if (t_ret != 0) {
@@ -199,6 +207,12 @@ __ham_vrfy_meta(dbp, vdp, m, pgno, flags)
 		    "%lu"), (u_long)pgno));
 		if (ret == 0)
 			ret = t_ret;
+	}
+	if (blob_id < 0) {
+		isbad = 1;
+		EPRINT((env, DB_STR_A("5506",
+			"Page %lu: invalid external file subdatabase id.",
+			"%lu"), (u_long)pgno));
 	}
 #else /* HAVE_64BIT_TYPES */
 	/*
@@ -442,6 +456,13 @@ __ham_vrfy_item(dbp, vdp, pgno, h, i, flags)
 		len = LEN_HKEYDATA(dbp, h, dbp->pgsize, i);
 		databuf = HKEYDATA_DATA(P_ENTRY(dbp, h, i));
 		for (offset = 0; offset < len; offset += DUP_SIZE(dlen)) {
+			if (offset + sizeof(db_indx_t) > len) {
+				EPRINT((dbp->env, DB_STR_A("1105",
+			    "Page %lu: duplicate item %lu has bad length",
+				    "%lu %lu"), (u_long)pip->pgno, (u_long)i));
+				ret = DB_VERIFY_BAD;
+				goto err;
+			}
 			memcpy(&dlen, databuf + offset, sizeof(db_indx_t));
 
 			/* Make sure the length is plausible. */
@@ -1063,6 +1084,10 @@ keydata:			memcpy(buf, HKEYDATA_DATA(hk), len);
 				}
 				file_id = (db_seq_t)hblob.file_id;
 				sdb_id = (db_seq_t)hblob.sdb_id;
+				if (file_id < 0 || sdb_id < 0) {
+					err_ret = DB_VERIFY_BAD;
+					continue;
+				}
 				/* Read the blob, in pieces if too large.*/
 				blob_offset = 0;
 				if (blob_size > MEGABYTE) {

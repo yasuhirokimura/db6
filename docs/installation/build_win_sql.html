@@ -40,27 +40,27 @@
         <dl>
           <dt>
             <span class="sect2">
-              <a href="build_win_sql.html#idm140188018737024">Setting User Authentication</a>
+              <a href="build_win_sql.html#idm140553823519392">Setting User Authentication</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="build_win_sql.html#idm140188018776032">Binary Compatibility With SQLite</a>
+              <a href="build_win_sql.html#idm140553823482496">Binary Compatibility With SQLite</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="build_win_sql.html#idm140188018742464">Setting Encryption</a>
+              <a href="build_win_sql.html#idm140553819764112">Setting Encryption</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="build_win_sql.html#idm140188018740160">Changing Compile Options</a>
+              <a href="build_win_sql.html#idm140553823728992">Changing Compile Options</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="build_win_sql.html#idm140188018722480">Enabling Extensions</a>
+              <a href="build_win_sql.html#idm140553820174528">Enabling Extensions</a>
             </span>
           </dt>
           <dt>
@@ -75,22 +75,22 @@
           </dt>
           <dt>
             <span class="sect2">
-              <a href="build_win_sql.html#idm140188018724976">Using the JDBC Driver</a>
+              <a href="build_win_sql.html#idm140553820096064">Using the JDBC Driver</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="build_win_sql.html#idm140188018636080">Using the JDBC Driver in ADF/JDeveloper</a>
+              <a href="build_win_sql.html#idm140553820637344">Using the JDBC Driver in ADF/JDeveloper</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="build_win_sql.html#idm140188018597328">Building the ODBC Driver</a>
+              <a href="build_win_sql.html#idm140553821578352">Building the ODBC Driver</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="build_win_sql.html#idm140188018713008"> Using the ADO.NET Driver </a>
+              <a href="build_win_sql.html#idm140553820011408"> Using the ADO.NET Driver </a>
             </span>
           </dt>
         </dl>
@@ -111,7 +111,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm140188018737024"></a>Setting User Authentication</h3>
+              <h3 class="title"><a id="idm140553823519392"></a>Setting User Authentication</h3>
             </div>
           </div>
         </div>
@@ -138,7 +138,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm140188018776032"></a>Binary Compatibility With SQLite</h3>
+              <h3 class="title"><a id="idm140553823482496"></a>Binary Compatibility With SQLite</h3>
             </div>
           </div>
         </div>
@@ -183,7 +183,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm140188018742464"></a>Setting Encryption</h3>
+              <h3 class="title"><a id="idm140553819764112"></a>Setting Encryption</h3>
             </div>
           </div>
         </div>
@@ -201,7 +201,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm140188018740160"></a>Changing Compile Options</h3>
+              <h3 class="title"><a id="idm140553823728992"></a>Changing Compile Options</h3>
             </div>
           </div>
         </div>
@@ -345,7 +345,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm140188018722480"></a>Enabling Extensions</h3>
+              <h3 class="title"><a id="idm140553820174528"></a>Enabling Extensions</h3>
             </div>
           </div>
         </div>
@@ -491,6 +491,20 @@
                   </li>
                   <li>
                     <p>
+								Download the JDBC driver package 
+								<code class="literal">javasqlite-20150419.tar.gz</code> from
+								<a class="ulink" href="http://www.ch-werner.de/javasqlite" target="_top">http://www.ch-werner.de/javasqlite</a>. 
+								Then, in the directory 
+								<code class="literal">&lt;db&gt;/dist</code>,
+								</p>
+                    <pre class="programlisting">./s_sql_drivers -jdbc \
+								-jdbc_package /path/to/javasqlite-20150419.tar.gz \
+								-noaddons</pre>
+                    <p>
+								This will install the package with a few necessary
+								patches to <code class="literal">&lt;db&gt;/lang/sql/jdbc</code>.
+							</p>
+                    <p>
                                 Go to
                                 <code class="literal">db\lang\sql\jdbc\SQLite</code>,
                                 and replace
@@ -549,7 +563,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm140188018724976"></a>Using the JDBC Driver</h3>
+              <h3 class="title"><a id="idm140553820096064"></a>Using the JDBC Driver</h3>
             </div>
           </div>
         </div>
@@ -562,7 +576,7 @@
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm140188018690112"></a>Downloading JDBC Sample Code</h4>
+                <h4 class="title"><a id="idm140553820083552"></a>Downloading JDBC Sample Code</h4>
               </div>
             </div>
           </div>
@@ -579,7 +593,7 @@
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm140188018644720"></a>Modifying Sample Code</h4>
+                <h4 class="title"><a id="idm140553821619440"></a>Modifying Sample Code</h4>
               </div>
             </div>
           </div>
@@ -647,7 +661,7 @@
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm140188018736384"></a>Building and Running the JDBC Sample code</h4>
+                <h4 class="title"><a id="idm140553819879216"></a>Building and Running the JDBC Sample code</h4>
               </div>
             </div>
           </div>
@@ -703,7 +717,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm140188018636080"></a>Using the JDBC Driver in ADF/JDeveloper</h3>
+              <h3 class="title"><a id="idm140553820637344"></a>Using the JDBC Driver in ADF/JDeveloper</h3>
             </div>
           </div>
         </div>
@@ -820,7 +834,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm140188018597328"></a>Building the ODBC Driver</h3>
+              <h3 class="title"><a id="idm140553821578352"></a>Building the ODBC Driver</h3>
             </div>
           </div>
         </div>
@@ -832,7 +846,7 @@
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm140188018610848"></a>Configuring Your System</h4>
+                <h4 class="title"><a id="idm140553823655120"></a>Configuring Your System</h4>
               </div>
             </div>
           </div>
@@ -863,7 +877,7 @@
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm140188018564528"></a>Building the Library</h4>
+                <h4 class="title"><a id="idm140553822634896"></a>Building the Library</h4>
               </div>
             </div>
           </div>
@@ -943,7 +957,7 @@
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm140188018667856"></a>Installing the Library</h4>
+                <h4 class="title"><a id="idm140553820085648"></a>Installing the Library</h4>
               </div>
             </div>
           </div>
@@ -968,7 +982,7 @@
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm140188018628096"></a>Testing the ODBC Install</h4>
+                <h4 class="title"><a id="idm140553820584352"></a>Testing the ODBC Install</h4>
               </div>
             </div>
           </div>
@@ -1018,16 +1032,12 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm140188018713008"></a> Using the ADO.NET Driver </h3>
+              <h3 class="title"><a id="idm140553820011408"></a> Using the ADO.NET Driver </h3>
             </div>
           </div>
         </div>
         <p>
-                Go to the <a class="ulink" href="http://www.oracle.com/technetwork/database/database-technologies/berkeleydb/downloads/index.html" target="_top">Oracle
-                Berkeley DB download page</a>, and download
-                the ADO.NET package. Build the package by following
-                the <a href="../bdb-sql/buildinstall.html#ado_net" class="olink">
-                instructions</a> included in the package.
+				See the instructions in the Berkeley DB SQL API Guide.
             </p>
       </div>
     </div>

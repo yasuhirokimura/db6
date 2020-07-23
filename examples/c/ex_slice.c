@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2016, 2017 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2016, 2019 Oracle and/or its affiliates.  All rights reserved.
  *
  * ex_slice - Use the Berkeley DB feature slices in a benchmarking application.
  *

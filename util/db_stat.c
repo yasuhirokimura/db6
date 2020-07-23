@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2019 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -12,7 +12,7 @@
 
 #ifndef lint
 static const char copyright[] =
-    "Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.\n";
+    "Copyright (c) 1996, 2019 Oracle and/or its affiliates.  All rights reserved.\n";
 #endif
 
 typedef enum { T_NOTSET, T_DB,
@@ -32,12 +32,12 @@ main(argc, argv)
 	extern char *optarg;
 	extern int optind;
 	DB_ENV	*dbenv;
-	DB *dbp;
+	DB *dbp, *dbvp;
 	test_t ttype;
-	u_int32_t cache, flags;
+	u_int32_t cache, flags, vflag;
 	int ch, exitval;
 	int nflag, private, resize, ret;
-	char *db, *home, *p, *passwd, *region_dir, *subdb;
+	char *db, *home, *p, *passwd, *region_dir, *subdb, *vopt;
 
 	progname = __db_util_arg_progname(argv[0]);
 
@@ -45,15 +45,15 @@ main(argc, argv)
 		return (ret);
 
 	dbenv = NULL;
-	dbp = NULL;
+	dbp = dbvp = NULL;
 	ttype = T_NOTSET;
 	cache = MEGABYTE;
 	flags = nflag = private = 0;
 	exitval = EXIT_SUCCESS;
-	db = home = passwd = region_dir = subdb = NULL;
+	db = region_dir = subdb = home = passwd = vopt = NULL;
 
 	while ((ch = getopt(argc,
-	    argv, "aC:cd:Eefgh:L:lM:mNP:p:R:rs:tVxX:Z")) != EOF)
+	    argv, "aC:cd:Eefgh:L:lM:mNP:p:R:rS:s:tVxX:Z")) != EOF)
 		switch (ch) {
 		case 'a':
 			LF_SET(DB_STAT_ALLOC);
@@ -173,6 +173,20 @@ main(argc, argv)
 			ttype = T_DB;
 			subdb = optarg;
 			break;
+		case 'S':
+			vopt = optarg;
+			switch (*vopt) {
+			case 'o':
+				vflag = DB_NOORDERCHK;
+				break;
+			case 'v':
+				vflag = 0;
+				break;
+			default:
+				(void)usage();
+				goto err;
+			}
+			break;
 		case 't':
 			if (ttype != T_NOTSET) {
 argcombo:			fprintf(stderr, DB_STR_A("5006",
@@ -224,6 +238,11 @@ argcombo:			fprintf(stderr, DB_STR_A("5006",
 	case T_MUTEX:
 	case T_REP:
 	case T_TXN:
+		if (vopt != NULL) {
+			fprintf(stderr, "usage: %s %s\n", progname,
+		    "you must specify a database file to run verification.");
+			goto usage_err;
+		}
 		break;
 	case T_NOTSET:
 		goto usage_err;
@@ -267,6 +286,10 @@ retry:
 			dbenv->err(dbenv, ret, "db_create");
 			goto err;
 		}
+
+		if (vopt != NULL && (db_create(&dbvp, dbenv, 0) != 0
+		    || dbvp->verify(dbvp, db, subdb, stdout, vflag) != 0))
+			goto err;
 
 		/*
 		 * We open the database for writing so we can update the cached
@@ -441,7 +464,7 @@ void
 usage()
 {
 	fprintf(stderr, "usage: %s %s\n", progname,
-	    "-d file [-fN] [-h home] [-P password] [-s database]");
+	    "-d file [-fN] [-h home] [-P password] [-s database] [-S ov]");
 	fprintf(stderr, "usage: %s %s\n\t%s\n", progname,
 	    "[-cEelmrtVx] [-C Aclop]",
 "[-h home] [-L A] [-M Ah] [-P password] [-p region_dir] [-R A] [-X A] [-aNZ]");

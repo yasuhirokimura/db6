@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2019 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -48,7 +48,7 @@ public class BdbServerCmdOptions {
     /* Hide constructor. */
     private BdbServerCmdOptions() {
         this.options.put(CONFIG_FILE, "bdb.properties");
-        this.options.put(LOG4J_CONFIG, "log4j.xml");
+        this.options.put(LOG4J_CONFIG, "log4j2.xml");
     }
 
     /**

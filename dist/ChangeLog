@@ -1,5 +1,59 @@
 = Berkeley DB 6.2 Changelog =
 
+== Changes between version 12.1.6.2.33 and version 12.1.6.2.38 ==
+
+Fixed several null pointer crashes in the Tcl API when a function
+returns a null value. [#26331]
+
+Third party JDBC driver code was removed from the distribution. Instructions
+have been added about how to download and integrate with Berkeley DB. [#26746]
+
+Third party ADO.NET driver code was removed from the distribution. Instructions
+have been added about how to download and integrate with Berkeley DB. [#26746]
+
+The BDB SQL test suite is no longer part of the release package. [#26749]
+
+For greater security, the libraries supporting the Berkeley DB
+client-server architecture have been updated. As a result,
+asynchronous loggers can no longer be used. [#27027]
+
+Fix a bug in the Java function Environment.lockVector(). [#27068]
+
+Improved stability with several changes that prevent crashes when 
+running db_verify against corrupt files. [#27088]
+
+Improved the reliability of DB_ENV->open(DB_REGISTER) when the Berkeley DB
+application is the principal process of a Docker container which is stopped
+and restarted. [#27100]
+
+Fixed a possible crash when running db_verify on a corrupted DB_QUEUE
+database. [#27179]
+
+The Berkeley DB client-server architecture has been updated to use 
+Thrift 0.11.0. [#27407] 
+
+== Changes between version 12.1.6.2.32 and version 12.1.6.2.33 ==
+
+Added PRAGMA bdbsql_upgrade, which upgrades the connected database.
+If the database is encrypted, the encryption key must be set before
+calling this pragma. If the database uses keystore authentication and
+the encryption key is not unknown, a user must login before calling
+this pragma. [#24598]
+
+Fixed several out of bounds memory reads and divide by zero bugs in
+the utility programs. [#26207]
+
+Fixed a bug that could prevent temporary files from being deleted.
+[#25997]
+
+Added the -S commandline option to db_stat, db_dump, and db_upgrade,
+which verifies the correctness of the database before executing the
+utilities. [#26207]
+
+When opening a database handle which was created outside of an environment,
+if the current working directory contains a DB_CONFIG file it will no longer
+be processed.  [#26319]
+
 == Changes between version 12.1.6.2.23 and version 12.1.6.2.32 ==
 
 Modified the ex_rep_base example to accept IPv6 addresses. [#24371]
@@ -206,6 +260,10 @@ was called on a 32-bit system. [#24783]
 
 Fixed a bug that allowed illegal use of transactions when adding a
 sequence to a new database.  [#24786]
+
+Improved the reliability of DB_ENV->open(DB_REGISTER) when the Berkeley DB
+application is the principal process of a Docker container which is stopped
+and restarted. [#27100]
 
 == Concurrent Data Store Changes ==
 

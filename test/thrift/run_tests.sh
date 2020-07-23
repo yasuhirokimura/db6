@@ -67,6 +67,10 @@ export CP_SEP
 export CLASSPATH
 export ANT_OPTS
 
+TEST_DIR=`pwd`
+cp ../../lang/thrift/server/log4j2.xml .
+sed -i "s?path-to-log-file?${TEST_DIR}?g" $TEST_DIR/log4j2.xml
+
 ANT=${ANT:-ant}
 
 $ANT -Ddb.jar=$DB_JAR clean

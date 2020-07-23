@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2010, 2017 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2010, 2019 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -126,6 +126,12 @@ __heap_vrfy_meta(dbp, vdp, meta, pgno, flags)
 		if (ret == 0)
 			ret = t_ret;
 	}
+	if (blob_id < 0) {
+		isbad = 1;
+		EPRINT((dbp->env, DB_STR_A("5507",
+			"Page %lu: invalid external file id.", "%lu"),
+			(u_long)pgno));
+	}
 #else /* HAVE_64BIT_TYPES */
 	/*
 	 * db_seq_t is an int on systems that do not have 64 integers types, so
@@ -168,7 +174,7 @@ __heap_vrfy(dbp, vdp, h, pgno, flags)
 	int i, j, ret;
 	off_t blob_size;
 	db_seq_t blob_id, file_id;
-	db_indx_t *offsets, *offtbl, end;
+	db_indx_t *offsets, offset, *offtbl, end;
 	u_int32_t cnt;
 
 	if (dbp->type != DB_HEAP) {
@@ -176,7 +182,7 @@ __heap_vrfy(dbp, vdp, h, pgno, flags)
 		    "Page %lu: invalid page type %u for %s database",
 		    "%lu %u %s"), (u_long)pgno, TYPE(h),
 		    __db_dbtype_to_string(dbp->type)));
-		return DB_VERIFY_BAD;
+		return DB_VERIFY_FATAL;
 	}
 
 	if ((ret = __db_vrfy_datapage(dbp, vdp, h, pgno, flags)) != 0)
@@ -209,6 +215,13 @@ __heap_vrfy(dbp, vdp, h, pgno, flags)
 			    "%lu"), (u_long)pgno));
 			ret = DB_VERIFY_BAD;
 			goto err;
+		}
+		offset = offtbl[i];
+		if (offset >= dbp->pgsize) {
+			EPRINT((dbp->env, DB_STR_A("5508",
+			    "Page %lu: invalid offset.", "%lu"), (u_long)pgno));
+			ret = DB_VERIFY_BAD;
+			continue;
 		}
 		hdr = (HEAPHDR *)P_ENTRY(dbp, h, i);
 		if (!F_ISSET(hdr, HEAP_RECSPLIT) &&
@@ -446,7 +459,7 @@ __heap_salvage(dbp, vdp, pgno, h, handle, callback, flags)
 	 * when the first piece is encountered,
 	 */
 	for (i = 0; i <= HEAP_HIGHINDX(h); i++) {
-		if (offtbl[i] == 0)
+		if (offtbl[i] == 0 || offtbl[i] >= dbp->pgsize)
 			continue;
 		hdr = (HEAPHDR *)P_ENTRY(dbp, h, i);
 		if (F_ISSET(hdr, HEAP_RECSPLIT)) {
@@ -475,6 +488,8 @@ __heap_salvage(dbp, vdp, pgno, h, handle, callback, flags)
 			if (ret != 0 || blob_size < 0)
 				goto err;
 			file_id = (db_seq_t)bhdr.file_id;
+			if (file_id < 1)
+				goto err;
 			/* Read the blob, in pieces if it is too large.*/
 			blob_offset = 0;
 			if (blob_size > MEGABYTE) {

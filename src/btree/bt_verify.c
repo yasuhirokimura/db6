@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1999, 2017 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1999, 2019 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -219,6 +219,12 @@ __bam_vrfy_meta(dbp, vdp, meta, pgno, flags)
 		if (ret == 0)
 			ret = t_ret;
 	}
+	if (blob_id < 0) {
+		isbad = 1;
+		EPRINT((env, DB_STR_A("5502",
+		    "Page %lu: invalid external file id.", "%lu"),
+		    (u_long)pgno));
+	}
 	t_ret = 0;
 	GET_BLOB_SDB_ID(env, meta, blob_id, t_ret);
 	if (t_ret != 0) {
@@ -228,6 +234,12 @@ __bam_vrfy_meta(dbp, vdp, meta, pgno, flags)
 		    "%lu"), (u_long)pgno));
 		if (ret == 0)
 			ret = t_ret;
+	}
+	if (blob_id < 0) {
+		isbad = 1;
+		EPRINT((env, DB_STR_A("5503",
+		    "Page %lu: invalid external file subdatabase id.", "%lu"),
+		    (u_long)pgno));
 	}
 #else /* HAVE_64BIT_TYPES */
 	/*
@@ -299,7 +311,7 @@ __ram_vrfy_leaf(dbp, vdp, h, pgno, flags)
 		    "Page %lu: invalid page type %u for %s database",
 		    "%lu %u %s"), (u_long)pgno, TYPE(h),
 		    __db_dbtype_to_string(dbp->type)));
-		return DB_VERIFY_BAD;
+		return DB_VERIFY_FATAL;
 	}
 
 	if ((ret = __db_vrfy_getpageinfo(vdp, pgno, &pip)) != 0)
@@ -410,7 +422,7 @@ __bam_vrfy(dbp, vdp, h, pgno, flags)
 		    "Page %lu: invalid page type %u for %s database",
 		    "%lu %u %s"), (u_long)pgno, TYPE(h),
 		    __db_dbtype_to_string(dbp->type)));
-		return DB_VERIFY_BAD;
+		return DB_VERIFY_FATAL;
 	}
 
 	if ((ret = __db_vrfy_getpageinfo(vdp, pgno, &pip)) != 0)
@@ -745,6 +757,10 @@ __bam_vrfy_inp(dbp, vdp, h, pgno, nentriesp, flags)
 			break;
 		case B_BLOB:
 			endoff = offset + BBLOB_SIZE - 1;
+			if (endoff >= dbp->pgsize) {
+				isbad = 1;
+				goto err;
+			}
 			break;
 		case B_DUPLICATE:
 			/*
@@ -1108,7 +1124,15 @@ __bam_vrfy_itemorder(dbp, vdp, ip, h, pgno, nentries, ovflok, hasdups, flags)
 				 */
 				mpf = dbp->mpf;
 				child = h;
+				cpgno = pgno;
 				while (TYPE(child) == P_IBTREE) {
+					if (NUM_ENT(child) == 0) {
+						EPRINT((env, DB_STR_A("1088",
+		    "Page %lu: internal page is empty and should not be",
+					    "%lu"), (u_long)cpgno));
+						ret = DB_VERIFY_BAD;
+						goto err;
+					}
 					bi = GET_BINTERNAL(dbp, child, 0);
 					cpgno = bi->pgno;
 					if (child != h &&
@@ -1486,6 +1510,13 @@ __bam_vrfy_structure(dbp, vdp, meta_pgno, lp, rp, flags)
 		break;
 	case P_IRECNO:
 	case P_LRECNO:
+		if (dbp->type != DB_RECNO) {
+			EPRINT((env, DB_STR_A("1215",
+		    	"Page %lu: invalid page type %u for %s database",
+		   	 "%lu %u %s"), (u_long)meta_pgno, rip->type,
+		   	 __db_dbtype_to_string(dbp->type)));
+			return DB_VERIFY_BAD;
+		}
 		stflags =
 		    flags | DB_ST_RECNUM | DB_ST_IS_RECNO | DB_ST_TOPLEVEL;
 		if (mip->re_len > 0)
@@ -1714,9 +1745,10 @@ bad_prev:				isbad = 1;
 			    (ret = __db_vrfy_ovfl_structure(dbp, vdp,
 			    child->pgno, child->tlen,
 			    flags | DB_ST_OVFL_LEAF)) != 0) {
-				if (ret == DB_VERIFY_BAD)
+				if (ret == DB_VERIFY_BAD) {
 					isbad = 1;
-				else
+					break;
+				} else
 					goto done;
 			}
 
@@ -2712,6 +2744,8 @@ __bam_salvage(dbp, vdp, pgno, pgtype, h, handle, callback, key, flags)
 				goto err;
 			file_id = (db_seq_t)bl.file_id;
 			sdb_id = (db_seq_t)bl.sdb_id;
+			if (file_id < 1 || sdb_id < 0)
+				goto err;
 
 			/* Read the blob, in pieces if it is too large.*/
 			blob_offset = 0;

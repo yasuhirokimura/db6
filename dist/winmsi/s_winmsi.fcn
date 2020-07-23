@@ -479,7 +479,7 @@ StageRuntimeComponents() {
 	cp $file stage/jar
     done
     cp lang/thrift/server/bdb.properties stage/bin
-    cp lang/thrift/server/log4j.xml stage/bin
+    cp lang/thrift/server/log4j2.xml stage/bin
     cp lang/thrift/bin/start_server.bat stage/bin
     chmod 400 stage/bin/bdb.properties
 
@@ -552,10 +552,10 @@ StageRuntimeComponents() {
 
     # Thrift
     find jar -name "*thrift*" >> $group_thrift
-    find jar -name "slf*" >> $group_thrift
-    echo "jar/log4j.jar" >> $group_thrift
+    find jar -name "log4j*" >> $group_thrift
+    echo "jar/slf4j-api.jar" >> $group_thrift
     echo "bin/bdb.properties" >> $group_thrift
-    echo "bin/log4j.xml" >> $group_thrift
+    echo "bin/log4j2.xml" >> $group_thrift
     echo "bin/start_server.bat" >> $group_thrift
     cd ..
 

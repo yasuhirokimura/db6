@@ -14,6 +14,7 @@ CSHARP_DOC_SRC=""
 # 0 is none, 1 is local dir, 2 is remote dir
 CSHARP_DOC_LOCATION=0
 test_run=0
+LICENSE_TYPE=""
 
 while [ $# -gt 0 ]
 do
@@ -37,6 +38,12 @@ do
 		fi
 		CSHARP_DOC_SRC=$1
 		CSHARP_DOC_LOCATION=2;;
+	-license_type)
+		shift
+		if [ ! $# -gt 0 ]; then 
+			die "-license_type param requires argument."
+		fi
+		LICENSE_TYPE=$1;;
 	-test)
 		echo "Doing a test run - this may contain changes that aren't\
 reflected in a tag, so the package won't be reproducible."
@@ -45,12 +52,18 @@ reflected in a tag, so the package won't be reproducible."
 	shift
 done
 
+# Check for valid license type.
+if [[ $LICENSE_TYPE != "ORACLE" ]] && [[ $LICENSE_TYPE != "AGPL" ]]; then
+	echo "You must specify a license type of ORACLE (commercial) or AGPL (open source)."
+	exit 1
+fi
+
 # A version string can be specified on the command line (e.g., "20080219").
 # Otherwise, use the standard X.X.X format.
 VERSION=${1:-${DB_VERSION_MAJOR}.${DB_VERSION_MINOR}.${DB_VERSION_PATCH}}
 
 # Use "ustar" as the archiver
-TAR=ustar
+TAR=/opt/schily/bin/ustar
 
 # Set root directory where we do the work, can be anywhere.
 START_DIR=`pwd`
@@ -80,6 +93,28 @@ if [ $test_run != 0 ]; then
 fi
 
 echo "Created hg archive in $R"
+
+# Build the appropriate LICENSE file for the distribution and discard the
+# extra parts before assembling the package. Third party notices belong
+# in all distributions.
+cd $R
+if [ $LICENSE_TYPE = "AGPL" ]; then
+	if [ ! -f AGPL ]; then 
+		die "AGPL license file is missing."
+	fi
+	cat AGPL >> LICENSE
+fi	
+if [ $LICENSE_TYPE = "ORACLE" ]; then
+	if [ ! -f ORACLE ]; then 
+		die "ORACLE license file is missing."
+	fi
+	cat ORACLE >> LICENSE
+fi	
+if [ ! -f 3RDPARTY ]; then 
+	die "3RDPARTY license file is missing."
+fi
+cat 3RDPARTY >> LICENSE
+rm 3RDPARTY ORACLE AGPL
 
 if [ "$nodocs" = true ] ; then
 	rm -rf $R/docs
@@ -132,16 +167,6 @@ else
 	cd $R/dist && sh s_javadoc
 fi
 
-# Pull a copy of the JDBC and ODBC libraries into the package.
-# Build the ADO.NET package, including moving the ADO.NET doc built above
-# into that package.
-# Tell the script where to look for packages.
-cd $R/dist && sh s_sql_drivers -addons ../../../..
-# Warn if s_sql_drivers didn't move its docs.
-if [ -e "$R/docs/bdb-sql-ado" ]; then
-	echo "WARNING: ADO.NET doc is still in the non ADO.NET package."
-fi
-
 cd $START_DIR
 
 # Pull a copy of the bfile directory into the package.
@@ -167,6 +192,12 @@ cp -rp $DB_ADDONS/bfile $SQL_EXT_DIR
 cd $R && rm -rf test/tcl/TODO test/upgrade test/scr036 test/erlang
 cd $R && rm -rf test/perf test/purify test/repmgr
 cd $R && rm -rf test/server test/stl test/vxworks
+cd $R && rm -rf lang/sql/jdbc
+cd $R && rm -rf lang/sql/sqlite/art lang/sql/sqlite/autoconf
+cd $R && rm -rf lang/sql/sqlite/autom4te.cache lang/sql/sqlite/contrib
+cd $R && rm -rf lang/sql/sqlite/doc lang/sql/sqlite/mptest
+cd $R && rm -rf lang/sql/sqlite/test lang/sql/sqlite/tool
+cd $R && rm -rf lang/sql/sqlite/vsixtest
 cd $R && find . -name '.hg*' | xargs rm -f
 cd $R && find . -name 'tags' | xargs rm -f
 

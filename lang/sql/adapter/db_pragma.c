@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2010, 2017 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2010, 2019 Oracle and/or its affiliates.  All rights reserved.
  */
 
 /*
@@ -579,6 +579,19 @@ static int bdbsqlPragmaStopReplication(Parse *pParse, Db *pDb)
 		sqlite3_free(old_addr);
 
 done:
+	return rc;
+}
+
+static int bdbsqlPragmaUpgradeDb(DB_ENV *dbenv, const char *file)
+{
+	DB *db;
+	int rc = 0, t_rc;
+
+	if ((rc = db_create(&db, dbenv, 0)) != 0)
+		return rc;
+	rc = db->upgrade(db, file, 0);
+	if ((t_rc = db->close(db, 0)) != 0 && rc == 0)
+		rc = t_rc;
 	return rc;
 }
 
@@ -1567,6 +1580,46 @@ int bdbsqlPragma(Parse *pParse, char *zLeft, char *zRight, int iDb)
 				    "Error getting statistics: %s.",
 				    db_strerror(err));
 		}
+		parsed = 1;
+	/*
+	 * PRAGMA bdbsql_upgrade; -- Upgrade all database files.
+	 */
+	} else if (sqlite3StrNICmp(zLeft, "bdbsql_upgrade", 14) == 0) {
+		BtShared *pBt;
+		DB_ENV *dbenv;
+		char **names;
+		int count, i, err;
+
+		pBt = pDb->pBt->pBt;
+		dbenv = NULL;
+		names = NULL;
+		err = count = 0;
+		if (pBt->env_opened ||
+		    btreeOpenEnvironment(pDb->pBt, 1) == SQLITE_OK) {
+			dbenv = pBt->dbenv;
+#ifdef BDBSQL_FILE_PER_TABLE
+			err = __os_dirlist(dbenv->env, pBt->full_name,
+			    0, &names, &count);
+#else
+			names = &pBt->full_name;
+			count = 1;
+#endif
+			for (i = 0; i < count; i++) {
+				if ((err = bdbsqlPragmaUpgradeDb(dbenv,
+				    names[i])) != 0) {
+				    	sqlite3ErrorMsg(pParse,
+				    	"Could not upgrade database '%s': %s.",
+				    	    names[i], db_strerror(err));
+					break;
+				}
+			}
+#ifdef BDBSQL_FILE_PER_TABLE
+			if (names != NULL)
+				__os_dirfree(dbenv->env, names, count);
+#endif
+		} else
+			sqlite3ErrorMsg(pParse,
+			    "Could not access the database.");
 		parsed = 1;
 	}
 #ifdef SQLITE_USER_AUTHENTICATION

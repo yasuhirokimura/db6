@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1999, 2017 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1999, 2019 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -1024,7 +1024,8 @@ env_Cmd(clientData, interp, objc, objv)
 			return (TCL_ERROR);
 		}
 		dbenv->get_errpfx(dbenv, &strval);
-		res = NewStringObj(strval, strlen(strval));
+		res = NewStringObj(strval,
+			strval != NULL ? strlen(strval) : 0);
 		break;
 	case ENVGETFLAGS:
 		result = env_GetFlags(interp, objc, objv, dbenv);
@@ -1057,7 +1058,8 @@ env_Cmd(clientData, interp, objc, objv)
 		ret = dbenv->get_lg_dir(dbenv, &strval);
 		if ((result = _ReturnSetup(interp, ret, DB_RETOK_STD(ret),
 		    "env get_lg_dir")) == TCL_OK)
-			res = NewStringObj(strval, strlen(strval));
+			res = NewStringObj(strval,
+				strval != NULL ? strlen(strval) : 0);
 		break;
 	case ENVGETLGFILEMODE:
 		if (objc != 2) {
@@ -1213,7 +1215,8 @@ env_Cmd(clientData, interp, objc, objv)
 		ret = dbenv->get_metadata_dir(dbenv, &strval);
 		if ((result = _ReturnSetup(interp, ret, DB_RETOK_STD(ret),
 		    "env get_metadata_dir")) == TCL_OK)
-			res = NewStringObj(strval, strlen(strval));
+			res = NewStringObj(strval,
+				strval != NULL ? strlen(strval) : 0);
 		break;
 	case ENVGETMPMAXOPENFD:
 		if (objc != 2) {
@@ -1284,7 +1287,8 @@ env_Cmd(clientData, interp, objc, objv)
 			return (TCL_ERROR);
 		}
 		dbenv->get_msgpfx(dbenv, &strval);
-		res = NewStringObj(strval, strlen(strval));
+		res = NewStringObj(strval,
+			strval != NULL ? strlen(strval) : 0);
 		break;
 	case ENVGETOPENFLAG:
 		result = env_GetOpenFlag(interp, objc, objv, dbenv);
@@ -1297,7 +1301,8 @@ env_Cmd(clientData, interp, objc, objv)
 		ret = dbenv->get_region_dir(dbenv, &strval);
 		if ((result = _ReturnSetup(interp, ret, DB_RETOK_STD(ret),
 			"env get_region_dir")) == TCL_OK)
-			res = NewStringObj(strval, strlen(strval));
+			res = NewStringObj(strval,
+				strval != NULL ? strlen(strval) : 0);
 		break;
 	case ENVGETSHMKEY:
 		if (objc != 2) {
@@ -1353,7 +1358,8 @@ env_Cmd(clientData, interp, objc, objv)
 		ret = dbenv->get_tmp_dir(dbenv, &strval);
 		if ((result = _ReturnSetup(interp, ret, DB_RETOK_STD(ret),
 		    "env get_tmp_dir")) == TCL_OK)
-			res = NewStringObj(strval, strlen(strval));
+			res = NewStringObj(strval,
+				strval != NULL ? strlen(strval) : 0);
 		break;
 	case ENVGETTXINIT:
 		if (objc != 2) {
