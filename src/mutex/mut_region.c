@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -258,11 +258,17 @@ __mutex_region_init(env, mtxmgr)
 		return (ret);
 	}
 #ifdef HAVE_SHARED_LATCHES
+	/*
+	 * Run some simple tests verifing that mutexes work adequately. We
+	 * expect failure when attempting to get shared access to an exlusively
+	 * held rwlock (perhaps with EDEADLK when using pthread locks) and that
+	 * we can get shared access mulitple times.
+	 */
 	if ((ret =
 	    __mutex_alloc(env,
 		MTX_MUTEX_TEST, DB_MUTEX_SHARED, &mutex) != 0) ||
 	    (ret = __mutex_lock(env, mutex)) != 0 ||
-	    (ret = __mutex_tryrdlock(env, mutex)) != DB_LOCK_NOTGRANTED ||
+	    (ret = __mutex_tryrdlock(env, mutex)) == 0 ||
 	    (ret = __mutex_unlock(env, mutex)) != 0 ||
 	    (ret = __mutex_rdlock(env, mutex)) != 0 ||
 	    (ret = __mutex_rdlock(env, mutex)) != 0 ||

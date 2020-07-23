@@ -2,7 +2,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -55,11 +55,7 @@
 #include <arpa/inet.h>
 #endif
 
-#if defined(STDC_HEADERS) || defined(__cplusplus)
 #include <stdarg.h>
-#else
-#include <varargs.h>
-#endif
 
 #include <ctype.h>
 #include <errno.h>
@@ -317,7 +313,7 @@ typedef struct __fn {
 		(val)--;						\
 		STAT_PERFMON2((env), cat, subcat, (val), (id));		\
 	} while (0)
-/* N.B.: Add a verbose version of STAT_DEC() when needed. */
+/* Add a verbose version of STAT_DEC() when needed. */
 
 #define	STAT_SET(env, cat, subcat, val, newval, id) 			\
 	do {								\
@@ -383,6 +379,13 @@ typedef struct __db_msgbuf {
 	(a)->buf = (a)->cur = NULL;					\
 	(a)->len = (a)->flags = 0;					\
 } while (0)
+
+#define	DB_MSGBUF_INIT_BUFFER(a, buffer, length) do {			\
+	(a)->buf = (a)->cur = (buffer);					\
+	(a)->len = (length); 						\
+	(a)->flags = DB_MSGBUF_PREALLOCATED;				\
+} while (0)
+
 #define	DB_MSGBUF_FLUSH(env, a) do {					\
 	if ((a)->buf != NULL) {						\
 		if ((a)->cur != (a)->buf)				\
@@ -475,6 +478,19 @@ typedef struct __db_msgbuf {
 	DB_SET_DBT(dbt, d, s);						\
 } while (0)
 
+#define	DB_INIT_DBT_USERMEM(dbt, d, s)  do {				\
+	memset(&(dbt), 0, sizeof(dbt));					\
+	(dbt).data = (void *)(d);					\
+	(dbt).ulen = (u_int32_t)(s);					\
+	(dbt).flags = DB_DBT_USERMEM;					\
+} while (0)
+
+/*
+ * char *__db_tohex(source, len, buf) 'prints' the bytes of source as a hex
+ * string into buf.  The result buffer needs to be at least this large.
+ */
+#define DB_TOHEX_BUFSIZE(len)	(2 * (len) + 1)
+
 /*******************************************************
  * API return values
  *******************************************************/
@@ -546,7 +562,8 @@ typedef enum {
 	DB_APP_LOG,			/* Log file. */
 	DB_APP_META,			/* Persistent metadata file. */
 	DB_APP_RECOVER,			/* We are in recovery. */
-	DB_APP_TMP			/* Temporary file. */
+	DB_APP_TMP,			/* Temporary file. */
+	DB_APP_REGION			/* Region file. */
 } APPNAME;
 
 /*
@@ -577,6 +594,28 @@ typedef enum {
 #define	REP_ON(env)							\
 	((env)->rep_handle != NULL && (env)->rep_handle->region != NULL)
 #define	TXN_ON(env)		((env)->tx_handle != NULL)
+
+/* Determine whether this environment is an active user of slices. */
+#ifdef HAVE_SLICES
+#define SLICES_ON(env)		((env)->slice_envs != NULL)
+/*
+ * SLICE_FOREACH precedes a statement (usually a { ... } block) that is to be
+ * executed once for each slice.  It skips the statement block in non-sliced
+ * envrionments or if slices are not enabled. If the statement is followed
+ * by an 'else', then enclose the entire SLICE_FOREACH() <statement> in { }
+ * in order to shield the 'else' from being tied to the 'if' below.
+ */
+#define SLICE_FOREACH(dbenv, slice, pos)				\
+	if (SLICES_ON((dbenv)->env)) 					\
+	    for ((pos) = -1;						\
+		((slice) = __slice_iterate((dbenv), &(pos))) != NULL; )
+#else
+#define SLICES_ON(env)		(0)
+#define SLICE_FOREACH(dbenv, slice, pos)				\
+	COMPQUIET((slice), NULL);					\
+	COMPQUIET((pos), 0);						\
+	for (; 0; )
+#endif
 
 /*
  * STD_LOCKING	Standard locking, that is, locking was configured and CDB
@@ -612,6 +651,10 @@ typedef enum {
 	if (F_ISSET((env), ENV_OPEN_CALLED))				\
 		ENV_REQUIRES_CONFIG(env, handle, i, flags)
 
+/*
+ * The ENV_ENTER and ENV_LEAVE macros announce to other threads that
+ * the current thread is entering or leaving the BDB api.
+ */
 #define	ENV_ENTER_RET(env, ip, ret) do {				\
 	ret = 0;							\
 	DISCARD_HISTORY(env);						\
@@ -641,7 +684,12 @@ typedef enum {
 		(ip)->dbth_state = THREAD_FAILCHK;			\
 } while (0)
 
-#define	ENV_GET_THREAD_INFO(env, ip) ENV_ENTER(env, ip)
+#define	ENV_GET_THREAD_INFO(env, ip) 	do {				\
+	if ((env)->thr_hashtab == NULL)					\
+		ip = NULL;						\
+	else 								\
+		(void)__env_set_state(env, &(ip), THREAD_VERIFY);	\
+} while (0)
 
 #define	ENV_LEAVE(env, ip) do {						\
 	if ((ip) != NULL) {	\
@@ -706,9 +754,10 @@ typedef struct __mutex_state {	/* SHARED */
 
 
 struct __db_thread_info { /* SHARED */
+	DB_THREAD_STATE	dbth_state;
 	pid_t		dbth_pid;
 	db_threadid_t	dbth_tid;
-	DB_THREAD_STATE	dbth_state;
+	/* This contains the overflow chain in env->thr_hashtab[indx]. */
 	SH_TAILQ_ENTRY	dbth_links;
 	/*
 	 * The next field contains the (process local) reference to the XA
@@ -817,7 +866,7 @@ struct __env {
 	 *
 	 * Arguments to DB_ENV->open.
 	 */
-	char	 *db_home;		/* Database home */
+	char	 *db_home;		/* Environment's home directory. */
 	u_int32_t open_flags;		/* Flags */
 	int	  db_mode;		/* Default open permissions */
 
@@ -829,12 +878,33 @@ struct __env {
 
 	DB_DISTAB   recover_dtab;	/* Dispatch table for recover funcs */
 
+#ifdef HAVE_SLICES
+	/*
+	 * A containing environment has slice_envs[] set, the others are zero.
+	 * A slice (subordinate) environment has both slice_container and
+	 * slice_index set. A non-slice-aware environment sets all to zero.
+	 */
+	DB_ENV	   **slice_envs;	/* Array of slice_cnt dbenvs, +1 NULL */
+	ENV	    *slice_container;	/* The containing env of this slice. */
+	db_slice_t   slice_index;	/* Position in container's slice_envs */
+#endif
+
 	int dir_mode;			/* Intermediate directory perms. */
 
 #define ENV_DEF_DATA_LEN		100
 	u_int32_t data_len;		/* Data length in __db_prbytes. */
 
-	/* Thread tracking */
+	/* Registered processes */ 
+	size_t	num_active_pids;	/* number of entries in active_pids */ 
+	size_t	size_active_pids;	/* allocated size of active_pids */ 
+	pid_t	*active_pids;		/* array active pids */ 
+
+	/*
+	 * Thread tracking: a kind of configurable thread local storage that is
+	 * located in the environment region. Allocating a new entry requires
+	 * locking mtx_regenv. Entries are neither deleted nor moved between
+	 * buckets, which permits safe lookups without requiring any mutexes.
+	 */
 	u_int32_t	 thr_nbucket;	/* Number of hash buckets */
 	DB_HASHTAB	*thr_hashtab;	/* Hash table of DB_THREAD_INFO */
 
@@ -887,17 +957,18 @@ struct __env {
 
 #define	DB_TEST_ELECTINIT	 1	/* after __rep_elect_init */
 #define	DB_TEST_ELECTVOTE1	 2	/* after sending VOTE1 */
-#define	DB_TEST_NO_PAGES	 3	/* before sending PAGE */
-#define	DB_TEST_POSTDESTROY	 4	/* after destroy op */
-#define	DB_TEST_POSTLOG		 5	/* after logging all pages */
-#define	DB_TEST_POSTLOGMETA	 6	/* after logging meta in btree */
-#define	DB_TEST_POSTOPEN	 7	/* after __os_open */
-#define	DB_TEST_POSTSYNC	 8	/* after syncing the log */
-#define	DB_TEST_PREDESTROY	 9	/* before destroy op */
-#define	DB_TEST_PREOPEN		 10	/* before __os_open */
-#define	DB_TEST_REPMGR_PERM	 11	/* repmgr perm/archiving tests */
-#define	DB_TEST_SUBDB_LOCKS	 12	/* subdb locking tests */
-#define	DB_TEST_REPMGR_HEARTBEAT 13	/* repmgr stop sending heartbeats */
+#define	DB_TEST_NO_CHUNKS	 3	/* before sending BLOB data */
+#define	DB_TEST_NO_PAGES	 4	/* before sending PAGE */
+#define	DB_TEST_POSTDESTROY	 5	/* after destroy op */
+#define	DB_TEST_POSTLOG		 6	/* after logging all pages */
+#define	DB_TEST_POSTLOGMETA	 7	/* after logging meta in btree */
+#define	DB_TEST_POSTOPEN	 8	/* after __os_open */
+#define	DB_TEST_POSTSYNC	 9	/* after syncing the log */
+#define	DB_TEST_PREDESTROY	 10	/* before destroy op */
+#define	DB_TEST_PREOPEN		 11	/* before __os_open */
+#define	DB_TEST_REPMGR_PERM	 12	/* repmgr perm/archiving tests */
+#define	DB_TEST_SUBDB_LOCKS	 13	/* subdb locking tests */
+#define	DB_TEST_REPMGR_HEARTBEAT 14	/* repmgr stop sending heartbeats */
 	int	test_abort;		/* Abort value for testing */
 	int	test_check;		/* Checkpoint value for testing */
 	int	test_copy;		/* Copy value for testing */
@@ -955,7 +1026,6 @@ struct __env {
 	DBC	 *pdbc;			/* Pointer to parent cursor. */ \
 									\
 	void	 *page;			/* Referenced page. */		\
-	u_int32_t part;			/* Partition number. */		\
 	db_pgno_t root;			/* Tree root. */		\
 	db_pgno_t pgno;			/* Referenced page number. */	\
 	db_indx_t indx;			/* Referenced key item index. */\
@@ -1114,7 +1184,7 @@ typedef struct __dbpginfo {
 		__txn = SH_TAILQ_FIRST(&(ip)->dbth_xatxn, __db_txn);	\
 		if (__txn != NULL &&					\
 		    __txn->xa_thr_status == TXN_XA_THREAD_ASSOCIATED)	\
-		    	retval = EINVAL;				\
+		    	retval = USR_ERR(__txn->mgrp->env, EINVAL);	\
 	}								\
 }
 

@@ -230,6 +230,7 @@
     <ClCompile Include="..\..\src\db\db_ret.c"/>
     <ClCompile Include="..\..\src\db\db_setid.c"/>
     <ClCompile Include="..\..\src\db\db_setlsn.c"/>
+    <ClCompile Include="..\..\src\db\db_slice.c"/>
     <ClCompile Include="..\..\src\db\db_sort_multiple.c"/>
     <ClCompile Include="..\..\src\db\db_stati.c"/>
     <ClCompile Include="..\..\src\db\db_truncate.c"/>
@@ -255,6 +256,7 @@
     <ClCompile Include="..\..\src\env\env_region.c"/>
     <ClCompile Include="..\..\src\env\env_register.c"/>
     <ClCompile Include="..\..\src\env\env_sig.c"/>
+    <ClCompile Include="..\..\src\env\env_slice.c"/>
     <ClCompile Include="..\..\src\env\env_stat.c"/>
     <ClCompile Include="..\..\src\fileops\fileops_auto.c"/>
     <ClCompile Include="..\..\src\fileops\fop_basic.c"/>

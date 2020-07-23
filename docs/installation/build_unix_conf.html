@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -326,6 +326,29 @@
             </p>
           </li>
           <li>
+            <p><a id="build_unix_conf.--enable-server"></a>
+                <span class="bold"><strong>--enable-server</strong></span>
+            </p>
+            <p>
+                To install the Berkeley DB Thrift Server and
+                its Java client driver API, enter --enable-server as
+                an argument to configure. The Berkeley DB Thrift Server
+                requires JDK 8 or above.
+            </p>
+            <p>
+                For more information, see the 
+                <em class="citetitle">Berkeley DB Programmer's Reference Guide</em>.
+            </p>
+          </li>
+          <li>
+            <p><a id="build_unix_conf.--enable-slices"></a>
+                <span class="bold"><strong>--enable-slices</strong></span>
+            </p>
+            <p>
+                Enable environment and database slice support.
+            </p>
+          </li>
+          <li>
             <p><a id="build_unix_conf.--enable-sql"></a>
                 <span class="bold"><strong>--enable-sql</strong></span>
             </p>
@@ -376,11 +399,13 @@
                 Berkeley DB library, enter --enable-smallbuild as an
                 argument to configure. The --enable-smallbuild
                 argument is equivalent to individually specifying
+        --disable-compression,
                 --with-cryptography=no, --disable-hash,
-                --disable-heap, --disable-queue,
+                --disable-heap, --disable-queue, --disable-partition,
                 --disable-replication, --disable-statistics and
-                --disable-verify, turning off cryptography support,
-                the Hash, Heap and Queue access methods, database
+                --disable-verify, turning off compression and 
+        cryptography support, the Hash, Heap and Queue access 
+        methods, support for partitioning, database
                 environment replication support and database and log
                 verification support. See <a class="xref" href="build_unix_small.html" title="Building a small memory footprint library">Building a small memory footprint library</a> for more
                 information.
@@ -496,6 +521,11 @@
                 --enable-umrw argument during configuration to mask
                 these errors. This argument should not be specified
                 when configuring to build production binaries. 
+            </p>
+            <p>
+                This flag can also be used to prevent data in the heap
+                from leaking onto unused parts of database pages when
+                using the environment flag DB_PRIVATE.
             </p>
           </li>
           <li>

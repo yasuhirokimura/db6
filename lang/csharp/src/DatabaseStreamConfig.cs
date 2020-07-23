@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2013, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2013, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 using System;
@@ -31,7 +31,7 @@ namespace BerkeleyDB {
         }
 
         /// <summary>
-        /// True if the database stream syncs the blob on each write.
+        /// True if the database stream syncs the external file on each write.
         /// </summary>
         public bool SyncPerWrite;
 

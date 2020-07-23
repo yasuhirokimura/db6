@@ -102,9 +102,9 @@ DbEnv.log_put
 
 DbEnv.log_set_config
 	DB_LOG_AUTO_REMOVE		# Automatically remove log files
-	DB_LOG_BLOB			# Full logging of blob files
 	DB_LOG_DIRECT			# Don't buffer log files in the OS
 	DB_LOG_DSYNC			# Set O_DSYNC on the log
+	DB_LOG_EXT_FILE			# Full logging of external files
 	DB_LOG_IN_MEMORY		# Store logs in buffers in memory
 	DB_LOG_NOSYNC			# Don't fsync log files during flush
 	DB_LOG_ZERO			# Zero log file on creation
@@ -158,6 +158,7 @@ DbEnv.remove
 DbEnv.rep_set_config
 	DB_REPMGR_CONF_2SITE_STRICT	# Don't cheat on election votes
 	DB_REPMGR_CONF_ELECTIONS	# Manage elections to choose master
+	DB_REPMGR_CONF_FORWARD_WRITES	# Enable write forwarding
 	DB_REPMGR_CONF_PREFMAS_CLIENT	# Preferred master client site
 	DB_REPMGR_CONF_PREFMAS_MASTER	# Preferred master site
 	DB_REP_CONF_AUTOINIT		# automatic client init
@@ -267,6 +268,7 @@ DbEnv.set_verbose
 	DB_VERB_REP_SYNC		# Replication client sync output
 	DB_VERB_REP_SYSTEM		# Replication system messages
 	DB_VERB_REP_TEST		# Replication temporary test output
+	DB_VERB_SLICE			# Slicing information
 	DB_VERB_WAITSFOR		# Dump waits-for table
 
 DbEnv.stat_print
@@ -407,9 +409,10 @@ Db.cursor
 	DB_READ_COMMITTED		# Degree 2 isolation
 	DB_READ_UNCOMMITTED		# Degree 1 isolation
 	DB_RECOVER			# Called from recovery (internal)
+	DB_SLICED			# Sliced cursor is desired (internal)
+	DB_TXN_SNAPSHOT			# Snapshot isolation
 	DB_WRITECURSOR			# Cursor can update (CDB)
 	DB_WRITELOCK			# Cursor should get write locks
-	DB_TXN_SNAPSHOT			# Snapshot isolation
 
 Db.del
 	DB_AUTO_COMMIT			# UNDOC: compatibility only
@@ -452,13 +455,14 @@ Db.open
 	DB_RDONLY			# Read-only (O_RDONLY)
 	DB_RDWRMASTER			# UNDOC: allow subdb master open R/W
 	DB_READ_UNCOMMITTED		# Degree 1 isolation
+	DB_SLICED			# Access a sliced db in sliced env
 	DB_THREAD			# Handle is free-threaded
 	DB_TRUNCATE			# Discard existing DB (O_TRUNC)
 
 	# The following flags aren't actually part of the Db.open method
 	# API, but they are accepted by the underlying __db_open function.
 	DB_DURABLE_UNKNOWN		# UNDOC: Durability on open
-	DB_INTERNAL_BLOB_DB		# UNDOC: Open db in blob dir
+	DB_INTERNAL_BLOB_DB		# UNDOC: Open db in ext file dir
 	DB_INTERNAL_PERSISTENT_DB	# UNDOC: Open db in metadata dir
 	DB_INTERNAL_TEMPORARY_DB	# UNDOC: Open db in env home dir
 	DB_NOERROR			# UNDOC: Don't raise errors.

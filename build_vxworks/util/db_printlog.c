@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -21,7 +21,7 @@
 
 #ifndef lint
 static const char copyright[] =
-    "Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.\n";
+    "Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.\n";
 #endif
 
 int db_printlog_print_app_record __P((DB_ENV *, DBT *, DB_LSN *, db_recops));
@@ -36,7 +36,7 @@ int db_printlog_env_init_print_61 __P((ENV *, DB_DISTAB *));
 int db_printlog_lsn_arg __P((char *, DB_LSN *));
 int db_printlog_main __P((int, char *[]));
 int db_printlog_open_rep_db __P((DB_ENV *, DB **, DBC **));
-int db_printlog_usage __P((void));
+void db_printlog_usage __P((void));
 int db_printlog_version_check __P((void));
 
 const char *progname;
@@ -90,7 +90,8 @@ db_printlog_main(argc, argv)
 	logc = NULL;
 	ZERO_LSN(start);
 	ZERO_LSN(stop);
-	exitval = nflag = rflag = repflag = 0;
+	nflag = rflag = repflag = 0;
+	exitval = EXIT_SUCCESS;
 	data_len = home = passwd = NULL;
 
 	memset(&dtab, 0, sizeof(dtab));
@@ -102,7 +103,7 @@ db_printlog_main(argc, argv)
 		case 'b':
 			/* Don't use getsubopt(3), not all systems have it. */
 			if (db_printlog_lsn_arg(optarg, &start))
-				return (db_printlog_usage());
+				goto usage_err;
 			break;
 		case 'D':
 			data_len = optarg;
@@ -110,7 +111,7 @@ db_printlog_main(argc, argv)
 		case 'e':
 			/* Don't use getsubopt(3), not all systems have it. */
 			if (db_printlog_lsn_arg(optarg, &stop))
-				return (db_printlog_usage());
+				goto usage_err;
 			break;
 		case 'h':
 			home = optarg;
@@ -122,8 +123,7 @@ db_printlog_main(argc, argv)
 			if (passwd != NULL) {
 				fprintf(stderr, DB_STR("5138",
 					"Password may not be specified twice"));
-				free(passwd);
-				return (EXIT_FAILURE);
+				goto err;
 			}
 			passwd = strdup(optarg);
 			memset(optarg, 0, strlen(optarg));
@@ -131,7 +131,7 @@ db_printlog_main(argc, argv)
 				fprintf(stderr, DB_STR_A("5010",
 				    "%s: strdup: %s\n", "%s %s\n"),
 				    progname, strerror(errno));
-				return (EXIT_FAILURE);
+				goto err;
 			}
 			break;
 		case 'r':
@@ -142,16 +142,16 @@ db_printlog_main(argc, argv)
 			break;
 		case 'V':
 			printf("%s\n", db_version(NULL, NULL, NULL));
-			return (EXIT_SUCCESS);
+			goto done;
 		case '?':
 		default:
-			return (db_printlog_usage());
+			goto usage_err;
 		}
 	argc -= optind;
 	argv += optind;
 
-	if (argc > 0)
-		return (db_printlog_usage());
+	if (argc != 0)
+		goto usage_err;
 
 	/* Handle possible interruptions. */
 	__db_util_siginit();
@@ -168,7 +168,6 @@ db_printlog_main(argc, argv)
 
 	dbenv->set_errfile(dbenv, stderr);
 	dbenv->set_errpfx(dbenv, progname);
-	dbenv->set_msgfile(dbenv, stdout);
 
 	if (nflag) {
 		if ((ret = dbenv->set_flags(dbenv, DB_NOLOCKING, 1)) != 0) {
@@ -318,10 +317,7 @@ db_printlog_main(argc, argv)
 		ret = __db_dispatch(env,
 		    &dtab, &data, &key, DB_TXN_PRINT, (void*)&dblog);
 
-		/*
-		 * XXX
-		 * Just in case the underlying routines don't flush.
-		 */
+		/* Just in case the underlying routines don't flush. */
 		(void)fflush(stdout);
 
 		if (ret != 0) {
@@ -332,9 +328,10 @@ db_printlog_main(argc, argv)
 	}
 
 	if (0) {
-err:		exitval = 1;
+usage_err:	db_printlog_usage();
+err:		exitval = EXIT_FAILURE;
 	}
-
+done:
 	if (dtab.int_dispatch != NULL)
 		__os_free(env, dtab.int_dispatch);
 	if (dtab.ext_dispatch != NULL)
@@ -349,16 +346,16 @@ err:		exitval = 1;
 	if (env != NULL && dblog.dbentry != NULL)
 		__os_free(env, dblog.dbentry);
 	if (logc != NULL && (ret = logc->close(logc, 0)) != 0)
-		exitval = 1;
+		exitval = EXIT_FAILURE;
 
 	if (dbc != NULL && (ret = dbc->close(dbc)) != 0)
-		exitval = 1;
+		exitval = EXIT_FAILURE;
 
 	if (dbp != NULL && (ret = dbp->close(dbp, 0)) != 0)
-		exitval = 1;
+		exitval = EXIT_FAILURE;
 
 	if (dbenv != NULL && (ret = dbenv->close(dbenv, 0)) != 0) {
-		exitval = 1;
+		exitval = EXIT_FAILURE;
 		fprintf(stderr,
 		    "%s: dbenv->close: %s\n", progname, db_strerror(ret));
 	}
@@ -369,7 +366,7 @@ err:		exitval = 1;
 	/* Resend any caught signal. */
 	__db_util_sigresend();
 
-	return (exitval == 0 ? EXIT_SUCCESS : EXIT_FAILURE);
+	return (exitval);
 }
 
 /*
@@ -622,10 +619,35 @@ db_printlog_env_init_print_60(env, dtabp)
 {
 	int ret;
 
-	ret = __db_add_recovery_int(env,
-	     dtabp,__fop_write_file_60_print, DB___fop_write_file_60);
+	if ((ret = __db_add_recovery_int(env, &env->recover_dtab,
+	    __fop_create_60_print, DB___fop_create_60)) != 0)
+		goto err;
 
-	return (ret);
+	if ((ret = __db_add_recovery_int(env, dtabp,
+	    __fop_remove_60_print, DB___fop_remove_60)) != 0)
+		goto err;
+
+	if ((ret = __db_add_recovery_int(env, dtabp,
+	    __fop_rename_60_print, DB___fop_rename_60)) != 0)
+		goto err;
+
+	if ((ret = __db_add_recovery_int(env, dtabp,
+	    __fop_rename_60_print, DB___fop_rename_noundo_60)) != 0)
+		goto err;
+
+	if ((ret = __db_add_recovery_int(env, dtabp,
+	    __fop_file_remove_60_print, DB___fop_file_remove_60)) != 0)
+		goto err;
+
+	if ((ret = __db_add_recovery_int(env, dtabp,
+	    __fop_write_60_print, DB___fop_write_60)) != 0)
+		goto err;
+
+	if ((ret = __db_add_recovery_int(env, dtabp,
+	    __fop_write_file_60_print, DB___fop_write_file_60)) != 0)
+		goto err;
+
+err:	return (ret);
 }
 
 int
@@ -641,13 +663,12 @@ db_printlog_env_init_print_61(env, dtabp)
 	return (ret);
 }
 
-int
+void
 db_printlog_usage()
 {
 	fprintf(stderr, "usage: %s %s%s\n", progname,
 	    "[-NrV] [-b file/offset] [-D data_len] ",
 	    "[-e file/offset] [-h home] [-P password]");
-	return (EXIT_FAILURE);
 }
 
 int
@@ -740,8 +761,10 @@ db_printlog_open_rep_db(dbenv, dbpp, dbcp)
 
 	return (0);
 
-err:	if (*dbpp != NULL)
+err:	if (*dbpp != NULL) {
 		(void)(*dbpp)->close(*dbpp, 0);
+		*dbpp = NULL;
+	}
 	return (ret);
 }
 

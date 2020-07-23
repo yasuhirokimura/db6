@@ -90,17 +90,15 @@ void sqlite3MaterializeView(
   Parse *pParse,       /* Parsing context */
   Table *pView,        /* View definition */
   Expr *pWhere,        /* Optional WHERE clause to be added */
-  int iCur             /* Cursor number for ephemerial table */
+  int iCur             /* Cursor number for ephemeral table */
 ){
   SelectDest dest;
   Select *pSel;
   SrcList *pFrom;
   sqlite3 *db = pParse->db;
   int iDb = sqlite3SchemaToIndex(db, pView->pSchema);
-
   pWhere = sqlite3ExprDup(db, pWhere, 0);
   pFrom = sqlite3SrcListAppend(db, 0, 0, 0);
-
   if( pFrom ){
     assert( pFrom->nSrc==1 );
     pFrom->a[0].zName = sqlite3DbStrDup(db, pView->zName);
@@ -108,10 +106,7 @@ void sqlite3MaterializeView(
     assert( pFrom->a[0].pOn==0 );
     assert( pFrom->a[0].pUsing==0 );
   }
-
   pSel = sqlite3SelectNew(pParse, 0, pFrom, pWhere, 0, 0, 0, 0, 0, 0);
-  if( pSel ) pSel->selFlags |= SF_Materialize;
-
   sqlite3SelectDestInit(&dest, SRT_EphemTab, iCur);
   sqlite3Select(pParse, pSel, &dest);
   sqlite3SelectDelete(db, pSel);
@@ -194,7 +189,7 @@ Expr *sqlite3LimitWhere(
 
   pInClause->x.pSelect = pSelect;
   pInClause->flags |= EP_xIsSelect;
-  sqlite3ExprSetHeight(pParse, pInClause);
+  sqlite3ExprSetHeightAndFlags(pParse, pInClause);
   return pInClause;
 
   /* something went wrong. clean up anything allocated. */
@@ -231,8 +226,8 @@ void sqlite3DeleteFrom(
   WhereInfo *pWInfo;     /* Information about the WHERE clause */
   Index *pIdx;           /* For looping over indices of the table */
   int iTabCur;           /* Cursor number for the table */
-  int iDataCur;          /* VDBE cursor for the canonical data source */
-  int iIdxCur;           /* Cursor number of the first index */
+  int iDataCur = 0;      /* VDBE cursor for the canonical data source */
+  int iIdxCur = 0;       /* Cursor number of the first index */
   int nIdx;              /* Number of indices */
   sqlite3 *db;           /* Main database structure */
   AuthContext sContext;  /* Authorization context */
@@ -253,7 +248,7 @@ void sqlite3DeleteFrom(
   int addrBypass = 0;    /* Address of jump over the delete logic */
   int addrLoop = 0;      /* Top of the delete loop */
   int addrDelete = 0;    /* Jump directly to the delete logic */
-  int addrEphOpen = 0;   /* Instruction to open the Ephermeral table */
+  int addrEphOpen = 0;   /* Instruction to open the Ephemeral table */
  
 #ifndef SQLITE_OMIT_TRIGGER
   int isView;                  /* True if attempting to delete from a view */
@@ -333,7 +328,7 @@ void sqlite3DeleteFrom(
   sqlite3BeginWriteOperation(pParse, 1, iDb);
 
   /* If we are trying to delete from a view, realize that view into
-  ** a ephemeral table.
+  ** an ephemeral table.
   */
 #if !defined(SQLITE_OMIT_VIEW) && !defined(SQLITE_OMIT_TRIGGER)
   if( isView ){
@@ -387,7 +382,7 @@ void sqlite3DeleteFrom(
       iRowSet = ++pParse->nMem;
       sqlite3VdbeAddOp2(v, OP_Null, 0, iRowSet);
     }else{
-      /* For a WITHOUT ROWID table, create an ephermeral table used to
+      /* For a WITHOUT ROWID table, create an ephemeral table used to
       ** hold all primary keys for rows to be deleted. */
       pPk = sqlite3PrimaryKeyIndex(pTab);
       assert( pPk!=0 );
@@ -448,7 +443,7 @@ void sqlite3DeleteFrom(
       iKey = ++pParse->nMem;
       nKey = 0;   /* Zero tells OP_Found to use a composite key */
       sqlite3VdbeAddOp4(v, OP_MakeRecord, iPk, nPk, iKey,
-                        sqlite3IndexAffinityStr(v, pPk), P4_TRANSIENT);
+                        sqlite3IndexAffinityStr(v, pPk), nPk);
       sqlite3VdbeAddOp2(v, OP_IdxInsert, iEphCur, iKey);
     }else{
       /* Get the rowid of the row to be deleted and remember it in the RowSet */
@@ -471,10 +466,11 @@ void sqlite3DeleteFrom(
     ** triggers.
     */
     if( !isView ){
+      testcase( IsVirtual(pTab) );
       sqlite3OpenTableAndIndices(pParse, pTab, OP_OpenWrite, iTabCur, aToOpen,
                                  &iDataCur, &iIdxCur);
-      assert( pPk || iDataCur==iTabCur );
-      assert( pPk || iIdxCur==iDataCur+1 );
+      assert( pPk || IsVirtual(pTab) || iDataCur==iTabCur );
+      assert( pPk || IsVirtual(pTab) || iIdxCur==iDataCur+1 );
     }
   
     /* Set up a loop over the rowids/primary-keys that were found in the
@@ -482,17 +478,20 @@ void sqlite3DeleteFrom(
     */
     if( okOnePass ){
       /* Just one row.  Hence the top-of-loop is a no-op */
-      assert( nKey==nPk ); /* OP_Found will use an unpacked key */
+      assert( nKey==nPk );  /* OP_Found will use an unpacked key */
+      assert( !IsVirtual(pTab) );
       if( aToOpen[iDataCur-iTabCur] ){
-        assert( pPk!=0 );
+        assert( pPk!=0 || pTab->pSelect!=0 );
         sqlite3VdbeAddOp4Int(v, OP_NotFound, iDataCur, addrBypass, iKey, nKey);
+        VdbeCoverage(v);
       }
     }else if( pPk ){
-      addrLoop = sqlite3VdbeAddOp1(v, OP_Rewind, iEphCur);
+      addrLoop = sqlite3VdbeAddOp1(v, OP_Rewind, iEphCur); VdbeCoverage(v);
       sqlite3VdbeAddOp2(v, OP_RowKey, iEphCur, iKey);
       assert( nKey==0 );  /* OP_Found will use a composite key */
     }else{
       addrLoop = sqlite3VdbeAddOp3(v, OP_RowSetRead, iRowSet, 0, iKey);
+      VdbeCoverage(v);
       assert( nKey==1 );
     }  
   
@@ -516,7 +515,7 @@ void sqlite3DeleteFrom(
     if( okOnePass ){
       sqlite3VdbeResolveLabel(v, addrBypass);
     }else if( pPk ){
-      sqlite3VdbeAddOp2(v, OP_Next, iEphCur, addrLoop+1);
+      sqlite3VdbeAddOp2(v, OP_Next, iEphCur, addrLoop+1); VdbeCoverage(v);
       sqlite3VdbeJumpHere(v, addrLoop);
     }else{
       sqlite3VdbeAddOp2(v, OP_Goto, 0, addrLoop);
@@ -558,7 +557,7 @@ delete_from_cleanup:
   return;
 }
 /* Make sure "isView" and other macros defined above are undefined. Otherwise
-** thely may interfere with compilation of other functions in this file
+** they may interfere with compilation of other functions in this file
 ** (or in another file, if this file becomes part of the amalgamation).  */
 #ifdef isView
  #undef isView
@@ -614,7 +613,11 @@ void sqlite3GenerateRowDelete(
   ** not attempt to delete it or fire any DELETE triggers.  */
   iLabel = sqlite3VdbeMakeLabel(v);
   opSeek = HasRowid(pTab) ? OP_NotExists : OP_NotFound;
-  if( !bNoSeek ) sqlite3VdbeAddOp4Int(v, opSeek, iDataCur, iLabel, iPk, nPk);
+  if( !bNoSeek ){
+    sqlite3VdbeAddOp4Int(v, opSeek, iDataCur, iLabel, iPk, nPk);
+    VdbeCoverageIf(v, opSeek==OP_NotExists);
+    VdbeCoverageIf(v, opSeek==OP_NotFound);
+  }
  
   /* If there are any triggers to fire, allocate a range of registers to
   ** use for the old.* references in the triggers.  */
@@ -656,6 +659,8 @@ void sqlite3GenerateRowDelete(
     */
     if( addrStart<sqlite3VdbeCurrentAddr(v) ){
       sqlite3VdbeAddOp4Int(v, opSeek, iDataCur, iLabel, iPk, nPk);
+      VdbeCoverageIf(v, opSeek==OP_NotExists);
+      VdbeCoverageIf(v, opSeek==OP_NotFound);
     }
 
     /* Do FK processing. This call checks that any FK constraints that
@@ -736,7 +741,7 @@ void sqlite3GenerateRowIndexDelete(
                                  &iPartIdxLabel, pPrior, r1);
     sqlite3VdbeAddOp3(v, OP_IdxDelete, iIdxCur+i, r1,
                       pIdx->uniqNotNull ? pIdx->nKeyCol : pIdx->nColumn);
-    sqlite3VdbeResolveLabel(v, iPartIdxLabel);
+    sqlite3ResolvePartIdxLabel(pParse, iPartIdxLabel);
     pPrior = pIdx;
   }
 }
@@ -755,10 +760,11 @@ void sqlite3GenerateRowIndexDelete(
 **
 ** If *piPartIdxLabel is not NULL, fill it in with a label and jump
 ** to that label if pIdx is a partial index that should be skipped.
+** The label should be resolved using sqlite3ResolvePartIdxLabel().
 ** A partial index should be skipped if its WHERE clause evaluates
 ** to false or null.  If pIdx is not a partial index, *piPartIdxLabel
 ** will be set to zero which is an empty label that is ignored by
-** sqlite3VdbeResolveLabel().
+** sqlite3ResolvePartIdxLabel().
 **
 ** The pPrior and regPrior parameters are used to implement a cache to
 ** avoid unnecessary register loads.  If pPrior is not NULL, then it is
@@ -791,6 +797,7 @@ int sqlite3GenerateIndexKey(
     if( pIdx->pPartIdxWhere ){
       *piPartIdxLabel = sqlite3VdbeMakeLabel(v);
       pParse->iPartIdxTab = iDataCur;
+      sqlite3ExprCachePush(pParse);
       sqlite3ExprIfFalse(pParse, pIdx->pPartIdxWhere, *piPartIdxLabel, 
                          SQLITE_JUMPIFNULL);
     }else{
@@ -817,4 +824,16 @@ int sqlite3GenerateIndexKey(
   }
   sqlite3ReleaseTempRange(pParse, regBase, nCol);
   return regBase;
+}
+
+/*
+** If a prior call to sqlite3GenerateIndexKey() generated a jump-over label
+** because it was a partial index, then this routine should be called to
+** resolve that label.
+*/
+void sqlite3ResolvePartIdxLabel(Parse *pParse, int iLabel){
+  if( iLabel ){
+    sqlite3VdbeResolveLabel(pParse->pVdbe, iLabel);
+    sqlite3ExprCachePop(pParse);
+  }
 }

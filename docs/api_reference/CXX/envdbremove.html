@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -55,6 +55,11 @@ DbEnv::dbremove(DbTxn *txnid,
          removing a file, when any database in the file has an open handle. 
     </p>
       <p>
+         The <code class="methodname">DbEnv::dbremove()</code> method is not atomic in a
+         sliced environment. If the operation fails, it is possible for
+         some, but not all, of the sliced databases to still exist.
+     </p>
+      <p>
          The <code class="methodname">DbEnv::dbremove()</code> <span>
             
             <span>
@@ -74,7 +79,7 @@ DbEnv::dbremove(DbTxn *txnid,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp59810752"></a>Parameters</h3>
+              <h3 class="title"><a id="idp101492528"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -82,7 +87,7 @@ DbEnv::dbremove(DbTxn *txnid,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp59810944"></a>txnid</h4>
+                <h4 class="title"><a id="idp101492912"></a>txnid</h4>
               </div>
             </div>
           </div>
@@ -103,7 +108,7 @@ DbEnv::dbremove(DbTxn *txnid,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp59795456"></a>file</h4>
+                <h4 class="title"><a id="idp101494944"></a>file</h4>
               </div>
             </div>
           </div>
@@ -116,7 +121,7 @@ DbEnv::dbremove(DbTxn *txnid,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp59796832"></a>database</h4>
+                <h4 class="title"><a id="idp101410784"></a>database</h4>
               </div>
             </div>
           </div>
@@ -129,7 +134,7 @@ DbEnv::dbremove(DbTxn *txnid,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp59799304"></a>flags</h4>
+                <h4 class="title"><a id="idp101488928"></a>flags</h4>
               </div>
             </div>
           </div>
@@ -159,7 +164,7 @@ DbEnv::dbremove(DbTxn *txnid,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp59818080"></a>Environment Variables</h3>
+              <h3 class="title"><a id="idp101427792"></a>Environment Variables</h3>
             </div>
           </div>
         </div>
@@ -172,7 +177,7 @@ DbEnv::dbremove(DbTxn *txnid,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp59811376"></a>Errors</h3>
+              <h3 class="title"><a id="idp101497168"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -190,7 +195,7 @@ DbEnv::dbremove(DbTxn *txnid,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp59827024"></a><span>DbDeadlockException or </span>DB_LOCK_DEADLOCK</h4>
+                <h4 class="title"><a id="idp101522672"></a><span>DbDeadlockException or </span>DB_LOCK_DEADLOCK</h4>
               </div>
             </div>
           </div>
@@ -208,7 +213,7 @@ DbEnv::dbremove(DbTxn *txnid,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp59813144"></a><span>DbLockNotGrantedException or </span>DB_LOCK_NOTGRANTED</h4>
+                <h4 class="title"><a id="idp101500560"></a><span>DbLockNotGrantedException or </span>DB_LOCK_NOTGRANTED</h4>
               </div>
             </div>
           </div>
@@ -233,7 +238,7 @@ DbEnv::dbremove(DbTxn *txnid,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp59790160"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp101486832"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -246,7 +251,7 @@ DbEnv::dbremove(DbTxn *txnid,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp59818992"></a>ENOENT</h4>
+                <h4 class="title"><a id="idp101446416"></a>ENOENT</h4>
               </div>
             </div>
           </div>
@@ -258,7 +263,7 @@ DbEnv::dbremove(DbTxn *txnid,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp59830288"></a>DB_META_CHKSUM_FAIL</h4>
+                <h4 class="title"><a id="idp101507632"></a>DB_META_CHKSUM_FAIL</h4>
               </div>
             </div>
           </div>
@@ -273,7 +278,7 @@ DbEnv::dbremove(DbTxn *txnid,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp59822576"></a>Class</h3>
+              <h3 class="title"><a id="idp101514512"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -285,7 +290,7 @@ DbEnv::dbremove(DbTxn *txnid,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp59777744"></a>See Also</h3>
+              <h3 class="title"><a id="idp101455472"></a>See Also</h3>
             </div>
           </div>
         </div>

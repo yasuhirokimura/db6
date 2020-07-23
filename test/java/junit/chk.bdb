@@ -51,16 +51,19 @@ case `uname -ms` in
 	  MMAP_OPTION="" ;;
 esac
 
-REQUIRED_JARS=$JUNIT_JAR
+JUNIT_DIR="`dirname $JUNIT_JAR`"
+REQUIRED_JARS=$JUNIT_JAR$CP_SEP$JUNIT_DIR/hamcrest-core.jar
 DB_JAR=$d/db.jar
 export DB_JAR
 export REQUIRED_JARS
 export CP_SEP
 export DB_LIB_DIR
 
-# Build the tests.
+# Build the tests.  Ignore failures in make clean -- they 
+# arise from trying to delete the ./classes directory in 
+# cases where it's not there.
 
-make clean
+make clean >/dev/null 2>&1
 
 [ -f ./dbtest.jar ] || (make dbtest.jar) || {
 	echo 'FAIL: unable to find or build dbtest.jar'

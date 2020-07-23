@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1997, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1997, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -129,7 +129,7 @@ __log_archive(env, listp, flags)
 #ifdef HAVE_GETCWD
 	if (LF_ISSET(DB_ARCH_ABS)) {
 		/*
-		 * XXX
+		 * !!!
 		 * Can't trust getcwd(3) to set a valid errno, so don't display
 		 * one unless we know it's good.  It's likely a permissions
 		 * problem: use something bland and useless in the default
@@ -138,7 +138,7 @@ __log_archive(env, listp, flags)
 		 */
 		__os_set_errno(0);
 		if (getcwd(path, sizeof(path)) == NULL) {
-			ret = __os_get_errno();
+			ret = USR_ERR(env, __os_get_errno());
 			__db_err(env, ret, DB_STR("2570",
 			    "no absolute path for the current directory"));
 			goto err;
@@ -407,7 +407,7 @@ __build_data(env, pref, listp)
 		return (ret);
 	for (n = 0; (ret = __logc_get(logc, &lsn, &rec, DB_PREV)) == 0;) {
 		if (rec.size < sizeof(rectype)) {
-			ret = EINVAL;
+			ret = USR_ERR(env, EINVAL);
 			__db_errx(env, DB_STR("2572",
 			    "DB_ENV->log_archive: bad log record"));
 			break;
@@ -418,7 +418,7 @@ __build_data(env, pref, listp)
 			continue;
 		if ((ret =
 		    __dbreg_register_read(env, rec.data, &argp)) != 0) {
-			ret = EINVAL;
+			ret = USR_ERR(env, EINVAL);
 			__db_errx(env, DB_STR("2573",
 			    "DB_ENV->log_archive: unable to read log record"));
 			break;

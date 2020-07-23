@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -72,7 +72,7 @@ __db_fullpath(env, dir, file, check_file, check_dir, namep)
 	*p = '\0';
 	if (check_dir && (__os_exists(env, str, &isdir) != 0 || !isdir)) {
 		__os_free(env, str);
-		return (ENOENT);
+		return (USR_ERR(env, ENOENT));
 	}
 	DB_ADDSTR(file);
 	*p = '\0';
@@ -83,7 +83,7 @@ __db_fullpath(env, dir, file, check_file, check_dir, namep)
 	 */
 	if (check_file && __os_exists(env, str, NULL) != 0) {
 		__os_free(env, str);
-		return (ENOENT);
+		return (USR_ERR(env, ENOENT));
 	}
 
 	if (namep == NULL)
@@ -196,6 +196,10 @@ __db_appname(env, appname, file, dirp, namep)
 		if (dbenv != NULL)
 			dir = dbenv->db_log_dir;
 		break;
+	case DB_APP_REGION:
+		if (dbenv != NULL)
+			dir = dbenv->db_reg_dir;
+		break;
 	case DB_APP_TMP:
 		if (dbenv != NULL)
 			dir = dbenv->db_tmp_dir;
@@ -279,7 +283,7 @@ __db_tmp_open(env, oflags, fhpp)
 		 *   <path>/DBaa345 ...  <path>/DBaz345
 		 *   <path>/DBba345, and so on.
 		 *
-		 * XXX
+		 * Note:
 		 * This algorithm is O(n**2) -- that is, creating 100 temporary
 		 * files requires 5,000 opens, creating 1000 files requires
 		 * 500,000.  If applications open a lot of temporary files, we
@@ -288,7 +292,7 @@ __db_tmp_open(env, oflags, fhpp)
 		 */
 		for (i = filenum, trv = firstx; i > 0; i = (i - 1) / 26)
 			if (*trv++ == '\0') {
-				ret = EINVAL;
+				ret = USR_ERR(env, EINVAL);
 				goto done;
 			}
 

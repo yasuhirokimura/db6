@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2001, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2001, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -85,39 +85,41 @@ public class RepQuoteExampleGSG implements EventHandler
                     isCreator = true;
                 // "local" should be host:port.
                 i++;
-                String[] words = argv[i].split(":");
-                if (words.length != 2) {
+                // Look for index of the last colon in the argv[i] string.
+                int sep = argv[i].lastIndexOf(':');
+                if (sep == -1 || sep == 0) {
                     System.err.println(
-                        "Invalid host specification host:port needed.");
+                        "Invalid local host specification host:port needed.");
                     usage();
                 }
                 try {
-                    tmpPort = Integer.parseInt(words[1]);
+                    tmpPort = Integer.parseInt(argv[i].substring(sep + 1));
                 } catch (NumberFormatException nfe) {
-                    System.err.println("Invalid host specification, " +
+                    System.err.println("Invalid local host specification, " +
                         "could not parse port number.");
                     usage();
                 }
-                config.setThisHost(words[0], tmpPort, isCreator);
+                config.setThisHost(argv[i].substring(0, sep), tmpPort, isCreator);
             } else if (argv[i].compareTo("-p") == 0) {
                 i++;
                 config.priority = Integer.parseInt(argv[i]);
             } else if (argv[i].compareTo("-r") == 0) {
                 i++;
-                String[] words = argv[i].split(":");
-                if (words.length != 2) {
+                // Look for index of the last colon in the argv[i] string.
+                int sep = argv[i].lastIndexOf(':');
+                if (sep == -1 || sep == 0) {
                     System.err.println(
-                        "Invalid host specification host:port needed.");
+                        "Invalid remote host specification host:port needed.");
                     usage();
                 }
                 try {
-                    tmpPort = Integer.parseInt(words[1]);
+                    tmpPort = Integer.parseInt(argv[i].substring(sep + 1));
                 } catch (NumberFormatException nfe) {
-                    System.err.println("Invalid host specification, " +
+                    System.err.println("Invalid remote host specification, " +
                         "could not parse port number.");
                     usage();
                 }
-                config.addOtherHost(words[0], tmpPort);
+                config.addOtherHost(argv[i].substring(0, sep), tmpPort);
             } else {
                 System.err.println("Unrecognized option: " + argv[i]);
                 usage();

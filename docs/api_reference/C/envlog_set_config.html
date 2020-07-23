@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -67,7 +67,7 @@ DB_ENV-&gt;log_set_config(DB_ENV *dbenv, u_int32_t flags, int onoff);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp2766672"></a>Parameters</h3>
+              <h3 class="title"><a id="idp4694112"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -75,7 +75,7 @@ DB_ENV-&gt;log_set_config(DB_ENV *dbenv, u_int32_t flags, int onoff);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp2767320"></a>flags</h4>
+                <h4 class="title"><a id="idp4695360"></a>flags</h4>
               </div>
             </div>
           </div>
@@ -127,14 +127,14 @@ DB_ENV-&gt;log_set_config(DB_ENV *dbenv, u_int32_t flags, int onoff);  </pre>
               </li>
               <li>
                 <p><a id="log_set_config_DB_LOG_BLOB"></a>
-                        <code class="literal">DB_LOG_BLOB</code>
+                        <code class="literal">DB_LOG_EXT_FILE</code>
                     </p>
                 <p>
                         Enables full logging of 
-                        <a class="link" href="blob.html" title="Chapter 13.  Binary Large Objects">BLOB</a> data. Only use
-                        this flag if using replication or running a hot
+                        <a class="link" href="blob.html" title="Chapter 13.  External Files">external file</a> data. Only
+                        use this flag if using replication or running a hot
                         backup; otherwise, it will impose a performance
-                        penalty on BLOB operations.
+                        penalty on external file operations.
                     </p>
                 <p>
                         This flag is off by default, unless Replication is
@@ -142,7 +142,7 @@ DB_ENV-&gt;log_set_config(DB_ENV *dbenv, u_int32_t flags, int onoff);  </pre>
                         on by default.
                     </p>
                 <p>
-                        The <code class="literal">DB_LOG_BLOB</code> flag may be
+                        The <code class="literal">DB_LOG_EXT_FILE</code> flag may be
                         used to configure Berkeley DB at any time during
                         the life of the application.
                     </p>
@@ -327,7 +327,7 @@ DB_ENV-&gt;log_set_config(DB_ENV *dbenv, u_int32_t flags, int onoff);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp2793984"></a>onoff</h4>
+                <h4 class="title"><a id="idp4744384"></a>onoff</h4>
               </div>
             </div>
           </div>
@@ -342,7 +342,7 @@ DB_ENV-&gt;log_set_config(DB_ENV *dbenv, u_int32_t flags, int onoff);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp2781472"></a>Errors</h3>
+              <h3 class="title"><a id="idp4663600"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -358,7 +358,7 @@ DB_ENV-&gt;log_set_config(DB_ENV *dbenv, u_int32_t flags, int onoff);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp2787768"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp4732448"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -371,7 +371,7 @@ DB_ENV-&gt;log_set_config(DB_ENV *dbenv, u_int32_t flags, int onoff);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp2778288"></a>Class</h3>
+              <h3 class="title"><a id="idp4717136"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -383,7 +383,7 @@ DB_ENV-&gt;log_set_config(DB_ENV *dbenv, u_int32_t flags, int onoff);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp2790016"></a>See Also</h3>
+              <h3 class="title"><a id="idp4735984"></a>See Also</h3>
             </div>
           </div>
         </div>

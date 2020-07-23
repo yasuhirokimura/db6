@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 
@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -34,7 +35,6 @@ import com.sleepycat.db.Sequence;
 import com.sleepycat.db.SequenceConfig;
 import com.sleepycat.db.Transaction;
 import com.sleepycat.db.TransactionConfig;
-import java.util.IdentityHashMap;
 import com.sleepycat.persist.DatabaseNamer;
 import com.sleepycat.persist.IndexNotAvailableException;
 import com.sleepycat.persist.PrimaryIndex;
@@ -1023,9 +1023,17 @@ public class Store {
                     Map<String, PersistCatalog> catalogMap =
                         catalogPool.get(env);
                     assert catalogMap != null;
-                    if (catalog.close()) {
-                        /* Remove when the reference count goes to zero. */
-                        catalogMap.remove(storeName);
+                    boolean removeFromCatalog = true;
+                    try {
+                        removeFromCatalog = catalog.close();
+                    } finally {
+                        /*
+                         * Remove it if the reference count goes to zero, or
+                         * when an exception is thrown while closing the db.
+                         */
+                        if (removeFromCatalog) {
+                            catalogMap.remove(storeName);
+                        }
                     }
                 }
             }

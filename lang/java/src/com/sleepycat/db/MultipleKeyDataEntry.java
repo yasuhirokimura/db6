@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -128,6 +128,7 @@ public class MultipleKeyDataEntry extends MultipleEntry {
     @return
     indicates whether there was space.  A return of <code>false</code>
     indicates that the specified entry could not fit in the buffer.
+    @throws DatabaseException if a failure occurs.
     */
     public boolean append(final byte[] key, int koff, int klen,
                           final byte[] data, int doff, int dlen)
@@ -150,6 +151,7 @@ public class MultipleKeyDataEntry extends MultipleEntry {
     @return
     indicates whether there was space.  A return of <code>false</code>
     indicates that the specified entry could not fit in the buffer.
+    @throws DatabaseException if a failure occurs.
     */
     public boolean append(final DatabaseEntry key, final DatabaseEntry data)
         throws DatabaseException {
@@ -169,6 +171,7 @@ public class MultipleKeyDataEntry extends MultipleEntry {
     @return
     indicates whether there was space.  A return of <code>false</code>
     indicates that the specified entry could not fit in the buffer.
+    @throws DatabaseException if a failure occurs.
     */
     public boolean append(final byte[] key, final byte[] data)
         throws DatabaseException {

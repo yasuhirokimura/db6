@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 
@@ -35,8 +35,10 @@ public class EvolveConfig implements Cloneable {
     /**
      * Returns a shallow copy of the configuration.
      *
+     * @return a shallow copy of the configuration.
+     *
      * @deprecated As of JE 4.0.13, replaced by {@link
-     * EvolveConfig#clone()}.</p>
+     * EvolveConfig#clone()}.
      */
     public EvolveConfig cloneConfig() {
         try {
@@ -61,6 +63,10 @@ public class EvolveConfig implements Cloneable {
     /**
      * Adds an entity class for a primary index to be converted.  If no classes
      * are added, all indexes that require evolution will be converted.
+     *
+     * @param entityClass the entity class name.
+     *
+     * @return 'this'.
      */
     public EvolveConfig addClassToEvolve(String entityClass) {
         classesToEvolve.add(entityClass);
@@ -69,6 +75,8 @@ public class EvolveConfig implements Cloneable {
 
     /**
      * Returns an unmodifiable set of the entity classes to be evolved.
+     *
+     * @return an unmodifiable set of the entity classes to be evolved.
      */
     public Set<String> getClassesToEvolve() {
         return Collections.unmodifiableSet(classesToEvolve);
@@ -76,6 +84,10 @@ public class EvolveConfig implements Cloneable {
 
     /**
      * Sets a progress listener that is notified each time an entity is read.
+     *
+     * @param listener the EvolveListener.
+     *
+     * @return 'this'.
      */
     public EvolveConfig setEvolveListener(EvolveListener listener) {
         setEvolveListenerVoid(listener);
@@ -84,6 +96,8 @@ public class EvolveConfig implements Cloneable {
     
     /**
      * The void return setter for use by Bean editors.
+     *
+     * @param listener the EvolveListener.
      */
     public void setEvolveListenerVoid(EvolveListener listener) {
         this.evolveListener = listener;
@@ -92,6 +106,8 @@ public class EvolveConfig implements Cloneable {
     /**
      * Returns the progress listener that is notified each time an entity is
      * read.
+     *
+     * @return the EvolveListener.
      */
     public EvolveListener getEvolveListener() {
         return evolveListener;

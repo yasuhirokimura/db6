@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2001, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2001, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -35,7 +35,6 @@ extern "C" {
 #define	DB_FOP_READONLY		0x00000010 /* File is read only. */
 #define	DB_FOP_WRITE		0x00000020 /* File is writeable. */
 #define	DB_FOP_SYNC_WRITE	0x00000040 /* Sync file on each write. */
-
 
 #include "dbinc_auto/fileops_auto.h"
 #include "dbinc_auto/fileops_ext.h"

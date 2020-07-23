@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1997, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1997, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -149,6 +149,7 @@ public class LockRequest {
 
     /**
     Return the lock reference.
+    @return the lock reference
     */
     public Lock getLock() {
         if (lock != null && lock.wrapper != null)
@@ -159,6 +160,7 @@ public class LockRequest {
 
     /**
     Return the lock mode.
+    @return the lock mode
     */
     public LockRequestMode getMode() {
         return mode;
@@ -166,6 +168,7 @@ public class LockRequest {
 
     /**
     Return the lock object.
+    @return the lock object
     */
     public DatabaseEntry getObj() {
         return obj;
@@ -173,6 +176,7 @@ public class LockRequest {
 
     /**
     Return the lock operation.
+    @return the lock operation
     */
     public LockOperation getOp() {
         return LockOperation.fromFlag(op);
@@ -180,6 +184,7 @@ public class LockRequest {
 
     /**
     Return the lock timeout value.
+    @return the lock timeout value
     */
     public int getTimeout() {
         return timeout;

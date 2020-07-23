@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1997, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1997, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -47,6 +47,8 @@ public class ReplicationHostAddress {
 
     /** 
     Create a ReplicationHostAddress with user defined host and port information.
+    @param host the host name
+    @param port the port
     **/
     public ReplicationHostAddress(String host, int port)
     {

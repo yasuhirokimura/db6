@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2006, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2006, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -199,7 +199,7 @@ __memp_bh_freeze(dbmp, infop, hp, bhp, need_frozenp)
 	    (u_long)ncache, (u_long)nbucket, (u_long)pagesize / 1024);
 
 	if ((ret = __db_appname(env,
-	    DB_APP_NONE, filename, NULL, &real_name)) != 0)
+	    DB_APP_REGION, filename, NULL, &real_name)) != 0)
 		goto err;
 
 	MUTEX_LOCK(env, hp->mtx_hash);
@@ -238,7 +238,7 @@ __memp_bh_freeze(dbmp, infop, hp, bhp, need_frozenp)
 	    &maxpgno, sizeof(db_pgno_t), &nio)) != 0)
 		goto err;
 	if (magic != DB_FREEZER_MAGIC) {
-		ret = EINVAL;
+		ret = USR_ERR(env, EINVAL);
 		goto err;
 	}
 	if (newpgno == 0) {
@@ -455,7 +455,7 @@ __memp_bh_thaw(dbmp, infop, hp, frozen_bhp, alloc_bhp)
 	    (u_long)ncache, (u_long)nbucket, (u_long)pagesize / 1024);
 
 	if ((ret = __db_appname(env,
-	    DB_APP_NONE, filename, NULL, &real_name)) != 0)
+	    DB_APP_REGION, filename, NULL, &real_name)) != 0)
 		goto err;
 	if ((ret = __os_open(env,
 	    real_name, pagesize, 0, env->db_mode, &fhp)) != 0)
@@ -472,7 +472,7 @@ __memp_bh_thaw(dbmp, infop, hp, frozen_bhp, alloc_bhp)
 		goto err;
 
 	if (magic != DB_FREEZER_MAGIC) {
-		ret = EINVAL;
+		ret = USR_ERR(env, EINVAL);
 		goto err;
 	}
 

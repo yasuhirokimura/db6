@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2013, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2013, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -12,7 +12,7 @@ import com.sleepycat.db.internal.DbConstants;
 import com.sleepycat.db.internal.DbStream;
 
 /**
-A database stream. The database stream is used to access the blob.
+A database stream. The database stream is used to access external files.
 <p>
 Once the database stream close method has been called, the handle may not
 be accessed again.
@@ -77,8 +77,6 @@ public class DatabaseStream {
     <p>
     @return
     This database stream configuration.
-    <p>
-    @throws DatabaseException if a failure occurs.
     */
     public DatabaseStreamConfig getConfig() {
         return config;
@@ -96,15 +94,15 @@ public class DatabaseStream {
     }
 
     /**
-    Read from the blob accessed by this database stream.
+    Read from the external file accessed by this database stream.
     <p>
     @throws IllegalArgumentException if a failure occurs.
     <p>
-    @param data the data read from the blob
+    @param data the data read from the file
     returned as output.  Its byte array does not need to be initialized by the
     caller.
     <p>
-    @param offset the position in bytes in the blob where the reading starts.
+    @param offset the position in bytes in the file where the reading starts.
     <p>
     @param size the number of bytes to read.
     <p>
@@ -123,10 +121,11 @@ public class DatabaseStream {
     }
 
     /**
-    Return the size in bytes of the blob accessed by the database stream.
+    Return the size in bytes of the external file accessed by the database
+    stream.
     <p>
     @return
-    The size in bytes of the blob accessed by the database stream.
+    The size in bytes of the file accessed by the database stream.
     <p>
     @throws DatabaseException if a failure occurs.
     */
@@ -136,12 +135,12 @@ public class DatabaseStream {
     }
 
     /**
-    Write to the blob accessed by the database stream.
+    Write to the external file accessed by the database stream.
     <p>
     @param data the data {@link com.sleepycat.db.DatabaseEntry DatabaseEntry}
-    to write into the blob.
+    to write into the file.
     <p>
-    @param offset the position in bytes in the blob where the writing starts.
+    @param offset the position in bytes in the file where the writing starts.
     <p>
     @return {@link com.sleepycat.db.OperationStatus#SUCCESS OperationStatus.SUCCESS}
     if the operation succeeds.

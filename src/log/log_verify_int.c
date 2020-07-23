@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -1680,7 +1680,7 @@ __dbreg_register_verify(env, dbtp, lsnp, notused2, lvhp)
 				__db_errx(env, DB_STR_A("2543",
 				    "[%lu][%lu] Wrong dbreg operation sequence,"
 				    "file %s with id %d is first seen of "
-				    "status: %s", "%lu %lu %s %d"),
+				    "status: %s", "%lu %lu %s %d %s"),
 				    (u_long)lsnp->file, (u_long)lsnp->offset,
 				    dbfname, argp->fileid,
 				    __lv_dbreg_str(opcode));
@@ -2275,6 +2275,37 @@ err:
 }
 
 /*
+ * PUBLIC: int __fop_create_60_verify __P((ENV *, DBT *, DB_LSN *,
+ * PUBLIC:     db_recops, void *));
+ */
+int
+__fop_create_60_verify(env, dbtp, lsnp, notused2, lvhp)
+	ENV *env;
+	DBT *dbtp;
+	DB_LSN *lsnp;
+	db_recops notused2;
+	void *lvhp;
+{
+	__fop_create_60_args *argp;
+	DB_LOG_VRFY_INFO *lvh;
+	int ret;
+
+	COMPQUIET(notused2, DB_TXN_LOG_VERIFY);
+	lvh = (DB_LOG_VRFY_INFO *)lvhp;
+
+	if ((ret = __fop_create_60_read(env, dbtp->data, &argp)) != 0)
+		return (ret);
+
+	ON_NOT_SUPPORTED(env, lvh, *lsnp, argp->type);
+	/* LOG_VRFY_PROC(lvh, *lsnp, argp, INVAL_DBREGID); */
+err:
+
+	__os_free(env, argp);
+
+	return (ret);
+}
+
+/*
  * PUBLIC: int __fop_create_verify __P((ENV *, DBT *, DB_LSN *,
  * PUBLIC:     db_recops, void *));
  */
@@ -2299,6 +2330,38 @@ __fop_create_verify(env, dbtp, lsnp, notused2, lvhp)
 	LOG_VRFY_PROC(lvh, *lsnp, argp, INVAL_DBREGID);
 
 out:
+
+err:
+
+	__os_free(env, argp);
+
+	return (ret);
+}
+
+/*
+ * PUBLIC: int __fop_remove_60_verify __P((ENV *, DBT *, DB_LSN *,
+ * PUBLIC:     db_recops, void *));
+ */
+int
+__fop_remove_60_verify(env, dbtp, lsnp, notused2, lvhp)
+	ENV *env;
+	DBT *dbtp;
+	DB_LSN *lsnp;
+	db_recops notused2;
+	void *lvhp;
+{
+	__fop_remove_60_args *argp;
+	DB_LOG_VRFY_INFO *lvh;
+	int ret;
+
+	COMPQUIET(notused2, DB_TXN_LOG_VERIFY);
+	lvh = (DB_LOG_VRFY_INFO *)lvhp;
+
+	if ((ret = __fop_remove_60_read(env, dbtp->data, &argp)) != 0)
+		return (ret);
+
+	ON_NOT_SUPPORTED(env, lvh, *lsnp, argp->type);
+	/*LOG_VRFY_PROC(lvh, *lsnp, argp, INVAL_DBREGID);*/
 
 err:
 
@@ -2360,6 +2423,36 @@ __fop_write_42_verify(env, dbtp, lsnp, notused2, lvhp)
 	lvh = (DB_LOG_VRFY_INFO *)lvhp;
 
 	if ((ret = __fop_write_42_read(env, dbtp->data, &argp)) != 0)
+		return (ret);
+
+	ON_NOT_SUPPORTED(env, lvh, *lsnp, argp->type);
+	/* LOG_VRFY_PROC(lvh, *lsnp, argp, INVAL_DBREGID); */
+err:
+
+	__os_free(env, argp);
+	return (ret);
+}
+
+/*
+ * PUBLIC: int __fop_write_60_verify __P((ENV *, DBT *, DB_LSN *,
+ * PUBLIC:     db_recops, void *));
+ */
+int
+__fop_write_60_verify(env, dbtp, lsnp, notused2, lvhp)
+	ENV *env;
+	DBT *dbtp;
+	DB_LSN *lsnp;
+	db_recops notused2;
+	void *lvhp;
+{
+	__fop_write_60_args *argp;
+	DB_LOG_VRFY_INFO *lvh;
+	int ret;
+
+	COMPQUIET(notused2, DB_TXN_LOG_VERIFY);
+	lvh = (DB_LOG_VRFY_INFO *)lvhp;
+
+	if ((ret = __fop_write_60_read(env, dbtp->data, &argp)) != 0)
 		return (ret);
 
 	ON_NOT_SUPPORTED(env, lvh, *lsnp, argp->type);
@@ -2495,6 +2588,37 @@ err:
 }
 
 /*
+ * PUBLIC: int __fop_rename_60_verify __P((ENV *, DBT *, DB_LSN *,
+ * PUBLIC:     db_recops, void *));
+ */
+int
+__fop_rename_60_verify(env, dbtp, lsnp, notused2, lvhp)
+	ENV *env;
+	DBT *dbtp;
+	DB_LSN *lsnp;
+	db_recops notused2;
+	void *lvhp;
+{
+	__fop_rename_60_args *argp;
+	DB_LOG_VRFY_INFO *lvh;
+	int ret;
+
+	COMPQUIET(notused2, DB_TXN_LOG_VERIFY);
+	lvh = (DB_LOG_VRFY_INFO *)lvhp;
+
+	if ((ret = __fop_rename_60_read(env, dbtp->data, &argp)) != 0)
+		return (ret);
+
+	ON_NOT_SUPPORTED(env, lvh, *lsnp, argp->type);
+	/* LOG_VRFY_PROC(lvh, *lsnp, argp, INVAL_DBREGID); */
+err:
+
+	__os_free(env, argp);
+
+	return (ret);
+}
+
+/*
  * PUBLIC: int __fop_rename_verify __P((ENV *, DBT *, DB_LSN *,
  * PUBLIC:     db_recops, void *));
  */
@@ -2555,6 +2679,38 @@ out:
 err:
 	if (buf != NULL)
 		__os_free(lvh->dbenv->env, buf);
+	__os_free(env, argp);
+
+	return (ret);
+}
+
+/*
+ * PUBLIC: int __fop_file_remove_60_verify __P((ENV *, DBT *, DB_LSN *,
+ * PUBLIC:     db_recops, void *));
+ */
+int
+__fop_file_remove_60_verify(env, dbtp, lsnp, notused2, lvhp)
+	ENV *env;
+	DBT *dbtp;
+	DB_LSN *lsnp;
+	db_recops notused2;
+	void *lvhp;
+{
+	__fop_file_remove_60_args *argp;
+	DB_LOG_VRFY_INFO *lvh;
+	int ret;
+
+	COMPQUIET(notused2, DB_TXN_LOG_VERIFY);
+	lvh = (DB_LOG_VRFY_INFO *)lvhp;
+
+	if ((ret = __fop_file_remove_60_read(env, dbtp->data, &argp)) != 0)
+		return (ret);
+
+	ON_NOT_SUPPORTED(env, lvh, *lsnp, argp->type);
+	/*LOG_VRFY_PROC(lvh, *lsnp, argp, INVAL_DBREGID);*/
+
+err:
+
 	__os_free(env, argp);
 
 	return (ret);
@@ -4302,7 +4458,7 @@ __lv_on_new_txn (lvh, lsnp, txnp, type, dbregid, fid)
 		 */
 		} else if (vtip->nchild_active + vtip->nchild_commit +
 		    vtip->nchild_abort == 0) {
-			__db_errx(lvh->dbenv->env, DB_STR_A("2564",
+			__db_errx(env, DB_STR_A("2564",
 			    "[%lu][%lu] Transaction id %lx reused without "
 			    "being recycled with a __txn_recycle.",
 			    "%lu %lu %lx"),

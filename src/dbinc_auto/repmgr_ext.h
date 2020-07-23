@@ -90,6 +90,7 @@ int __repmgr_get_config __P((DB_SITE *, u_int32_t, u_int32_t *));
 int __repmgr_site_config_pp __P((DB_SITE *, u_int32_t, u_int32_t));
 int __repmgr_site_config_int __P((DB_SITE *, u_int32_t, u_int32_t));
 int __repmgr_site_close __P((DB_SITE *));
+int __repmgr_set_socket __P((DB_ENV *, int (*)(DB_ENV *, DB_REPMGR_SOCKET, int *, u_int32_t)));
 void *__repmgr_msg_thread __P((void *));
 int __repmgr_send_err_resp __P((ENV *, CHANNEL *, int));
 int __repmgr_handle_event __P((ENV *, u_int32_t, void *));
@@ -97,7 +98,7 @@ int __repmgr_update_membership __P((ENV *, DB_THREAD_INFO *, int, u_int32_t, u_i
 int __repmgr_set_gm_version __P((ENV *, DB_THREAD_INFO *, DB_TXN *, u_int32_t));
 int __repmgr_setup_gmdb_op __P((ENV *, DB_THREAD_INFO *, DB_TXN **, u_int32_t));
 int __repmgr_cleanup_gmdb_op __P((ENV *, int));
-int __repmgr_hold_master_role __P((ENV *, REPMGR_CONNECTION *));
+int __repmgr_hold_master_role __P((ENV *, REPMGR_CONNECTION *, u_int32_t));
 int __repmgr_rlse_master_role __P((ENV *));
 void __repmgr_set_sites __P((ENV *));
 int __repmgr_connect __P((ENV *, repmgr_netaddr_t *, REPMGR_CONNECTION **, int *));
@@ -119,6 +120,7 @@ int __repmgr_getaddr __P((ENV *, const char *, u_int, int, ADDRINFO **));
 int __repmgr_listen __P((ENV *));
 int __repmgr_net_close __P((ENV *));
 void __repmgr_net_destroy __P((ENV *, DB_REP *));
+void __repmgr_print_addr __P((ENV *, struct sockaddr *, const char *, int, int));
 int __repmgr_thread_start __P((ENV *, REPMGR_RUNNABLE *));
 int __repmgr_thread_join __P((REPMGR_RUNNABLE *));
 int __repmgr_set_nonblock_conn __P((REPMGR_CONNECTION *));
@@ -223,6 +225,9 @@ int __repmgr_set_msg_dispatch __P((DB_ENV *, void (*)(DB_ENV *, DB_CHANNEL *, DB
 #ifndef HAVE_REPLICATION_THREADS
 int __repmgr_init_recover __P((ENV *, DB_DISTAB *));
 #endif
+#ifndef HAVE_REPLICATION_THREADS
+int __repmgr_set_socket __P((DB_ENV *, int (*)(DB_ENV *, DB_REPMGR_SOCKET, int *, u_int32_t)));
+#endif
 int __repmgr_schedule_connection_attempt __P((ENV *, int, int));
 int __repmgr_is_server __P((ENV *, REPMGR_SITE *));
 void __repmgr_reset_for_reading __P((REPMGR_CONNECTION *));
@@ -279,6 +284,9 @@ int __repmgr_bcast_parm_refresh __P((ENV *));
 int __repmgr_chg_prio __P((ENV *, u_int32_t, u_int32_t));
 int __repmgr_bcast_own_msg __P((ENV *, u_int32_t, u_int8_t *, size_t));
 int __repmgr_bcast_member_list __P((ENV *));
+int __repmgr_forward_single_write __P((u_int32_t, DB *, DBT *, DBT *, u_int32_t));
+void __repmgr_msgdispatch __P((DB_ENV *, DB_CHANNEL *, DBT *, u_int32_t, u_int32_t));
+int __repmgr_set_write_forwarding __P((ENV *, int));
 
 #if defined(__cplusplus)
 }

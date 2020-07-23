@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2005, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2005, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -716,7 +716,7 @@ __repmgr_become_master(env, startopts)
 		return (0);
 
 	/* There isn't a gmdb.  Create one from the in-memory site list. */
-	if ((ret = __repmgr_hold_master_role(env, NULL)) != 0)
+	if ((ret = __repmgr_hold_master_role(env, NULL, 0)) != 0)
 		goto leave;
 	ENV_GET_THREAD_INFO(env, ip);
 retry:
@@ -883,6 +883,7 @@ __repmgr_open(env, rep_)
 	rep->heartbeat_frequency = db_rep->heartbeat_frequency;
 	rep->inqueue_max_gbytes = db_rep->inqueue_max_gbytes;
 	rep->inqueue_max_bytes = db_rep->inqueue_max_bytes;
+	rep->write_forward_timeout = db_rep->write_forward_timeout;
 	if (rep->inqueue_max_gbytes == 0 && rep->inqueue_max_bytes == 0) {
 		rep->inqueue_max_bytes = DB_REPMGR_DEFAULT_INQUEUE_MAX;
 	}
@@ -2934,4 +2935,404 @@ out:
 	if (v4buf != NULL)
 		__os_free(env, v4buf);
 	return (ret);
+}
+
+/*
+ * PUBLIC: int __repmgr_forward_single_write __P((u_int32_t,
+ * PUBLIC:     DB *, DBT *, DBT *, u_int32_t));
+ *
+ * Forwards a replication manager client write operation to the master
+ * for processing.  It uses repmgr channels to implement the internal
+ * messages needed to do this.  This routine contains the client-side
+ * processing.
+ *
+ * The only supported operations are a single put or a single del
+ * without a transaction.  Each forwarded operation uses its own
+ * implicit transaction on the master.  The master must have an open
+ * database handle for the database on which the operation is being
+ * performed.
+ *
+ * This routine only returns errors expected by a put or del operation
+ * with one exception: it can also return DB_TIMEOUT to reflect
+ * communications issues between the client and master.
+ */
+int
+__repmgr_forward_single_write(optype, dbp, key, data, opflags)
+	u_int32_t optype;
+	DB *dbp;
+	DBT *key;
+	DBT *data;
+	u_int32_t opflags;
+{
+	DB_CHANNEL *wfchannel;
+	DB_ENV *dbenv;
+	DB_REP *db_rep;
+	ENV *env;
+	REP *rep;
+	DBT response;
+	DBT msgdbts[REPMGR_WF_MAX_DBTS];
+	char fidstr[REPMGR_WF_FILEID_STRLEN];
+	wf_uint32_pair opmeta, twoflags, wfidvers;
+	u_int32_t nsegs;
+	int i, ret, ret2;
+
+	env = dbp->env;
+	dbenv = env->dbenv;
+	db_rep = env->rep_handle;
+	rep = db_rep->region;
+	ret = 0;
+	ret2 = 0;
+	nsegs = 0;
+
+	/*
+	 * If we are a subordinate client process that didn't call
+	 * repmgr_start(), we might not have set the write forwarding
+	 * repmgr channels callback yet, so do it here.
+	 */
+	if (db_rep->msg_dispatch == NULL &&
+	    (ret = __repmgr_set_write_forwarding(env, 1)) != 0) {
+		__db_err(env, ret, "forward_single set_wf subordinate");
+		return (ret);
+	}
+
+	/*
+	 * Cannot support a bulk put or del because repmgr channels does
+	 * not support DBTs formatted as bulk buffers.
+	 */
+	if (FLD_ISSET(opflags, DB_MULTIPLE_KEY | DB_MULTIPLE))
+		return (EACCES);
+
+	for (i = 0; i < REPMGR_WF_MAX_DBTS; i++)
+		memset(&msgdbts[i], 0, sizeof(DBT));
+	memset(&response, 0, sizeof(DBT));
+	response.flags = DB_DBT_MALLOC;
+
+	/*
+	 * A note about numeric value-sharing in the write forwarding
+	 * protocol: the repmgr channels protocol uses scatter-gather
+	 * IO which depends on the iovecs array.  The maximum number of
+	 * iovec segments is governed on each platform by IOV_MAX.  On
+	 * some platforms IOV_MAX is very small (e.g. 16 on Solaris.)
+	 * The repmgr channels protocol uses 3 iovec slots for overhead
+	 * information, 1 slot for each DBT passed in, and possibly
+	 * 1 additional slot for each DBT if padding is needed.  This
+	 * means that write forwarding can pass in a maximum of 6 DBTs
+	 * to operate on systems like Solaris.
+	 *
+	 * Write forwarding uses more than 6 separate pieces of information,
+	 * so the write forwarding protocol packs two smaller numbers into
+	 * a larger number value in a few cases to help conserve DBT slots.
+	 */
+
+	/* Pack write forwarding identifier and protocol version. */
+	wfidvers.unum64 = 0;
+	wfidvers.unum32[0] = REPMGR_WF_IDENTIFIER;
+	wfidvers.unum32[1] = REPMGR_WF_VERSION;
+	(&msgdbts[0])->data = &wfidvers;
+	(&msgdbts[0])->size = sizeof(wfidvers);
+
+	/* Pack write operation type and metapgno. */
+	if (optype == 0 || optype > REPMGR_WF_MAX_V1_MSG_TYPE) {
+		__db_err(env, ret, "forward_single invalid optype %u", optype);
+		return (EINVAL);
+	}
+	opmeta.unum64 = 0;
+	opmeta.unum32[0] = optype;
+	opmeta.unum32[1] = dbp->meta_pgno;
+	(&msgdbts[1])->data = &opmeta;
+	(&msgdbts[1])->size = sizeof(opmeta);
+
+	/* Pack database flags and operation flags. */
+	twoflags.unum64 = 0;
+	twoflags.unum32[0] = dbp->flags;
+	twoflags.unum32[1] = opflags;
+	(&msgdbts[2])->data = &twoflags;
+	(&msgdbts[2])->size = sizeof(twoflags);
+
+	/*
+	 * Pack database fileid.  There is no need to specify a
+	 * directory because there can only be one database file with
+	 * a given name across all of the data directories.  The code
+	 * in __db_appname() that finds a database file first searches
+	 * all data directories for an existing file of that name and
+	 * will only create a new file in the create directory if it
+	 * doesn't find an existing one.
+	 */
+	(&msgdbts[3])->data = (void *)(dbp->fileid);
+	(&msgdbts[3])->size = DB_FILE_ID_LEN;
+
+	VPRINT(env, (env, DB_VERB_REPMGR_MISC,
+	    "repmgr_forward_single_write: optype %d opflags %u",
+	    optype, opflags));
+	REPMGR_WF_DUMP_FILEID(dbp->fileid, i, fidstr);
+	VPRINT(env, (env, DB_VERB_REPMGR_MISC,
+	    "repmgr_forward_single_write: dbflags %u fileid %s meta_pgno %u",
+	    dbp->flags, fidstr, dbp->meta_pgno));
+
+	/* Pack write operation information. */
+	msgdbts[4] = *key;
+	switch (optype) {
+	case REPMGR_WF_SINGLE_DEL:
+		nsegs = 5;
+		break;
+	case REPMGR_WF_SINGLE_PUT:
+		/*
+		 * Lint complains about a possible NULL data value from
+		 * the SINGLE_DEL call even though this switch never allows
+		 * the NULL value to be used here.
+		 */
+		if (data != NULL) {
+			msgdbts[5] = *data;
+			nsegs = 6;
+		}
+		break;
+	default:
+		return (EINVAL);
+	}
+
+	if ((ret = __repmgr_channel(dbenv,
+	    DB_EID_MASTER, &wfchannel, 0)) != 0) {
+		/* Translate repmgr channels error into put/del error. */
+		if (ret == DB_REP_UNAVAIL)
+			ret = EACCES;
+		__db_err(env, ret, "forward_single repmgr_channel");
+		return (ret);
+	}
+
+	if ((ret = __repmgr_send_request(wfchannel, msgdbts,
+	    nsegs, &response, rep->write_forward_timeout, 0)) != 0) {
+		/* Translate repmgr channels error into put/del error. */
+		if (ret == DB_NOSERVER)
+			ret = EACCES;
+		__db_err(env, ret, "forward_single channel->send_request");
+		goto close_channel;
+	}
+	STAT(rep->mstat.st_write_ops_forwarded++);
+
+	if (response.size > 0) {
+		ret = *(int *)response.data;
+		free(response.data);
+		if (ret != 0)
+			__db_err(env, ret, "forward_single response");
+	}
+
+close_channel:
+	if ((ret2 = __repmgr_channel_close(wfchannel, 0)) != 0) {
+		__db_err(env, ret2, "forward_single channel->close");
+		if (ret == 0)
+			ret = ret2;
+	}
+	VPRINT(env, (env, DB_VERB_REPMGR_MISC,
+	    "repmgr_forward_single_write: returning %d", ret));
+	return (ret);
+}
+
+/*
+ * PUBLIC: void __repmgr_msgdispatch __P((DB_ENV *, DB_CHANNEL *, DBT *,
+ * PUBLIC:     u_int32_t, u_int32_t));
+ *
+ * This is the repmgr channels message dispatch callback for repmgr write
+ * forwarding.  This is the master-side processing that gets invoked when
+ * the master receives a forwarded write operation via repmgr channels.
+ * The supported write operations are a single put or a single del.  Each
+ * operation uses its own implicit master transaction.
+ *
+ * The master must already have an open database handle for the database
+ * on which the operation is being performed.
+ */
+void
+__repmgr_msgdispatch(dbenv, ch, request, nseg, flags)
+	DB_ENV *dbenv;
+	DB_CHANNEL *ch;
+	DBT *request;
+	u_int32_t nseg;
+	u_int32_t flags;
+{
+	DB *ldbp;
+	DB_REP *db_rep;
+	ENV *env;
+	REP *rep;
+	DBT data, key, response;
+	char fidstr[REPMGR_WF_FILEID_STRLEN];
+	wf_uint32_pair opmeta, twoflags, wfidvers;
+	u_int32_t dbflags, opflags, optype, wfprotid, wfprotvers;
+	db_pgno_t metapgno;
+	int got_runrecovery, i, ret, ret2;
+	u_int8_t *fileid;
+
+	env = dbenv->env;
+	db_rep = env->rep_handle;
+	rep = db_rep->region;
+	ret = 0;
+	ret2 = 0;
+	got_runrecovery = 0;
+
+	/* Make sure we received an expected number of DBTs. */
+	if (nseg < REPMGR_WF_MIN_DBTS || nseg > REPMGR_WF_MAX_DBTS) {
+		ret = EACCES;
+		__db_err(env, ret, "repmgr_msgdispatch wrong # DBTs");
+		goto send_response;
+	}
+
+	/*
+	 * Unpack write forwarding identifier and version.  Verify that
+	 * caller supplied expected write forwarding identifier to make
+	 * sure this isn't some other type of repmgr channels message or
+	 * random noise.
+	 */
+	wfidvers.unum64 = *(u_int64_t *)request[0].data;
+	wfprotid = wfidvers.unum32[0];
+	wfprotvers = wfidvers.unum32[1];
+	if (wfprotid != REPMGR_WF_IDENTIFIER) {
+		ret = EACCES;
+		__db_err(env, ret, "repmgr_msgdispatch bad id");
+		goto send_response;
+	}
+
+	/* Unpack operation type and metapgno. */
+	opmeta.unum64 = *(u_int64_t *)request[1].data;
+	optype = opmeta.unum32[0];
+	metapgno = opmeta.unum32[1];
+	if (optype == 0 || optype > REPMGR_WF_MAX_V1_MSG_TYPE) {
+		ret = EACCES;
+		__db_err(env, ret, "repmgr_msgdispatch invalid optype");
+		goto send_response;
+	}
+	VPRINT(env, (env, DB_VERB_REPMGR_MISC,
+	    "repmgr_msgdispatch: protid %u protvers %u optype %u",
+	    wfprotid, wfprotvers, optype));
+	STAT(rep->mstat.st_write_ops_received++);
+
+	/* Unpack database and operation flags. */
+	twoflags.unum64 = *(u_int64_t *)request[2].data;
+	dbflags = twoflags.unum32[0];
+	opflags = twoflags.unum32[1];
+
+	/* Unpack database fileid. */
+	fileid = (u_int8_t *)request[3].data;
+	REPMGR_WF_DUMP_FILEID(fileid, i, fidstr);
+	VPRINT(env, (env, DB_VERB_REPMGR_MISC,
+	    "repmgr_msgdispatch: dbflags %u fileid %s metapgno %u",
+	    dbflags, fidstr, metapgno));
+
+	/*
+	 * Search the environment's dblist for an open handle for this
+	 * database.  The dblist needs mutex protection.  We use the
+	 * metapgno to identify the correct subdatabase.
+	 *
+	 * We cannot use the MUTEX_[UN]LOCK() macros because they can
+	 * return DB_RUNRECOVERY and this message dispatch callback is void,
+	 * so use the alternative MUTEX_[UN]LOCK_RET() macros instead.
+	 * We perform special handling for DB_RUNRECOVERY below.
+	 */
+	if (MUTEX_LOCK_RET(env, env->mtx_dblist) != 0) {
+		__db_err(env, ret, "repmgr_msgdispatch mutex_lock");
+		goto send_response;
+	}
+	TAILQ_FOREACH(ldbp, &env->dblist, dblistlinks) {
+		if (memcmp(ldbp->fileid, fileid, DB_FILE_ID_LEN) == 0 &&
+		    ldbp->meta_pgno == metapgno)
+			break;
+	}
+	if (MUTEX_UNLOCK_RET(env, env->mtx_dblist) != 0) {
+		__db_err(env, ret, "repmgr_msgdispatch mutex_unlock");
+		goto send_response;
+	}
+	/* If there isn't an open database handle, we can't do anything. */
+	if (ldbp == NULL) {
+		ret = EACCES;
+		__db_err(env, ret, "repmgr_msgdispatch no open dbp");
+		goto send_response;
+	}
+	VPRINT(env, (env, DB_VERB_REPMGR_MISC,
+	    "repmgr_msgdispatch: db filename %s dbname %s opflags %u",
+	    ldbp->fname, ldbp->dname, opflags));
+
+	/* Unpack write operation information and perform write operation. */
+	key = request[4];
+	switch (optype) {
+	case REPMGR_WF_SINGLE_DEL:
+		if ((ret = __db_del_pp(ldbp, NULL, &key, opflags)) != 0) {
+			/* Send client access error if database file is gone. */
+			if (ret == ENOENT)
+				ret = EACCES;
+			/* Send success if deleted data is already gone. */
+			if (ret == DB_NOTFOUND || ret == DB_KEYEMPTY)
+				ret = 0;
+			if (ret != 0)
+				__db_err(env, ret,
+				    "repmgr_msgdispatch del error");
+			goto send_response;
+		}
+		break;
+	case REPMGR_WF_SINGLE_PUT:
+		data = request[5];
+		if ((ret =
+		    __db_put_pp(ldbp, NULL, &key, &data, opflags)) != 0) {
+			/* Send client access error if database file is gone. */
+			if (ret == ENOENT)
+				ret = EACCES;
+			if (ret != 0)
+				__db_err(env, ret,
+				    "repmgr_msgdispatch put error");
+			goto send_response;
+		}
+		break;
+	default:
+		ret = EACCES;
+		__db_err(env, ret, "repmgr_msgdispatch invalid optype");
+		goto send_response;
+	}
+
+send_response:
+	/*
+	 * It is possible that the mutex routines returned DB_RUNRECOVERY.
+	 * If they or anything else returned DB_RUNRECOERY, we don't want to
+	 * pass that back to the client and cause a panic there.  Send EACCES
+	 * to the client and then panic this master environment.
+	 */
+	if (ret == DB_RUNRECOVERY) {
+		got_runrecovery = 1;
+		__db_err(env, ret, "repmgr_msgdispatch RUNRECOVERY panic env");
+		ret = EACCES;
+	}
+	/* Send either success or an error back to the client. */
+	if (flags & DB_REPMGR_NEED_RESPONSE) {
+		memset(&response, 0, sizeof(response));
+		response.data = &ret;
+		response.size = sizeof(ret);
+		if ((ret2 = __repmgr_send_response(ch, &response, 1, 0)) == 0)
+		    VPRINT(env, (env, DB_VERB_REPMGR_MISC,
+			"repmgr_msgdispatch: sent response %d", ret));
+		else
+			__db_err(env, ret2, "repmgr_msgdispatch send_msg");
+	}
+	/* Now we can panic this master environment if necessary. */
+	if (got_runrecovery)
+		(void)__env_panic(env, DB_RUNRECOVERY);
+}
+
+/*
+ * PUBLIC: int __repmgr_set_write_forwarding __P((ENV *, int));
+ *
+ * Enable or disable write forwarding as specified by the value turn_on.
+ * This consists of setting or disabling the repmgr write forwarding
+ * message dispatch callback for use by repmgr channels.
+ */
+int
+__repmgr_set_write_forwarding(env, turn_on)
+	ENV *env;
+	int turn_on;
+{
+	DB_ENV *dbenv;
+	int ret;
+
+	dbenv = env->dbenv;
+
+	if (turn_on)
+		ret = __repmgr_set_msg_dispatch(dbenv, __repmgr_msgdispatch, 0);
+	else
+		ret = __repmgr_set_msg_dispatch(dbenv, NULL, 0);
+	return (ret);
+
 }

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2001, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2001, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -230,12 +230,10 @@ __rep_process_message_int(env, control, rec, eid, ret_lsnp)
 	REGENV *renv;
 	REGINFO *infop;
 	REP *rep;
-	REP_46_CONTROL *rp46;
-	REP_OLD_CONTROL *orp;
 	__rep_control_args *rp, tmprp;
 	__rep_egen_args egen_arg;
 	size_t len;
-	u_int32_t gen, rep_version;
+	u_int32_t gen;
 	int cmp, do_sync, lockout, master_id, recovering, ret, t_ret;
 	time_t savetime;
 	u_int8_t buf[__REP_MAXMSG_SIZE];
@@ -249,49 +247,10 @@ __rep_process_message_int(env, control, rec, eid, ret_lsnp)
 	lp = dblp->reginfo.primary;
 	infop = env->reginfo;
 	renv = infop->primary;
-	/*
-	 * Casting this to REP_OLD_CONTROL is just kind of stylistic: the
-	 * rep_version field of course has to be in the same offset in all
-	 * versions in order for this to work.
-	 *
-	 * We can look at the rep_version unswapped here because if we're
-	 * talking to an old version, it will always be unswapped.  If
-	 * we're talking to a new version, the only issue is if it is
-	 * swapped and we take one of the old version conditionals
-	 * incorrectly.  The rep_version would need to be very, very
-	 * large for a swapped version to look like a small, older
-	 * version.  There is no problem here looking at it unswapped.
-	 */
-	rep_version = ((REP_OLD_CONTROL *)control->data)->rep_version;
-	if (rep_version <= DB_REPVERSION_45) {
-		orp = (REP_OLD_CONTROL *)control->data;
-		if (rep_version == DB_REPVERSION_45 &&
-		    F_ISSET(orp, REPCTL_INIT_45)) {
-			F_CLR(orp, REPCTL_INIT_45);
-			F_SET(orp, REPCTL_INIT);
-		}
-		tmprp.rep_version = orp->rep_version;
-		tmprp.log_version = orp->log_version;
-		tmprp.lsn = orp->lsn;
-		tmprp.rectype = orp->rectype;
-		tmprp.gen = orp->gen;
-		tmprp.flags = orp->flags;
-		tmprp.msg_sec = 0;
-		tmprp.msg_nsec = 0;
-	} else if (rep_version == DB_REPVERSION_46) {
-		rp46 = (REP_46_CONTROL *)control->data;
-		tmprp.rep_version = rp46->rep_version;
-		tmprp.log_version = rp46->log_version;
-		tmprp.lsn = rp46->lsn;
-		tmprp.rectype = rp46->rectype;
-		tmprp.gen = rp46->gen;
-		tmprp.flags = rp46->flags;
-		tmprp.msg_sec = (u_int32_t)rp46->msg_time.tv_sec;
-		tmprp.msg_nsec = (u_int32_t)rp46->msg_time.tv_nsec;
-	} else
-		if ((ret = __rep_control_unmarshal(env, &tmprp,
-		    control->data, control->size, NULL)) != 0)
-			return (ret);
+
+	if ((ret = __rep_control_unmarshal(env, &tmprp,
+	    control->data, control->size, NULL)) != 0)
+		return (ret);
 	rp = &tmprp;
 	if (ret_lsnp != NULL)
 		ZERO_LSN(*ret_lsnp);
@@ -535,9 +494,7 @@ __rep_process_message_int(env, control, rec, eid, ret_lsnp)
 		 * Handle even if we're recovering.
 		 */
 		ANYSITE(rep);
-		if (rp->rep_version < DB_REPVERSION_47)
-			egen_arg.egen = *(u_int32_t *)rec->data;
-		else if ((ret = __rep_egen_unmarshal(env, &egen_arg,
+		if ((ret = __rep_egen_unmarshal(env, &egen_arg,
 		    rec->data, rec->size, NULL)) != 0)
 			return (ret);
 		REP_SYSTEM_LOCK(env);
@@ -582,15 +539,10 @@ __rep_process_message_int(env, control, rec, eid, ret_lsnp)
 		REP_SYSTEM_LOCK(env);
 		egen_arg.egen = rep->egen;
 		REP_SYSTEM_UNLOCK(env);
-		if (rep->version < DB_REPVERSION_47)
-			DB_INIT_DBT(data_dbt, &egen_arg.egen,
-			    sizeof(egen_arg.egen));
-		else {
-			if ((ret = __rep_egen_marshal(env,
-			    &egen_arg, buf, __REP_EGEN_SIZE, &len)) != 0)
-				goto errlock;
-			DB_INIT_DBT(data_dbt, buf, len);
-		}
+		if ((ret = __rep_egen_marshal(env,
+		    &egen_arg, buf, __REP_EGEN_SIZE, &len)) != 0)
+			goto errlock;
+		DB_INIT_DBT(data_dbt, buf, len);
 		(void)__rep_send_message(env,
 		    eid, REP_ALIVE, &lsn, &data_dbt, 0, 0);
 		break;
@@ -603,6 +555,7 @@ __rep_process_message_int(env, control, rec, eid, ret_lsnp)
 	case REP_BLOB_ALL_REQ:
 		RECOVERING_SKIP;
 		CLIENT_MASTERCHK;
+		MASTER_UPDATE(env, renv);
 		ret = __rep_blob_allreq(env, eid, rec);
 		CLIENT_REREQ;
 		break;
@@ -616,6 +569,7 @@ __rep_process_message_int(env, control, rec, eid, ret_lsnp)
 	case REP_BLOB_CHUNK_REQ:
 		RECOVERING_SKIP;
 		CLIENT_MASTERCHK;
+		MASTER_UPDATE(env, renv);
 		ret = __rep_blob_chunk_req(env, eid, rec);
 		CLIENT_REREQ;
 		break;
@@ -625,10 +579,8 @@ __rep_process_message_int(env, control, rec, eid, ret_lsnp)
 		break;
 	case REP_BLOB_UPDATE_REQ:
 		MASTER_ONLY(rep, rp);
-		infop = env->reginfo;
-		renv = infop->primary;
 		MASTER_UPDATE(env, renv);
-		ret = __rep_blob_update_req(env, ip, rec);
+		ret = __rep_blob_update_req(env, eid, ip, rec);
 		break;
 	case REP_BULK_LOG:
 		RECOVERING_LOG_SKIP;
@@ -700,6 +652,9 @@ __rep_process_message_int(env, control, rec, eid, ret_lsnp)
 				ret = __rep_init_cleanup(env, rep, DB_FORCE);
 				F_CLR(rep, REP_F_ABBREVIATED);
 				CLR_RECOVERY_SETTINGS(rep);
+#ifdef HAVE_REPLICATION_THREADS
+				db_rep->abbrev_init = FALSE;
+#endif
 			}
 			MUTEX_UNLOCK(env, rep->mtx_clientdb);
 			if (ret != 0) {
@@ -830,6 +785,9 @@ __rep_process_message_int(env, control, rec, eid, ret_lsnp)
 					    rep, DB_FORCE);
 					F_CLR(rep, REP_F_ABBREVIATED);
 					CLR_RECOVERY_SETTINGS(rep);
+#ifdef HAVE_REPLICATION_THREADS
+					db_rep->abbrev_init = FALSE;
+#endif
 				}
 				MUTEX_UNLOCK(env, rep->mtx_clientdb);
 				if (t_ret != 0) {
@@ -842,15 +800,10 @@ __rep_process_message_int(env, control, rec, eid, ret_lsnp)
 				lockout = 0;
 			}
 			REP_SYSTEM_UNLOCK(env);
-			if (rep->version < DB_REPVERSION_47)
-				DB_INIT_DBT(data_dbt, &egen_arg.egen,
-				    sizeof(egen_arg.egen));
-			else {
-				if ((ret = __rep_egen_marshal(env, &egen_arg,
-				    buf, __REP_EGEN_SIZE, &len)) != 0)
-					goto errlock;
-				DB_INIT_DBT(data_dbt, buf, len);
-			}
+			if ((ret = __rep_egen_marshal(env, &egen_arg,
+			    buf, __REP_EGEN_SIZE, &len)) != 0)
+				goto errlock;
+			DB_INIT_DBT(data_dbt, buf, len);
 			(void)__rep_send_message(env, DB_EID_BROADCAST,
 			    REP_ALIVE, &rp->lsn, &data_dbt, 0, 0);
 			break;
@@ -879,15 +832,10 @@ __rep_process_message_int(env, control, rec, eid, ret_lsnp)
 			if (eid == rep->master_id)
 				rep->master_id = DB_EID_INVALID;
 			REP_SYSTEM_UNLOCK(env);
-			if (rep->version < DB_REPVERSION_47)
-				DB_INIT_DBT(data_dbt, &egen_arg.egen,
-				    sizeof(egen_arg.egen));
-			else {
-				if ((ret = __rep_egen_marshal(env, &egen_arg,
-				    buf, __REP_EGEN_SIZE, &len)) != 0)
-					goto errlock;
-				DB_INIT_DBT(data_dbt, buf, len);
-			}
+			if ((ret = __rep_egen_marshal(env, &egen_arg,
+			    buf, __REP_EGEN_SIZE, &len)) != 0)
+				goto errlock;
+			DB_INIT_DBT(data_dbt, buf, len);
 			(void)__rep_send_message(env, eid,
 			    REP_ALIVE, &rp->lsn, &data_dbt, 0, 0);
 		}
@@ -1060,7 +1008,7 @@ __rep_process_message_int(env, control, rec, eid, ret_lsnp)
 		/*
 		 * Handle even if we're recovering.
 		 */
-		ret = __rep_vote2(env, rp, rec, eid);
+		ret = __rep_vote2(env, rec, eid);
 		break;
 	default:
 		__db_errx(env, DB_STR_A("3521",
@@ -1627,27 +1575,15 @@ __rep_process_txn(env, rec)
 		 * We're the end of a transaction.  Make sure this is
 		 * really a commit and not an abort!
 		 */
-		if (rep->version >= DB_REPVERSION_44) {
-			if ((ret = __txn_regop_read(
-			    env, rec->data, &txn_args)) != 0)
-				return (ret);
-			if (txn_args->opcode != TXN_COMMIT) {
-				__os_free(env, txn_args);
-				return (0);
-			}
-			prev_lsn = txn_args->prev_lsn;
-			lock_dbt = &txn_args->locks;
-		} else {
-			if ((ret = __txn_regop_42_read(
-			    env, rec->data, &txn42_args)) != 0)
-				return (ret);
-			if (txn42_args->opcode != TXN_COMMIT) {
-				__os_free(env, txn42_args);
-				return (0);
-			}
-			prev_lsn = txn42_args->prev_lsn;
-			lock_dbt = &txn42_args->locks;
+		if ((ret = __txn_regop_read(
+		    env, rec->data, &txn_args)) != 0)
+			return (ret);
+		if (txn_args->opcode != TXN_COMMIT) {
+			__os_free(env, txn_args);
+			return (0);
 		}
+		prev_lsn = txn_args->prev_lsn;
+		lock_dbt = &txn_args->locks;
 	} else {
 		/* We're a prepare. */
 		DB_ASSERT(env, rectype == DB___txn_prepare);
@@ -2015,14 +1951,7 @@ __rep_newfile(env, rp, rec)
 	if (F_ISSET(rep, REP_F_NEWFILE))
 		return (0);
 	if (rp->lsn.file + 1 > lp->ready_lsn.file) {
-		if (rec == NULL || rec->size == 0) {
-			RPRINT(env, (env, DB_VERB_REP_MISC,
-"rep_newfile: Old-style NEWFILE msg.  Use control msg log version: %lu",
-    (u_long) rp->log_version));
-			nf_args.version = rp->log_version;
-		} else if (rp->rep_version < DB_REPVERSION_47)
-			nf_args.version = *(u_int32_t *)rec->data;
-		else if ((ret = __rep_newfile_unmarshal(env, &nf_args,
+		if ((ret = __rep_newfile_unmarshal(env, &nf_args,
 		    rec->data, rec->size, NULL)) != 0)
 			return (ret);
 		RPRINT(env, (env, DB_VERB_REP_MISC,
@@ -2517,7 +2446,7 @@ __rep_resend_req(env, rereq)
 		} else {
 			MUTEX_LOCK(env, rep->mtx_clientdb);
 			REP_SYSTEM_LOCK(env);
-			ret = __rep_blob_rereq(env, rep);
+			ret = __rep_blob_rereq(env, rep, gapflags);
 			REP_SYSTEM_UNLOCK(env);
 			MUTEX_UNLOCK(env, rep->mtx_clientdb);
 		}

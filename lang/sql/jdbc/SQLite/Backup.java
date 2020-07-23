@@ -14,6 +14,8 @@ public class Backup {
 
     /**
      * Finish a backup.
+     *
+     * @throws SQLite.Exception indicating SQLite error
      */
 
     protected void finish() throws SQLite.Exception {
@@ -42,6 +44,7 @@ public class Backup {
      *
      * @param n number of pages to backup
      * @return true when backup completed
+     * @throws SQLite.Exception indicating SQLite error
      */
 
     public boolean step(int n) throws SQLite.Exception {
@@ -54,6 +57,8 @@ public class Backup {
 
     /**
      * Perform the backup in one step.
+     *
+     * @throws SQLite.Exception indicating SQLite error
      */
 
     public void backup() throws SQLite.Exception {
@@ -64,6 +69,9 @@ public class Backup {
 
     /**
      * Return number of remaining pages to be backed up.
+     *
+     * @return number of remaining pages
+     * @throws SQLite.Exception indicating SQLite error
      */
 
     public int remaining() throws SQLite.Exception {
@@ -76,6 +84,9 @@ public class Backup {
 
     /**
      * Return the total number of pages in the backup source database.
+     *
+     * @return total number of pages
+     * @throws SQLite.Exception indicating SQLite error
      */
 
     public int pagecount() throws SQLite.Exception {

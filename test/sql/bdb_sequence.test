@@ -664,6 +664,53 @@ do_test bdb_sequences-13.14 {
     commit;
   }
 } {}
+db close
+
+#
+# Test sequence names
+sqlite3 db test.db
+do_test bdb_sequences-14.1 {
+  execsql {
+    select create_sequence("test");
+  }
+} {0}
+
+# Capitalization is ignored
+do_test bdb_sequences-14.2 {
+  execsql {
+    select nextval("TEST");
+  }
+} {0}
+
+# Capitalization counts when in quotes
+do_test bdb_sequences-14.3 {
+  execsql {
+    select create_sequence('"Test2"');
+  }
+} {0}
+
+do_test bdb_sequences-14.4 {
+  execsql {
+    select nextval('"Test2"');
+  }
+} {0}
+
+do_test bdb_sequences-14.5 {
+  set v [catch {execsql {
+    select nextval("Test2");
+  }} msg]
+  lappend v $msg
+} {1 {no such sequence: Test2}}
+
+#
+# Can still find the sequence after a failed
+# lookup.
+do_test bdb_sequences-14.6 {
+  execsql {
+    select nextval('"Test2"');
+  }
+} {1}
+db close
 
 finish_test
 

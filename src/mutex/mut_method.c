@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -424,15 +424,15 @@ static inline db_mutex_t atomic_get_mutex(env, v)
 }
 
 /*
- * __atomic_inc
+ * __atomic_inc_int
  *	Use a mutex to provide an atomic increment function
  *
  * PUBLIC: #if !defined(HAVE_ATOMIC_SUPPORT) && defined(HAVE_MUTEX_SUPPORT)
- * PUBLIC: atomic_value_t __atomic_inc __P((ENV *, db_atomic_t *));
+ * PUBLIC: atomic_value_t __atomic_inc_int __P((ENV *, db_atomic_t *));
  * PUBLIC: #endif
  */
 atomic_value_t
-__atomic_inc(env, v)
+__atomic_inc_int(env, v)
 	ENV *env;
 	db_atomic_t *v;
 {
@@ -448,15 +448,15 @@ __atomic_inc(env, v)
 }
 
 /*
- * __atomic_dec
+ * __atomic_dec_int
  *	Use a mutex to provide an atomic decrement function
  *
  * PUBLIC: #if !defined(HAVE_ATOMIC_SUPPORT) && defined(HAVE_MUTEX_SUPPORT)
- * PUBLIC: atomic_value_t __atomic_dec __P((ENV *, db_atomic_t *));
+ * PUBLIC: atomic_value_t __atomic_dec_int __P((ENV *, db_atomic_t *));
  * PUBLIC: #endif
  */
 atomic_value_t
-__atomic_dec(env, v)
+__atomic_dec_int(env, v)
 	ENV *env;
 	db_atomic_t *v;
 {
@@ -472,11 +472,11 @@ __atomic_dec(env, v)
 }
 
 /*
- * atomic_compare_exchange
+ * __atomic_compare_exchange_int
  *	Use a mutex to provide an atomic decrement function
  *
  * PUBLIC: #if !defined(HAVE_ATOMIC_SUPPORT) && defined(HAVE_MUTEX_SUPPORT)
- * PUBLIC: int atomic_compare_exchange
+ * PUBLIC: int __atomic_compare_exchange_int
  * PUBLIC:     __P((ENV *, db_atomic_t *, atomic_value_t, atomic_value_t));
  * PUBLIC: #endif
  *	Returns 1 if the *v was equal to oldval, else 0
@@ -485,7 +485,7 @@ __atomic_dec(env, v)
  *		Sets the value to newval if and only if returning 1
  */
 int
-atomic_compare_exchange(env, v, oldval, newval)
+__atomic_compare_exchange_int(env, v, oldval, newval)
 	ENV *env;
 	db_atomic_t *v;
 	atomic_value_t oldval;

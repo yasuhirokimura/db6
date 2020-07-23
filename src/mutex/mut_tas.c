@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -156,14 +156,16 @@ loop:	/* Attempt to acquire the resource for N spins. */
 			    ip == NULL && dbenv->is_alive(dbenv,
 			    mutexp->pid, mutexp->tid, 0) == 0) {
 				/*
-				 * The process owing the mutex is "dead" now, but it may
-				 * have already released the mutex. We need to check again
-				 * by going back to the top of the loop if the mutex is 
-				 * still held by the "dead" process. We yield 10 us to
-				 * increase the likelyhood of mutexp fields being up-to-date.
-				 * Set spin so we spin one more time because there isno need
-				 * to spin more if the dead process owns the mutex.
-				 */                               
+				 * The process owing the mutex is "dead" now,
+				 * but it may have already released the mutex.
+				 * We need to check again by going back to the
+				 * top of the loop if the mutex is still held
+				 * by the "dead" process. We yield 10 us to
+				 * increase the likelyhood of mutexp fields
+				 * being up-to-date. Set spin so we spin one
+				 * more time because there isno need to spin
+				 * more if the dead process owns the mutex.
+				 */
 				if (nspins > 1) {
 					nspins = 2;
 					__os_yield(env, 0, 10);
@@ -180,7 +182,7 @@ loop:	/* Attempt to acquire the resource for N spins. */
 					 * failchk thread don't give more
 					 * notice of the already-existing panic.
 					 */
-				    	if (ret == 0)
+					if (ret == 0)
 						return (USR_ERR(env,
 						    DB_RUNRECOVERY));
 					else
@@ -193,7 +195,6 @@ loop:	/* Attempt to acquire the resource for N spins. */
 			/*
 			 * Some systems (notably those with newer Intel CPUs)
 			 * need a small pause here. [#6975]
-			 * XXX Is there some better post-Pentum 4?
 			 */
 			MUTEX_PAUSE
 			continue;
@@ -594,9 +595,9 @@ __db_tas_mutex_unlock(env, mutex)
 #if defined(HAVE_SHARED_LATCHES)
 	if (F_ISSET(mutexp, DB_MUTEX_SHARED)) {
 		if (atomic_read(&mutexp->sharecount) == 0) {
+			ret = USR_ERR(env, DB_RUNRECOVERY);
 			if (PANIC_ISSET(env))
-				return (__env_panic(env, 
-				    USR_ERR(env, DB_RUNRECOVERY)));
+				return (__env_panic(env, ret));
 			__db_errx(env, DB_STR_A("2031",
 			    "shared unlock %ld already unlocked", "%ld"),
 			    (long)mutex);
@@ -606,7 +607,7 @@ __db_tas_mutex_unlock(env, mutex)
 #endif
 	if (!F_ISSET(mutexp, DB_MUTEX_LOCKED)) {
 		if (PANIC_ISSET(env))
-			return (__env_panic(env, 
+			return (__env_panic(env,
 			    USR_ERR(env, DB_RUNRECOVERY)));
 		__db_errx(env, DB_STR_A("2032",
 		    "unlock %ld already unlocked", "%ld"), (long)mutex);
@@ -630,11 +631,11 @@ __db_tas_mutex_unlock(env, mutex)
 		if (sharecount == 0) {
 was_not_locked:
 			if (!PANIC_ISSET(env)) {
+				ret = USR_ERR(env, DB_RUNRECOVERY);
 				__db_errx(env, DB_STR_A("2070",
 				    "Shared unlock %s: already unlocked", "%s"),
 				    __mutex_describe(env, mutex, description));
-				return (__env_panic(env, 
-				    USR_ERR(env, DB_RUNRECOVERY)));
+				return (__env_panic(env, ret));
 			}
 			return (__env_panic(env, EACCES));
 		    }

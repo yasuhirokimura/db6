@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2012, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2012, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -64,6 +64,7 @@ proc repmgr037_sub { method niter tnum cid nelects nunelects nviews largs } {
 	global testdir
 	global rep_verbose
 	global verbose_type
+	global ipversion
 
 	if { $nelects < 2 || $nviews < 1 } {
 		puts "Invalid configuration nelects $nelects nviews $nviews"
@@ -88,6 +89,7 @@ proc repmgr037_sub { method niter tnum cid nelects nunelects nviews largs } {
 	}
 
 	env_cleanup $testdir
+	set hoststr [get_hoststr $ipversion]
 	set ports [available_ports $nsites]
 	set omethod [convert_method $method]
 
@@ -121,7 +123,7 @@ proc repmgr037_sub { method niter tnum cid nelects nunelects nviews largs } {
 		$envs($i) rep_config {mgr2sitestrict off}
 		if { $i == $mas1 } {
 			$envs($i) repmgr -ack all -pri 100 \
-			    -local [list 127.0.0.1 [lindex $ports 0]] \
+			    -local [list $hoststr [lindex $ports 0]] \
 			    -start master
 		} else {
 			if { $i < $ui } {
@@ -137,9 +139,9 @@ proc repmgr037_sub { method niter tnum cid nelects nunelects nviews largs } {
 				set priority 90
 			}
 			$envs($i) repmgr -ack all -pri $priority \
-			    -local [list 127.0.0.1 \
+			    -local [list $hoststr \
 			    [lindex $ports [expr $i - 1]]] \
-			    -remote [list 127.0.0.1 [lindex $ports 0]] \
+			    -remote [list $hoststr [lindex $ports 0]] \
 			    -start client
 			await_startup_done $envs($i)
 		}

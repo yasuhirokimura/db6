@@ -51,7 +51,7 @@ do
 	shift
 done
 
-DB_ADDONS_REPO=$PKG_ROOT/db_addons-6.1
+DB_ADDONS_REPO=$PKG_ROOT/db_addons
 update_repo()
 {
 	if [ ! -d $DB_ADDONS_REPO ]; then
@@ -168,14 +168,23 @@ rm -f $JDBC_DIR/db $JDBC_DIR/db2 $JDBC_DIR/db3
 # Remove other bits and pieces that aren't relevant.
 rm -rf $JDBC_DIR/debian $ODBC_DIR/*ming* $ODBC_DIR/README.* $ODBC_DIR/*mak
 
+# Patch the JDBC configure file, so the JDK binaries path can be configured
+# correctly on non-Linux platforms
+mv $JDBC_DIR/configure $JDBC_DIR/configure.tmp
+# 1. Use the JAVAC path configured for BDB
+cat $JDBC_DIR/configure.tmp | \
+    sed -e '/$JAVA_HOME\/bin/s//$JAVA_BIN/' > $JDBC_DIR/configure
+rm -f $JDBC_DIR/configure.tmp
+
 # Patch the JDBC build files for autoconf, so the Berkeley DB library
 # can be added to the link command.
 mv $JDBC_DIR/Makefile.in $JDBC_DIR/Makefile.in.tmp
 # 1. Define BDB_LIB for Makefile
 # 2. Add LD_LIBRARY_PATH for runing native/mkconst in JDBC configuration
+# 3. Make the suffix of libsqlite_jni configurable
 cat $JDBC_DIR/Makefile.in.tmp | \
     sed -e '/native\/mkconst > SQLite\/Constants.java/ i \\t\LD_LIBRARY_PATH=\"\$\$LD_LIBRARY_PATH:\$(PWD)\/..\/.libs\" \\' \
-    -e '/^LIBS=/s/$/ @BDB_LIB@/' > $JDBC_DIR/Makefile.in
+    -e '/^LIBS=/s/$/ @BDB_LIB@/' -e '/-o libsqlite_jni.la/s/-o/-shrext $(JMODSUFFIX) -o/' > $JDBC_DIR/Makefile.in
 rm -f $JDBC_DIR/Makefile.in.tmp
 
 # Generate Constants.java needed by JDBC on Windows

@@ -7,14 +7,14 @@
     <link rel="stylesheet" href="apiReference.css" type="text/css" />
     <meta name="generator" content="DocBook XSL Stylesheets V1.73.2" />
     <link rel="start" href="index.html" title="Berkeley DB C++ API Reference" />
-    <link rel="up" href="blob.html" title="Chapter 14.  Binary Large Objects" />
+    <link rel="up" href="blob.html" title="Chapter 14.  External Files" />
     <link rel="prev" href="dbstream_read.html" title="DbStream::read()" />
     <link rel="next" href="dbstream_write.html" title="DbStream::write()" />
   </head>
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -23,7 +23,7 @@
         <tr>
           <td width="20%" align="left"><a accesskey="p" href="dbstream_read.html">Prev</a> </td>
           <th width="60%" align="center">Chapter 14. 
-                Binary Large Objects
+                External Files
         </th>
           <td width="20%" align="right"> <a accesskey="n" href="dbstream_write.html">Next</a></td>
         </tr>
@@ -44,7 +44,7 @@ int
 DbStream::size(Dbt *data, db_off_t *size, u_int32_t flags); </pre>
       <p>
          The <code class="methodname">DbStream::size()</code> method returns the
-         size of the BLOB in bytes.
+         size of the external file in bytes.
      </p>
       <p>
          Unless otherwise specified, the
@@ -61,7 +61,7 @@ DbStream::size(Dbt *data, db_off_t *size, u_int32_t flags); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp63891544"></a>Parameters</h3>
+              <h3 class="title"><a id="idp108927872"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -69,21 +69,21 @@ DbStream::size(Dbt *data, db_off_t *size, u_int32_t flags); </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp63872584"></a>size</h4>
+                <h4 class="title"><a id="idp108942592"></a>size</h4>
               </div>
             </div>
           </div>
           <p>
                   The <span class="bold"><strong>size</strong></span> parameter
-                  references memory into which the size of the BLOB is
-                  copied.
+                  references memory into which the size of the external file
+                  is copied.
              </p>
         </div>
         <div class="sect3" lang="en" xml:lang="en">
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp63879752"></a>flags</h4>
+                <h4 class="title"><a id="idp108921072"></a>flags</h4>
               </div>
             </div>
           </div>
@@ -96,7 +96,7 @@ DbStream::size(Dbt *data, db_off_t *size, u_int32_t flags); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp63852080"></a>Errors</h3>
+              <h3 class="title"><a id="idp108879840"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -114,7 +114,7 @@ DbStream::size(Dbt *data, db_off_t *size, u_int32_t flags); </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp63897032"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp108952992"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -127,24 +127,24 @@ DbStream::size(Dbt *data, db_off_t *size, u_int32_t flags); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp63895056"></a>Class</h3>
+              <h3 class="title"><a id="idp108950016"></a>Class</h3>
             </div>
           </div>
         </div>
         <p>
-            <a class="link" href="blob.html" title="Chapter 14.  Binary Large Objects">DbStream</a>  
+            <a class="link" href="blob.html" title="Chapter 14.  External Files">DbStream</a>  
         </p>
       </div>
       <div class="sect2" lang="en" xml:lang="en">
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp63887704"></a>See Also</h3>
+              <h3 class="title"><a id="idp108882848"></a>See Also</h3>
             </div>
           </div>
         </div>
         <p>
-             <a class="xref" href="blob.html#bloblist" title="BLOBs and Related Methods">BLOBs and Related Methods</a> 
+             <a class="xref" href="blob.html#bloblist" title="External Files and Related Methods">External Files and Related Methods</a> 
         </p>
       </div>
     </div>

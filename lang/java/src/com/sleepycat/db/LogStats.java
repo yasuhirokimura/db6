@@ -4,7 +4,7 @@
  *
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
  */
 
 package com.sleepycat.db;
@@ -19,6 +19,7 @@ public class LogStats {
     private int st_magic;
     /**
     The magic number that identifies a file as a log file.
+    @return the magic number that identifies a file as a log file
     */
     public int getMagic() {
         return st_magic;
@@ -27,6 +28,7 @@ public class LogStats {
     private int st_version;
     /**
     The version of the log file type.
+    @return the version of the log file type
     */
     public int getVersion() {
         return st_version;
@@ -35,6 +37,7 @@ public class LogStats {
     private int st_mode;
     /**
     The mode of any created log files.
+    @return the mode of any created log files
     */
     public int getMode() {
         return st_mode;
@@ -43,6 +46,7 @@ public class LogStats {
     private int st_lg_bsize;
     /**
     The in-memory log record cache size.
+    @return the in-memory log record cache size
     */
     public int getLgBSize() {
         return st_lg_bsize;
@@ -51,6 +55,7 @@ public class LogStats {
     private int st_lg_size;
     /**
     The current log file size.
+    @return the current log file size
     */
     public int getLgSize() {
         return st_lg_size;
@@ -60,6 +65,8 @@ public class LogStats {
     /**
     The number of bytes over and above {@link com.sleepycat.db.LogStats#getWcMbytes LogStats.getWcMbytes}
     written to this log since the last checkpoint.
+    @return the number of bytes over and above {@link com.sleepycat.db.LogStats#getWcMbytes LogStats.getWcMbytes}
+    written to this log since the last checkpoint
     */
     public int getWcBytes() {
         return st_wc_bytes;
@@ -68,31 +75,44 @@ public class LogStats {
     private int st_wc_mbytes;
     /**
     The number of megabytes written to this log since the last checkpoint.
+    @return the number of megabytes written to this log since the last checkpoint.
     */
     public int getWcMbytes() {
         return st_wc_mbytes;
     }
 
     private int st_fileid_init;
-    /** The initial allocated file logging identifiers. */
+    /**
+    The initial allocated file logging identifiers.
+    @return the initial allocated file logging identifiers
+    */
     public int getFileidInit() {
         return st_fileid_init;
     }
 
     private int st_nfileid;
-    /** The current number of file logging identifiers. */
+    /**
+    The current number of file logging identifiers.
+    @return the current number of file logging identifiers
+    */
     public int getNumFileId() {
         return st_nfileid;
     }
 
     private int st_maxnfileid;
-    /** The maximum number of file logging identifiers used. */
+    /**
+    The maximum number of file logging identifiers used.
+    @return the maximum number of file logging identifiers
+    */
     public int getMaxNfileId() {
         return st_maxnfileid;
     }
 
     private long st_record;
-    /** The number of records written to this log. **/
+    /**
+    The number of records written to this log.
+    @return the number of records written to this log
+    */
     public long getRecord() {
         return st_record;
     }
@@ -100,6 +120,7 @@ public class LogStats {
     private int st_w_bytes;
     /**
     The number of bytes over and above {@link #getWMbytes} written to this log.
+    @return the number of bytes over and above {@link #getWMbytes} written to this log
     */
     public int getWBytes() {
         return st_w_bytes;
@@ -108,6 +129,7 @@ public class LogStats {
     private int st_w_mbytes;
     /**
     The number of megabytes written to this log.
+    @return the number of megabytes written to this log
     */
     public int getWMbytes() {
         return st_w_mbytes;
@@ -116,6 +138,7 @@ public class LogStats {
     private long st_wcount;
     /**
     The number of times the log has been written to disk.
+    @return the number of times the log has been written to disk
     */
     public long getWCount() {
         return st_wcount;
@@ -125,13 +148,18 @@ public class LogStats {
     /**
     The number of times the log has been written to disk because the
     in-memory log record cache filled up.
+    @return the number of times the log has been written to disk because the
+    in-memory log record cache filled up
     */
     public long getWCountFill() {
         return st_wcount_fill;
     }
 
     private long st_rcount;
-    /** The number of times the log has been read from disk. **/
+    /**
+    The number of times the log has been read from disk.
+    @return the number of times the log has been read from disk
+    */
     public long getRCount() {
         return st_rcount;
     }
@@ -139,6 +167,7 @@ public class LogStats {
     private long st_scount;
     /**
     The number of times the log has been flushed to disk.
+    @return the number of times the log has been flushed to disk
     */
     public long getSCount() {
         return st_scount;
@@ -148,6 +177,8 @@ public class LogStats {
     /**
     The number of times that a thread of control was forced to wait
     before obtaining the log region mutex.
+    @return the number of times that a thread of control was forced to wait
+    before obtaining the log region mutex
     */
     public long getRegionWait() {
         return st_region_wait;
@@ -157,6 +188,8 @@ public class LogStats {
     /**
     The number of times that a thread of control was able to obtain
     the log region mutex without waiting.
+    @return the number of times that a thread of control was able to obtain
+    the log region mutex without waiting
     */
     public long getRegionNowait() {
         return st_region_nowait;
@@ -165,6 +198,7 @@ public class LogStats {
     private int st_cur_file;
     /**
     The current log file number.
+    @return the current log file number
     */
     public int getCurFile() {
         return st_cur_file;
@@ -173,6 +207,7 @@ public class LogStats {
     private int st_cur_offset;
     /**
     The byte offset in the current log file.
+    @return the byte offset in the current log file
     */
     public int getCurOffset() {
         return st_cur_offset;
@@ -181,6 +216,7 @@ public class LogStats {
     private int st_disk_file;
     /**
     The log file number of the last record known to be on disk.
+    @return the log file number of the last record known to be on disk
     */
     public int getDiskFile() {
         return st_disk_file;
@@ -189,6 +225,7 @@ public class LogStats {
     private int st_disk_offset;
     /**
     The byte offset of the last record known to be on disk.
+    @return the byte offset of the last record known to be on disk
     */
     public int getDiskOffset() {
         return st_disk_offset;
@@ -197,6 +234,7 @@ public class LogStats {
     private int st_maxcommitperflush;
     /**
     The maximum number of commits contained in a single log flush.
+    @return the maximum number of commits contained in a single log flush
     */
     public int getMaxCommitperflush() {
         return st_maxcommitperflush;
@@ -206,6 +244,8 @@ public class LogStats {
     /**
     The minimum number of commits contained in a single log flush that
     contained a commit.
+    @return the minimum number of commits contained in a single log flush that
+    contained a commit
     */
     public int getMinCommitperflush() {
         return st_mincommitperflush;
@@ -214,6 +254,7 @@ public class LogStats {
     private long st_regsize;
     /**
     The size of the region.
+    @return the size of the region
     */
     public long getRegSize() {
         return st_regsize;
@@ -222,6 +263,7 @@ public class LogStats {
     /**
     For convenience, the LogStats class has a toString method that lists
     all the data fields.
+    @return a String that lists all the data fields
     */
     public String toString() {
         return "LogStats:"

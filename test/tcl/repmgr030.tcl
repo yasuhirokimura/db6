@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2007, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2007, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -32,12 +32,17 @@ proc repmgr030 { { niter 100 } { tnum "030" } args } {
 
 	puts "Repmgr$tnum ($method): repmgr multiple c2c peer test."
 	repmgr030_sub $method $niter $tnum $args
+
+	append args " -blob_threshold 100"
+	puts "Repmgr$tnum ($method blobs): repmgr multiple c2c peer test."
+	repmgr030_sub $method $niter $tnum $args
 }
 
 proc repmgr030_sub { method niter tnum largs } {
 	global testdir
 	global rep_verbose
 	global verbose_type
+	global ipversion
 	set nsites 5
 
 	set verbargs ""
@@ -46,6 +51,7 @@ proc repmgr030_sub { method niter tnum largs } {
 	}
 
 	env_cleanup $testdir
+	set hoststr [get_hoststr $ipversion]
 	set ports [available_ports $nsites]
 	set omethod [convert_method $method]
 
@@ -67,8 +73,14 @@ proc repmgr030_sub { method niter tnum largs } {
 	# acknowledge removing a site.
 	#
 	set ack_timeout 3000000
-	set req_min 4000
-	set req_max 128000
+	# Blob replication takes more time, so increase re-request timeout.
+    	if { [string first $largs "blob"] == -1 } {
+		set req_min 4000
+		set req_max 128000
+    	} else {
+		set req_min 40000
+		set req_max 1280000
+    	}
 	set hbsend 200000
 	set hbmon 500000
 
@@ -79,7 +91,7 @@ proc repmgr030_sub { method niter tnum largs } {
 	set masterenv [eval $ma_envcmd]
 	$masterenv rep_request $req_min $req_max
 	$masterenv repmgr -ack all -pri 100 \
-	    -local [list 127.0.0.1 [lindex $ports 0]] \
+	    -local [list $hoststr [lindex $ports 0]] \
 	    -timeout [list ack $ack_timeout] \
 	    -timeout [list heartbeat_send $hbsend] \
 	    -timeout [list heartbeat_monitor $hbmon] -start master
@@ -92,10 +104,10 @@ proc repmgr030_sub { method niter tnum largs } {
 	set clientenv [eval $cl_envcmd]
 	$clientenv rep_request $req_min $req_max
 	$clientenv repmgr -ack all -pri 80 \
-	    -local [list 127.0.0.1 [lindex $ports 1]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] \
-	    -remote [list 127.0.0.1 [lindex $ports 2]] \
-	    -remote [list 127.0.0.1 [lindex $ports 3]] \
+	    -local [list $hoststr [lindex $ports 1]] \
+	    -remote [list $hoststr [lindex $ports 0]] \
+	    -remote [list $hoststr [lindex $ports 2]] \
+	    -remote [list $hoststr [lindex $ports 3]] \
 	    -timeout [list ack $ack_timeout] \
 	    -timeout [list heartbeat_send $hbsend] \
 	    -timeout [list heartbeat_monitor $hbmon] -start client
@@ -106,10 +118,10 @@ proc repmgr030_sub { method niter tnum largs } {
 	set clientenv2 [eval $cl2_envcmd]
 	$clientenv2 rep_request $req_min $req_max
 	$clientenv2 repmgr -ack all -pri 60 \
-	    -local [list 127.0.0.1 [lindex $ports 2]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] \
-	    -remote [list 127.0.0.1 [lindex $ports 1]] \
-	    -remote [list 127.0.0.1 [lindex $ports 3]] \
+	    -local [list $hoststr [lindex $ports 2]] \
+	    -remote [list $hoststr [lindex $ports 0]] \
+	    -remote [list $hoststr [lindex $ports 1]] \
+	    -remote [list $hoststr [lindex $ports 3]] \
 	    -timeout [list ack $ack_timeout] \
 	    -timeout [list heartbeat_send $hbsend] \
 	    -timeout [list heartbeat_monitor $hbmon] -start client
@@ -122,11 +134,11 @@ proc repmgr030_sub { method niter tnum largs } {
 	set clientenv3 [eval $cl3_envcmd]
 	$clientenv3 rep_request $req_min $req_max
 	$clientenv3 repmgr -ack all -pri 50 \
-	    -local [list 127.0.0.1 [lindex $ports 3]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] \
-	    -remote [list 127.0.0.1 [lindex $ports 1] peer] \
-	    -remote [list 127.0.0.1 [lindex $ports 4] peer] \
-	    -remote [list 127.0.0.1 [lindex $ports 2] peer] \
+	    -local [list $hoststr [lindex $ports 3]] \
+	    -remote [list $hoststr [lindex $ports 0]] \
+	    -remote [list $hoststr [lindex $ports 1] peer] \
+	    -remote [list $hoststr [lindex $ports 4] peer] \
+	    -remote [list $hoststr [lindex $ports 2] peer] \
 	    -timeout [list ack $ack_timeout] \
 	    -timeout [list heartbeat_send $hbsend] \
 	    -timeout [list heartbeat_monitor $hbmon] -start client
@@ -141,8 +153,8 @@ proc repmgr030_sub { method niter tnum largs } {
 	set viewenv [eval $view_envcmd]
 	$viewenv rep_request $req_min $req_max
 	$viewenv repmgr -ack all -pri 80 \
-	    -local [list 127.0.0.1 [lindex $ports 4]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] \
+	    -local [list $hoststr [lindex $ports 4]] \
+	    -remote [list $hoststr [lindex $ports 0]] \
 	    -timeout [list ack $ack_timeout] \
 	    -timeout [list heartbeat_send $hbsend] \
 	    -timeout [list heartbeat_monitor $hbmon] -start client
@@ -164,14 +176,17 @@ proc repmgr030_sub { method niter tnum largs } {
 	error_check_good no_client2_reqs [expr {$c2reqs == 0}] 1
 
 	puts "\tRepmgr$tnum.f: Run some transactions at master."
-	eval rep_test $method $masterenv NULL $niter 0 0 0 $largs
+	set start 0
+	eval rep_test $method $masterenv NULL $niter 0 $start 0 $largs
+	incr start $niter
 
 	puts "\tRepmgr$tnum.g: Shut down master, first client takes over."
 	error_check_good masterenv_close [$masterenv close] 0
 	await_expected_master $clientenv
 
 	puts "\tRepmgr$tnum.h: Run some more transactions at new master."
-	eval rep_test $method $clientenv NULL $niter $niter 0 0 $largs
+	eval rep_test $method $clientenv NULL $niter 0 $start 0 $largs
+	incr start $niter
 
 	puts "\tRepmgr$tnum.i: Sync delayed third client."
 	error_check_good rep_sync [$clientenv3 rep_sync] 0
@@ -187,7 +202,7 @@ proc repmgr030_sub { method niter tnum largs } {
 	# master with its lower priority.  This also reduces the size of
 	# the replication group so that the remaining sites can generate
 	# enough votes for a successful election.
-	$clientenv repmgr -remove [list 127.0.0.1 [lindex $ports 0]]
+	$clientenv repmgr -remove [list $hoststr [lindex $ports 0]]
 	await_event $clientenv site_removed
 	# Give site remove gmdb operation some time to propagate.
 	tclsleep 2
@@ -197,14 +212,14 @@ proc repmgr030_sub { method niter tnum largs } {
 	await_expected_master $clientenv2
 
 	puts "\tRepmgr$tnum.l: Run more transactions at latest master."
-	eval rep_test $method $clientenv2 NULL $niter $niter 0 0 $largs
+ 	eval rep_test $method $clientenv2 NULL $niter 0 $start 0 $largs
 
 	puts "\tRepmgr$tnum.m: Sync delayed third client."
 	error_check_good rep_sync [$clientenv3 rep_sync] 0
 
 	puts "\tRepmgr$tnum.n: Check third client used view as peer."
 	# Give sync requests a bit of time to show up in stats.
-	tclsleep 1
+	tclsleep 2
 	set vreqs2 [stat_field $viewenv rep_stat "Client service requests"]
 	error_check_good got_view_reqs [expr {$vreqs2 > 0}] 1
 

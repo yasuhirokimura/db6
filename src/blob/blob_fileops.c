@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2013, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2013, 2016 Oracle and/or its affiliates.  All rights reserved.
  */
 
 #include "db_config.h"
@@ -54,7 +54,7 @@ __blob_file_create(dbc, fhpp, blob_id)
 	    (F_ISSET(dbc->dbp, DB_AM_NOT_DURABLE) ? DB_LOG_NOT_DURABLE : 0)))
 	    != 0) {
 		__db_errx(env, DB_STR_A("0228",
-		    "Error creating blob file: %llu.", "%llu"),
+		    "Error creating external file: %llu.", "%llu"),
 		    (unsigned long long)*blob_id);
 		goto err;
 	}
@@ -115,7 +115,7 @@ __blob_file_delete(dbc, blob_id)
 	if ((ret = __blob_id_to_path(
 	    env, dbc->dbp->blob_sub_dir, blob_id, &blob_name)) != 0) {
 		__db_errx(env, DB_STR_A("0229",
-		   "Failed to construct path for blob file %llu.",
+		   "Failed to construct path for external file %llu.",
 		   "%llu"), (unsigned long long)blob_id);
 		goto err;
 	}
@@ -133,7 +133,7 @@ __blob_file_delete(dbc, blob_id)
 
 	if (ret != 0) {
 		__db_errx(env, DB_STR_A("0230",
-		    "Failed to remove blob file while deleting: %s.",
+		    "Failed to remove external file while deleting: %s.",
 		    "%s"), blob_name);
 		goto err;
 	}
@@ -176,7 +176,7 @@ __blob_file_open(dbp, fhpp, blob_id, flags, printerr)
 	if ((ret = __db_appname(
 	    env, DB_APP_BLOB, ppath, NULL, &path)) != 0) {
 		__db_errx(env, DB_STR_A("0231",
-		    "Failed to get path to blob file: %llu.", "%llu"),
+		    "Failed to get path to external file: %llu.", "%llu"),
 		    (unsigned long long)blob_id);
 		goto err;
 	}
@@ -190,7 +190,7 @@ __blob_file_open(dbp, fhpp, blob_id, flags, printerr)
 		 */
 		if (printerr == 1) {
 			__db_errx(env, DB_STR_A("0232",
-			    "Error opening blob file: %s.", "%s"), path);
+			    "Error opening external file: %s.", "%s"), path);
 		}
 		goto err;
 	}
@@ -233,7 +233,7 @@ __blob_file_read(env, fhp, dbt, offset, size)
 		buf = dbt->data;
 
 	if ((ret = __os_read(env, fhp, buf, size, &bytes)) != 0) {
-		__db_errx(env, DB_STR("0233", "Error reading blob file."));
+		__db_errx(env, DB_STR("0233", "Error reading external file."));
 		goto err;
 	}
 	/*
@@ -289,7 +289,7 @@ __blob_file_write(dbc, fhp, buf, offset, blob_id, file_size, flags)
 
 	if (DBENV_LOGGING(env)) {
 		if ((ret = __log_get_config(
-		    env->dbenv, DB_LOG_BLOB, &blob_lg)) != 0)
+		    env->dbenv, DB_LOG_EXT_FILE, &blob_lg)) != 0)
 			goto err;
 		if (blob_lg == 0 && !REP_ON(env))
 			LF_SET(DB_FOP_PARTIAL_LOG);
@@ -316,7 +316,7 @@ __blob_file_write(dbc, fhp, buf, offset, blob_id, file_size, flags)
 		if ((ret = __fop_write_file(env, dbc->txn, name, dirname,
 		    DB_APP_BLOB, fhp, offset, ptr, data_size, flags)) != 0) {
 			__db_errx(env, DB_STR_A("0235",
-			    "Error writing blob file: %s.", "%s"), name);
+			    "Error writing external file: %s.", "%s"), name);
 				goto err;
 		}
 		LF_SET(DB_FOP_APPEND);
@@ -333,7 +333,7 @@ __blob_file_write(dbc, fhp, buf, offset, blob_id, file_size, flags)
 	if ((ret = __fop_write_file(env, dbc->txn, name, dirname,
 	    DB_APP_BLOB, fhp, write_offset, ptr, data_size, flags)) != 0) {
 		__db_errx(env, DB_STR_A("0236",
-		    "Error writing blob file: %s.", "%s"), name);
+		    "Error writing external file: %s.", "%s"), name);
 		goto err;
 	}
 

@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -68,7 +68,7 @@ proc test008 { method {reopen "008"} {debug 0} args} {
 
 	# Look for incompatible configurations of blob.
 	set skipblob 0
-	foreach conf { "-encryptaes" "-encrypt" "-compress" "-dup" "-dupsort" \
+	foreach conf { "-compress" "-dup" "-dupsort" \
 	    "-read_uncommitted" "-multiversion" } {
 		if { [lsearch -exact $args $conf] != -1 } {
 			set skipblob 1
@@ -84,12 +84,6 @@ proc test008 { method {reopen "008"} {debug 0} args} {
 	if { $skipblob == 0 && $databases_in_memory } {
 		set skipblob 1
 		set skipmsg "Test$reopen skipping in-memory database for blob"
-	}
-	if { $has_crypto == 1 && $skipblob == 0 && $env != "NULL" } {
-	    	if {[$env get_encrypt_flags] != "" } {
-			set skipblob 1
-			set skipmsg "Test$reopen skipping security environment"
-		}
 	}
 
 	set t1 $testdir/t1
@@ -126,14 +120,6 @@ proc test008 { method {reopen "008"} {debug 0} args} {
 			if { $skipblob != 0 } {
 				puts $skipmsg
 				continue
-			} elseif { $env != "NULL" && [is_repenv $env] == 1 } {
-				puts "Test$reopen\
-				    skipping blob for replication."
-				continue
-			} elseif { [lsearch -exact $args "-chksum"] != -1 } {
-				set indx [lsearch -exact $args "-chksum"]
-				set args [lreplace $args $indx $indx]
-				puts "Test$reopen ignoring -chskum for blob"
 			}
 			set bflags "-blob_threshold 30"
 			if { $env == "NULL" } {
@@ -314,9 +300,12 @@ proc test008 { method {reopen "008"} {debug 0} args} {
 			error_check_good blob_meta_db \
 			    [file exists $blobdir/__db_blob_meta.db] 1
 
+			set encargs ""
+			split_encargs $args encargs
+			#puts "encargs $encargs"
 			# Run verify to check the internal structure and order.
 			if { [catch {eval {berkdb dbverify} \
-			    $vrflags $testfile-$opt.db} res] } {
+			    $vrflags $encargs $testfile-$opt.db} res] } {
 				error "FAIL: Verification failed with $res"
 			}
 		} else {

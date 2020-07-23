@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2009, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2009, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # TEST	repmgr024
 # TEST	Test of group-wide log archiving awareness.
@@ -46,6 +46,7 @@ proc repmgr024_sub { method niter tnum testopt largs } {
 	global repfiles_in_memory
 	global rep_verbose
 	global verbose_type
+	global ipversion
 
 	set verbargs ""
 	if { $rep_verbose == 1 } {
@@ -62,6 +63,7 @@ proc repmgr024_sub { method niter tnum testopt largs } {
 	file mkdir [set dirb $testdir/SITE_B]
 	file mkdir [set dirc $testdir/SITE_C]
 	foreach { porta portb portc } [available_ports 3] {}
+	set hoststr [get_hoststr $ipversion]
 
 	# Log size is small so we quickly create more than one.
 	# The documentation says that the log file must be at least
@@ -80,7 +82,7 @@ proc repmgr024_sub { method niter tnum testopt largs } {
 	# otherwise it will never wait when the client is closed and
 	# we want to give it a chance to wait later in the test.
 	$enva repmgr -timeout {connection_retry 5000000} \
-	    -local [list 127.0.0.1 $porta] -start master
+	    -local [list $hoststr $porta] -start master
 
 	# Define envb as a view if needed.
 	if { $testopt == "view" } {
@@ -95,8 +97,8 @@ proc repmgr024_sub { method niter tnum testopt largs } {
 	    $viewstr -home $dirb"
 	set envb [eval $cmdb]
 	$envb repmgr -timeout {connection_retry 5000000} \
-	    -local [list 127.0.0.1 $portb] -start client \
-	    -remote [list 127.0.0.1 $porta]
+	    -local [list $hoststr $portb] -start client \
+	    -remote [list $hoststr $porta]
 	puts "\tRepmgr$tnum.a: wait for client B to sync with master."
 	await_startup_done $envb
 
@@ -106,8 +108,8 @@ proc repmgr024_sub { method niter tnum testopt largs } {
 	    -home $dirc"
 	set envc [eval $cmdc]
 	$envc repmgr -timeout {connection_retry 5000000} \
-	    -local [list 127.0.0.1 $portc] -start client \
-	    -remote [list 127.0.0.1 $porta]
+	    -local [list $hoststr $portc] -start client \
+	    -remote [list $hoststr $porta]
 	puts "\tRepmgr$tnum.b: wait for client C to sync with master."
 	await_startup_done $envc
 
@@ -146,7 +148,7 @@ proc repmgr024_sub { method niter tnum testopt largs } {
 	set outstr "Close"
 	if { $testopt == "liverem" } {
 		set outstr "Remove and close"
-		$enva repmgr -remove  [list 127.0.0.1 $portc]
+		$enva repmgr -remove  [list $hoststr $portc]
 		await_event $envc local_site_removed
 	}
 	puts "\tRepmgr$tnum.d: $outstr client."

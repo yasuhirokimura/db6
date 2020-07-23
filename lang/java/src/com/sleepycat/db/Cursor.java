@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -117,7 +117,6 @@ public class Cursor {
     A new cursor with the same transaction and locker ID as the original
     cursor.
     <p>
-    <p>
 @throws DatabaseException if a failure occurs.
     */
     public Cursor dup(final boolean samePosition)
@@ -135,9 +134,6 @@ public class Cursor {
     <p>
     @return
     This cursor's configuration.
-    <p>
-    <p>
-@throws DatabaseException if a failure occurs.
     */
     public CursorConfig getConfig() {
         return config;
@@ -145,11 +141,10 @@ public class Cursor {
 
     /**
     Return the Database handle associated with this Cursor. 
-    
+
     <p>
     @return
     The Database handle associated with this Cursor.
-    <p>
     */
     public Database getDatabase() {
         return database;
@@ -159,7 +154,7 @@ public class Cursor {
     Return a comparison of the two cursors. Two cursors are 
     equal if and only if they are positioned 
     on the same item in the same database.
-    <p>
+    @param OtherCursor the other cursor to be compared
     @return
     An integer representing the result of the 
     comparison between this cursor and OtherCursor (another 
@@ -167,7 +162,6 @@ public class Cursor {
     OtherCursor are positioned on the same item, 1 
     indicates this cursor is greater than OtherCursor, -1 indicates that 
     OtherCursor is greater than this cursor.
-    <p>
     <p>
 @throws DeadlockException if the operation was selected to resolve a
 deadlock.
@@ -187,7 +181,6 @@ deadlock.
     @return
     A count of the number of data items for the key to which the cursor
     refers.
-    <p>
     <p>
 @throws DeadlockException if the operation was selected to resolve a
 deadlock.
@@ -210,8 +203,8 @@ deadlock.
     The cursor position is unchanged after a delete, and subsequent calls
 to cursor functions expecting the cursor to refer to an existing key
 will fail.
-    <p>
-    <p>
+@return {@link com.sleepycat.db.OperationStatus#KEYEMPTY OperationStatus.KEYEMPTY} if the key/pair at the cursor
+position has been deleted; otherwise, {@link com.sleepycat.db.OperationStatus#SUCCESS OperationStatus.SUCCESS}.
 @throws DeadlockException if the operation was selected to resolve a
 deadlock.
 <p>
@@ -848,6 +841,7 @@ the existing key/data pair will be replaced.
 <p>
 @param data the data {@link com.sleepycat.db.DatabaseEntry DatabaseEntry} stored.
 <p>
+@return {@link com.sleepycat.db.OperationStatus#SUCCESS OperationStatus.SUCCESS}
 <p>
 @throws DeadlockException if the operation was selected to resolve a
 deadlock.
@@ -895,6 +889,9 @@ The putAfter method may not be called for the Queue access method.
 <p>
 @param data the data {@link com.sleepycat.db.DatabaseEntry DatabaseEntry} stored.
 <p>
+@return {@link com.sleepycat.db.OperationStatus#NOTFOUND OperationStatus.NOTFOUND}
+if the current cursor record has already been deleted and the underlying access method is Hash;
+otherwise, {@link com.sleepycat.db.OperationStatus#SUCCESS OperationStatus.SUCCESS}.
 <p>
 @throws DeadlockException if the operation was selected to resolve a
 deadlock.
@@ -942,6 +939,9 @@ The putBefore method may not be called for the Queue access method.
 <p>
 @param data the data {@link com.sleepycat.db.DatabaseEntry DatabaseEntry} stored.
 <p>
+@return {@link com.sleepycat.db.OperationStatus#NOTFOUND OperationStatus.NOTFOUND}
+if the current cursor record has already been deleted and the underlying access method is Hash;
+otherwise, {@link com.sleepycat.db.OperationStatus#SUCCESS OperationStatus.SUCCESS}.
 <p>
 @throws DeadlockException if the operation was selected to resolve a
 deadlock.
@@ -972,6 +972,9 @@ If the key already appears in the database, putNoOverwrite will return
 <p>
 @param data the data {@link com.sleepycat.db.DatabaseEntry DatabaseEntry} stored.
 <p>
+@return {@link com.sleepycat.db.OperationStatus#KEYEXIST OperationStatus.KEYEXIST}
+if a matching key/data pair already exists in the database;
+otherwise, {@link com.sleepycat.db.OperationStatus#SUCCESS OperationStatus.SUCCESS}.
 <p>
 @throws DeadlockException if the operation was selected to resolve a
 deadlock.
@@ -1035,6 +1038,7 @@ The putKeyFirst method may not be called for the Queue or Recno access methods.
 <p>
 @param data the data {@link com.sleepycat.db.DatabaseEntry DatabaseEntry} stored.
 <p>
+@return {@link com.sleepycat.db.OperationStatus#SUCCESS OperationStatus.SUCCESS}
 <p>
 @throws DeadlockException if the operation was selected to resolve a
 deadlock.
@@ -1075,6 +1079,7 @@ The putKeyLast method may not be called for the Queue or Recno access methods.
 <p>
 @param data the data {@link com.sleepycat.db.DatabaseEntry DatabaseEntry} stored.
 <p>
+@return {@link com.sleepycat.db.OperationStatus#SUCCESS OperationStatus.SUCCESS}
 <p>
 @throws DeadlockException if the operation was selected to resolve a
 deadlock.
@@ -1112,6 +1117,9 @@ This method may not be called for the Queue or Recno access methods.
 <p>
 @param data the data {@link com.sleepycat.db.DatabaseEntry DatabaseEntry} stored.
 <p>
+@return {@link com.sleepycat.db.OperationStatus#KEYEXIST OperationStatus.KEYEXIST}
+if a matching key/data pair already exists in the database;
+otherwise, {@link com.sleepycat.db.OperationStatus#SUCCESS OperationStatus.SUCCESS}.
 <p>
 @throws DeadlockException if the operation was selected to resolve a
 deadlock.
@@ -1153,6 +1161,10 @@ deadlock.
     <p>
     @param data the data DatabaseEntry stored.
     <br>
+    @return {@link com.sleepycat.db.OperationStatus#NOTFOUND OperationStatus.NOTFOUND}
+    if the current cursor record has already been deleted;
+    otherwise, {@link com.sleepycat.db.OperationStatus#SUCCESS OperationStatus.SUCCESS}.
+    <br>
     @throws DeadlockException - if the operation was selected to resolve a
     deadlock.
     <br>
@@ -1175,7 +1187,7 @@ deadlock.
     <p>
     This method may be called at any time during the life of the application.
     <p>
-    <p>
+    @return the cache priority for pages referenced by the cursor
 @throws DatabaseException if a failure occurs.
     */
     public CacheFilePriority getPriority()
@@ -1195,6 +1207,7 @@ deadlock.
     <p>
     This method may be called at any time during the life of the application.
     <p>
+    @param priority the new cache priority
 @throws DatabaseException if a failure occurs.
     */
     public void setPriority(final CacheFilePriority priority)
@@ -1205,7 +1218,7 @@ deadlock.
 
     /**
     Return a database stream pointing to a key/data pair where the data item
-    is a blob.
+    is an external file.
     <p>
     @param config
     The database stream attributes.  If null, default attributes are used.
@@ -1213,7 +1226,7 @@ deadlock.
     @return
     A database stream.
     <p>
-    @throws DatabaseException if the data item is not a blob.
+    @throws DatabaseException if the data item is not an external file.
     */
     public DatabaseStream openDatabaseStream(DatabaseStreamConfig config)
         throws DatabaseException {

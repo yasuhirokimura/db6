@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2004, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2004, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -22,7 +22,7 @@ source $test_path/testutils.tcl
 set usage "envscript testdir testfile putget key data recover failchk wait"
 
 # Verify usage
-if { $argc != 8 } {
+if { $argc != 9 } {
 	puts stderr "FAIL:[timestamp] Usage: $usage"
 	exit
 }
@@ -36,6 +36,7 @@ set data [ lindex $argv 4 ]
 set recover [ lindex $argv 5 ]
 set failchk [lindex $argv 6 ]
 set wait [ lindex $argv 7 ]
+set sliced [ lindex $argv 8 ]
 
 set flag1 {}
 if { $recover == "RECOVER" } {
@@ -59,7 +60,7 @@ error_check_good envopen [is_valid_env $dbenv] TRUE
 
 # Open database, put or get, close database.
 if {[catch {eval {berkdb_open} \
-    -create -auto_commit -btree -env $dbenv $testfile} db]} {
+    -create -auto_commit -btree -env $dbenv $sliced $testfile} db]} {
 	puts "FAIL: opening db returned $db"
 }
 error_check_good dbopen [is_valid_db $db] TRUE

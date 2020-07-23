@@ -1,11 +1,11 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2010, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2010, 2016 Oracle and/or its affiliates.  All rights reserved.
  */
 
 #ifndef _DB_HEAP_H_
-#define _DB_HEAP_H_
+#define	_DB_HEAP_H_
 
 #if defined(__cplusplus)
 extern "C" {
@@ -19,7 +19,7 @@ struct __heap_cursor;	typedef struct __heap_cursor HEAP_CURSOR;
  * The in-memory, per-heap data structure.
  */
 struct __heap {		/* Heap access method. */
-	
+
 	u_int32_t gbytes;	/* Initial heap size. */
 	u_int32_t bytes;	/* Initial heap size. */
 	u_int32_t region_size;	/* Size of each region. */
@@ -39,14 +39,14 @@ struct __heap_cursor {
 	u_int32_t	flags;
 };
 
-#define HEAP_PG_FULL	3	/* No space on page. */
-#define HEAP_PG_GT66	2	/* Page greater than 66% full */
-#define HEAP_PG_GT33	1	/* Page greater than 33% full */
-#define HEAP_PG_LT33	0	/* Page less than 33% full */
+#define	HEAP_PG_FULL	3	/* No space on page. */
+#define	HEAP_PG_GT66	2	/* Page greater than 66% full */
+#define	HEAP_PG_GT33	1	/* Page greater than 33% full */
+#define	HEAP_PG_LT33	0	/* Page less than 33% full */
 
-#define HEAP_PG_FULL_PCT	5	/* Less than 5% of page is free. */
-#define HEAP_PG_GT66_PCT	33	/* Less than 33% of page is free. */
-#define HEAP_PG_GT33_PCT	66	/* Less than 66% of page is free. */
+#define	HEAP_PG_FULL_PCT	5	/* Less than 5% of page is free. */
+#define	HEAP_PG_GT66_PCT	33	/* Less than 33% of page is free. */
+#define	HEAP_PG_GT33_PCT	66	/* Less than 66% of page is free. */
 
 #if defined(__cplusplus)
 }
@@ -56,5 +56,3 @@ struct __heap_cursor {
 #include "dbinc_auto/heap_ext.h"
 #include "dbinc/db_am.h"
 #endif
-
-	

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2005, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2005, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -62,7 +62,7 @@ __mutex_failchk(env)
 	if (count == 0)
 		return (count);
 	else
-		return (__env_panic(env, USR_ERR(env, DB_RUNRECOVERY)));
+		return (USR_ERR(env, DB_RUNRECOVERY));
 }
 
 /*
@@ -163,7 +163,10 @@ __mutex_failchk_single(env, mutex, ip)
 	(void)dbenv->thread_id_string(dbenv, pid, threadid, id_str);
 	(void)__mutex_describe(env, mutex, mtx_desc);
 
-	if (LF_ISSET(DB_MUTEX_PROCESS_ONLY) && !already_dead) {
+	if (LF_ISSET(DB_MUTEX_PROCESS_ONLY)) {
+		if (already_dead)
+			return (0);
+
 		__db_errx(env, DB_STR_A("2065",
 		    "Freeing %s for process: %s", "%s %s"), mtx_desc, id_str);
 
@@ -175,8 +178,7 @@ __mutex_failchk_single(env, mutex, ip)
 		if (LF_ISSET(DB_MUTEX_LOCKED))
 			MUTEX_UNLOCK(env, mutex);
 
-		if ((ret = __mutex_free_int(env, 0, &mutex)) != 0)
-			return (ret);
+		return (__mutex_free_int(env, 0, &mutex));
 	}
 #ifdef HAVE_FAILCHK_BROADCAST
 	else if (LF_ISSET(DB_MUTEX_LOCKED)) {
@@ -195,5 +197,5 @@ __mutex_failchk_single(env, mutex, ip)
 		    mtx_desc, id_str);
 	}
 #endif
-	return (__env_panic(env, USR_ERR(env, DB_RUNRECOVERY)));
+	return (USR_ERR(env, DB_RUNRECOVERY));
 }

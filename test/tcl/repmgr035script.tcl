@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2012, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2012, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -8,7 +8,8 @@
 # replication manager upgrade test.
 #
 
-proc repmgr035scr_starttest { role oplist envid mydir markerdir local_port remote_ports } {
+proc repmgr035scr_starttest { role oplist envid mydir markerdir\
+    hoststr local_port remote_ports dbopt } {
 	global util_path
 	global repfiles_in_memory
 
@@ -62,16 +63,60 @@ proc repmgr035scr_starttest { role oplist envid mydir markerdir local_port remot
 		set nsites_str " -nsites [expr [llength $remote_ports] + 1]"
 	}
 	set repmgr_conf " -start $rolearg $nsites_str \
-	    -local { 127.0.0.1 $local_port $legacy_str }"
+	    -local { $hoststr $local_port $legacy_str }"
 	# Append each remote site.  This is required for group membership
 	# legacy startups, and doesn't hurt the other cases.
 	foreach rmport $remote_ports {
-		append repmgr_conf " -remote { 127.0.0.1 $rmport $legacy_str }"
+		append repmgr_conf " -remote { $hoststr $rmport $legacy_str }"
 	}
 	# Turn off elections so that clients still running at the end of the
 	# test after the master shuts down do not create extra log records.
 	$repenv rep_config {mgrelections off}
+	# For diskandinmem, the master must start up and create an in-memory
+	# database before the clients start up, so delay client starts here.
+	if { $dbopt == "diskandinmem" && $role == "CLIENT" } {
+		set waitsec 0
+		set waitincr 2
+		while { [file exists $markerdir/MASTERSTARTED] == 0 } {
+			set waitsec [expr $waitsec + $waitincr]
+			tclsleep $waitincr
+			puts "STARTTEST diskandinmem: waited $waitsec seconds"
+			if { $waitsec > [expr $waitincr * 90] } {
+				error "Master site never started."
+			}
+		}
+	}
 	eval $repenv repmgr $repmgr_conf
+
+	# Create an in-memory database on the master to cause an abbreviated
+	# internal init.  This is a less common case but it has unique
+	# upgrade issues when upgrading from releases before 6.0.  Before
+	# 6.0, the master would send back a list of all database files for
+	# an abbreviated internal init and it was up to the client to only
+	# request pages for in-memory databases.  Starting in 6.0, the master 
+	# only sends back a list of in-memory database files.  We need to
+	# make sure a current-version client can handle either type of
+	# database list.
+	#
+	# The abbreviated internal init will only happen on the clients if
+	# the master has already started and created the in-memory database.
+	#
+	# For the more typical on-disk-only case, this timing is not
+	# required and it is also useful to test all sites starting
+	# simultaneously.
+	set inmemdbname { "" "inmemtest.db" }
+	if { $dbopt == "diskandinmem" && $role == "MASTER" } {
+		set method [lindex $oplist 1]
+		set omethod [convert_method $method]
+		set imdb [eval "berkdb_open_noerr -create -mode 0644 $omethod \
+		    -auto_commit -env $repenv $inmemdbname"]
+		set key1 1
+		set key2 2
+		error_check_good imdb_put1 \
+		    [eval $imdb put $key1 [chop_data $omethod data$key1]] 0
+		error_check_good imdb_put2 \
+		    [eval $imdb put $key2 [chop_data $omethod data$key2]] 0
+	}
 
 	if { $role == "CLIENT" } {
 		await_startup_done $repenv
@@ -84,6 +129,10 @@ proc repmgr035scr_starttest { role oplist envid mydir markerdir local_port remot
 	#
 	puts "create START$envid marker file"
 	upgrade_create_markerfile $markerdir/START$envid
+	# For diskandinmem, inform clients that the master has started.
+	if { $dbopt == "diskandinmem" && $role == "MASTER" } {
+		upgrade_create_markerfile $markerdir/MASTERSTARTED
+	}
 	puts "sleeping after marker"
 	tclsleep 3
 
@@ -98,6 +147,19 @@ proc repmgr035scr_starttest { role oplist envid mydir markerdir local_port remot
 	}
 	if { $op == "REPTEST_GET" } {
 		upgradescr_repget $repenv $oplist $mydir $markerdir
+	}
+	if { $dbopt == "diskandinmem" && $role == "CLIENT" } {
+		# Need an open in-memory db handle on client to dump it.
+		set imdb [eval "berkdb_open_noerr -unknown \
+		    -env $repenv -rdonly $inmemdbname"]
+	}
+	if { $dbopt == "diskandinmem" } {
+		# Must dump in-memory database for later verification
+		# here because its contents will not be available after
+		# we close the environment.
+		set dumpfile "$mydir/VERIFY/dbinmemdump"
+		dump_file $imdb "" $dumpfile rep_test_upg.inmem.check
+		error_check_good imdb_close [$imdb close] 0
 	}
 	puts "Closing env"
 	$repenv mpool_sync
@@ -128,13 +190,16 @@ proc repmgr035scr_verify { oplist mydir } {
 # ctldir: controlling directory
 # mydir: directory where this participant runs
 # reputils_path: location of reputils.tcl
+# hoststr: host string for repmgr sites
 # local_port: port for local repmgr site
 # remote_ports: ports for remote repmgr sites
+# dbopt: diskonly or diskandinmem
 #
-set usage "upgradescript type role op envid ctldir mydir reputils_path local_port remote_ports"
+set usage "upgradescript type role op envid ctldir mydir reputils_path \
+hoststr local_port remote_ports dbopt"
 
 # Verify usage
-if { $argc != 9 } {
+if { $argc != 11 } {
 	puts stderr "Argc $argc, argv $argv"
 	puts stderr "FAIL:[timestamp] Usage: $usage"
 	exit
@@ -148,8 +213,10 @@ set envid [ lindex $argv 3 ]
 set ctldir [ lindex $argv 4 ]
 set mydir [ lindex $argv 5 ]
 set reputils_path [ lindex $argv 6 ]
-set local_port [ lindex $argv 7 ]
-set remote_ports [ lindex $argv 8 ]
+set hoststr [ lindex $argv 7 ]
+set local_port [ lindex $argv 8 ]
+set remote_ports [ lindex $argv 9 ]
+set dbopt [ lindex $argv 10 ]
 
 set histdir $mydir/../..
 puts "Histdir $histdir"
@@ -170,10 +237,15 @@ source $reputils_path/reputils.tcl
 set markerdir $ctldir/TESTDIR/MARKER
 
 puts "Calling proc for type $type"
+puts "PBDEBUG: mydir before $type is $mydir"
 if { $type == "START" } {
-	repmgr035scr_starttest $role $op $envid $mydir $markerdir $local_port $remote_ports
-} elseif { $type == "VERIFY" } {
+	# VERIFY directory is needed in advance for diskandinmem so that
+	# in-memory database can be dumped while it still exists inside
+	# the starttest script.
 	file mkdir $mydir/VERIFY
+	repmgr035scr_starttest $role $op $envid $mydir $markerdir \
+	    $hoststr $local_port $remote_ports $dbopt
+} elseif { $type == "VERIFY" } {
 	repmgr035scr_verify $op $mydir
 } else {
 	puts "FAIL: unknown type $type"

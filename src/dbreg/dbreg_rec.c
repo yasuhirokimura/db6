@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  */
 /*
  * Copyright (c) 1995, 1996
@@ -45,7 +45,7 @@
 static int __dbreg_open_file __P((ENV *,
     DB_TXN *, __dbreg_register_args *, void *));
 static int __dbreg_register_recover_int
-    __P((ENV *, DBT *, db_recops, void *, __dbreg_register_args *));
+    __P((ENV *, DBT *, DB_LSN *, db_recops, void *, __dbreg_register_args *));
 
 /*
  * PUBLIC: int __dbreg_register_recover
@@ -67,7 +67,7 @@ __dbreg_register_recover(env, dbtp, lsnp, op, info)
 	if ((ret = __dbreg_register_read(env, dbtp->data, &argp)) != 0)
 		goto out;
 
-	ret = __dbreg_register_recover_int(env, dbtp, op, info, argp);
+	ret = __dbreg_register_recover_int(env, dbtp, lsnp, op, info, argp);
 
 	if (ret == 0)
 		*lsnp = argp->prev_lsn;
@@ -107,7 +107,7 @@ __dbreg_register_42_recover(env, dbtp, lsnp, op, info)
 	arg.blob_fid_lo = 0;
 	arg.blob_fid_hi = 0;
 
-	ret = __dbreg_register_recover_int(env, dbtp, op, info, &arg);
+	ret = __dbreg_register_recover_int(env, dbtp, lsnp, op, info, &arg);
 
 	if (ret == 0)
 		*lsnp = argp->prev_lsn;
@@ -121,9 +121,10 @@ err:	if (argp != NULL)
  * 61 log version.
  */
 static int
-__dbreg_register_recover_int(env, dbtp, op, info, argp)
+__dbreg_register_recover_int(env, dbtp, lsnp, op, info, argp)
 	ENV *env;
 	DBT *dbtp;
+	DB_LSN *lsnp;
 	db_recops op;
 	void *info;
 	__dbreg_register_args *argp;
@@ -133,6 +134,9 @@ __dbreg_register_recover_int(env, dbtp, op, info, argp)
 	DB *dbp;
 	u_int32_t opcode, status;
 	int do_close, do_open, do_rem, ret, t_ret;
+#ifdef DEBUG_RECOVER
+	DB_LOG dblog;
+#endif
 #ifdef	HAVE_REPLICATION
 	DB_REP *db_rep;
 	DELAYED_BLOB_LIST *dbl;
@@ -146,9 +150,21 @@ __dbreg_register_recover_int(env, dbtp, op, info, argp)
 	ret = 0;
 
 #ifdef DEBUG_RECOVER
-	REC_PRINT(__dbreg_register_print);
+	/*
+	 * Since dbregister records tries to print info about the very files
+	 * which it can open and close, it is tricky. Note that
+	 * __log_print_dbreg_setup() requires a dummy DB_LOG parameter, since
+	 * using the environment's real DB_LOG would mess up the real registry
+	 * table. So, as with db_printlog.c, use a dummy DB_LOG. Use the same
+	 * sort of cleanup code at the end, although there can be just 1 entry.
+	 */
+	memset(&dblog, 0, sizeof(dblog));
+
+	REC_PRINT_DBREG(__dbreg_register_print, &dblog);
 #else
+	/* These are only used by the above REC_PRINT. */
 	COMPQUIET(dbtp, NULL);
+	COMPQUIET(lsnp, NULL);
 #endif
 	do_open = do_close = 0;
 
@@ -225,9 +241,9 @@ __dbreg_register_recover_int(env, dbtp, op, info, argp)
 			 * a callback already.
 			 */
 			if (db_rep->partial == NULL) {
+				ret = USR_ERR(env, EINVAL);
 				__db_errx(env, DB_STR("1592",
 				    "Must set a view callback."));
-				ret = EINVAL;
 				goto out;
 			}
 			if ((ret = __rep_call_partial(env,
@@ -262,7 +278,7 @@ __dbreg_register_recover_int(env, dbtp, op, info, argp)
 		    op == DB_TXN_ABORT || op == DB_TXN_POPENFILES ?
 		    argp->txnp : NULL, argp, info);
 		if (ret == DB_PAGE_NOTFOUND && argp->meta_pgno != PGNO_BASE_MD)
-			ret = ENOENT;
+			ret = USR_ERR(env, ENOENT);
 		if (ret == ENOENT || ret == EINVAL) {
 			/*
 			 * If this is an OPEN while rolling forward, it's
@@ -278,7 +294,7 @@ __dbreg_register_recover_int(env, dbtp, op, info, argp)
 				    __dbreg_open_file(env, NULL, argp, info);
 				if (ret == DB_PAGE_NOTFOUND &&
 				     argp->meta_pgno != PGNO_BASE_MD)
-					ret = ENOENT;
+					ret = USR_ERR(env, ENOENT);
 			}
 			/*
 			 * We treat ENOENT as OK since it's possible that
@@ -305,6 +321,7 @@ __dbreg_register_recover_int(env, dbtp, op, info, argp)
 		 * fact, not have the file open, and that's OK.
 		 */
 		do_rem = 0;
+		dbe = NULL;
 		MUTEX_LOCK(env, dblp->mtx_dbreg);
 		if (argp->fileid < dblp->dbentry_cnt) {
 			/*
@@ -392,10 +409,20 @@ __dbreg_register_recover_int(env, dbtp, op, info, argp)
 				if ((t_ret = __db_close(
 				    dbp, NULL, DB_NOSYNC)) != 0 && ret == 0)
 					ret = t_ret;
+				dbe->dbp = NULL;
 			}
 		}
 	}
-out:	return (ret);
+out:
+#ifdef DEBUG_RECOVER
+	if (dblog.dbentry_cnt != 0 && (dbp = dblog.dbentry[0].dbp) != NULL) {
+		/* There should be at most(exactly?) one active entry. */
+		DB_ASSERT(env, dblog.dbentry[1].dbp == NULL);
+
+		(void)__db_close(dbp, NULL, DB_NOSYNC);
+	}
+#endif
+	return (ret);
 }
 
 /*
@@ -437,7 +464,7 @@ __dbreg_open_file(env, txn, argp, info)
 	if (dbe != NULL) {
 		if (dbe->deleted) {
 			MUTEX_UNLOCK(env, dblp->mtx_dbreg);
-			return (ENOENT);
+			return (USR_ERR(env, ENOENT));
 		}
 
 		/*
@@ -466,8 +493,10 @@ __dbreg_open_file(env, txn, argp, info)
 				MUTEX_UNLOCK(env, dblp->mtx_dbreg);
 				(void)__dbreg_revoke_id(dbp, 0,
 				    DB_LOGFILEID_INVALID);
-				if (F_ISSET(dbp, DB_AM_RECOVER))
+				if (F_ISSET(dbp, DB_AM_RECOVER)) {
 					(void)__db_close(dbp, NULL, DB_NOSYNC);
+					dbe->dbp = NULL;
+				}
 				goto reopen;
 			}
 
@@ -499,7 +528,7 @@ reopen:
 	 */
 	if (argp->name.size == 0) {
 		(void)__dbreg_add_dbentry(env, dblp, NULL, argp->fileid);
-		return (ENOENT);
+		return (USR_ERR(env, ENOENT));
 	}
 
 	/*

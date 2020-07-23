@@ -2,9 +2,9 @@
  * @file inst.c
  * SQLite ODBC Driver installer/uninstaller for WIN32
  *
- * $Id: inst.c,v 1.19 2013/01/22 16:37:30 chw Exp chw $
+ * $Id: inst.c,v 1.22 2014/12/29 09:52:55 chw Exp chw $
  *
- * Copyright (c) 2001-2013 Christian Werner <chw@ch-werner.de>
+ * Copyright (c) 2001-2014 Christian Werner <chw@ch-werner.de>
  *
  * See the file "license.terms" for information on usage
  * and redistribution of this file and for a
@@ -219,7 +219,7 @@ InUn(int remove, char *drivername, char *dllname, char *dll2name, char *dsname)
 	    if (nosys) {
 		goto done;
 	    }
-	    sprintf(attr, "DSN=%s;Database=sqlite.db;", dsname);
+	    sprintf(attr, "DSN=%s;Database=", dsname);
 	    p = attr;
 	    while (*p) {
 		if (*p == ';') {
@@ -260,7 +260,7 @@ InUn(int remove, char *drivername, char *dllname, char *dll2name, char *dsname)
 	if (nosys) {
 	    goto done;
 	}
-	sprintf(attr, "DSN=%s;Database=sqlite.db;", dsname);
+	sprintf(attr, "DSN=%s;Database=;", dsname);
 	p = attr;
 	while (*p) {
 	    if (*p == ';') {
@@ -294,7 +294,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 {
     char path[300], *p;
     int i, remove;
-    BOOL ret[3];
+    BOOL ret[NUMDRVS];
 
     GetModuleFileName(NULL, path, sizeof (path));
     p = path;
@@ -333,3 +333,11 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     exit(0);
 }
 
+/*
+ * Local Variables:
+ * mode: c
+ * c-basic-offset: 4
+ * fill-column: 78
+ * tab-width: 8
+ * End:
+ */

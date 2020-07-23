@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -219,17 +219,6 @@ __bam_stat_print(dbc, flags)
 	DBC *dbc;
 	u_int32_t flags;
 {
-	static const FN fn[] = {
-		{ BTM_DUP,	"duplicates" },
-		{ BTM_RECNO,	"recno" },
-		{ BTM_RECNUM,	"record-numbers" },
-		{ BTM_FIXEDLEN,	"fixed-length" },
-		{ BTM_RENUMBER,	"renumber" },
-		{ BTM_SUBDB,	"multiple-databases" },
-		{ BTM_DUPSORT,	"sorted duplicates" },
-		{ BTM_COMPRESS,	"compressed" },
-		{ 0,		NULL }
-	};
 	DB *dbp;
 	DB_BTREE_STAT *sp;
 	ENV *env;
@@ -268,7 +257,8 @@ __bam_stat_print(dbc, flags)
 		break;
 	}
 	__db_msg(env, "%s\tByte order", s);
-	__db_prflags(env, NULL, sp->bt_metaflags, fn, NULL, "\tFlags");
+	__db_prflags(env,
+	    NULL, sp->bt_metaflags, __db_get_bmeta_fn(), NULL, "\tFlags");
 	if (dbp->type == DB_BTREE)
 		__db_dl(env, "Minimum keys per-page", (u_long)sp->bt_minkey);
 	if (dbp->type == DB_RECNO) {
@@ -292,7 +282,8 @@ __bam_stat_print(dbc, flags)
 	    "Number of data items in the tree", (u_long)sp->bt_ndata);
 	if (dbp->type == DB_BTREE) {
 		__db_dl(env,
-		    "Number of blobs in the tree", (u_long)sp->bt_nblobs);
+		    "Number of external files in the tree",
+		    (u_long)sp->bt_ext_files);
 	}
 
 	__db_dl(env,
@@ -380,8 +371,10 @@ __bam_stat_callback(dbc, h, cookie, putp)
 				++sp->bt_ndata;
 
 			/* Count blobs. */
-			if (B_TYPE(type) == B_BLOB)
+			if (B_TYPE(type) == B_BLOB) {
 				++sp->bt_nblobs;
+				++sp->bt_ext_files;
+			}
 		}
 
 		++sp->bt_leaf_pg;

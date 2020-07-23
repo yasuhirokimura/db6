@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2012, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2012, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -53,6 +53,7 @@ proc repmgr004_sub { method niter tnum use_bulk use_blob largs } {
 	global overflowword2
 	global databases_in_memory
 	global gigabyte
+	global ipversion
 
 	# Avoid using pure digit strings since pure digit strings can make 
 	# 'Tcl_GetIntFromObj' run very slowly in '_CopyObjBytes', see 
@@ -107,8 +108,8 @@ proc repmgr004_sub { method niter tnum use_bulk use_blob largs } {
 		# times to be more than one.
 		set overflow 1
 		if {$use_bulk} {
-			set niter 4
-			set times 3
+			set niter 8
+			set times 6
 		} else {
 			set niter 2
 			set times 1
@@ -132,6 +133,7 @@ proc repmgr004_sub { method niter tnum use_bulk use_blob largs } {
 
 	env_cleanup $testdir
 	set ports [available_ports $nsites]
+	set hoststr [get_hoststr $ipversion]
 
 	set masterdir $testdir/MASTERDIR
 	set clientdir $testdir/CLIENTDIR
@@ -166,7 +168,7 @@ proc repmgr004_sub { method niter tnum use_bulk use_blob largs } {
 		$masterenv rep_config {bulk on}
 	}
 	$masterenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 0]] \
+	    -local [list $hoststr [lindex $ports 0]] \
 	    -start master
 
 	puts "\tRepmgr$tnum.a.1: Run some transactions on the master."
@@ -188,7 +190,7 @@ proc repmgr004_sub { method niter tnum use_bulk use_blob largs } {
 	if { [expr $initpgsz > 8192] == 1 } { 
 		set initdbsz [expr $initpgsz * 2] 
 	} else {
-		set initdbsz [expr $initpgsz * 4]
+		set initdbsz [expr $initpgsz * 2]
 	}
 	set initdbgsz 0
 
@@ -214,8 +216,8 @@ proc repmgr004_sub { method niter tnum use_bulk use_blob largs } {
 		set clientenv [eval $cl_envcmd $opt]
 		$clientenv rep_request $req_min $req_max
 		$clientenv repmgr -ack all \
-		    -local [list 127.0.0.1 [lindex $ports 1]] \
-		    -remote [list 127.0.0.1 [lindex $ports 0]] \
+		    -local [list $hoststr [lindex $ports 1]] \
+		    -remote [list $hoststr [lindex $ports 0]] \
 		    -inqueue [list $inqgbytes $inqbytes] \
 		    -start client
 		repmgr004_verify_config $clientenv $inqgbytes $inqbytes

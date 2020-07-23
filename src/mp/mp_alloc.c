@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -773,14 +773,15 @@ this_buffer:	/*
 		 * allocated some frozen buffer headers.
 		 */
 		if (alloc_freeze) {
+			/* __memp_ bhfree(..., 0) unlocks both hp & bhp. */
+			h_locked = 0;
+			b_lock = 0;
 			if ((ret = __memp_bhfree(dbmp,
 			     infop, bh_mfp, hp, bhp, 0)) != 0)
 				goto err;
 			DB_ASSERT(env, bhp->mtx_buf != MUTEX_INVALID);
 			if ((ret = __mutex_free(env, &bhp->mtx_buf)) != 0)
 				goto err;
-			b_lock = 0;
-			h_locked = 0;
 
 			MVCC_MPROTECT(bhp->buf, bh_mfp->pagesize,
 			    PROT_READ | PROT_WRITE | PROT_EXEC);
@@ -810,6 +811,9 @@ this_buffer:	/*
 		 * reuse it. Otherwise, free it and keep looking.
 		 */
 		if (mfp != NULL && mfp->pagesize == bh_mfp->pagesize) {
+			/* __memp_ bhfree(..., 0) unlocks both hp & bhp. */
+			h_locked = 0;
+			b_lock = 0;
 			if ((ret = __memp_bhfree(dbmp,
 			     infop, bh_mfp, hp, bhp, 0)) != 0)
 				goto err;
@@ -818,6 +822,9 @@ this_buffer:	/*
 		}
 
 		freed_space += sizeof(*bhp) + bh_mfp->pagesize;
+		/* __memp_ bhfree(.., BH_FREE_FREEMEM) also unlocks hp & bhp. */
+		h_locked = 0;
+		b_lock = 0;
 		if ((ret = __memp_bhfree(dbmp,
 		    infop, bh_mfp, hp, bhp, BH_FREE_FREEMEM)) != 0)
 			goto err;

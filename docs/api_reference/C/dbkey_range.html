@@ -9,12 +9,12 @@
     <link rel="start" href="index.html" title="Berkeley DB C API Reference" />
     <link rel="up" href="db.html" title="Chapter 2.  The DB Handle" />
     <link rel="prev" href="dbjoin.html" title="DB-&gt;join()" />
-    <link rel="next" href="dbopen.html" title="DB-&gt;open()" />
+    <link rel="next" href="dbmsg.html" title="DB-&gt;msg()" />
   </head>
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -25,7 +25,7 @@
           <th width="60%" align="center">Chapter 2. 
                 The DB Handle
         </th>
-          <td width="20%" align="right"> <a accesskey="n" href="dbopen.html">Next</a></td>
+          <td width="20%" align="right"> <a accesskey="n" href="dbmsg.html">Next</a></td>
         </tr>
       </table>
       <hr />
@@ -91,6 +91,10 @@ DB-&gt;key_range(DB *db, DB_TXN *txnid,
          is no matching key, and will be non-zero otherwise.
     </p>
       <p>
+        The <code class="methodname">DB-&gt;key_range()</code> method can not be used 
+        with a sliced database.
+    </p>
+      <p>
         The <code class="methodname">DB-&gt;key_range()</code> <span>
             <span>
                   method returns a non-zero error value on failure and 0 on success.
@@ -102,7 +106,7 @@ DB-&gt;key_range(DB *db, DB_TXN *txnid,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm1136600"></a>Parameters</h3>
+              <h3 class="title"><a id="idm2168736"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -110,7 +114,7 @@ DB-&gt;key_range(DB *db, DB_TXN *txnid,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm7752160"></a>txnid</h4>
+                <h4 class="title"><a id="idm1722416"></a>txnid</h4>
               </div>
             </div>
           </div>
@@ -132,7 +136,7 @@ DB-&gt;key_range(DB *db, DB_TXN *txnid,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm6366752"></a>key</h4>
+                <h4 class="title"><a id="idm3824736"></a>key</h4>
               </div>
             </div>
           </div>
@@ -144,7 +148,7 @@ DB-&gt;key_range(DB *db, DB_TXN *txnid,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm2349312"></a>key_range</h4>
+                <h4 class="title"><a id="idm2692016"></a>key_range</h4>
               </div>
             </div>
           </div>
@@ -161,7 +165,7 @@ DB-&gt;key_range(DB *db, DB_TXN *txnid,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm2102912"></a>flags</h4>
+                <h4 class="title"><a id="idm3539536"></a>flags</h4>
               </div>
             </div>
           </div>
@@ -175,7 +179,7 @@ DB-&gt;key_range(DB *db, DB_TXN *txnid,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm3430200"></a>Errors</h3>
+              <h3 class="title"><a id="idm3220832"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -191,7 +195,7 @@ DB-&gt;key_range(DB *db, DB_TXN *txnid,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm3593632"></a>DB_LOCK_DEADLOCK</h4>
+                <h4 class="title"><a id="idm4476304"></a>DB_LOCK_DEADLOCK</h4>
               </div>
             </div>
           </div>
@@ -204,7 +208,7 @@ DB-&gt;key_range(DB *db, DB_TXN *txnid,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm3701992"></a>DB_LOCK_NOTGRANTED</h4>
+                <h4 class="title"><a id="idm6586480"></a>DB_LOCK_NOTGRANTED</h4>
               </div>
             </div>
           </div>
@@ -224,7 +228,7 @@ DB-&gt;key_range(DB *db, DB_TXN *txnid,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm7310536"></a>  DB_REP_HANDLE_DEAD</h4>
+                <h4 class="title"><a id="idm5259120"></a>  DB_REP_HANDLE_DEAD</h4>
               </div>
             </div>
           </div>
@@ -243,7 +247,7 @@ DB-&gt;key_range(DB *db, DB_TXN *txnid,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp241880"></a>DB_REP_LOCKOUT</h4>
+                <h4 class="title"><a id="idm6903312"></a>DB_REP_LOCKOUT</h4>
               </div>
             </div>
           </div>
@@ -255,13 +259,15 @@ DB-&gt;key_range(DB *db, DB_TXN *txnid,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm6400032"></a>EINVAL</h4>
+                <h4 class="title"><a id="idm5994464"></a>EINVAL</h4>
               </div>
             </div>
           </div>
           <p>
-                          If the underlying database was not of type Btree; or if an invalid
-                          flag value or parameter was specified.
+                          If the underlying database was not of type Btree;
+                          if this method is called on a sliced database; or
+                          if an invalid flag value or parameter was
+                          specified.
                         </p>
         </div>
       </div>
@@ -269,7 +275,7 @@ DB-&gt;key_range(DB *db, DB_TXN *txnid,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm6087928"></a>Class</h3>
+              <h3 class="title"><a id="idm6790928"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -281,7 +287,7 @@ DB-&gt;key_range(DB *db, DB_TXN *txnid,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm2902528"></a>See Also</h3>
+              <h3 class="title"><a id="idm5895328"></a>See Also</h3>
             </div>
           </div>
         </div>
@@ -298,14 +304,14 @@ DB-&gt;key_range(DB *db, DB_TXN *txnid,
           <td width="20%" align="center">
             <a accesskey="u" href="db.html">Up</a>
           </td>
-          <td width="40%" align="right"> <a accesskey="n" href="dbopen.html">Next</a></td>
+          <td width="40%" align="right"> <a accesskey="n" href="dbmsg.html">Next</a></td>
         </tr>
         <tr>
           <td width="40%" align="left" valign="top">DB-&gt;join() </td>
           <td width="20%" align="center">
             <a accesskey="h" href="index.html">Home</a>
           </td>
-          <td width="40%" align="right" valign="top"> DB-&gt;open()</td>
+          <td width="40%" align="right" valign="top"> DB-&gt;msg()</td>
         </tr>
       </table>
     </div>

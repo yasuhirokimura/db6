@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  * 
- * Copyright (c) 2011, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2011, 2016 Oracle and/or its affiliates.  All rights reserved.
  * 
  * $Id$
  * 
@@ -23,9 +23,9 @@ import com.sleepycat.db.*;
 
 public class RepmgrSiteTest extends EventHandlerAdapter
 {
-    static String host = "localhost";
+    static String host = "::1";
     static String homedirName = "";
-    static long port = 30100;
+    static long port = 30303;
     static int maxLoopWait = 30;
 
     File homedir;
@@ -384,7 +384,12 @@ public class RepmgrSiteTest extends EventHandlerAdapter
         dbsite.close();
 
         // Ensure the DbSite handle cannot work after close.
-        dbsite.getLocalSite();
+	try {
+	    dbsite.getLocalSite();
+	} catch (IllegalArgumentException ex) {
+	    env.close();
+	    throw ex;
+	}
 
         env.close();
     }

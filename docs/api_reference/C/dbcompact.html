@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -50,6 +50,12 @@ DB-&gt;compact(DB *db, DB_TXN *txnid,
          filesystem.
     </p>
       <p>
+         The <code class="methodname">DB-&gt;compact()</code> method is non-atomic
+         when used on a sliced database. If the operation fails, it is
+         possible for a subset of the supporting sliced databases to be
+         compacted.
+     </p>
+      <p>
          The <code class="methodname">DB-&gt;compact()</code> <span>
             <span>
                   method returns a non-zero error value on failure and 0 on success.
@@ -61,7 +67,7 @@ DB-&gt;compact(DB *db, DB_TXN *txnid,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm1777472"></a>Parameters</h3>
+              <h3 class="title"><a id="idm10326048"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -69,7 +75,7 @@ DB-&gt;compact(DB *db, DB_TXN *txnid,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm6847496"></a>txnid</h4>
+                <h4 class="title"><a id="idm10329520"></a>txnid</h4>
               </div>
             </div>
           </div>
@@ -100,7 +106,7 @@ DB-&gt;compact(DB *db, DB_TXN *txnid,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm1336984"></a>start</h4>
+                <h4 class="title"><a id="idm10444144"></a>start</h4>
               </div>
             </div>
           </div>
@@ -119,7 +125,7 @@ DB-&gt;compact(DB *db, DB_TXN *txnid,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm1228312"></a>stop</h4>
+                <h4 class="title"><a id="idm10499616"></a>stop</h4>
               </div>
             </div>
           </div>
@@ -137,7 +143,7 @@ DB-&gt;compact(DB *db, DB_TXN *txnid,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm3030664"></a>c_data</h4>
+                <h4 class="title"><a id="idm10548720"></a>c_data</h4>
               </div>
             </div>
           </div>
@@ -262,7 +268,7 @@ DB-&gt;compact(DB *db, DB_TXN *txnid,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm5176688"></a>flags</h4>
+                <h4 class="title"><a id="idm10671728"></a>flags</h4>
               </div>
             </div>
           </div>
@@ -312,7 +318,7 @@ DB-&gt;compact(DB *db, DB_TXN *txnid,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm4256288"></a>end</h4>
+                <h4 class="title"><a id="idm11505008"></a>end</h4>
               </div>
             </div>
           </div>
@@ -331,7 +337,7 @@ DB-&gt;compact(DB *db, DB_TXN *txnid,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm1661584"></a>Errors</h3>
+              <h3 class="title"><a id="idm10413536"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -347,7 +353,7 @@ DB-&gt;compact(DB *db, DB_TXN *txnid,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm5569168"></a>DB_LOCK_DEADLOCK</h4>
+                <h4 class="title"><a id="idm11798064"></a>DB_LOCK_DEADLOCK</h4>
               </div>
             </div>
           </div>
@@ -360,7 +366,7 @@ DB-&gt;compact(DB *db, DB_TXN *txnid,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm5455624"></a>DB_LOCK_NOTGRANTED</h4>
+                <h4 class="title"><a id="idm11851376"></a>DB_LOCK_NOTGRANTED</h4>
               </div>
             </div>
           </div>
@@ -380,7 +386,7 @@ DB-&gt;compact(DB *db, DB_TXN *txnid,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm6120696"></a>  DB_REP_HANDLE_DEAD</h4>
+                <h4 class="title"><a id="idm11864976"></a>  DB_REP_HANDLE_DEAD</h4>
               </div>
             </div>
           </div>
@@ -399,7 +405,7 @@ DB-&gt;compact(DB *db, DB_TXN *txnid,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm5667416"></a>DB_REP_LOCKOUT</h4>
+                <h4 class="title"><a id="idm11916384"></a>DB_REP_LOCKOUT</h4>
               </div>
             </div>
           </div>
@@ -411,7 +417,7 @@ DB-&gt;compact(DB *db, DB_TXN *txnid,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm6222888"></a>EACCES</h4>
+                <h4 class="title"><a id="idm11950704"></a>EACCES</h4>
               </div>
             </div>
           </div>
@@ -423,7 +429,7 @@ DB-&gt;compact(DB *db, DB_TXN *txnid,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm6728072"></a>EINVAL</h4>
+                <h4 class="title"><a id="idm11961120"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -436,7 +442,7 @@ DB-&gt;compact(DB *db, DB_TXN *txnid,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm869744"></a>Class</h3>
+              <h3 class="title"><a id="idm11742800"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -448,7 +454,7 @@ DB-&gt;compact(DB *db, DB_TXN *txnid,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm6432200"></a>See Also</h3>
+              <h3 class="title"><a id="idm11981632"></a>See Also</h3>
             </div>
           </div>
         </div>

@@ -7,14 +7,14 @@
     <link rel="stylesheet" href="apiReference.css" type="text/css" />
     <meta name="generator" content="DocBook XSL Stylesheets V1.73.2" />
     <link rel="start" href="index.html" title="Berkeley DB C API Reference" />
-    <link rel="up" href="blob.html" title="Chapter 13.  Binary Large Objects" />
+    <link rel="up" href="blob.html" title="Chapter 13.  External Files" />
     <link rel="prev" href="dbstream_size.html" title="DB_STREAM-&gt;size()" />
-    <link rel="next" href="envget_blob_dir.html" title="DB_ENV-&gt;get_blob_dir()" />
+    <link rel="next" href="envget_blob_dir.html" title="DB_ENV-&gt;get_ext_file_dir()" />
   </head>
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -23,7 +23,7 @@
         <tr>
           <td width="20%" align="left"><a accesskey="p" href="dbstream_size.html">Prev</a> </td>
           <th width="60%" align="center">Chapter 13. 
-                Binary Large Objects
+                External Files
         </th>
           <td width="20%" align="right"> <a accesskey="n" href="envget_blob_dir.html">Next</a></td>
         </tr>
@@ -45,20 +45,20 @@ DB_STREAM-&gt;write(DB_STREAM *dbs, DBT *data, db_off_t offset,
                  u_int32_t flags); </pre>
       <p>
          The <code class="methodname">DB_STREAM-&gt;write()</code> method writes data
-         to an existing BLOB object in the database. This method writes
-         data contained in the <a class="link" href="dbt.html" title="Chapter 4.  The DBT Handle">DBT</a>
-         <span class="bold"><strong>data</strong></span> to the BLOB stream. Data is
-         written into the stream starting at the position indicated by
+         to an existing external file object in the database. This method
+         writes data contained in the <a class="link" href="dbt.html" title="Chapter 4.  The DBT Handle">DBT</a>
+         <span class="bold"><strong>data</strong></span> to the external file stream.
+         Data is written into the stream starting at the position indicated by
          <span class="bold"><strong>offset</strong></span>. The amount of data
          written is determined by the <code class="literal">size</code> field in the
          DBT.
      </p>
       <p>
-         If this method writes data in the middle of the BLOB, it will
+         If this method writes data in the middle of the external file, it will
          overwrite existing data, instead of shifting it. If this method
-         writes data to the end of the BLOB, the data is appended to the
-         existing BLOB. You can determine how large a BLOB is using
-         <a class="xref" href="dbstream_size.html" title="DB_STREAM-&gt;size()">DB_STREAM-&gt;size()</a>.
+         writes data to the end of the external file, the data is appended to
+         the existing external file. You can determine how large an external
+         file is using <a class="xref" href="dbstream_size.html" title="DB_STREAM-&gt;size()">DB_STREAM-&gt;size()</a>.
      </p>
       <p>
          To open a stream, use <a class="xref" href="dbstream.html" title="DBC-&gt;db_stream()">DBC-&gt;db_stream()</a>.
@@ -76,7 +76,7 @@ DB_STREAM-&gt;write(DB_STREAM *dbs, DBT *data, db_off_t offset,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp5051112"></a>Parameters</h3>
+              <h3 class="title"><a id="idp8874176"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -84,15 +84,15 @@ DB_STREAM-&gt;write(DB_STREAM *dbs, DBT *data, db_off_t offset,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp5054552"></a>data</h4>
+                <h4 class="title"><a id="idp8880336"></a>data</h4>
               </div>
             </div>
           </div>
           <p>
                   The <span class="bold"><strong>data</strong></span> parameter is
                   the <a class="link" href="dbt.html" title="Chapter 4.  The DBT Handle">DBT</a> containing the
-                  data to be written to the BLOB. The amount of data to be
-                  written is determined by the DBT's
+                  data to be written to the external file. The amount of data
+                  to be written is determined by the DBT's
                   <code class="literal">size</code> field.
              </p>
         </div>
@@ -100,13 +100,13 @@ DB_STREAM-&gt;write(DB_STREAM *dbs, DBT *data, db_off_t offset,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp5060384"></a>offset</h4>
+                <h4 class="title"><a id="idp8824704"></a>offset</h4>
               </div>
             </div>
           </div>
           <p>
                   The <span class="bold"><strong>offset</strong></span> parameter
-                  identifies the position in the BLOB where the write
+                  identifies the position in the external file where the write
                   operation will begin.
              </p>
         </div>
@@ -114,13 +114,13 @@ DB_STREAM-&gt;write(DB_STREAM *dbs, DBT *data, db_off_t offset,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp5025304"></a>flags</h4>
+                <h4 class="title"><a id="idp8827840"></a>flags</h4>
               </div>
             </div>
           </div>
           <p>
-                  The <span class="bold"><strong>flags</strong></span> parameter must be set to 0
-                  or the following value:
+                  The <span class="bold"><strong>flags</strong></span> parameter must be
+                  set to 0 or the following value:
              </p>
           <div class="itemizedlist">
             <ul type="disc">
@@ -147,7 +147,7 @@ DB_STREAM-&gt;write(DB_STREAM *dbs, DBT *data, db_off_t offset,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp5068872"></a>Errors</h3>
+              <h3 class="title"><a id="idp8907072"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -163,7 +163,7 @@ DB_STREAM-&gt;write(DB_STREAM *dbs, DBT *data, db_off_t offset,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp5064072"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp8881232"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -179,24 +179,24 @@ DB_STREAM-&gt;write(DB_STREAM *dbs, DBT *data, db_off_t offset,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp5064312"></a>Class</h3>
+              <h3 class="title"><a id="idp8918832"></a>Class</h3>
             </div>
           </div>
         </div>
         <p>
-            <a class="link" href="blob.html" title="Chapter 13.  Binary Large Objects">DB_STREAM</a>  
+            <a class="link" href="blob.html" title="Chapter 13.  External Files">DB_STREAM</a>  
         </p>
       </div>
       <div class="sect2" lang="en" xml:lang="en">
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp5067672"></a>See Also</h3>
+              <h3 class="title"><a id="idp8909616"></a>See Also</h3>
             </div>
           </div>
         </div>
         <p>
-             <a class="xref" href="blob.html#bloblist" title="BLOBs and Related Methods">BLOBs and Related Methods</a> 
+             <a class="xref" href="blob.html#bloblist" title="External Files and Related Methods">External Files and Related Methods</a> 
         </p>
       </div>
     </div>
@@ -215,7 +215,7 @@ DB_STREAM-&gt;write(DB_STREAM *dbs, DBT *data, db_off_t offset,
           <td width="20%" align="center">
             <a accesskey="h" href="index.html">Home</a>
           </td>
-          <td width="40%" align="right" valign="top"> DB_ENV-&gt;get_blob_dir()</td>
+          <td width="40%" align="right" valign="top"> DB_ENV-&gt;get_ext_file_dir()</td>
         </tr>
       </table>
     </div>

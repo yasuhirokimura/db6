@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2012, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2012, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -23,20 +23,17 @@
 
 #ifdef _WIN32
 #include <sys/timeb.h>
+#include <winsock2.h>
 extern "C" {
 	int getopt(int, char * const *, const char *);
 	char *optarg;
 }
 /* Implement a basic high res timer with a POSIX interface for Windows. */
-struct timeval {
-	time_t tv_sec;
-	long tv_usec;
-};
 int gettimeofday(struct timeval *tv, struct timezone *tz)
 {
 	struct _timeb now;
 	_ftime(&now);
-	tv->tv_sec = now.time;
+	tv->tv_sec = (long)now.time;
 	tv->tv_usec = now.millitm * NS_PER_US;
 	return (0);
 }
@@ -791,7 +788,7 @@ void BulkExample::initDbenv(const char *home, u_int32_t cachesize)
 
 	ret = 0;
 
-	dbenv = new DbEnv(0);
+	dbenv = new DbEnv((u_int32_t)0);
 
 	dbenv->set_error_stream(&cerr);
 	dbenv->set_errpfx(progname);

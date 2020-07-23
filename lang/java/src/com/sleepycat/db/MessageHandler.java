@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1997, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1997, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -27,8 +27,13 @@ public interface MessageHandler {
     @param environment  
     The enclosing database environment handle.
     <p>
+    @param msgpfx
+    The prefix string, as previously configured by
+    {@link com.sleepycat.db.EnvironmentConfig#setMessagePrefix EnvironmentConfig.setMessagePrefix} or
+    {@link com.sleepycat.db.DatabaseConfig#setMessagePrefix DatabaseConfig.setMessagePrefix}.
+    <p>
     @param message
     An informational message string.
     */
-    void message(Environment environment, String message);
+    void message(Environment environment, String msgpfx, String message);
 }

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1999, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1999, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -789,7 +789,7 @@ tcl_LogConfig(interp, dbenv, which, onoff)
 		wh = DB_LOG_AUTO_REMOVE;
 		break;
 	case LOGCONF_BLOB:
-		wh = DB_LOG_BLOB;
+		wh = DB_LOG_EXT_FILE;
 		break;
 	case LOGCONF_DIRECT:
 		wh = DB_LOG_DIRECT;
@@ -854,7 +854,7 @@ tcl_LogGetConfig(interp, dbenv, which)
 		wh = DB_LOG_AUTO_REMOVE;
 		break;
 	case LOGCONF_BLOB:
-		wh = DB_LOG_BLOB;
+		wh = DB_LOG_EXT_FILE;
 		break;
 	case LOGCONF_DIRECT:
 		wh = DB_LOG_DIRECT;

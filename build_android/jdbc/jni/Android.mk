@@ -1,6 +1,6 @@
 # DO NOT EDIT: automatically built by dist/s_android.
 # Makefile for building Android.JDBC for DBSQL
-# Berkeley DB 12c Release 1, library version 12.1.6.1.19: (June 10, 2014)
+# Berkeley DB 12c Release 1, library version 12.1.6.2.23: (March 28, 2016)
 #
 # This Makefile will generate 3 files:
 #   1. Static libdb_sql library. An internal library and users don't
@@ -11,6 +11,8 @@
 ###################################################################
 LOCAL_PATH := $(call my-dir)
 BDB_ENABLE_ENCRYPTION := false
+BDB_ENABLE_USERAUTH := false
+BDB_ENABLE_USERAUTH_KEYSTORE := false
 
 ###################################################################
 # Common variables
@@ -46,6 +48,14 @@ COMMON_CFLAGS := -Wall -DHAVE_USLEEP=1 \
 
 ifeq ($(BDB_ENABLE_ENCRYPTION),true)
 COMMON_CFLAGS += -DSQLITE_HAS_CODEC -DHAVE_CRYPTO -DHAVE_SQLITE3_KEY
+endif
+
+ifeq ($(BDB_ENABLE_USERAUTH),true)
+COMMON_CFLAGS += -DBDBSQL_USER_AUTHENTICATION
+endif
+
+ifeq ($(BDB_ENABLE_USERAUTH_KEYSTORE),true)
+COMMON_CFLAGS += -DBDBSQL_USER_AUTHENTICATION_KEYSTORE
 endif
 
 # Required for JDBC building
@@ -164,6 +174,7 @@ LOCAL_SRC_FILES := \
 	$(BDB_TOP)/src/db/db_ret.c \
 	$(BDB_TOP)/src/db/db_setid.c \
 	$(BDB_TOP)/src/db/db_setlsn.c \
+	$(BDB_TOP)/src/db/db_slice.c \
 	$(BDB_TOP)/src/db/db_sort_multiple.c \
 	$(BDB_TOP)/src/db/db_stati.c \
 	$(BDB_TOP)/src/db/db_truncate.c \
@@ -189,6 +200,7 @@ LOCAL_SRC_FILES := \
 	$(BDB_TOP)/src/env/env_region.c \
 	$(BDB_TOP)/src/env/env_register.c \
 	$(BDB_TOP)/src/env/env_sig.c \
+	$(BDB_TOP)/src/env/env_slice.c \
 	$(BDB_TOP)/src/env/env_stat.c \
 	$(BDB_TOP)/src/fileops/fileops_auto.c \
 	$(BDB_TOP)/src/fileops/fop_basic.c \
@@ -302,7 +314,9 @@ LOCAL_SRC_FILES += $(BDB_TOP)/src/common/crypto_stub.c
 endif
 
 ifneq ($(TARGET_ARCH),arm)
+ifneq ($(TARGET_ARCH),arm64)
 LOCAL_LDLIBS += -lpthread -ldl
+endif
 endif
 
 ifneq ($(TARGET_SIMULATOR),true)
@@ -354,7 +368,9 @@ LOCAL_CFLAGS += $(COMMON_CFLAGS)
 LOCAL_CFLAGS += -DNO_ANDROID_FUNCS
 
 ifneq ($(TARGET_ARCH),arm)
+ifneq ($(TARGET_ARCH),arm64)
 LOCAL_LDLIBS += -lpthread -ldl
+endif
 endif
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
@@ -381,7 +397,9 @@ LOCAL_C_INCLUDES += $(COMMON_C_INCLUDES)
 LOCAL_CFLAGS += $(COMMON_CFLAGS)
 
 ifneq ($(TARGET_ARCH),arm)
+ifneq ($(TARGET_ARCH),arm64)
 LOCAL_LDLIBS += -lpthread -ldl
+endif
 endif
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
@@ -409,7 +427,9 @@ LOCAL_C_INCLUDES += $(COMMON_C_INCLUDES)
 LOCAL_CFLAGS += $(COMMON_CFLAGS)
 
 ifneq ($(TARGET_ARCH),arm)
+ifneq ($(TARGET_ARCH),arm64)
 LOCAL_LDLIBS += -lpthread -ldl
+endif
 endif
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
@@ -437,7 +457,9 @@ LOCAL_C_INCLUDES += $(COMMON_C_INCLUDES)
 LOCAL_CFLAGS += $(COMMON_CFLAGS)
 
 ifneq ($(TARGET_ARCH),arm)
+ifneq ($(TARGET_ARCH),arm64)
 LOCAL_LDLIBS += -lpthread -ldl
+endif
 endif
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
@@ -465,7 +487,9 @@ LOCAL_C_INCLUDES += $(COMMON_C_INCLUDES)
 LOCAL_CFLAGS += $(COMMON_CFLAGS)
 
 ifneq ($(TARGET_ARCH),arm)
+ifneq ($(TARGET_ARCH),arm64)
 LOCAL_LDLIBS += -lpthread -ldl
+endif
 endif
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
@@ -492,7 +516,9 @@ LOCAL_C_INCLUDES += $(COMMON_C_INCLUDES)
 LOCAL_CFLAGS += $(COMMON_CFLAGS)
 
 ifneq ($(TARGET_ARCH),arm)
+ifneq ($(TARGET_ARCH),arm64)
 LOCAL_LDLIBS += -lpthread -ldl
+endif
 endif
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
@@ -520,7 +546,9 @@ LOCAL_C_INCLUDES += $(COMMON_C_INCLUDES)
 LOCAL_CFLAGS += $(COMMON_CFLAGS)
 
 ifneq ($(TARGET_ARCH),arm)
+ifneq ($(TARGET_ARCH),arm64)
 LOCAL_LDLIBS += -lpthread -ldl
+endif
 endif
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
@@ -557,7 +585,9 @@ LOCAL_C_INCLUDES += $(COMMON_C_INCLUDES)
 LOCAL_CFLAGS += $(COMMON_CFLAGS)
 
 ifneq ($(TARGET_ARCH),arm)
+ifneq ($(TARGET_ARCH),arm64)
 LOCAL_LDLIBS += -lpthread -ldl
+endif
 endif
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
@@ -584,7 +614,9 @@ LOCAL_C_INCLUDES += $(COMMON_C_INCLUDES)
 LOCAL_CFLAGS += $(COMMON_CFLAGS)
 
 ifneq ($(TARGET_ARCH),arm)
+ifneq ($(TARGET_ARCH),arm64)
 LOCAL_LDLIBS += -lpthread -ldl
+endif
 endif
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
@@ -611,7 +643,9 @@ LOCAL_C_INCLUDES += $(COMMON_C_INCLUDES)
 LOCAL_CFLAGS += $(COMMON_CFLAGS)
 
 ifneq ($(TARGET_ARCH),arm)
+ifneq ($(TARGET_ARCH),arm64)
 LOCAL_LDLIBS += -lpthread -ldl
+endif
 endif
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
@@ -639,7 +673,9 @@ LOCAL_C_INCLUDES += $(COMMON_C_INCLUDES)
 LOCAL_CFLAGS += $(COMMON_CFLAGS)
 
 ifneq ($(TARGET_ARCH),arm)
+ifneq ($(TARGET_ARCH),arm64)
 LOCAL_LDLIBS += -lpthread -ldl
+endif
 endif
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
@@ -666,7 +702,9 @@ LOCAL_C_INCLUDES += $(COMMON_C_INCLUDES)
 LOCAL_CFLAGS += $(COMMON_CFLAGS)
 
 ifneq ($(TARGET_ARCH),arm)
+ifneq ($(TARGET_ARCH),arm64)
 LOCAL_LDLIBS += -lpthread -ldl
+endif
 endif
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
@@ -693,7 +731,9 @@ LOCAL_C_INCLUDES += $(COMMON_C_INCLUDES)
 LOCAL_CFLAGS += $(COMMON_CFLAGS)
 
 ifneq ($(TARGET_ARCH),arm)
+ifneq ($(TARGET_ARCH),arm64)
 LOCAL_LDLIBS += -lpthread -ldl
+endif
 endif
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
@@ -721,7 +761,9 @@ LOCAL_C_INCLUDES += $(COMMON_C_INCLUDES)
 LOCAL_CFLAGS += $(COMMON_CFLAGS)
 
 ifneq ($(TARGET_ARCH),arm)
+ifneq ($(TARGET_ARCH),arm64)
 LOCAL_LDLIBS += -lpthread -ldl
+endif
 endif
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
@@ -749,7 +791,9 @@ LOCAL_C_INCLUDES += $(COMMON_C_INCLUDES)
 LOCAL_CFLAGS += $(COMMON_CFLAGS)
 
 ifneq ($(TARGET_ARCH),arm)
+ifneq ($(TARGET_ARCH),arm64)
 LOCAL_LDLIBS += -lpthread -ldl
+endif
 endif
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)

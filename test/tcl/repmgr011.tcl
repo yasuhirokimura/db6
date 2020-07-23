@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2007, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2007, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -37,6 +37,7 @@ proc repmgr011_sub { method niter tnum largs } {
 	global testdir
 	global rep_verbose
 	global verbose_type
+	global ipversion
 	set nsites 2
 
 	set verbargs ""
@@ -46,6 +47,7 @@ proc repmgr011_sub { method niter tnum largs } {
 
 	env_cleanup $testdir
 	set ports [available_ports $nsites]
+	set hoststr [get_hoststr $ipversion]
 
 	set clientdir $testdir/CLIENTDIR
 	set clientdir2 $testdir/CLIENTDIR2
@@ -58,7 +60,7 @@ proc repmgr011_sub { method niter tnum largs } {
 	    -errpfx CLIENT -home $clientdir -txn -rep -thread"
 	set clientenv [eval $cl_envcmd]
 	$clientenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 0]] \
+	    -local [list $hoststr [lindex $ports 0]] \
 	    -start master
 
 	puts "\tRepmgr$tnum.a2: Start second site as client."
@@ -66,8 +68,8 @@ proc repmgr011_sub { method niter tnum largs } {
 	    -errpfx CLIENT2 -home $clientdir2 -txn -rep -thread"
 	set clientenv2 [eval $cl2_envcmd]
 	$clientenv2 repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 1]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] \
+	    -local [list $hoststr [lindex $ports 1]] \
+	    -remote [list $hoststr [lindex $ports 0]] \
 	    -start client
 	await_startup_done $clientenv2
 
@@ -88,8 +90,8 @@ proc repmgr011_sub { method niter tnum largs } {
 	puts "\tRepmgr$tnum.a5: Restart first site as master"
 	set clientenv [eval $cl_envcmd]
 	$clientenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 0]] \
-	    -remote [list 127.0.0.1 [lindex $ports 1]] \
+	    -local [list $hoststr [lindex $ports 0]] \
+	    -remote [list $hoststr [lindex $ports 1]] \
 	    -start master
 	await_expected_master $clientenv
 
@@ -99,7 +101,7 @@ proc repmgr011_sub { method niter tnum largs } {
 
 	puts "\tRepmgr$tnum.a7: Shut down and remove client."
 	error_check_good client_close [$clientenv2 close] 0
-	$clientenv repmgr -remove  [list 127.0.0.1 [lindex $ports 1]]
+	$clientenv repmgr -remove  [list $hoststr [lindex $ports 1]]
 
 	puts "\tRepmgr$tnum.a8: Run another set of transactions at master."
 	eval rep_test $method $clientenv NULL $niter $start 0 0 $largs
@@ -108,8 +110,8 @@ proc repmgr011_sub { method niter tnum largs } {
 	puts "\tRepmgr$tnum.a9: Restart removed client."
 	set clientenv2 [eval $cl2_envcmd]
 	$clientenv2 repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 1]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] \
+	    -local [list $hoststr [lindex $ports 1]] \
+	    -remote [list $hoststr [lindex $ports 0]] \
 	    -start elect
 	await_startup_done $clientenv2
 	# Allow time for rejoin group membership database updates to complete.
@@ -138,8 +140,8 @@ proc repmgr011_sub { method niter tnum largs } {
 	puts "\tRepmgr$tnum.b4: Restart first site as client."
 	set clientenv [eval $cl_envcmd]
 	$clientenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 0]] \
-	    -remote [list 127.0.0.1 [lindex $ports 1]] \
+	    -local [list $hoststr [lindex $ports 0]] \
+	    -remote [list $hoststr [lindex $ports 1]] \
 	    -start elect
 	await_startup_done $clientenv
 
@@ -149,7 +151,7 @@ proc repmgr011_sub { method niter tnum largs } {
 
 	puts "\tRepmgr$tnum.b6: Shut down and remove client."
 	error_check_good client_close [$clientenv close] 0
-	$clientenv2 repmgr -remove  [list 127.0.0.1 [lindex $ports 0]]
+	$clientenv2 repmgr -remove  [list $hoststr [lindex $ports 0]]
 
 	puts "\tRepmgr$tnum.b7: Run another set of transactions at master."
 	eval rep_test $method $clientenv2 NULL $niter $start 0 0 $largs
@@ -162,8 +164,8 @@ proc repmgr011_sub { method niter tnum largs } {
 	# repgroup by asking for an election.
 	#
 	$clientenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 0]] \
-	    -remote [list 127.0.0.1 [lindex $ports 1]] \
+	    -local [list $hoststr [lindex $ports 0]] \
+	    -remote [list $hoststr [lindex $ports 1]] \
 	    -start elect
 	await_startup_done $clientenv
 	error_check_good c2strict [$clientenv rep_config \

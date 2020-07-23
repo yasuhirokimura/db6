@@ -15,9 +15,9 @@
  * @file sqlite3odbc.h
  * Header file for SQLite3 ODBC driver.
  *
- * $Id: sqlite3odbc.h,v 1.43 2013/09/23 09:20:26 chw Exp chw $
+ * $Id: sqlite3odbc.h,v 1.46 2015/04/13 06:31:52 chw Exp chw $
  *
- * Copyright (c) 2004-2013 Christian Werner <chw@ch-werner.de>
+ * Copyright (c) 2004-2015 Christian Werner <chw@ch-werner.de>
  *
  * See the file "license.terms" for information on usage
  * and redistribution of this file and for a
@@ -98,7 +98,6 @@ typedef struct {
     int ov3;			/**< True for SQL_OV_ODBC3 */
 #if defined(_WIN32) || defined(_WIN64)
     CRITICAL_SECTION cs;	/**< For serializing most APIs */
-    DWORD owner;		/**< Current owner of CS or 0 */
 #endif
     struct dbc *dbcs;		/**< Pointer to first DBC */
 } ENV;
@@ -149,6 +148,8 @@ typedef struct dbc {
     int (*gpps)();
 #endif
 #if defined(_WIN32) || defined(_WIN64)
+    CRITICAL_SECTION cs;	/**< For serializing most APIs */
+    DWORD owner;		/**< Current owner of CS or 0 */
     int xcelqrx;
 #endif
 } DBC;
@@ -292,3 +293,12 @@ typedef struct stmt {
 } STMT;
 
 #endif
+
+/*
+ * Local Variables:
+ * mode: c
+ * c-basic-offset: 4
+ * fill-column: 78
+ * tab-width: 8
+ * End:
+ */

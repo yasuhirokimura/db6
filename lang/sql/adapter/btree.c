@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2010, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2010, 2016 Oracle and/or its affiliates.  All rights reserved.
  */
 
 /*
@@ -60,18 +60,6 @@
 #endif
 
 /*
- * We use the following internal DB functions.
- */
-extern void __os_dirfree(ENV *env, char **namesp, int cnt);
-extern int __os_dirlist(ENV *env,
-    const char *dir, int returndir, char ***namesp, int *cntp);
-extern int __os_exists (ENV *, const char *, int *);
-extern int __os_fileid(ENV *, const char *, int, u_int8_t *);
-extern int __os_mkdir (ENV *, const char *, int);
-extern int __os_unlink (ENV *, const char *, int);
-extern void __os_yield (ENV *, u_long, u_long);
-
-/*
  * The DB_SQL_LOCKER structure is used to unlock a DB handle. The id field must
  * be compatible with the id field of the DB_LOCKER struct. We know the first
  * field will be a "u_int32_t id", define enough of a structure here so that
@@ -90,7 +78,7 @@ typedef struct {
 
 /* Forward declarations for internal functions. */
 static int btreeCloseCursor(BtCursor *pCur, int removeList);
-static int btreeConfigureDbHandle(Btree *p, int iTable, DB **dbpp);
+static int btreeConfigureDbHandle(Btree *p, int iTable, DB **dbpp, int);
 static int btreeCreateDataTable(Btree *, int, CACHED_DB **);
 static int btreeCreateSharedBtree(
     Btree *, const char *, u_int8_t *, sqlite3 *, int, storage_mode_t);
@@ -273,9 +261,9 @@ int dberr2sqlite(int err, Btree *p)
 	pBt = p->pBt;
 	if (pBt != NULL && pBt->err_msg != NULL) {
 		if (ret != SQLITE_OK)
-			sqlite3Error(p->db, ret, pBt->err_msg);
+			sqlite3ErrorWithMsg(p->db, ret, pBt->err_msg);
 		else
-			sqlite3Error(p->db, ret, NULL);
+			sqlite3Error(p->db, ret);
 		sqlite3_free(pBt->err_msg);
 		pBt->err_msg = NULL;
 	}
@@ -562,6 +550,36 @@ static int btreeCompareIntKey(DB *dbp,
 	if (v1 < v2)
 		return -1;
 	return v1 > v2;
+}
+
+static int btreeCompareDup(DB *dbp,
+    const DBT *dbt1, const DBT *dbt2, size_t *locp)
+{
+	Mem mem1, mem2;
+	const unsigned char *data1, *data2;
+	u32 serial_type1, serial_type2;
+
+	/* This path can happen when loading an in memory index onto disk. */
+	if (dbt1->size == 0) {
+		assert(dbt2->size == 0);
+		return 0;
+	}
+
+	memset(&mem1, 0, sizeof(Mem));
+	memset(&mem2, 0, sizeof(Mem));
+
+	data1 = (const unsigned char *) dbt1->data;
+	data2 = (const unsigned char *) dbt2->data;
+
+	/* Get the value types. */
+	getVarint32(data1, serial_type1);
+	getVarint32(data2, serial_type2);
+
+	/* Set the values in the Mems. */
+	sqlite3VdbeSerialGet(&data1[1], serial_type1, &mem1);
+	sqlite3VdbeSerialGet(&data2[1], serial_type2, &mem2);
+
+	return sqlite3MemCompare(&mem1, &mem2, NULL);
 }
 
 #ifdef BDBSQL_CONVERT_SQLITE
@@ -1212,8 +1230,8 @@ static int btreeSetUpReplication(Btree *p, int master, u8 *replicate)
 		    &value, NULL)) == SQLITE_OK && value && atoi(value)) {
 			if (pDbEnv->set_verbose(pDbEnv,
 			    DB_VERB_REPLICATION, 1) != 0) {
-				sqlite3Error(db, SQLITE_ERROR, "Error in "
-				    "replication set_verbose call");
+				sqlite3ErrorWithMsg(db, SQLITE_ERROR, "Error "
+				    "in replication set_verbose call");
 				rc = SQLITE_ERROR;
 			}
 			else if ((rc = getPersistentPragma(p,
@@ -1221,11 +1239,11 @@ static int btreeSetUpReplication(Btree *p, int master, u8 *replicate)
 			    &value2, NULL)) == SQLITE_OK && value && value2) {
 				if ((rc = unsetRepVerboseFile(
 				    pBt, pDbEnv, &msg)) != SQLITE_OK)
-					sqlite3Error(db, rc, msg);
+					sqlite3ErrorWithMsg(db, rc, msg);
 				if (rc == SQLITE_OK && strlen(value2) > 0 &&
 				    (rc = setRepVerboseFile(
 				    pBt, pDbEnv, value2, msg)) != SQLITE_OK)
-					sqlite3Error(db, rc, msg);
+					sqlite3ErrorWithMsg(db, rc, msg);
 			}
 		}
 		if (value)
@@ -1244,33 +1262,33 @@ static int btreeSetUpReplication(Btree *p, int master, u8 *replicate)
 			rc2 = getHostPort(value, &host, &port);
 			if (pDbEnv->repmgr_site(pDbEnv,
 			    host, port, &lsite, 0) != 0) {
-				sqlite3Error(db, SQLITE_ERROR, "Error in "
-				    "replication call repmgr_site LOCAL");
+				sqlite3ErrorWithMsg(db, SQLITE_ERROR, "Error "
+				    "in replication call repmgr_site LOCAL");
 				rc = SQLITE_ERROR;
 			}
 			if (rc != SQLITE_ERROR &&
 			    lsite->set_config(lsite, DB_LOCAL_SITE, 1) != 0) {
-				sqlite3Error(db, SQLITE_ERROR, "Error in "
-				    "replication call site config LOCAL");
+				sqlite3ErrorWithMsg(db, SQLITE_ERROR, "Error "
+				    "in replication call site config LOCAL");
 				rc = SQLITE_ERROR;
 			}
 			if (rc != SQLITE_ERROR && master &&
 			    lsite->set_config(lsite,
 			    DB_GROUP_CREATOR, 1) != 0) {
-				sqlite3Error(db, SQLITE_ERROR, "Error in "
-				    "replication call site config CREATOR");
+				sqlite3ErrorWithMsg(db, SQLITE_ERROR, "Error "
+				    "in replication call site config CREATOR");
 				rc = SQLITE_ERROR;
 			}
 			if (lsite != NULL && lsite->close(lsite) != 0) {
-				sqlite3Error(db, SQLITE_ERROR, "Error in "
-				    "replication call site close LOCAL");
+				sqlite3ErrorWithMsg(db, SQLITE_ERROR, "Error "
+				    "in replication call site close LOCAL");
 				rc = SQLITE_ERROR;
 			}
 			if (rc2 == SQLITE_OK)
 				sqlite3_free(host);
 		} else {
-			sqlite3Error(db, SQLITE_ERROR, "Must specify local "
-			    "site before starting replication");
+			sqlite3ErrorWithMsg(db, SQLITE_ERROR, "Must specify "
+			    "local site before starting replication");
 			rc = SQLITE_ERROR;
 		}
 		if (value)
@@ -1287,18 +1305,18 @@ static int btreeSetUpReplication(Btree *p, int master, u8 *replicate)
 			rc2 = getHostPort(value, &host, &port);
 			if (pDbEnv->repmgr_site(pDbEnv,
 			    host, port, &rsite, 0) != 0) {
-				sqlite3Error(db, SQLITE_ERROR, "Error in "
-				    "replication call repmgr_site REMOTE");
+				sqlite3ErrorWithMsg(db, SQLITE_ERROR, "Error "
+				   "in replication call repmgr_site REMOTE");
 				rc = SQLITE_ERROR;
 			}
 			if (rc != SQLITE_ERROR &&
 			    rsite->set_config(rsite,
 			    DB_BOOTSTRAP_HELPER, 1) != 0)
-				sqlite3Error(db, SQLITE_ERROR, "Error in "
-				    "replication call site config HELPER");
+				sqlite3ErrorWithMsg(db, SQLITE_ERROR, "Error "
+				    "in replication call site config HELPER");
 			if (rsite != NULL && rsite->close(rsite) != 0)
-				sqlite3Error(db, SQLITE_ERROR, "Error in "
-				    "replication call site close REMOTE");
+				sqlite3ErrorWithMsg(db, SQLITE_ERROR, "Error "
+				    "in replication call site close REMOTE");
 			if (rc2 == SQLITE_OK)
 				sqlite3_free(host);
 		}
@@ -1308,7 +1326,7 @@ static int btreeSetUpReplication(Btree *p, int master, u8 *replicate)
 		/* Set 2SITE_STRICT to ensure data durability. */
 		if (pDbEnv->rep_set_config(pDbEnv,
 		    DB_REPMGR_CONF_2SITE_STRICT, 1) != 0) {
-			sqlite3Error(db, SQLITE_ERROR, "Error in "
+			sqlite3ErrorWithMsg(db, SQLITE_ERROR, "Error in "
 			    "replication call rep_set_config");
 			rc = SQLITE_ERROR;
 			goto err;
@@ -1320,15 +1338,16 @@ static int btreeSetUpReplication(Btree *p, int master, u8 *replicate)
 		 */
 		if (pDbEnv->rep_set_timeout(pDbEnv,
 		    DB_REP_HEARTBEAT_MONITOR, 7000000) != 0) {
-			sqlite3Error(db, SQLITE_ERROR, "Error in replication "
-			    "call rep_set_timeout heartbeat monitor");
+			sqlite3ErrorWithMsg(db, SQLITE_ERROR, 
+			    "Error in replication call rep_set_timeout "
+			    "heartbeat monitor");
 			rc = SQLITE_ERROR;
 			goto err;
 		}
 		if (pDbEnv->rep_set_timeout(pDbEnv,
 		    DB_REP_HEARTBEAT_SEND, 5000000) != 0) {
-			sqlite3Error(db, SQLITE_ERROR, "Error in replication "
-			    "call rep_set_timeout heartbeat send");
+			sqlite3ErrorWithMsg(db, SQLITE_ERROR, "Error in "
+			    "replication call rep_set_timeout heartbeat send");
 			rc = SQLITE_ERROR;
 			goto err;
 		}
@@ -1366,13 +1385,13 @@ static int btreeRepStartupFinished(Btree *p)
 
 	if (pDbEnv->rep_get_timeout(pDbEnv,
 	    DB_REP_ELECTION_RETRY, &electRetry) != 0) {
-		sqlite3Error(db, SQLITE_ERROR, "Error in "
+		sqlite3ErrorWithMsg(db, SQLITE_ERROR, "Error in "
 		    "replication call rep_get_timeout election retry");
 		goto err;
 	}
 	if (pDbEnv->rep_get_timeout(pDbEnv,
 	    DB_REP_ELECTION_TIMEOUT, &electTimeout) != 0) {
-		sqlite3Error(db, SQLITE_ERROR, "Error in "
+		sqlite3ErrorWithMsg(db, SQLITE_ERROR, "Error in "
 		    "replication call rep_get_timeout election timeout");
 		goto err;
 	}
@@ -1389,7 +1408,7 @@ static int btreeRepStartupFinished(Btree *p)
 	do {
 		__os_yield(pDbEnv->env, 1, 0);
 		if (pDbEnv->rep_stat(pDbEnv, &repStat, 0) != 0) {
-			sqlite3Error(db, SQLITE_ERROR, "Error in "
+			sqlite3ErrorWithMsg(db, SQLITE_ERROR, "Error in "
 			    "replication call rep_stat election");
 			goto err;
 		}
@@ -1411,8 +1430,8 @@ static int btreeRepStartupFinished(Btree *p)
 		do {
 			__os_yield(pDbEnv->env, 2, 0);
 			if (pDbEnv->rep_stat(pDbEnv, &repStat, 0) != 0) {
-				sqlite3Error(db, SQLITE_ERROR, "Error in "
-				    "replication call rep_stat client sync");
+				sqlite3ErrorWithMsg(db, SQLITE_ERROR, "Error "
+				    "in replication call rep_stat client sync");
 				goto err;
 			}
 			if (repStat->st_startup_complete)
@@ -1707,6 +1726,19 @@ int btreeReopenEnvironment(Btree *p, int removingRep)
 	if (removingRep && 
 	    (ret = pDbEnv->set_thread_count(pDbEnv, 50)) != 0)
 		goto err;
+
+	/*
+	 * Restore underlying encryption setting if any.  The original open
+	 * had encryption set in sqlite3CodecAttach(), but this path does not
+	 * make that call.
+	 */
+	if (pBt->encrypted) {
+		ret = pDbEnv->set_encrypt(pDbEnv,
+		    pBt->encrypt_pwd, DB_ENCRYPT_AES);
+		if (ret != 0)
+			goto err;
+	}
+
 	rc = btreeOpenEnvironment(p, 0);
 
 	/* Release the lock now. */
@@ -1885,7 +1917,7 @@ int btreeOpenEnvironment(Btree *p, int needLock)
 		ret = pDbEnv->repmgr_start(pDbEnv, 1,
 		    pBt->repStartMaster ? DB_REP_MASTER : DB_REP_ELECTION);
 		if (ret != 0 && ret != DB_REP_IGNORE) {
-			sqlite3Error(db, SQLITE_CANTOPEN, "Error in "
+			sqlite3ErrorWithMsg(db, SQLITE_CANTOPEN, "Error in "
 			    "replication call repmgr_start");
 			rc = SQLITE_CANTOPEN;
 			goto err;
@@ -1898,8 +1930,8 @@ int btreeOpenEnvironment(Btree *p, int needLock)
 			 * election and synchronize with the master.
 			 */
 			if (!btreeRepStartupFinished(p)) {
-				sqlite3Error(db, SQLITE_CANTOPEN, "Error "
-				    "starting as replication client");
+				sqlite3ErrorWithMsg(db, SQLITE_CANTOPEN, 
+				    "Error starting as replication client");
 				rc = SQLITE_CANTOPEN;
 				goto err;
 			}
@@ -1916,8 +1948,8 @@ int btreeOpenEnvironment(Btree *p, int needLock)
 			if (rc == SQLITE_OK)
 				goto aftercreatemeta;
 			else {
-				sqlite3Error(db, SQLITE_CANTOPEN, "Error "
-				    "opening replicated SQL metadata");
+				sqlite3ErrorWithMsg(db, SQLITE_CANTOPEN, 
+				    "Error opening replicated SQL metadata");
 				rc = SQLITE_CANTOPEN;
 				goto err;
 			}
@@ -2464,7 +2496,8 @@ int sqlite3BtreeClose(Btree *p)
 #endif
 
 	if (pMainTxn != NULL &&
-	    (t_rc = sqlite3BtreeRollback(p, rc)) != SQLITE_OK && rc == SQLITE_OK)
+	    (t_rc = sqlite3BtreeRollback(p, rc, 0)) != SQLITE_OK && 
+	    rc == SQLITE_OK)
 		rc = t_rc;
 	assert(pMainTxn == NULL);
 
@@ -2745,9 +2778,7 @@ static int btreeHandleCacheClear(Btree *p) {
 		if (btreeDbHandleIsLocked(cached_db))
 			continue;
 		tables_to_close[i++] = cached_db;
-		sqlite3HashInsert(&pBt->db_cache,
-		    cached_db->key,
-		    (int)strlen(cached_db->key), NULL);
+		sqlite3HashInsert(&pBt->db_cache, cached_db->key, NULL);
 	}
 	sqlite3_mutex_leave(pBt->mutex);
 	for (i = 0; tables_to_close[i] != NULL; i++) {
@@ -2883,10 +2914,8 @@ static int btreeHandleCacheCleanup(Btree *p, cleanup_mode_t cleanup)
 			remove = 1;
 		}
 		if (cleanup == CLEANUP_CLOSE || remove) {
-			if (remove)
-				sqlite3HashInsert(&pBt->db_cache,
-				    cached_db->key,
-				    (int)strlen(cached_db->key), NULL);
+			sqlite3HashInsert(&pBt->db_cache,
+			    cached_db->key, NULL);
 			if (cached_db->cookie != NULL)
 				sqlite3_free(cached_db->cookie);
 			sqlite3_free(cached_db);
@@ -3247,7 +3276,7 @@ int sqlite3BtreeCommit(Btree *p)
 ** This will release the write lock on the database file.  If there are no
 ** active cursors, it also releases the read lock.
 */
-int sqlite3BtreeRollback(Btree *p, int tripCode)
+int sqlite3BtreeRollback(Btree *p, int tripCode, int writeOnly)
 {
 	BtShared *pBt;
 	int rc, t_rc;
@@ -3410,7 +3439,7 @@ static int btreeCompare(
 		    keyInfo, dbt2->size, dbt2->data, pIdxKey);
 
 		/*
-		 * XXX If we are out of memory, the call to unpack the record
+		 * !!! If we are out of memory, the call to unpack the record
 		 * may have returned NULL.  The out-of-memory error has been
 		 * noted and will be handled by the VM, but we really want to
 		 * return that error to Berkeley DB.  There is no way to do
@@ -3458,7 +3487,7 @@ static int btreeCompareShared(DB *dbp,
 /*
  * Configures a Berkeley DB database handle prior to calling open.
  */
-static int btreeConfigureDbHandle(Btree *p, int iTable, DB **dbpp)
+static int btreeConfigureDbHandle(Btree *p, int iTable, DB **dbpp, int skipdup)
 {
 	BtShared *pBt;
 	DB *dbp;
@@ -3478,6 +3507,12 @@ static int btreeConfigureDbHandle(Btree *p, int iTable, DB **dbpp)
 	if ((ret = db_create(&dbp, pDbEnv, 0)) != 0)
 		goto err;
 	if ((flags & BTREE_INTKEY) == 0) {
+		/*
+		 * Indexes created between 5.1 and 6.1 support duplicate data
+		 * items in some cases.
+		 */
+		if (pBt->dbStorage == DB_STORE_NAMED && !skipdup)
+			dbp->set_dup_compare(dbp, btreeCompareDup);
 #ifdef BDBSQL_SINGLE_THREAD
 		dbp->set_bt_compare(dbp, btreeCompareKeyInfo);
 #else
@@ -3558,8 +3593,7 @@ int btreeFindOrCreateDataTable(
 	}
 
 	sqlite3_snprintf(sizeof(cached_db_key), cached_db_key, "%x", iTable);
-	cached_db = sqlite3HashFind(&pBt->db_cache,
-	    cached_db_key, (int)strlen(cached_db_key));
+	cached_db = sqlite3HashFind(&pBt->db_cache, cached_db_key);
 	if ((flags & BTREE_CREATE) && cached_db != NULL) {
 		/*
 		 * If the table already exists in the cache, it's a
@@ -3576,8 +3610,7 @@ int btreeFindOrCreateDataTable(
 			if (ret != 0)
 				goto err;
 		}
-		sqlite3HashInsert(&pBt->db_cache,
-		    cached_db_key, (int)strlen(cached_db_key), NULL);
+		sqlite3HashInsert(&pBt->db_cache, cached_db_key, NULL);
 		sqlite3_free(cached_db);
 		cached_db = NULL;
 	}
@@ -3594,8 +3627,7 @@ int btreeFindOrCreateDataTable(
 		if (rc != SQLITE_OK)
 			goto err;
 		sqlite3_mutex_enter(pBt->mutex);
-		cached_db = sqlite3HashFind(&pBt->db_cache,
-		    cached_db_key, (int)strlen(cached_db_key));
+		cached_db = sqlite3HashFind(&pBt->db_cache, cached_db_key);
 		/* if its not there, then insert it. */
 		if (cached_db == NULL) {
 			rc = btreeCreateDataTable(p, iTable, &create_db);
@@ -3608,9 +3640,15 @@ int btreeFindOrCreateDataTable(
 				create_db->dbp = NULL;
 			}
 			sqlite3_mutex_leave(pBt->mutex);
-			if (create_db->dbp != NULL)
+			if (create_db->dbp != NULL) {
+#ifndef BDBSQL_SINGLE_THREAD
+				if (create_db->dbp->app_private != NULL)
+					sqlite3_free(
+					    create_db->dbp->app_private);
+#endif
 				ret = create_db->dbp->close(
 				     create_db->dbp, DB_NOSYNC);
+			}
 			if (ret != 0)
 				goto err;
 		}
@@ -3650,11 +3688,14 @@ static int btreeCreateDataTable(
 	DBT d, k;
 #endif
 	char *fileName, *tableName, tableNameBuf[DBNAME_SIZE];
-	int ret, t_ret;
+	int ret, skipdup, t_ret;
+	u_int32_t dupflag, flags;
 
 	log_msg(LOG_VERBOSE, "sqlite3BtreeCreateDataTable(%p, %u, %p)",
 	    p, iTable, ppCachedDb);
 
+	skipdup = 1;
+	dupflag = 0;
 	pBt = p->pBt;
 	assert(!pBt->resultsBuffer);
 
@@ -3682,16 +3723,29 @@ static int btreeCreateDataTable(
 	 * creating the table, we should be holding the schema lock,
 	 * which will protect the handle in cache until we are done.
 	 */
-	if ((ret = btreeConfigureDbHandle(p, iTable, &dbp)) != 0)
+	if ((ret = btreeConfigureDbHandle(p, iTable, &dbp, skipdup)) != 0)
 		goto err;
 	ret = ENOENT;
-	if (pBt->dbStorage == DB_STORE_NAMED &&
+redo:	if (pBt->dbStorage == DB_STORE_NAMED &&
 	    (pBt->db_oflags & DB_CREATE) != 0) {
 		ret = dbp->open(dbp, pFamilyTxn, fileName, tableName, DB_BTREE,
 		    (pBt->db_oflags & ~DB_CREATE) | GET_ENV_READONLY(pBt) |
 		    GET_AUTO_COMMIT(pBt, pFamilyTxn), 0);
+		/*
+		 * Indexes created between 5.1 and 6.1 may support sorted
+		 * duplicates.  If this is one of those indexes, close it, 
+		 * configure the handle with a custom duplicate compare
+		 * function, and re-open it.  Custom duplicate compare
+		 * functions cannot be set after open.
+		 */
+		if (ret == 0 && skipdup == 1 &&
+		    !(iTable & 1) &&  supportsDuplicates(dbp))
+			skipdup = 0;
+		else
+			skipdup = 1;
+			
 		/* Close and re-configure handle. */
-		if (ret == ENOENT) {
+		if (ret == ENOENT || skipdup == 0) {
 #ifndef BDBSQL_SINGLE_THREAD
 			if (dbp->app_private != NULL)
 				sqlite3_free(dbp->app_private);
@@ -3700,22 +3754,17 @@ static int btreeCreateDataTable(
 				ret = t_ret;
 				goto err;
 			}
-			if ((t_ret =
-			    btreeConfigureDbHandle(p, iTable, &dbp)) != 0) {
+			if ((t_ret = btreeConfigureDbHandle(
+			    p, iTable, &dbp, skipdup)) != 0) {
 				ret = t_ret;
 				goto err;
 			}
+
+			if (skipdup == 0)
+				goto redo;
 		}
 	}
 	if (ret == ENOENT) {
-		/*
-		 * Indices in files should be configured with DB_DUPSORT.
-		 * Only do this once we are sure we are creating the database
-		 * so that we can open v5.0 database files without error.
-		 */
-		if (pBt->dbStorage == DB_STORE_NAMED && (iTable & 1) == 0)
-			dbp->set_flags(dbp, DB_DUPSORT);
-
 		/* Set blob threshold. */
 		if (pBt->dbStorage == DB_STORE_NAMED
 		    && (iTable & 1) != 0 && pBt->blob_threshold > 0 &&
@@ -3724,9 +3773,11 @@ static int btreeCreateDataTable(
 			    dbp, pBt->blob_threshold, 0)) != 0)
 				goto err;
 		}
-		ret = dbp->open(dbp, pSavepointTxn, fileName, tableName,
-		    DB_BTREE, pBt->db_oflags | GET_ENV_READONLY(pBt) |
-		    GET_AUTO_COMMIT(pBt, pSavepointTxn), 0);
+		flags = pBt->db_oflags | GET_ENV_READONLY(pBt) |
+		    GET_AUTO_COMMIT(pBt, pSavepointTxn);
+		flags |= (GET_ENV_READONLY(pBt) ? 0 : DB_CREATE);
+		ret = dbp->open(dbp, pSavepointTxn,
+		    fileName, tableName, DB_BTREE, flags, 0);
 #ifdef BDBSQL_FILE_PER_TABLE
 		if (ret == 0 && pBt->dbStorage == DB_STORE_NAMED) {
 			memset(&k, 0, sizeof(k));
@@ -3756,7 +3807,7 @@ insert_db:
 
 		assert(sqlite3_mutex_held(pBt->mutex));
 		stale_db = sqlite3HashInsert(&pBt->db_cache, cached_db->key,
-		    (int)strlen(cached_db->key), cached_db);
+		    cached_db);
 		if (stale_db) {
 			sqlite3_free(stale_db);
 			/*
@@ -3788,12 +3839,14 @@ err:	if (dbp != NULL) {
 }
 
 /*
- * Only persisent uncollated indexes use the 1 key, duplicate
- * data structure, because the space saving is not worth the
- * overhead in temperary indexes, and collated (other than binary
- * collation) indexes lose data because different values can be
- * stored under the same key if the collation reads them as
- * identical.
+ * Persistent uncollated indexes created from 5.1 to 6.1 used a 1 key,
+ * duplicate data structure as part of a space and speed optimization. 
+ * The optimization was limited to those indexes because the space saving
+ * was not worth the overhead in temporary indexes, and collated (other than
+ * binary collation) indexes lost data because different values could be
+ * stored under the same key if the collation read the values as identical.
+ * In 6.2 this optimization was discontinued as it was shown to reduce
+ * performance for index lookups.
  */
 int isDupIndex(int flags, int storage, KeyInfo *keyInfo, DB *db)
 {
@@ -4081,9 +4134,13 @@ static int btreeCloseCursor(BtCursor *pCur, int listRemove)
 		pCur->index.data = NULL;
 	}
 
-	/* Incrblob write cursors have their own dedicated transactions. */
-	if (pCur->isIncrblobHandle && pCur->txn && pCur->wrFlag &&
-	    pSavepointTxn != NULL && pCur->txn != pSavepointTxn) {
+	/*
+	 * Incrblob write cursors have their own dedicated transactions
+	 * if txn_bulk is not enabled. 
+	 */
+	if (pCur->isIncrblobHandle && pCur->txn &&
+	    pCur->wrFlag && pSavepointTxn != NULL &&
+	    pCur->txn != pSavepointTxn && !p->txn_bulk) {
 		ret = pCur->txn->commit(pCur->txn, DB_TXN_NOSYNC);
 		pCur->txn = 0;
 	}
@@ -4124,7 +4181,7 @@ int indexIsCollated(KeyInfo *keyInfo)
 	return ((i != keyInfo->nField) ? 1 : 0);
 }
 
-/* Indexes created before 5.1 do not support duplicates.*/
+/* Indexes created before 5.1 and after 6.1 do not support duplicates.*/
 int supportsDuplicates(DB *db)
 {
 	u_int32_t val;
@@ -4188,6 +4245,7 @@ int sqlite3BtreeMovetoUnpacked(
 {
 	int rc, res, ret;
 	unsigned char buf[ROWIDMAXSIZE];
+	int old_default_rc;
 
 	log_msg(LOG_VERBOSE, "sqlite3BtreeMovetoUnpacked(%p, %p, %u, %u, %p)",
 	    pCur, pUnKey, (int)nKey, bias, pRes);
@@ -4241,15 +4299,29 @@ int sqlite3BtreeMovetoUnpacked(
 			indexData.flags = MEM_Int;
 			serial_type =
 			    sqlite3VdbeSerialType(&indexData, file_format);
-			pUnKey->flags = UNPACKED_PREFIX_MATCH;
 			pCur->data.size =
 			    sqlite3VdbeSerialTypeLen(serial_type) + 1;
 			assert(pCur->data.size < ROWIDMAXSIZE);
 			pCur->data.data = &buf;
 			putVarint32(buf, serial_type);
 			sqlite3VdbeSerialPut(&buf[1], &indexData, serial_type);
+
+			/*
+			 * If the compare keys do not contain the same number of
+			 * fields and all fields that appear in both keys are 
+			 * equal, SQLite compare method will return 
+			 * pUnKey->default_rc. This will break BDB internal 
+			 * btree binary search. Here we set pUnKey->default_rc
+			 * to 0 and restore it after the BDB cursor operation.
+			 */
+			old_default_rc = pUnKey->default_rc;
+			pUnKey->default_rc = 0;
+ 
 			ret = pDbc->get(pDbc, &pCur->key, &pCur->data,
 			    DB_GET_BOTH_RANGE | RMW(pCur));
+
+			pUnKey->default_rc = old_default_rc;
+
 		/*
 		 * If not looking for a specific key in the index (just
 		 * looking at the value part of the key) then do a
@@ -4475,7 +4547,9 @@ static int btreeRestoreCursorPosition(BtCursor *pCur, int skipMoveto)
 		assert(!pBt->transactional || !pCur->wrFlag ||
 		    pSavepointTxn != NULL);
 #endif
-		pCur->txn = pCur->wrFlag ? pSavepointTxn : pReadTxn;
+		/** A write blob cursor has its own dedicated transaction **/
+		if(!(pCur->isIncrblobHandle && pCur->wrFlag))
+			pCur->txn = pCur->wrFlag ? pSavepointTxn : pReadTxn;
 
 		if ((ret = pBDb->cursor(pBDb, pCur->txn, &pDbc,
 		    GET_BTREE_ISOLATION(p) & ~DB_READ_COMMITTED)) != 0)
@@ -4809,6 +4883,7 @@ static int cursorGet(BtCursor *pCur, int op, int *pRes)
 	static int numMultiGets, numBufferGets, numBufferSmalls;
 	DBT oldkey;
 	int ret, equal;
+	u_int32_t size;
 
 	log_msg(LOG_VERBOSE, "cursorGet(%p, %u, %p)", pCur, op, pRes);
 	ret = 0;
@@ -4869,13 +4944,23 @@ static int cursorGet(BtCursor *pCur, int op, int *pRes)
 
 	if (op == DB_FIRST || (op == DB_NEXT && !pCur->skipMulti)) {
 		++numMultiGets;
+		/*
+		 * Set the multi buffer size to the page size.  Any larger and
+		 * it has a large negative performance impact on index and
+		 * rowid lookups.
+		 */
+		if ((ret = pDbc->dbp->get_pagesize(pDbc->dbp, &size)) != 0)
+			goto err;
+		/* Bulk buffer must be at least 1024. */
+		if (size < 1024)
+			size = 1024;
 
 		if (pCur->multiData.data == NULL) {
-			pCur->multiData.data = sqlite3_malloc(MULTI_BUFSIZE);
+			pCur->multiData.data = sqlite3_malloc(size);
 			if (pCur->multiData.data == NULL)
 				return SQLITE_NOMEM;
 			pCur->multiData.flags = DB_DBT_USERMEM;
-			pCur->multiData.ulen = MULTI_BUFSIZE;
+			pCur->multiData.ulen = size;
 		}
 
 		/*
@@ -5120,6 +5205,11 @@ int sqlite3BtreePrevious(BtCursor *pCur, int *pRes)
 		sqlite3_free(keyCopy);
 		if (rc != SQLITE_OK)
 			return rc;
+	}
+
+	if (pCur->eState == CURSOR_INVALID) {
+		*pRes = 1;
+		return SQLITE_OK;
 	}
 
 	if (pCur->eState != CURSOR_VALID &&
@@ -5626,8 +5716,7 @@ int sqlite3BtreeDropTable(Btree *p, int iTable, int *piMoved)
 	/* Close any cached handle */
 	sqlite3_snprintf(sizeof(cached_db_key), cached_db_key, "%x", iTable);
 	sqlite3_mutex_enter(pBt->mutex);
-	cached_db = sqlite3HashFind(&pBt->db_cache,
-	    cached_db_key, (int)strlen(cached_db_key));
+	cached_db = sqlite3HashFind(&pBt->db_cache, cached_db_key);
 	if (cached_db != NULL && (dbp = cached_db->dbp) != NULL) {
 #ifndef BDBSQL_SINGLE_THREAD
 		if (dbp->app_private != NULL)
@@ -5638,8 +5727,7 @@ int sqlite3BtreeDropTable(Btree *p, int iTable, int *piMoved)
 		if (ret != 0)
 			goto err;
 	}
-	sqlite3HashInsert(
-	    &pBt->db_cache, cached_db_key, (int)strlen(cached_db_key), NULL);
+	sqlite3HashInsert( &pBt->db_cache, cached_db_key, NULL);
 	sqlite3_mutex_leave(pBt->mutex);
 	sqlite3_free(cached_db);
 
@@ -5827,7 +5915,7 @@ void sqlite3BtreeGetMeta(Btree *p, int idx, u32 *pMeta)
 		p->db->errCode = SQLITE_BUSY;
 		ret = 0;
 		*pMeta = 0;
-		sqlite3BtreeRollback(p, SQLITE_BUSY);
+		sqlite3BtreeRollback(p, SQLITE_BUSY, 0);
 	}
 
 	assert(ret == 0);
@@ -6039,24 +6127,9 @@ int sqlite3BtreeCheckpoint(Btree *p, int eMode, int *pnLog, int *pnCkpt)
  * Determine whether or not a cursor has moved from the position it was last
  * placed at.
  */
-int sqlite3BtreeCursorHasMoved(BtCursor *pCur, int *pHasMoved)
+int sqlite3BtreeCursorHasMoved(BtCursor *pCur)
 {
-	int rc;
-
-	/* Set this here in case of error. */
-	*pHasMoved = 1;
-
-	/*
-	 * We only want to return an error if the cursor is faulted, not just
-	 * if it is not pointing at anything.
-	 */
-	if (pCur->eState != CURSOR_VALID && pCur->eState != CURSOR_INVALID &&
-	    (rc = btreeRestoreCursorPosition(pCur, 0)) != SQLITE_OK)
-		return rc;
-
-	if (pCur->eState == CURSOR_VALID && pCur->lastRes == 0)
-		*pHasMoved = 0;
-	return SQLITE_OK;
+	return pCur->eState != CURSOR_VALID;
 }
 
 #ifndef NDEBUG
@@ -6085,12 +6158,6 @@ int sqlite3BtreePutData(BtCursor *pCur, u32 offset, u32 amt, void *z)
 	log_msg(LOG_VERBOSE, "sqlite3BtreePutData(%p, %u, %u, %p)",
 	    pCur, offset, amt, z);
 
-	/*
-	 * Check that the cursor is open for writing and the cursor points at a
-	 * valid row of an intKey table.
-	 */
-	if (!pCur->wrFlag)
-		return SQLITE_READONLY;
 
 	UPDATE_DURING_BACKUP(pCur->pBtree)
 
@@ -6102,6 +6169,13 @@ int sqlite3BtreePutData(BtCursor *pCur, u32 offset, u32 amt, void *z)
 		return SQLITE_ABORT;
 
 	assert(!pCur->multiGetPtr);
+
+	/*
+	 * Check that the cursor is open for writing and the cursor points at a
+	 * valid row of an intKey table.
+	 */
+	if (!pCur->wrFlag)
+		return SQLITE_READONLY;
 
 #ifndef SQLITE_OMIT_INCRBLOB
 	assert(pCur);
@@ -6129,32 +6203,6 @@ int sqlite3BtreePutData(BtCursor *pCur, u32 offset, u32 amt, void *z)
 }
 
 /*****************************************************************
-** Set a flag on this cursor to indicate that it is an incremental blob
-** cursor.  Incrblob cursors are invalidated differently to ordinary cursors:
-** if the value under an incrblob cursor is modified, attempts to access
-** the cursor again will result in an error.
-*/
-void sqlite3BtreeCacheOverflow(BtCursor *pCur)
-{
-	Btree *p;
-
-	log_msg(LOG_VERBOSE, "sqlite3BtreeCacheOverflow(%p)", pCur);
-
-	pCur->isIncrblobHandle = 1;
-	p = pCur->pBtree;
-
-	/*
-	 * Give the transaction to the incrblob cursor, since it has to live
-	 * the lifetime of the cursor.
-	 */
-	if (p && p->connected && p->pBt->transactional && pCur->wrFlag) {
-		/* XXX error handling */
-		p->pBt->dbenv->txn_begin(p->pBt->dbenv, pSavepointTxn->parent,
-		    &pSavepointTxn, 0);
-	}
-}
-
-/*****************************************************************
 ** Return non-zero if a read (or write) transaction is active.
 */
 int sqlite3BtreeIsInReadTrans(Btree *p)
@@ -6176,13 +6224,13 @@ int sqlite3BtreeIsInReadTrans(Btree *p)
 ** it is not sufficient to save the state of the cursor. The cursor must be
 ** invalidated.
 */
-void sqlite3BtreeTripAllCursors(Btree*	p, int errCode)
+int sqlite3BtreeTripAllCursors(Btree*	p, int errCode, int writeOnly)
 {
 	BtShared *pBt;
 	BtCursor *pCur;
 
 	if (!p)
-		return;
+		return 0;
 
 	log_msg(LOG_VERBOSE, "sqlite3BtreeTripAllCursors(%p, %u)", p, errCode);
 
@@ -6194,6 +6242,7 @@ void sqlite3BtreeTripAllCursors(Btree*	p, int errCode)
 		pCur->error = errCode;
 	}
 	sqlite3_mutex_leave(pBt->mutex);
+	return 0;
 }
 
 int btreeLockSchema(Btree *p, lock_mode_t lockMode)
@@ -6401,9 +6450,9 @@ int sqlite3BtreeGetPageSize(Btree *p)
 /***************************************************************************
 ** No op.
 */
-int sqlite3BtreeGetReserve(Btree *p)
+int sqlite3BtreeGetReserveNoMutex(Btree *p)
 {
-	log_msg(LOG_VERBOSE, "sqlite3BtreeGetReserve(%p)", p);
+	log_msg(LOG_VERBOSE, "sqlite3BtreeGetReserveNoMutex(%p)", p);
 	/* FIXME: Need to check how this is used by SQLite. */
 	return (0);
 }
@@ -6636,6 +6685,15 @@ int btreeGetKeyInfo(Btree *p, int iTable, KeyInfo **pKeyInfo)
 		}
 		memcpy(*pKeyInfo, newKeyInfo, nBytes);
 		(*pKeyInfo)->enc = ENC(p->db);
+
+		/*
+		 * #24471 field aSortOrder in the copied KeyInfo object is 
+		 * pointing to address inside the original KeyInfo object. Fix 
+		 * it by computing the address offset.
+		 */
+		(*pKeyInfo)->aSortOrder = (u8 *)*pKeyInfo + 
+		    ((u8 *)newKeyInfo->aSortOrder - (u8 *)newKeyInfo);
+
 		sqlite3KeyInfoUnref(newKeyInfo);
 	}
 	return SQLITE_OK;
@@ -6879,7 +6937,7 @@ int sqlite3_enable_shared_cache(int enable)
 int btreeGetUserTable(Btree *p, DB_TXN *pTxn, DB **pDb, int iTable)
 {
 	char *fileName, *tableName, tableNameBuf[DBNAME_SIZE];
-	int ret, rc;
+	int ret, rc, skipdup;
 	BtShared *pBt;
 	DB *dbp;
 	KeyInfo *keyInfo;
@@ -6889,6 +6947,7 @@ int btreeGetUserTable(Btree *p, DB_TXN *pTxn, DB **pDb, int iTable)
 	pBt = p->pBt;
 	dbp = *pDb;
 	keyInfo = NULL;
+	skipdup = 1;
 	/* Is the metadata table. */
 	if (iTable < 1) {
 		*pDb = NULL;
@@ -6901,7 +6960,7 @@ int btreeGetUserTable(Btree *p, DB_TXN *pTxn, DB **pDb, int iTable)
 	FIX_TABLENAME(pBt, fileName, tableName);
 
 	/* Open a DB handle on that table. */
-	if ((ret = db_create(&dbp, pDbEnv, 0)) != 0)
+redo:	if ((ret = db_create(&dbp, pDbEnv, 0)) != 0)
 		return dberr2sqlite(ret, p);
 
 	if (!GET_DURABLE(pBt) &&
@@ -6912,13 +6971,16 @@ int btreeGetUserTable(Btree *p, DB_TXN *pTxn, DB **pDb, int iTable)
 
 	if (!(iTable & 1)) {
 		/* Get the KeyInfo for the index */
-		if ((rc = btreeGetKeyInfo(p, iTable, &keyInfo)) != SQLITE_OK)
+		if (keyInfo == NULL &&
+		    (rc = btreeGetKeyInfo(p, iTable, &keyInfo)) != SQLITE_OK)
 			goto err;
 
 		if (keyInfo) {
 			dbp->app_private = keyInfo;
 			dbp->set_bt_compare(dbp, btreeCompareKeyInfo);
 		}
+		if (pBt->dbStorage == DB_STORE_NAMED && !skipdup)
+			dbp->set_dup_compare(dbp, btreeCompareDup);
 	} else
 		dbp->set_bt_compare(dbp, btreeCompareIntKey);
 
@@ -6928,6 +6990,19 @@ int btreeGetUserTable(Btree *p, DB_TXN *pTxn, DB **pDb, int iTable)
 	    (pBt->db_oflags & ~DB_CREATE) | GET_ENV_READONLY(pBt), 0) |
 	    GET_AUTO_COMMIT(pBt, pTxn)) != 0)
 		goto err;
+
+	/*
+	 * Indexes created between BDB 5.1 and 6.1 support
+	 * duplicates, so attempt to open the index again with
+	 * btreeCompareDup set.
+	 */
+	if (skipdup == 1 && !(iTable & 1) &&
+	    pBt->dbStorage == DB_STORE_NAMED && supportsDuplicates(dbp)) {
+		skipdup = 0;
+		dbp->close(dbp, DB_NOSYNC);
+		dbp = NULL;
+		goto redo;
+	}
 
 	*pDb = dbp;
 	return rc;
@@ -7298,12 +7373,12 @@ static const u_int8_t __dbsql_marshaled_int_size[] = {
 };
 
 /*
-** set the mask of hint flags for cursor pCsr. Currently the only valid
-** values are 0 and BTREE_BULKLOAD.
+** set the mask of hint flags for cursor pCsr.
 */
-void sqlite3BtreeCursorHints(BtCursor *pCsr, unsigned int mask){
-  assert( mask==BTREE_BULKLOAD || mask==0 );
-  pCsr->hints = mask;
+void sqlite3BtreeCursorHints(BtCursor *pCsr, unsigned int mask)
+{
+	assert(mask == BTREE_BULKLOAD || mask == BTREE_SEEK_EQ || mask == 0);
+	pCsr->hints = mask;
 }
 
 #ifdef BDBSQL_OMIT_LEAKCHECK
@@ -7865,6 +7940,8 @@ int isCurrentThread(void *tid)
 
 #elif defined(SQLITE_MUTEX_W32)
 
+#include <windows.h>
+
 void *getThreadID(sqlite3 *db) 
 {
 	DWORD *tid, temp_tid;
@@ -7900,3 +7977,155 @@ int isCurrentThread(void *tid)
 }
 
 #endif
+
+/*
+** Delete all information from the single table that pCur is open on.
+**
+** This routine only work for pCur on an ephemeral table.
+*/
+int sqlite3BtreeClearTableOfCursor(BtCursor *pCur)
+{
+	int rc;
+	CACHED_DB *cached_db;
+	Btree *p;
+    
+	p = pCur->pBtree;
+	cached_db = pCur->cached_db;
+
+	if (pDbc && (rc = pDbc->close(pDbc) != SQLITE_OK))
+		return rc;
+	pDbc = NULL;
+
+	if (pCur->multiData.data != NULL) {
+		sqlite3_free(pCur->multiData.data);
+		pCur->multiData.data = NULL;
+	}
+
+	if(cached_db && pBDb){
+		if(rc = pBDb->truncate(pBDb, 0, 0, 0) != SQLITE_OK)
+			return rc;
+#ifndef BDBSQL_SINGLE_THREAD
+		if (pBDb->app_private != NULL)
+			sqlite3_free(pBDb->app_private);
+#endif
+		if(rc = pBDb->close(pBDb, DB_NOSYNC) != SQLITE_OK)
+			return rc;
+		sqlite3HashInsert(&p->pBt->db_cache, cached_db->key, NULL);
+		sqlite3_free(cached_db);
+		pCur->cached_db = NULL;
+	}
+
+	pIsBuffer = 1;
+
+	return SQLITE_OK;
+}
+
+#ifndef SQLITE_OMIT_INCRBLOB
+/* 
+** Mark this cursor as an incremental blob cursor.
+*/
+void sqlite3BtreeIncrblobCursor(BtCursor *pCur)
+{
+	Btree *p;
+
+	log_msg(LOG_VERBOSE, "sqlite3BtreeIncrblobCursor(%p)", pCur);
+
+	pCur->isIncrblobHandle = 1;
+	p = pCur->pBtree;
+
+	/* 
+	 * This method may be applied to an existing blob handler when 
+	 * sqlite3_blob_reopen() was called. We should not begin another 
+	 * transaction in this case.
+	 */
+	if (p && pCur->txn != NULL && pCur->txn != pSavepointTxn)
+		return;
+
+	/*
+	 * Give the transaction to the incrblob cursor, since it has to live
+	 * the lifetime of the cursor.  Create a new transaction for any
+	 * future operations.  When txn_bulk is enabled the cursor and all
+	 * other operations must share a single transaction for writing.
+	 */
+	if (p && p->connected &&
+	    p->pBt->transactional && pCur->wrFlag && !p->txn_bulk) {
+		/* 
+		 * TODO The DB_ENV->txn_begin() method may fail and return 
+		 * errors. The errors need to be handled inside this method 
+		 * since this method does not return a value.
+		 */
+		p->pBt->dbenv->txn_begin(p->pBt->dbenv, pSavepointTxn->parent,
+		    &pSavepointTxn, 0);
+	}
+}
+#endif
+
+#define restoreCursorPosition(p) \
+	(p->eState >= CURSOR_REQUIRESEEK ? \
+	    btreeRestoreCursorPosition(p, 0) : \
+	    SQLITE_OK)
+
+/*
+** This routine restores a cursor back to its original position after it
+** has been moved by some outside activity (such as a btree rebalance or
+** a row having been deleted out from under the cursor).  
+**
+** On success, the *pDifferentRow parameter is false if the cursor is left
+** pointing at exactly the same row.  *pDifferntRow is the row the cursor
+** was pointing to has been deleted, forcing the cursor to point to some
+** nearby row.
+**
+** This routine should only be called for a cursor that just returned
+** TRUE from sqlite3BtreeCursorHasMoved().
+*/
+int sqlite3BtreeCursorRestore(BtCursor *pCur, int *pDifferentRow)
+{
+	int rc;
+
+	assert(pCur != 0);
+	assert(pCur->eState != CURSOR_VALID);
+	rc = restoreCursorPosition(pCur);
+	if (rc) {
+		*pDifferentRow = 1;
+		return rc;
+	}
+	if (pCur->eState != CURSOR_VALID || pCur->lastRes) {
+		*pDifferentRow = 1;
+	} else {
+		*pDifferentRow = 0;
+	}
+	return SQLITE_OK;
+}
+
+/*
+** Return true if the given Btree is read-only.
+*/
+int sqlite3BtreeIsReadonly(Btree *p)
+{
+	return IS_BTREE_READONLY(p);
+}
+
+/*
+** Return the size of the header added to each page by this module.
+*/
+int sqlite3HeaderSizeBtree(void)
+{ 
+	return 0; 
+}
+
+
+#ifdef SQLITE_DEBUG
+/*
+** Return true if the cursor has a hint specified.  This routine is
+** only used from within assert() statements
+*/
+int sqlite3BtreeCursorHasHint(BtCursor *pCsr, unsigned int mask)
+{
+	return (pCsr->hints & mask) != 0;
+}
+#endif
+
+int sqlite3BtreeGetOptimalReserve(Btree *p)
+{
+	return 0;
+}

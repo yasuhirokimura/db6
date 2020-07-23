@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2007, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2007, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -43,6 +43,7 @@ proc repmgr010_sub { method niter tnum viewopt largs } {
 	global testdir
 	global rep_verbose
 	global verbose_type
+	global ipversion
 
 	if { $viewopt == "view" } {
 		set nsites 7
@@ -61,6 +62,7 @@ proc repmgr010_sub { method niter tnum viewopt largs } {
 
 	env_cleanup $testdir
 	set ports [available_ports $nsites]
+	set hoststr [get_hoststr $ipversion]
 
 	set masterdir $testdir/MASTERDIR
 	set clientdir $testdir/CLIENTDIR
@@ -87,7 +89,7 @@ proc repmgr010_sub { method niter tnum viewopt largs } {
 	set masterenv [eval $ma_envcmd]
 	$masterenv repmgr -ack quorum \
 	    -timeout {ack 5000000} \
-	    -local [list 127.0.0.1 [lindex $ports 0]] \
+	    -local [list $hoststr [lindex $ports 0]] \
 	    -start master
 
 	# Open first client
@@ -95,9 +97,9 @@ proc repmgr010_sub { method niter tnum viewopt largs } {
 	    -errpfx CLIENT -home $clientdir -txn -rep -thread"
 	set clientenv [eval $cl_envcmd]
 	$clientenv repmgr -ack quorum \
-	    -local [list 127.0.0.1 [lindex $ports 1]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] \
-	    -remote [list 127.0.0.1 [lindex $ports 2]] \
+	    -local [list $hoststr [lindex $ports 1]] \
+	    -remote [list $hoststr [lindex $ports 0]] \
+	    -remote [list $hoststr [lindex $ports 2]] \
 	    -start client
 	await_startup_done $clientenv
 
@@ -106,9 +108,9 @@ proc repmgr010_sub { method niter tnum viewopt largs } {
 	    -errpfx CLIENT2 -home $clientdir2 -txn -rep -thread"
 	set clientenv2 [eval $cl2_envcmd]
 	$clientenv2 repmgr -ack quorum \
-	    -local [list 127.0.0.1 [lindex $ports 2]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] \
-	    -remote [list 127.0.0.1 [lindex $ports 1]] \
+	    -local [list $hoststr [lindex $ports 2]] \
+	    -remote [list $hoststr [lindex $ports 0]] \
+	    -remote [list $hoststr [lindex $ports 1]] \
 	    -start client
 	await_startup_done $clientenv2
 
@@ -187,9 +189,9 @@ proc repmgr010_sub { method niter tnum viewopt largs } {
 	puts "\tRepmgr$tnum.i: Restart client."
 	set clientenv [eval $cl_envcmd -recover]
 	$clientenv repmgr -ack quorum \
-	    -local [list 127.0.0.1 [lindex $ports 1]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] \
-	    -remote [list 127.0.0.1 [lindex $ports 2]] \
+	    -local [list $hoststr [lindex $ports 1]] \
+	    -remote [list $hoststr [lindex $ports 0]] \
+	    -remote [list $hoststr [lindex $ports 2]] \
 	    -start client
 	await_startup_done $clientenv
 
@@ -257,6 +259,7 @@ proc repmgr010_joinunelect { method niter tnum largs } {
 	global testdir
 	global rep_verbose
 	global verbose_type
+	global ipversion
 
 	set nsites 3
 
@@ -269,6 +272,7 @@ proc repmgr010_joinunelect { method niter tnum largs } {
 
 	env_cleanup $testdir
 	set ports [available_ports $nsites]
+	set hoststr [get_hoststr $ipversion]
 
 	set masterdir $testdir/MASTERDIR
 	set clientdir $testdir/CLIENTDIR
@@ -283,14 +287,14 @@ proc repmgr010_joinunelect { method niter tnum largs } {
 	set masterenv [eval $ma_envcmd]
 	$masterenv repmgr -ack allpeers \
 	    -timeout {ack 5000000} \
-	    -local [list 127.0.0.1 [lindex $ports 0]] \
+	    -local [list $hoststr [lindex $ports 0]] \
 	    -start master
 	set cl_envcmd "berkdb_env_noerr -create $verbargs \
 	    -errpfx CLIENT -home $clientdir -txn -rep -thread"
 	set clientenv [eval $cl_envcmd]
 	$clientenv repmgr -ack allpeers \
-	    -local [list 127.0.0.1 [lindex $ports 1]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] \
+	    -local [list $hoststr [lindex $ports 1]] \
+	    -remote [list $hoststr [lindex $ports 0]] \
 	    -start client
 	await_startup_done $clientenv
 
@@ -310,8 +314,8 @@ proc repmgr010_joinunelect { method niter tnum largs } {
 	$clientenv test abort repmgr_heartbeat
 	$clientenv2 test abort repmgr_heartbeat
 	$clientenv2 repmgr -pri 0 -ack allpeers \
-	    -local [list 127.0.0.1 [lindex $ports 2]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] \
+	    -local [list $hoststr [lindex $ports 2]] \
+	    -remote [list $hoststr [lindex $ports 0]] \
 	    -start client
 	# Defer await_startup_done until test hook is turned off.
 
@@ -346,6 +350,9 @@ proc repmgr010_joinunelect { method niter tnum largs } {
 }
 
 proc repmgr010_create_view { vprefix vdir verbargs lport rport } {
+	global ipversion
+
+	set hoststr [get_hoststr $ipversion]
 	set venv NULL
 	set viewcb ""
 	set v_envcmd "berkdb_env_noerr -create $verbargs \
@@ -353,8 +360,8 @@ proc repmgr010_create_view { vprefix vdir verbargs lport rport } {
 	    -home $vdir -txn -rep -thread"
 	set venv [eval $v_envcmd]
 	$venv repmgr -ack quorum \
-	    -local [list 127.0.0.1 $lport] \
-	    -remote [list 127.0.0.1 $rport] \
+	    -local [list $hoststr $lport] \
+	    -remote [list $hoststr $rport] \
 	    -start client
 	await_startup_done $venv
 	return $venv

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 
@@ -17,6 +17,8 @@ public interface EvolveListener {
 
     /**
      * The listener method called during eager entity evolution.
+     *
+     * @param event the EvolveEvent.
      *
      * @return true to continue evolution or false to stop.
      */

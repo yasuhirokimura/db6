@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -174,7 +174,7 @@ __memp_fopen(dbmfp, mfp, path, dirp, flags, mode, pgsize)
 				goto err;
 			ret = __os_exists(env, rpath, &isdir);
 			if (ret == 0 && isdir) {
-				ret = EINVAL;
+				ret = USR_ERR(env, EINVAL);
 				goto err;
 			} else if (ret == 0) {
 				if  ((ret = __os_fileid(env,
@@ -251,7 +251,7 @@ __memp_fopen(dbmfp, mfp, path, dirp, flags, mode, pgsize)
 				     atomic_read(&mfp->multiversion) == 0) {
 mvcc_err:				__db_errx(env, DB_STR("3041",
 "DB_MULTIVERSION cannot be specified on a database file that is already open"));
-					ret = EINVAL;
+					ret = USR_ERR(env, EINVAL);
 					goto err;
 				}
 
@@ -281,7 +281,7 @@ mvcc_err:				__db_errx(env, DB_STR("3041",
 		 * The error will be ignored, so don't output an error message.
 		 */
 		if (mfp->deadfile) {
-			ret = EINVAL;
+			ret = USR_ERR(env, EINVAL);
 			goto err;
 		}
 	}
@@ -315,6 +315,13 @@ mvcc_err:				__db_errx(env, DB_STR("3041",
 	 * but there's nothing to read from disk.
 	 */
 	if (!FLD_ISSET(dbmfp->config_flags, DB_MPOOL_NOFILE)) {
+		/* This detects when a metadata page has a bad size. [#24223] */
+		if (pagesize == 0 || !IS_VALID_PAGESIZE(pagesize)) {
+			ret = USR_ERR(env, EINVAL);
+			 __db_errx(env, DB_STR("0511",
+			     "page sizes must be a power-of-2"));
+			goto err;
+		}
 		/* Convert MP open flags to DB OS-layer open flags. */
 		oflags = 0;
 		if (LF_ISSET(DB_CREATE))
@@ -325,7 +332,7 @@ mvcc_err:				__db_errx(env, DB_STR("3041",
 			oflags |= DB_OSO_RDONLY;
 
 		/*
-		 * XXX
+		 * Note:
 		 * A grievous layering violation, the DB_DSYNC_DB flag
 		 * was left in the ENV structure and not driven through
 		 * the cache API.  This needs to be fixed when the general
@@ -384,18 +391,11 @@ mvcc_err:				__db_errx(env, DB_STR("3041",
 		}
 
 		/*
-		 * Don't permit files that aren't a multiple of the pagesize,
-		 * and find the number of the last page in the file, all the
-		 * time being careful not to overflow 32 bits.
-		 *
 		 * During verify or recovery, we might have to cope with a
 		 * truncated file; if the file size is not a multiple of the
 		 * page size, round down to a page, we'll take care of the
 		 * partial page outside the mpool system.
-		 *
-		 * Pagesize of 0 is only allowed for in-mem dbs.
 		 */
-		DB_ASSERT(env, pagesize != 0);
 		if (bytes % pagesize != 0) {
 			if (LF_ISSET(DB_ODDFILESIZE))
 				bytes -= (u_int32_t)(bytes % pagesize);
@@ -435,7 +435,7 @@ mvcc_err:				__db_errx(env, DB_STR("3041",
     "%s: file size (%lu %lu) not a multiple of the pagesize %lu",
     "%s %lu %lu %lu"),
     rpath, (u_long)mbytes, (u_long)bytes, (u_long)pagesize);
-					ret = EINVAL;
+					ret = USR_ERR(env, EINVAL);
 					goto err;
 				}
 			}
@@ -504,7 +504,7 @@ check:	MUTEX_LOCK(env, hp->mtx_hash);
 		    "%s: clear length, page size or LSN location changed",
 			    "%s"), path);
 			MUTEX_UNLOCK(env, hp->mtx_hash);
-			ret = EINVAL;
+			ret = USR_ERR(env, EINVAL);
 			goto err;
 		}
 	}
@@ -532,7 +532,7 @@ check:	MUTEX_LOCK(env, hp->mtx_hash);
 		 */
 		if (FLD_ISSET(dbmfp->config_flags, DB_MPOOL_NOFILE) &&
 		    !LF_ISSET(DB_CREATE)) {
-			ret = ENOENT;
+			ret = USR_ERR(env, ENOENT);
 			goto err;
 		}
 
@@ -541,9 +541,9 @@ alloc:		if ((ret = __memp_mpf_alloc(dbmp,
 			goto err;
 
 		/*
-		 * If the user specifies DB_MPOOL_LAST or DB_MPOOL_NEW on a
-		 * page get, we have to increment the last page in the file.
-		 * Figure it out and save it away.
+		 * If the user specifies DB_MPOOL_LAST or DB_MPOOL_NEW on a page
+		 * get, we have to increment the last page in the file. Figure
+		 * it out and save it away. Be careful not to overflow 32 bits.
 		 *
 		 * Note correction: page numbers are zero-based, not 1-based.
 		 */
@@ -589,7 +589,7 @@ have_mfp:
 		    !F_ISSET(mfp, MP_NOT_DURABLE)) {
 			__db_errx(env, DB_STR("3039",
 	     "Cannot open DURABLE and NOT DURABLE handles in the same file"));
-			ret = EINVAL;
+			ret = USR_ERR(env, EINVAL);
 			goto err;
 		}
 	}

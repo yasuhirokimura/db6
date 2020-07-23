@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 1999, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 1999, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -230,6 +230,7 @@ proc db_reptest_int { cfgtype { restoredir NULL } } {
 	set use(peers) [get_peers $cfgtype]
 	set use(view) 0
 	set use(view_site) 0
+	set use(blobs) 0
 	#
 	# Get port information in case it needs to be converted for this
 	# run.  A conversion will happen for a restored run if the current
@@ -294,9 +295,14 @@ proc db_reptest_int { cfgtype { restoredir NULL } } {
 		set autotakeover_site [get_autotakeover $use(kill) \
 		    $site_remove $use(view) $use(view_site) $use(nsites) \
 		    $use(pmkill)]
-		set workers [get_workers $cfgtype $use(lease) $use(twosite)]
 		set dbtype [get_dbtype $cfgtype]
-		set runtime [get_runtime $cfgtype $use(nsites) $use(lease)]
+		set use(blobs) [get_blobs $cfgtype $dbtype]
+		set workers [get_workers $cfgtype $use(lease) \
+		    $use(twosite) $use(blobs)]
+		set ipconfig [get_ipconfig $cfgtype]
+		set socketcb [get_socketcb $cfgtype]
+		set runtime [get_runtime $cfgtype $use(nsites) $use(lease) \
+		    $use(blobs)]
 		puts "Running: $use(nsites) sites, $runtime seconds."
 		puts -nonewline "Running: "
 		if { $use(createdir) } {
@@ -359,7 +365,7 @@ proc db_reptest_int { cfgtype { restoredir NULL } } {
 		reptest_cleanup $dirs(env.$i)
 		#
 		# If we are restoring the args, just read them from the
-		# saved location for this sites.  Otherwise build up
+		# saved location for this site.  Otherwise build up
 		# the args for each piece we need.
 		#
 		if { $cfgtype == "restore" } {
@@ -386,6 +392,7 @@ proc db_reptest_int { cfgtype { restoredir NULL } } {
 				set runtime [parse_runtime $prog_args($i)]
 				puts "Runtime: $runtime"
 			}
+			set ipconfig [parse_ipconfig $prog_args($i)]
 		} else {
 			set nmsg_min 1
 			if { $use(twosite) == "PREFMAS" } {
@@ -399,6 +406,10 @@ proc db_reptest_int { cfgtype { restoredir NULL } } {
 			    [concat $prog_args($i) "-h $dirs(home.$i)"]
 			set prog_args($i) \
 			    [concat $prog_args($i) "-o $use(nsites)"]
+			if { $use(blobs) != 0 } {
+				set prog_args($i) \
+				    [concat $prog_args($i) "-b $use(blobs)"]
+			}
 			#
 			# Add in if this site should remove itself.
 			#
@@ -477,12 +488,30 @@ proc db_reptest_int { cfgtype { restoredir NULL } } {
 			if { $autotakeover_site == $i } {
 				set prog_args($i) [concat $prog_args($i) "-a"]
 			}
+			#
+			# Add in if this configuration is using something
+			# other than the default of IPv6 for all sites.
+			# Use 1 for IPv4 or 2 for mixed ipversions.
+			#
+			if { $ipconfig == "IPV4" } {
+				set prog_args($i) [concat $prog_args($i) "-I 1"]
+			} elseif { $ipconfig == "IPMIXED" } {
+				set prog_args($i) [concat $prog_args($i) "-I 2"]
+			}
+			#
+			# Add in if this configuration should set a socket
+			# callback.
+			#
+			if { $socketcb } {
+				set prog_args($i) [concat $prog_args($i) "-i"]
+			}
 		}
 		save_db_reptest $dirs(save) ARGS $i $prog_args($i)
 	}
 
 	# Now make the DB_CONFIG file for each site.
-	reptest_make_config $cfgtype dirs state use $portlist baseport
+	set hostlist [get_hosts $cfgtype $use(nsites) $ipconfig]
+	reptest_make_config $cfgtype dirs state use $hostlist $portlist baseport
 
 	# Run the test
 	run_db_reptest dirs $use(nsites) $runtime $use(lease)
@@ -499,7 +528,8 @@ proc db_reptest_int { cfgtype { restoredir NULL } } {
 #
 # Make a DB_CONFIG file for all sites in the group
 #
-proc reptest_make_config { cfgtype dirsarr starr usearr portlist baseptarr } {
+proc reptest_make_config { cfgtype dirsarr starr usearr \
+    hostlist portlist baseptarr } {
 	upvar $dirsarr dirs
 	upvar $starr state
 	upvar $baseptarr baseport
@@ -700,6 +730,12 @@ proc reptest_make_config { cfgtype dirsarr starr usearr portlist baseptarr } {
 			lappend cfglist $litem
 		}
 		#
+		# Set blob threshold.
+		#
+		if { $use(blobs) != 0 } {
+			lappend cfglist {"set_blob_threshold" "$use(blobs) 0" }
+		}
+		#
 		# Others: limit size, bulk, 2site strict, preferred master
 		#
 		if { $cfgtype == "random" } {
@@ -743,15 +779,16 @@ proc reptest_make_config { cfgtype dirsarr starr usearr portlist baseptarr } {
 		set litem [list repmgr_set_ack_policy $ackpolicy]
 		lappend cfglist $litem
 		#
-		# Now set up the local and remote ports.  If we are the
-		# known_master (either master or group creator) set the
+		# Now set up the local and remote hosts and ports.  If we are
+		# the known_master (either master or group creator) set the
 		# group creator flag on.
 		#
-		# Must use explicit 127.0.0.1 rather than localhost because
-		# localhost can be configured differently on different
+		# Must use explicit IPv6 or IPv4 loopback rather than localhost
+		# because localhost can be configured differently on different
 		# machines or platforms.  Use of localhost can cause 
 		# available_ports to return ports that are actually in use.
 		#
+		set lhost($i) [lindex $hostlist [expr $i - 1]]
 		set lport($i) [lindex $portlist [expr $i - 1]]
 		if { $i == $known_master } {
 			#
@@ -760,24 +797,28 @@ proc reptest_make_config { cfgtype dirsarr starr usearr portlist baseptarr } {
 			# on this ordering and these embedded spaces.
 			#
 			set litem [list repmgr_site \
-			    "127.0.0.1 $lport($i) db_local_site on \
+			    "$lhost($i) $lport($i) db_local_site on\
 			    db_group_creator on"]
 		} else {
 			set litem [list repmgr_site \
-			    "127.0.0.1 $lport($i) db_local_site on"]
+			    "$lhost($i) $lport($i) db_local_site on"]
 		}
 		lappend cfglist $litem
-		set rport($i) [get_rport $portlist $i $use(nsites) \
+		set rsites($i) [get_rsites $i $use(nsites) \
 		    $known_master $cfgtype]
 		#
 		# Declare all sites bootstrap helpers.
 		#
-		foreach p $rport($i) {
+		foreach p $rsites($i) {
 			if { $use(peers) } {
-				set litem [list repmgr_site "127.0.0.1 $p \
+				set litem [list repmgr_site \
+				    "[lindex $hostlist $p]\
+				    [lindex $portlist $p]\
 				    db_bootstrap_helper on db_repmgr_peer on"]
 			} else {
-				set litem [list repmgr_site "127.0.0.1 $p \
+				set litem [list repmgr_site \
+				    "[lindex $hostlist $p]\
+				    [lindex $portlist $p]\
 				    db_bootstrap_helper on"]
 			}
 			#
@@ -866,6 +907,18 @@ proc run_db_reptest { dirsarr numsites runtime use_lease } {
 	}
 }
 
+proc db_reptest_blob_cmp_func { a b } {
+	set big_e [big_endian]
+	if { $big_e } {
+		binary scan $a I a
+		binary scan $b I b
+	} else {
+		binary scan $a i a
+		binary scan $b i b
+	}
+	return [expr $a - $b]
+}
+
 proc verify_db_reptest { num_sites dirsarr usearr kill site_rem } {
 	upvar $dirsarr dirs
 	upvar $usearr use
@@ -915,6 +968,22 @@ proc verify_db_reptest { num_sites dirsarr usearr kill site_rem } {
 			    {eval $dirs(env.$i)/$datadir/am1.db}] 0
 			continue
 		}
+
+		set bt_cmp 0
+		set ham_cmp 0
+		set blob_dir_exists [file exists $dirs(env.$startenv)/__db_bl]
+		if { $use(blobs) != 0 || $blob_dir_exists } {
+			set dbam1 [eval berkdb_open -env $envbase \
+			    -rdonly am1.db]
+			set actype [$dbam1 get_type]
+			$dbam1 close
+			if { $actype == "btree" } {
+				set bt_cmp db_reptest_blob_cmp_func
+			} else {
+				set ham_cmp db_reptest_blob_cmp_func
+			}
+		}
+
 		set cmpenv [berkdb_env_noerr -home $dirs(env.$i)]
 		puts "Compare $dirs(env.$startenv) with $dirs(env.$i)"
 		#
@@ -925,7 +994,7 @@ proc verify_db_reptest { num_sites dirsarr usearr kill site_rem } {
 		# 1 - match databases
 		# 0 - don't compare logs (for now)
 		rep_verify $dirs(env.$startenv) $envbase $dirs(env.$i) $cmpenv \
-		    0 1 0 am1.db $datadir
+		    0 1 0 am1.db $datadir $bt_cmp $ham_cmp
 		$cmpenv close
 	}
 	$envbase close
@@ -1317,6 +1386,86 @@ proc get_pmkill { cfgtype twosite } {
 }
 
 #
+# Determine the IP version used by sites in the replication group.
+# Returns the following values:
+#     IPV6     All sites use IPv6
+#     IPV4     All sites use IPv4
+#     IPMIXED  Some sites use IPv6 and others use IPv4
+#
+proc get_ipconfig { cfgtype } {
+	if { $cfgtype == "random" } {
+		set i [berkdb random_int 0 3]
+		if { $i == 2 } {
+			return "IPV4"
+		}
+		if { $i == 3 } {
+			return "IPMIXED"
+		}
+	}
+	return "IPV6"
+}
+
+#
+# Returns an array of the host strings to be used by each site in the
+# replication group.  Each host string is either the IPv6 or IPv4
+# loopback.  The combination of IPv6 and IPv4 is determined by ipconfig.
+#
+proc get_hosts { cfgtype nsites ipconfig } {
+	set hosts {}
+	set v6str "::1"
+	set v4str "127.0.0.1"
+	set hoststr $v6str
+	if { $ipconfig == "IPV4" } {
+		set hoststr $v4str
+	}
+
+	if { $cfgtype == "random" || $cfgtype == "restore" } {
+		# Fill in the initial array.
+		for { set i 1 } { $i <= $nsites } { incr i } {
+			lappend hosts $hoststr
+		}
+		#
+		# For a mixed configuration, the array was originally populated
+		# with IPv6 strings.  Now substitute the IPv4 string for the
+		# second element.  If there are 5 sites, also substitute the
+		# IPv4 string for the fourth element.
+		#
+		if { $ipconfig == "IPMIXED" } {
+			set hosts [lreplace $hosts 1 1 $v4str]
+			if { $nsites == 5 } {
+				set hosts [lreplace $hosts 3 3 $v4str]
+			}
+		}
+	}
+
+	#
+	# The basic_db_reptest options only use IPv6, so just create
+	# the basic host array they need.
+	#
+	if { $cfgtype == "basic0" || $cfgtype == "basic1" } {
+		for { set i 1 } { $i <= $nsites } { incr i } {
+			lappend hosts $hoststr
+		}
+	}
+
+	return $hosts
+}
+
+#
+# Set a socket callback 20% of the time, regardless of the other details
+# of the ip configuration.
+#
+proc get_socketcb { cfgtype } {
+	if { $cfgtype == "random" } {
+		set sockcb { 0 0 1 0 0 }
+		set len [expr [llength $sockcb] - 1]
+		set i [berkdb random_int 0 $len]
+		return [lindex $sockcb $i]
+	}
+	return 0
+}
+
+#
 # ELECT_LOGLENGTH is only significant in test cases where the master is killed.
 # The reason is that the repmgr group creator is automatically the master
 # without an election on initial startup.  Use ELECT_LOGLENGTH in 25% of the
@@ -1446,9 +1595,9 @@ proc get_autotakeover { kill remove view viewsite nsites pmkill } {
 # This is the number of worker threads performing the workload.
 # This is not the number of message processing threads.
 #
-# Scale back the number of worker threads if leases are in use.
-# The timing with leases can be fairly sensitive and since all sites
-# run on the local machine, too many workers on every site can
+# Scale back the number of worker threads if leases or blobs are in
+# use.  The timing with leases can be fairly sensitive and since all
+# sites run on the local machine, too many workers on every site can
 # overwhelm the system, causing lost messages and delays that make
 # the tests fail.  Rather than try to tweak timeouts, just reduce
 # the workloads a bit.
@@ -1458,9 +1607,9 @@ proc get_autotakeover { kill remove view viewsite nsites pmkill } {
 # after resyncing with the temporary master.  Too many workers
 # overwhelming the system can cause delays that make the test fail.
 #
-proc get_workers { cfgtype lease twosite} {
+proc get_workers { cfgtype lease twosite blobs} {
 	if { $cfgtype == "random" } {
-		if { $lease || $twosite == "PREFMAS"} {
+		if { $lease || $twosite == "PREFMAS" || $blobs } {
 			return [berkdb random_int 2 4]
 		} else {
 			return [berkdb random_int 2 8]
@@ -1489,12 +1638,37 @@ proc get_dbtype { cfgtype } {
 	}
 }
 
-proc get_runtime { cfgtype nsites useleases } {
+# On random configurations return blobs 20% of the time if the method supports
+# blobs.  
+proc get_blobs { cfgtype dbtype } {
+	if { $cfgtype == "random" \
+	    && $dbtype != "queue" && $dbtype != "recno" } {
+		set threshold { 0 0 0 0 1024 }
+		set len [expr [llength $threshold] - 1]
+		set i [berkdb random_int 0 $len]
+		return [lindex $threshold $i]
+	}
+	if { $cfgtype == "basic1" } {
+		return 1024
+	}
+	return 0
+}
+
+proc get_runtime { cfgtype nsites useleases useblobs } {
 	global os_tbase
 
 	if { $cfgtype == "random" } {
 		set min 100
-		if { $nsites > 4 && $useleases} {
+		if { $useleases && $useblobs } {
+			# Things are very slow when master leases are
+			# combined with blobs.  Master leases add delays to
+			# adding a site to the replication group and blobs
+			# have a longer internal init time.  A failure is most
+			# likely in a run that could kill the master site
+			# before all other sites have had time to complete
+			# their internal inits.
+			set min 300
+		} elseif { $nsites > 4 && $useleases} {
 			# Master leases really slow down the process of adding
 			# sites to the replication group.  With 5 sites it
 			# can take longer than the total test time when runtime
@@ -1512,7 +1686,13 @@ proc get_runtime { cfgtype nsites useleases } {
 	}
 }
 
-proc get_rport { portlist i num_sites known_master cfgtype} {
+#
+# Returns a list of the site numbers to be used as the remote
+# bootstrap helpers for a given site.  The site numbers will
+# be used as indexes into the lists of host strings and port
+# numbers when writing the remote sites to DB_CONFIG.
+#
+proc get_rsites { i num_sites known_master cfgtype} {
 	global rporttype
 
 	if { $cfgtype == "random" && $rporttype == "NULL" } {
@@ -1534,16 +1714,16 @@ proc get_rport { portlist i num_sites known_master cfgtype} {
 	#
 	if { $rporttype == "forwcirc" } {
 		if { $i != $num_sites } {
-			return [list [lindex $portlist $i]]
+			return $i
 		} else {
-			return [list [lindex $portlist 0]]
+			return 0
 		}
 	}
 	if { $rporttype == "backcirc" } {
 		if { $i != 1 } {
-			return [list [lindex $portlist [expr $i - 2]]]
+			return [expr $i - 2]
 		} else {
-			return [list [lindex $portlist [expr $num_sites - 1]]]
+			return [expr $num_sites - 1]
 		}
 	}
 	#
@@ -1558,7 +1738,7 @@ proc get_rport { portlist i num_sites known_master cfgtype} {
 		if { $i == $known_master } {
 			return {}
 		}
-		return [lindex $portlist $helper_site]
+		return $helper_site
 	}
 	#
 	# This produces a fully connected configuration
@@ -1567,8 +1747,7 @@ proc get_rport { portlist i num_sites known_master cfgtype} {
 		set rlist {}
 		for { set site 1 } { $site <= $num_sites } { incr site } {
 			if { $site != $i } {
-				lappend rlist \
-				    [lindex $portlist [expr $site - 1]]
+				lappend rlist [expr $site - 1]
 			}
 		}
 		return $rlist
@@ -1653,11 +1832,13 @@ proc get_orig_baseport { cfgtype { restoredir NULL } } {
 	} else {
 		set cid [open $restoredir/DB_CONFIG.1 r]
 		set cfg [read $cid]
-		# Look for a number between "127.0.0.1" and "db_local_site on".
-		# The spaces after 127.0.0.1 and before db_local_site are
-		# significant in the pattern match.  Also accept localhost as
-		# input so that old configs can be run.
-		regexp {(127.0.0.1 |localhost )([0-9]+)( db_local_site on)} \
+		# Look for a number between "::1" or "127.0.0.1" and
+		# "db_local_site on".  The spaces after ::1/127.0.0.1 and
+		# before db_local_site are significant in the pattern match.
+		# Also accept localhost as input so that old configs can be
+		# run.
+		regexp \
+		    {(::1 |127.0.0.1 |localhost )([0-9]+)( db_local_site on)} \
 		    $cfg match p1 pnum
 		close $cid
 		return [expr $pnum - 1]
@@ -1665,14 +1846,14 @@ proc get_orig_baseport { cfgtype { restoredir NULL } } {
 }
 
 #
-# Convert DB_CONFIG file port numbers following "127.0.0.1 " to use a 
-# different baseport.  regsub -all substitutes all occurrences of pattern,
-# which is "127.0.0.1 " and a number.  The result of regsub contains a tcl
-# expression with the number (\2, the second part of the pattern), operators
-# and variable names, e.g.:
+# Convert DB_CONFIG file port numbers following "::1 " or "127.0.0.1 " to use 
+# a different baseport.  regsub -all substitutes all occurrences of pattern,
+# which is "::1 " or "127.0.0.1" and a number.  The result of regsub contains
+# a tcl expression with the number (\2, the second part of the pattern),
+# operators and variable names, e.g.:
 #     -K [expr 30104 - $baseport(orig) + $baseport(curr)]
 # and then subst evalutes the tcl expression.  Also accept localhost as
-# input so that old configs can be run.
+# input so that old configs can be run and convert localhost to "::1".
 #
 # Writes a converted copy of orig_file to new_file.
 #
@@ -1681,7 +1862,9 @@ proc convert_config_ports { orig_file new_file basept } {
 
 	set cid [open $orig_file r]
 	set cfg [read $cid]
-	regsub -all {(127.0.0.1 |localhost )([0-9]+)} $cfg \
+	regsub -all {(::1 |localhost )([0-9]+)} $cfg \
+	    {::1 [expr \2 - $baseport(orig) + $baseport(curr)]} cfg
+	regsub -all {(127.0.0.1 )([0-9]+)} $cfg \
 	    {127.0.0.1 [expr \2 - $baseport(orig) + $baseport(curr)]} cfg
 	set cfg [subst $cfg]
 	close $cid
@@ -1695,6 +1878,21 @@ proc parse_runtime { progargs } {
 	set i [lsearch $progargs "-T"]
 	set val [lindex $progargs [expr $i + 1]]
 	return $val
+}
+
+proc parse_ipconfig { progargs } {
+	set ipconfig "IPV6"
+	set val 0
+	set i [lsearch $progargs "-I"]
+	if { $i > -1 } {
+		set val [lindex $progargs [expr $i + 1]]
+	}
+	if { $val == 1 } {
+		set ipconfig "IPV4"
+	} elseif { $val == 2 } {
+		set ipconfig "IPMIXED"
+	}
+	return $ipconfig
 }
 
 proc print_summary { } {

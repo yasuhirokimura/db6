@@ -1,6 +1,47 @@
 SQLite ODBC Driver
 ------------------
 
+Mon Apr 13 2015 version 0.9992 released
+
+	* update to SQLite 3.8.9
+	* fixed buffer length return in SQLGetStmtAttr*()
+	* report SQL_SC_SQL92_ENTRY level for
+	  SQLGetInfo(...SQL_SQL_CONFORMANCE...)
+	* improved configure for cross-compiling
+
+Mon Dec 29 2014 version 0.9991 released
+
+	* update to SQLite 3.8.7.4
+	* Win32 now uses per SQLHDBC locking, thanks
+	  Bruno Schw"agli for testing
+	* fixed crashes in sqlite3_table_column_metadata() use
+	* added transaction patches from Jean-Louis Charton
+
+Sat Sep 20 2014 version 0.999 released
+
+	* update to SQLite 3.8.6
+	* fixes to improve support of MS Excel 2010
+	* treat CTE expressions (WITH ...) like SELECT with
+	  handling of result set
+
+Mon Jul 21 2014 version 0.998 released
+
+	* update to SQLite 3.8.5
+	* no more out of memory condition for zero length
+	  blobs, thanks Dan Kennedy for initial fix
+	* default SQL_BINARY columns to width 255
+	* provide default database name as empty string,
+	  i.e. don't omit "Database=" in connect strings
+
+Fri Mar 28 2014 version 0.997 released
+
+	* update to SQLite 3.8.4.2
+	* Win32 inst.exe does not provide default database name
+	  for system DSN anymore (thanks Walter Tsui for suggestion)
+	* improved parsing width/precision in schema
+	  (thanks Jean-Louis Charton for initial fix)
+	* removed artificial delay in SQLCancel()
+
 Sun Dec 08 2013 version 0.996 released
 
 	* update to SQLite 3.8.2

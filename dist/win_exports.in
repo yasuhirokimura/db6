@@ -169,13 +169,21 @@ __dbreg_register_desc						db db_small
 __dbreg_register_42_desc					db db_small
 __dbt_usercopy						db db_small 
 __dbt_userfree						db db_small 
-__fop_create_42_desc						db db_small 
+__env_encrypt_adj_size					db
+__env_encrypt						db
+__env_decrypt						db
+__fop_create_42_desc						db db_small
+__fop_create_60_desc						db db_small
 __fop_create_desc						db db_small 
-__fop_file_remove_desc						db db_small 
+__fop_file_remove_60_desc					db db_small
+__fop_file_remove_desc						db db_small
+__fop_remove_60_desc						db db_small
 __fop_remove_desc						db db_small 
-__fop_rename_42_desc						db db_small 
-__fop_rename_desc						db db_small 
-__fop_write_42_desc						db db_small 
+__fop_rename_42_desc						db db_small
+__fop_rename_60_desc						db db_small
+__fop_rename_desc						db db_small
+__fop_write_42_desc						db db_small
+__fop_write_60_desc						db db_small 
 __fop_write_desc						db db_small
 __fop_write_file_60_desc					db db_small
 __fop_write_file_desc						db db_small

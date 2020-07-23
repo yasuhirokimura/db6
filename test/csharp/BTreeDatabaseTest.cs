@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2009, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2009, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 using System;
@@ -31,40 +31,45 @@ namespace CsharpAPITest
 		{
 			testName = "TestBlob";
 			SetUpTest(false);
-			// Test opening the blob database without environment.
+			// Test opening the external file database without
+			// environment.
 			TestBlobBtreeDatabase(0, null, 6, null, false);
 
 			/*
-			 * Test opening the blob database without environment
-			 * but specifying blob directory.
+			 * Test opening the external file database without
+			 * environment
+			 * but specifying external file directory.
 			 */
 			TestBlobBtreeDatabase(0, null, 6,
 			    testHome + "/DBBLOB", true);
 
-			// Test opening the blob database with environment.
+			// Test opening the external file database with
+			// environment.
 			TestBlobBtreeDatabase(3, "ENVBLOB", 6, null, false);
 
 			/*
-			 * Test opening the blob database with environment
-			 * and specifying blob directory.
+			 * Test opening the external file database with
+			 * environment and specifying external file directory.
 			 */
 			TestBlobBtreeDatabase(3, null, 6, "/DBBLOB", true);
 		}
 
 		/*
-		 * Test the blob database with or without environment.
+		 * Test the external file database with or without environment.
 		 * 1. Config and open the environment;
-		 * 2. Verify the environment blob configs;
+		 * 2. Verify the environment external file configs;
 		 * 3. Config and open the database;
-		 * 4. Verify the database blob configs;
-		 * 5. Insert and verify some blob data by database methods;
-		 * 6. Insert some blob data by cursor, update it and verify
+		 * 4. Verify the database external file configs;
+		 * 5. Insert and verify some external file data by database
+		 * methods;
+		 * 6. Insert some external file data by cursor, update it and
+		 * verify
 		 * the update by database stream and cursor;
 		 * 7. Verify the stats;
 		 * 8. Close all handles.
 		 * If "blobdbt" is true, set the data DatabaseEntry.Blob as
-		 * true, otherwise make the data DatabaseEntry reach the blob
-		 * threshold in size.
+		 * true, otherwise make the data DatabaseEntry reach the
+		 * external file threshold in size.
 		 */
 		void TestBlobBtreeDatabase(uint env_threshold,
 		    string env_blobdir, uint db_threshold,
@@ -81,7 +86,8 @@ namespace CsharpAPITest
 			cfg.Creation = CreatePolicy.ALWAYS;
 			string blrootdir = "__db_bl";
 
-			// Open the environment and verify the blob configs.
+			// Open the environment and verify the external file
+			// configs.
 			if (env_threshold > 0)
 			{
 				DatabaseEnvironmentConfig envConfig =
@@ -92,36 +98,37 @@ namespace CsharpAPITest
 				envConfig.UseLogging = true;
 				envConfig.UseTxns = true;
 				envConfig.UseLocking = true;
-				envConfig.BlobThreshold = env_threshold;
+				envConfig.ExternalFileThreshold = env_threshold;
 				if (env_blobdir != null)
 				{
-					envConfig.BlobDir = env_blobdir;
+					envConfig.ExternalFileDir = env_blobdir;
 					blrootdir = env_blobdir;
 				}
 				DatabaseEnvironment env =
 				    DatabaseEnvironment.Open(
 				    testHome, envConfig);
 				if (env_blobdir == null)
-					Assert.IsNull(env.BlobDir);
+					Assert.IsNull(env.ExternalFileDir);
 				else
-					Assert.AreEqual(0, env.BlobDir.
+					Assert.AreEqual(0, env.ExternalFileDir.
 					    CompareTo(env_blobdir));
 				Assert.AreEqual(env_threshold,
-				    env.BlobThreshold);
+				    env.ExternalFileThreshold);
 				cfg.Env = env;
 				btreeDBName = testName + ".db";
 			}
 
-			// Open the database and verify the blob configs.
+			// Open the database and verify the external file
+			// configs.
 			if (db_threshold > 0)
-				cfg.BlobThreshold = db_threshold;
+				cfg.ExternalFileThreshold = db_threshold;
 			if (db_blobdir != null)
 			{
-				cfg.BlobDir = db_blobdir;
+				cfg.ExternalFileDir = db_blobdir;
 				/*
-				 * The blob directory setting in the database
- 				 * is effective only when it is opened without
-				 * an environment.
+				 * The external file directory setting in the
+ 				 * database is effective only when it is opened
+				 * without an environment.
 				 */
 				if (cfg.Env == null)
 					blrootdir = db_blobdir;
@@ -131,14 +138,15 @@ namespace CsharpAPITest
 			    BTreeDatabase.Open(btreeDBName, cfg);
 			Assert.AreEqual(
 			    db_threshold > 0 ? db_threshold : env_threshold,
-			    db.BlobThreshold);
+			    db.ExternalFileThreshold);
 			if (db_blobdir == null && cfg.Env == null)
-				Assert.IsNull(db.BlobDir);
+				Assert.IsNull(db.ExternalFileDir);
 			else
 				Assert.AreEqual(0,
-				    db.BlobDir.CompareTo(blrootdir));
+				    db.ExternalFileDir.CompareTo(blrootdir));
 
-			// Insert and verify some blob data by database methods.
+			// Insert and verify some external file data by
+			// database methods.
 			string[] records = {"a", "b", "c", "d", "e", "f", "g",
 			    "h", "i", "j", "k", "l", "m", "n", "o", "p", "q",
 			    "r", "s", "t", "u", "v", "w", "x", "y", "z"};
@@ -147,8 +155,8 @@ namespace CsharpAPITest
 			byte[] kdata, ddata;
 			string str;
 			KeyValuePair<DatabaseEntry, DatabaseEntry> pair;
-			ddbt.Blob = blobdbt;
-			Assert.AreEqual(blobdbt, ddbt.Blob);
+			ddbt.ExternalFile = blobdbt;
+			Assert.AreEqual(blobdbt, ddbt.ExternalFile);
 			for (int i = 0; i < records.Length; i++)
 			{
 				kdata = BitConverter.GetBytes(i);
@@ -176,15 +184,15 @@ namespace CsharpAPITest
 			}
 
 			/*
-			 * Insert some blob data by cursor, update it and verify
-			 * the update by database stream.
+			 * Insert some external file data by cursor, update it
+			 * and verify the update by database stream.
 			 */
 			kdata = BitConverter.GetBytes(records.Length);
 			ddata = Encoding.ASCII.GetBytes("abc");
 			kdbt.Data = kdata;
 			ddbt.Data = ddata;
-			ddbt.Blob = true;
-			Assert.IsTrue(ddbt.Blob);
+			ddbt.ExternalFile = true;
+			Assert.IsTrue(ddbt.ExternalFile);
 			pair = new KeyValuePair<
 			    DatabaseEntry, DatabaseEntry>(kdbt, ddbt);
 			CursorConfig dbcConfig = new CursorConfig();
@@ -240,7 +248,7 @@ namespace CsharpAPITest
 				txn.Commit();
 
 			/*
-			 * Verify the blob files are created
+			 * Verify the external file files are created
 			 * in the expected location.
 			 * This part of test code is disabled since
 			 * BTreeDatabase.BlobSubDir is not exposed to users.
@@ -256,7 +264,7 @@ namespace CsharpAPITest
 
 			// Verify the stats.
 			BTreeStats st = db.Stats();
-			Assert.AreEqual(records.Length + 1, st.nBlobRecords);
+			Assert.AreEqual(records.Length + 1, st.nExternalFiles);
 
 			// Close all handles.
 			db.Close();
@@ -264,7 +272,7 @@ namespace CsharpAPITest
 				cfg.Env.Close();
 
 			/*
-			 * Remove the default blob directory when it
+			 * Remove the default external file directory when it
 			 * is not under the test home.
 			 */
 			if (db_blobdir == null && cfg.Env == null)
@@ -1358,7 +1366,7 @@ ASCIIEncoding.ASCII.GetBytes(Configuration.RandomString(100)));
 
 			// Call set_msgcall() of env.
 			db.messageFeedback = new MessageFeedbackDelegate(Msgcall_fcn);
-			db.messageFeedback(messageInfo);
+			db.messageFeedback(null, messageInfo);
 
 			// Unconfigures the callback interface.
 			db.messageFeedback = null;
@@ -1380,11 +1388,13 @@ ASCIIEncoding.ASCII.GetBytes(Configuration.RandomString(100)));
 			env.Close();
 		}
 
-		public void Msgcall_fcn(string message)
+		public void Msgcall_fcn(string msgpfx, string message)
 		{
 			string msgfile = testHome + "/" + "MessageCallFile";
 			FileStream fs = new FileStream(msgfile, FileMode.OpenOrCreate);
 			StreamWriter sw = new StreamWriter(fs);
+			if (msgpfx != null)
+				sw.Write(msgpfx + ": ");
 			sw.Write(message);
 			sw.Flush();
 			sw.Close();
@@ -2836,7 +2846,7 @@ ASCIIEncoding.ASCII.GetBytes(Configuration.RandomString(100)));
 			testName = "TestUpgrade";
 			SetUpTest(true);
 
-			string srcDBFileName = "../../bdb4.7.db";
+			string srcDBFileName = "../../../bdb4.7.db";
 			string testDBFileName = testHome + "/bdb4.7.db";
 
 			FileInfo srcDBFileInfo = new FileInfo(srcDBFileName);

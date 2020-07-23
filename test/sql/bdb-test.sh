@@ -4,6 +4,10 @@ TOP=`dirname $0`
 TOP=`cd $TOP && /bin/pwd`
 SQLITE=$TOP/../../lang/sql/sqlite
 
+# Excluded Tests
+#
+# thread1.test - Reace condition can lead to hangs.
+#
 BDB_TESTS_PASSING="\
 aggerror.test
 alter.test
@@ -16,6 +20,7 @@ analyze4.test
 analyze5.test
 analyze6.test
 analyze7.test
+analyzeC.test
 async.test
 async2.test
 async3.test
@@ -26,6 +31,9 @@ auth.test
 auth2.test
 auth3.test
 autoinc.test
+autoindex2.test
+autoindex3.test
+autoindex4.test
 autovacuum.test
 autovacuum_ioerr2.test
 backup.test
@@ -43,9 +51,13 @@ bdb_mvcc.test
 bdb_persistent_pragma.test
 bdb_pragmas.test
 bdb_rdonly.test
+bdb_replication.test
 bdb_sequence.test
+bdb_userauth_keystore.test
+bdb_userauth_pragma.test
 between.test
 bigrow.test
+bigsort.test
 bind.test
 bindxfer.test
 bitvec.test
@@ -54,6 +66,8 @@ boundary1.test
 boundary2.test
 boundary3.test
 boundary4.test
+btree01.test
+btree02.test
 capi3d.test
 cast.test
 check.test
@@ -71,6 +85,7 @@ collate9.test
 collateA.test
 colmeta.test
 colname.test
+cost.test
 count.test
 createtab.test
 cse.test
@@ -83,6 +98,10 @@ descidx1.test
 descidx2.test
 descidx3.test
 distinctagg.test
+e_blobbytes.test
+e_blobopen.test
+e_blobwrite.test
+e_changes.test
 e_createtable.test
 e_droptrigger.test
 e_insert.test
@@ -90,6 +109,7 @@ e_reindex.test
 e_resolve.test
 e_select.test
 e_select2.test
+e_totalchanges.test
 e_update.test
 enc.test
 enc3.test
@@ -101,6 +121,7 @@ expr.test
 fkey1.test
 fkey2.test
 fkey3.test
+fkey8.test
 fkey_malloc.test
 func.test
 func2.test
@@ -114,11 +135,13 @@ in.test
 in2.test
 in3.test
 in4.test
+incrblob.test
 incrblob2.test
 incrblob4.test
 incrblob_err.test
 incrvacuum.test
 incrvacuum2.test
+incrvacuum_ioerr.test
 index.test
 index2.test
 index3.test
@@ -142,6 +165,7 @@ lastinsert.test
 laststmtchanges.test
 like.test
 like2.test
+like3.test
 limit.test
 loadext.test
 loadext2.test
@@ -159,6 +183,7 @@ mallocF.test
 mallocG.test
 mallocH.test
 mallocJ.test
+mallocL.test
 manydb.test
 mem5.test
 memdb.test
@@ -171,6 +196,7 @@ misc2.test
 misc3.test
 misc4.test
 misc6.test
+misc8.test
 misuse.test
 nan.test
 notify1.test
@@ -178,6 +204,9 @@ notify2.test
 notnull.test
 null.test
 openv2.test
+orderby6.test
+orderby8.test
+ovfl.test
 pagesize.test
 printf.test
 ptrchng.test
@@ -210,14 +239,20 @@ select9.test
 selectA.test
 selectB.test
 selectC.test
+selectF.test
+selectG.test
 server1.test
 shared2.test
 shared3.test
 shared4.test
 shared6.test
 shared7.test
+sharedB.test
 sidedelete.test
 sort.test
+sort2.test
+sort3.test
+sort4.test
 sqllimits1.test
 subquery.test
 subselect.test
@@ -230,19 +265,24 @@ thread001.test
 thread003.test
 thread004.test
 thread005.test
-thread1.test
 thread2.test
 tkt-2a5629202f.test
 tkt-38cb5df375.test
 tkt-3998683a16.test
 tkt-3a77c9714e.test
+tkt-4ef7e3cfca.test
 tkt-5e10420e8d.test
 tkt-385a5b56b9.test
 tkt-752e1646fc.test
 tkt-80ba201079.test
 tkt-8454a207b9.test
+tkt-8c63ff0ec.test
+tkt-9a8b09f8e6.test
 tkt-b351d95f9.test
+tkt-b75a9ca6b0.test
+tkt-ba7cbfaedc.test
 tkt-bdc6bbbb38.test
+tkt-f67b41381a.test
 tkt-f7b4edec.test
 tokenize.test
 trace.test
@@ -267,8 +307,10 @@ types.test
 types2.test
 types3.test
 unique.test
+unique2.test
 unordered.test
 update.test
+userauth01.test
 utf16align.test
 vacuum.test
 vacuum2.test
@@ -300,14 +342,19 @@ where7.test
 where8.test
 where8m.test
 where9.test
+whereA.test
 whereB.test
 whereC.test
+whereI.test
 wherelimit.test
 with1.test
 with2.test
+without_rowid6.test
 zeroblob.test"
 
-# Tests to run with blob files enabled
+# Tests to run with blob files enabled.  This is designed as 
+# a quick sanity test, to be run manually with the command
+# sh ../../test/sql/bdb-test.sh blobs 
 BDB_TESTS_BLOB="\
 alter.test
 alter3.test
@@ -488,7 +535,6 @@ temptrigger.test
 thread001.test
 thread004.test
 thread005.test
-thread1.test
 thread2.test
 tkt-2a5629202f.test
 tkt-38cb5df375.test
@@ -595,6 +641,12 @@ rtree4.test
 rtree5.test
 rtree6.test"
 
+BDB_USERAUTH_TESTS="\
+userauth01.test
+bdb_userauth_keystore.test
+bdb_userauth_pragma.test
+"
+
 exe_suffix=""
 cygwin=`uname | grep -i "cygwin"`
 if [ "$cygwin" != "" ]; then
@@ -621,16 +673,17 @@ case "$1" in
 esac
 
 case "$1" in
-passing) TEST_CASES="$BDB_TESTS_PASSING";;
-blobs)   TEST_CASES="$BDB_TESTS_BLOB";;
-errors)  TEST_CASES="$BDB_TESTS_ERRORS";;
-hangs)   TEST_CASES="$BDB_TESTS_HANGS";;
-fts3)	 TEST_CASES="$BDB_FTS3_TESTS"
-	 TIMEOUT=7200
-	 ;;
-rtree)	 TEST_CASES="$BDB_RTREE_TESTS"
-	 TIMEOUT=7200
-	 ;;
+passing)    TEST_CASES="$BDB_TESTS_PASSING";;
+blobs)      TEST_CASES="$BDB_TESTS_BLOB";;
+errors)     TEST_CASES="$BDB_TESTS_ERRORS";;
+hangs)      TEST_CASES="$BDB_TESTS_HANGS";;
+fts3)	    TEST_CASES="$BDB_FTS3_TESTS"
+	    TIMEOUT=7200
+	    ;;
+rtree)	    TEST_CASES="$BDB_RTREE_TESTS"
+	    TIMEOUT=7200
+	    ;;
+userauth)   TEST_CASES="$BDB_USERAUTH_TESTS";;
 *)       TEST_CASES="$BDB_TESTS_ALL";;
 esac
 

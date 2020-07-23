@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2011, 2014 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016 Oracle and/or its affiliates. All rights reserved.
  */
 
 #include <ctype.h>
@@ -231,7 +231,7 @@ setup(envp1, envp2, envp3, g)
 	CHECK(dbenv1->open(dbenv1, "DIR1", flags, 0));
 	
 	CHECK(dbenv1->rep_set_config(dbenv1, DB_REPMGR_CONF_ELECTIONS, 0));
-	CHECK(dbenv1->repmgr_site(dbenv1, "localhost", ports[0], &dbsite, 0));
+	CHECK(dbenv1->repmgr_site(dbenv1, "::1", ports[0], &dbsite, 0));
 	CHECK(dbsite->set_config(dbsite, DB_LOCAL_SITE, 1));
 	CHECK(dbsite->close(dbsite));
 	CHECK(dbenv1->set_event_notify(dbenv1, notify));
@@ -246,10 +246,10 @@ setup(envp1, envp2, envp3, g)
 	CHECK(dbenv2->open(dbenv2, "DIR2", flags, 0));
 	CHECK(dbenv2->rep_set_config(dbenv2, DB_REPMGR_CONF_ELECTIONS, 0));
 
-	CHECK(dbenv2->repmgr_site(dbenv2, "localhost", ports[1], &dbsite, 0));
+	CHECK(dbenv2->repmgr_site(dbenv2, "::1", ports[1], &dbsite, 0));
 	CHECK(dbsite->set_config(dbsite, DB_LOCAL_SITE, 1));
 	CHECK(dbsite->close(dbsite));
-	CHECK(dbenv2->repmgr_site(dbenv2, "localhost", ports[0], &dbsite, 0));
+	CHECK(dbenv2->repmgr_site(dbenv2, "::1", ports[0], &dbsite, 0));
 	CHECK(dbsite->set_config(dbsite, DB_BOOTSTRAP_HELPER, 1));
 	CHECK(dbsite->close(dbsite));
 	CHECK(dbenv2->set_event_notify(dbenv2, notify));
@@ -271,10 +271,10 @@ setup(envp1, envp2, envp3, g)
 	CHECK(dbenv3->open(dbenv3, "DIR3", flags, 0));
 	CHECK(dbenv3->rep_set_config(dbenv3, DB_REPMGR_CONF_ELECTIONS, 0));
 
-	CHECK(dbenv3->repmgr_site(dbenv3, "localhost", ports[2], &dbsite, 0));
+	CHECK(dbenv3->repmgr_site(dbenv3, "::1", ports[2], &dbsite, 0));
 	CHECK(dbsite->set_config(dbsite, DB_LOCAL_SITE, 1));
 	CHECK(dbsite->close(dbsite));
-	CHECK(dbenv3->repmgr_site(dbenv3, "localhost", ports[0], &dbsite, 0));
+	CHECK(dbenv3->repmgr_site(dbenv3, "::1", ports[0], &dbsite, 0));
 	CHECK(dbsite->set_config(dbsite, DB_BOOTSTRAP_HELPER, 1));
 	CHECK(dbsite->close(dbsite));
 	CHECK(dbenv3->set_event_notify(dbenv3, notify));
@@ -433,7 +433,7 @@ int TestChannelFeature(CuTest *ct) {
 	 */
 	CuAssertTrue(ct,
 	    (ret = dbenv1->repmgr_site(dbenv1,
-		"localhost", ports[1], &dbsite, 0)) == 0);
+		"::1", ports[1], &dbsite, 0)) == 0);
 	CuAssertTrue(ct, (ret = dbsite->get_eid(dbsite, &eid)) == 0);
 	CuAssertTrue(ct, (ret = dbsite->close(dbsite)) == 0);
 	CuAssertTrue(ct, (ret = dbenv1->repmgr_channel(dbenv1, eid, &ch, 0)) == 0);
@@ -682,7 +682,7 @@ int TestChannelFeature(CuTest *ct) {
 	CuAssertTrue(ct, (ret = dbenv1->repmgr_msg_dispatch(dbenv1, msg_disp3, 0)) == 0);
 	CuAssertTrue(ct,
 	    (ret = dbenv2->repmgr_site(dbenv2,
-		"localhost", ports[0], &dbsite, 0)) == 0);
+		"::1", ports[0], &dbsite, 0)) == 0);
 	CuAssertTrue(ct, (ret = dbsite->get_eid(dbsite, &eid)) == 0);
 	CuAssertTrue(ct, (ret = dbsite->close(dbsite)) == 0);
 	CuAssertTrue(ct, (ret = dbenv2->repmgr_channel(dbenv2, eid, &ch, 0)) == 0);
@@ -735,7 +735,7 @@ int TestChannelFeature(CuTest *ct) {
 	CuAssertTrue(ct, (ret = dbenv2->repmgr_msg_dispatch(dbenv2, msg_disp4, 0)) == 0);
 	CuAssertTrue(ct,
 	    (ret = dbenv2->repmgr_site(dbenv2,
-		"localhost", ports[2], &dbsite, 0)) == 0);
+		"::1", ports[2], &dbsite, 0)) == 0);
 	CuAssertTrue(ct, (ret = dbsite->get_eid(dbsite, &eid)) == 0);
 	CuAssertTrue(ct, (ret = dbsite->close(dbsite)) == 0);
 	CuAssertTrue(ct, (ret = dbenv2->repmgr_channel(dbenv2, eid, &ch, 0)) == 0);
@@ -1311,7 +1311,7 @@ static int get_avail_ports(ports, count)
 		i = incr;
 
 		while (i-- > 0) {
-			if ((ret = __repmgr_getaddr(NULL, "localhost", curport,
+			if ((ret = __repmgr_getaddr(NULL, "::1", curport,
 			    AI_PASSIVE, &orig_ai)) != 0)
 				goto end;
 

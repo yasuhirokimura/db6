@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -130,7 +130,11 @@ DB_ENV-&gt;rep_process_message(DB_ENV *env,
                  client is unable to synchronize with the new master. This is possibly because the client
                  has turned off automatic internal initialization by setting the
                  <a class="link" href="repconfig.html#config_DB_REP_CONF_AUTOINIT">DB_REP_CONF_AUTOINIT</a> 
-                 flag to <code class="literal">0</code>.
+                 flag to <code class="literal">0</code>. Another possible reason is that
+                 an unencrypted client is attempting to join a replication
+                 group where encryption is use, or an encrypted client is
+                 attempting to join a replication group where encryption is
+                 not in use.
             </p>
           </li>
           <li>
@@ -175,7 +179,7 @@ DB_ENV-&gt;rep_process_message(DB_ENV *env,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp3910120"></a>Parameters</h3>
+              <h3 class="title"><a id="idp6800560"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -183,7 +187,7 @@ DB_ENV-&gt;rep_process_message(DB_ENV *env,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp3918136"></a>control</h4>
+                <h4 class="title"><a id="idp6798912"></a>control</h4>
               </div>
             </div>
           </div>
@@ -198,7 +202,7 @@ See the <a class="xref" href="reptransport.html" title="DB_ENV-&gt;rep_set_trans
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp3925688"></a>rec</h4>
+                <h4 class="title"><a id="idp6813856"></a>rec</h4>
               </div>
             </div>
           </div>
@@ -213,7 +217,7 @@ See the <a class="xref" href="reptransport.html" title="DB_ENV-&gt;rep_set_trans
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp3927136"></a>envid</h4>
+                <h4 class="title"><a id="idp6775456"></a>envid</h4>
               </div>
             </div>
           </div>
@@ -228,7 +232,7 @@ See the <a class="xref" href="reptransport.html" title="DB_ENV-&gt;rep_set_trans
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp3929816"></a>ret_lsnp</h4>
+                <h4 class="title"><a id="idp6821920"></a>ret_lsnp</h4>
               </div>
             </div>
           </div>
@@ -251,7 +255,7 @@ See the <a class="xref" href="reptransport.html" title="DB_ENV-&gt;rep_set_trans
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp3913888"></a>Errors</h3>
+              <h3 class="title"><a id="idp6791760"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -268,7 +272,7 @@ See the <a class="xref" href="reptransport.html" title="DB_ENV-&gt;rep_set_trans
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp3935504"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp6832352"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -287,7 +291,7 @@ See the <a class="xref" href="reptransport.html" title="DB_ENV-&gt;rep_set_trans
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp3936360"></a>Class</h3>
+              <h3 class="title"><a id="idp6834096"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -299,7 +303,7 @@ See the <a class="xref" href="reptransport.html" title="DB_ENV-&gt;rep_set_trans
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp3938192"></a>See Also</h3>
+              <h3 class="title"><a id="idp6776640"></a>See Also</h3>
             </div>
           </div>
         </div>

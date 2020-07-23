@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  */
 /*
  * Copyright (c) 1990, 1993, 1994, 1995, 1996
@@ -52,18 +52,29 @@ static int __bam_root __P((DBC *, EPG *));
 
 /*
  * __bam_split --
- *	Split a page.
+ *	Split a data page and any full index pages above it. If all the pages up
+ *	to and including the root are full, then grow the tree by one level.
+ *	Splitting or collapsing the root does not change the page number -- 
+ *	although __bam_compact_int does.
+ *
+ *	The caller can request the root pgno of the subtree that is an ancestor
+ *	of the to-be-inserted key. This is either the root of the tree or it is
+ *	the parent of the last split performed while going 'up' the tree. This
+ *	optimization allows later searches to safely rescan only that portion of
+ *	the tree, because the subtree pgno is write locked. The caller must
+ *	ignore the returned subroot pgno if __bam_split returns an error.
  *
  * PUBLIC: int __bam_split __P((DBC *, void *, db_pgno_t *));
  */
 int
-__bam_split(dbc, arg, root_pgnop)
+__bam_split(dbc, arg, subtree_rootp)
 	DBC *dbc;
 	void *arg;
-	db_pgno_t *root_pgnop;
+	db_pgno_t *subtree_rootp;
 {
 	BTREE_CURSOR *cp;
 	DB_LOCK meta_lock, next_lock;
+	PAGE *page;
 	enum { UP, DOWN } dir;
 	db_pgno_t pgno, next_pgno, root_pgno;
 	int exact, level, ret;
@@ -77,8 +88,10 @@ __bam_split(dbc, arg, root_pgnop)
 	next_pgno = PGNO_INVALID;
 
 	/*
-	 * First get a lock on the metadata page; we will have to allocate
-	 * pages and cannot get a lock while we have the search tree pinned.
+	 * First get a lock on the metadata page; we will have to allocate pages
+	 * and cannot wait for a lock while we have the search tree pinned.
+	 * This also prevents a concurrent compact from relocating the root pgno
+	 * out from underneath us.
 	 */
 	pgno = PGNO_BASE_MD;
 	if ((ret = __db_lget(dbc, 0, pgno, DB_LOCK_WRITE, 0, &meta_lock)) != 0)
@@ -104,7 +117,7 @@ __bam_split(dbc, arg, root_pgnop)
 	 * root page as the final resort.  The entire process then repeats,
 	 * as necessary, until we split a leaf page.
 	 *
-	 * XXX
+	 * Note:
 	 * A traditional method of speeding this up is to maintain a stack of
 	 * the pages traversed in the original search.  You can detect if the
 	 * stack is correct by storing the page's LSN when it was searched and
@@ -113,9 +126,7 @@ __bam_split(dbc, arg, root_pgnop)
 	 * numbers that indicate it's worthwhile.
 	 */
 	for (dir = UP, level = LEAFLEVEL;; dir == UP ? ++level : --level) {
-		/*
-		 * Acquire a page and its parent, locked.
-		 */
+		/* Acquire a page and its parent, locked. */
 retry:		if ((ret = (dbc->dbtype == DB_BTREE ?
 		    __bam_search(dbc, PGNO_INVALID,
 			arg, SR_WRPAIR, level, NULL, &exact) :
@@ -123,22 +134,24 @@ retry:		if ((ret = (dbc->dbtype == DB_BTREE ?
 			(db_recno_t *)arg, SR_WRPAIR, level, &exact))) != 0)
 			break;
 
-		if (cp->csp[0].page->pgno == root_pgno) {
-			/* we can overshoot the top of the tree. */
-			level = cp->csp[0].page->level;
-			if (root_pgnop != NULL)
-				*root_pgnop = root_pgno;
-		} else if (root_pgnop != NULL)
-			*root_pgnop = cp->csp[-1].page->pgno;
+		page = cp->csp[0].page;
+		/*
+		 * Set level if we are at the root; the tree might have been
+		 * compacted and we could have just overshot its top.
+		 */
+		if (page->pgno == root_pgno && level != page->level) {
+			__db_msg(dbc->env, "bam_split overshot root level %u -> %u",
+			    level, page->level);
+			level = page->level;
+		}
 
 		/*
-		 * Split the page if it still needs it (it's possible another
-		 * thread of control has already split the page).  If we are
-		 * guaranteed that two items will fit on the page, the split
-		 * is no longer necessary.
+		 * If there is space for two items on the page, the split at
+		 * this level is no longer necessary -- another thread has
+		 * already done it.
 		 */
 		if (2 * B_MAXSIZEONPAGE(cp->ovflsize)
-		    <= (db_indx_t)P_FREESPACE(dbc->dbp, cp->csp[0].page)) {
+		    <= (db_indx_t)P_FREESPACE(dbc->dbp, page)) {
 			if ((ret = __bam_stkrel(dbc, STK_NOLOCK)) != 0)
 				goto err;
 			goto no_split;
@@ -148,14 +161,24 @@ retry:		if ((ret = (dbc->dbtype == DB_BTREE ?
 		 * We need to try to lock the next page so we can update
 		 * its PREV.
 		 */
-		if (ISLEAF(cp->csp->page) &&
-		    (pgno = NEXT_PGNO(cp->csp->page)) != PGNO_INVALID) {
+		if (ISLEAF(page) && (pgno = NEXT_PGNO(page)) != PGNO_INVALID) {
 			TRY_LOCK(dbc, pgno,
 			     next_pgno, next_lock, DB_LOCK_WRITE, retry);
 			if (ret != 0)
 				goto err;
 		}
-		ret = cp->csp[0].page->pgno == root_pgno ?
+
+		/*
+		 * This code fulfills the caller request for the subtree root.
+		 * When the direction is UP, we update the subtree root with
+		 * the position before attempting the split; if there is no room
+		 * here we'll repeat this step on the next level up.
+		 */
+		if (subtree_rootp != NULL && dir == UP)
+			*subtree_rootp = (page->pgno == root_pgno) ? root_pgno :
+			    cp->csp[-1].page->pgno;
+
+		ret = page->pgno == root_pgno ?
 		    __bam_root(dbc, &cp->csp[0]) :
 		    __bam_page(dbc, &cp->csp[-1], &cp->csp[0]);
 		BT_STK_CLR(cp);
@@ -185,20 +208,23 @@ no_split:		/* Once we've split the leaf page, we're done. */
 		}
 	}
 
-	if (root_pgnop != NULL)
-		*root_pgnop = BAM_ROOT_PGNO(dbc);
+	if (subtree_rootp != NULL)
+		*subtree_rootp = BAM_ROOT_PGNO(dbc);
 err:
 done:	(void)__LPUT(dbc, meta_lock);
 	(void)__TLPUT(dbc, next_lock);
 
 	if (F_ISSET(dbc, DBC_OPD))
 		LOCK_CHECK_ON(dbc->thread_info);
+	if (F_ISSET(dbc->env->dbenv, DB_ENV_YIELDCPU))
+		__os_yield(dbc->env, 0, 0);
 	return (ret);
 }
 
 /*
  * __bam_root --
- *	Split the root page of a btree.
+ *	Split the root page of a btree, by distributing its keys into two
+ *	newly allocated index pages.
  */
 static int
 __bam_root(dbc, cp)
@@ -478,7 +504,7 @@ __bam_page(dbc, pp, cp)
 			/*
 			 * If this is not RECNO then undo the update
 			 * to the parent page, which has not been
-			 * logged yet. This must succeed.  Renco
+			 * logged yet. This must succeed.  Recno
 			 * database trees are locked and therefore
 			 * the parent can be logged independently.
 			 */
@@ -841,7 +867,7 @@ __bam_pinsert(dbc, parent, split, lchild, rchild, flags)
 	 * offset, where the new key goes ONE AFTER the index, because we split
 	 * to the right.
 	 *
-	 * XXX
+	 * Note:
 	 * Some btree algorithms replace the key for the old page as well as
 	 * the new page.  We don't, as there's no reason to believe that the
 	 * first key on the old page is any better than the key we have, and,
@@ -956,7 +982,7 @@ __bam_pinsert(dbc, parent, split, lchild, rchild, flags)
 			 * page and the first key on the right child page.
 			 */
 			if (F_ISSET(dbc, DBC_OPD)) {
-				if (dbp->dup_compare == __bam_defcmp)
+				if (dbp->dup_compare == __dbt_defcmp)
 					func = __bam_defpfx;
 				else
 					func = NULL;

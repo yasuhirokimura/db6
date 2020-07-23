@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1997, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1997, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -22,19 +22,29 @@ public class DatabaseException extends Exception {
     private Environment dbenv;
     private int errno;
 
-    /** Construct an exception with the specified cause exception. **/
+    /**
+    Construct an exception with the specified cause exception.
+    @param t the cause
+    **/
     public DatabaseException(Throwable t) {
         super(t);
         errno = 0;
         dbenv = null;
     }
 
-    /** Construct an exception with the specified message. **/
+    /**
+    Construct an exception with the specified message.
+    @param s the message
+    **/
     public DatabaseException(final String s) {
         this(s, 0, (Environment)null);
     }
 
-    /** Construct an exception with the specified message and error number. **/
+    /**
+    Construct an exception with the specified message and error number.
+    @param s the message
+    @param errno the error number
+    **/
     public DatabaseException(final String s, final int errno) {
         this(s, errno, (Environment)null);
     }
@@ -42,6 +52,9 @@ public class DatabaseException extends Exception {
     /**
     Construct an exception with the specified message and error number
     associated with a database environment handle.
+    @param s the message
+    @param errno the error number
+    @param dbenv the database environment handle
     **/
     public DatabaseException(final String s,
                              final int errno,
@@ -74,6 +87,7 @@ The environment in which the exception occurred.
     <p>
     Note that error numbers can be returned from system calls
     and are system-specific.
+    @return the error number
     **/
     public int getErrno() {
         return errno;

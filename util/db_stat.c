@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -12,7 +12,7 @@
 
 #ifndef lint
 static const char copyright[] =
-    "Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.\n";
+    "Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.\n";
 #endif
 
 typedef enum { T_NOTSET, T_DB,
@@ -20,7 +20,7 @@ typedef enum { T_NOTSET, T_DB,
 
 int	 db_init __P((DB_ENV *, char *, test_t, u_int32_t, int *));
 int	 main __P((int, char *[]));
-int	 usage __P((void));
+void	 usage __P((void));
 int	 version_check __P((void));
 
 const char *progname;
@@ -38,7 +38,7 @@ main(argc, argv)
 	u_int32_t cache, flags;
 	int ch, exitval;
 	int nflag, private, resize, ret;
-	char *db, *home, *p, *passwd, *subdb;
+	char *db, *home, *p, *passwd, *region_dir, *subdb;
 
 	if ((progname = __db_rpath(argv[0])) == NULL)
 		progname = argv[0];
@@ -52,11 +52,12 @@ main(argc, argv)
 	dbp = NULL;
 	ttype = T_NOTSET;
 	cache = MEGABYTE;
-	exitval = flags = nflag = private = 0;
-	db = home = passwd = subdb = NULL;
+	flags = nflag = private = 0;
+	exitval = EXIT_SUCCESS;
+	db = home = passwd = region_dir = subdb = NULL;
 
 	while ((ch = getopt(argc,
-	    argv, "aC:cd:Eefgh:L:lM:mNP:R:rs:tVxX:Z")) != EOF)
+	    argv, "aC:cd:Eefgh:L:lM:mNP:p:R:rs:tVxX:Z")) != EOF)
 		switch (ch) {
 		case 'a':
 			LF_SET(DB_STAT_ALLOC);
@@ -86,7 +87,7 @@ main(argc, argv)
 						LF_SET(DB_STAT_LOCK_PARAMS);
 						break;
 					default:
-						return (usage());
+						goto usage_err;
 					}
 			break;
 		case 'd':
@@ -123,7 +124,7 @@ main(argc, argv)
 						LF_SET(DB_STAT_ALL);
 						break;
 					default:
-						return (usage());
+						goto usage_err;
 					}
 			break;
 		case 'M': case 'm':
@@ -142,7 +143,7 @@ main(argc, argv)
 					case 'm': /* Backward compatible. */
 						break;
 					default:
-						return (usage());
+						goto usage_err;
 					}
 			break;
 		case 'N':
@@ -152,8 +153,7 @@ main(argc, argv)
 			if (passwd != NULL) {
 				fprintf(stderr, DB_STR("5139",
 					"Password may not be specified twice"));
-				free(passwd);
-				return (EXIT_FAILURE);
+				goto err;
 			}
 			passwd = strdup(optarg);
 			memset(optarg, 0, strlen(optarg));
@@ -161,8 +161,11 @@ main(argc, argv)
 				fprintf(stderr, DB_STR_A("5005",
 				    "%s: strdup: %s\n", "%s %s\n"),
 				    progname, strerror(errno));
-				return (EXIT_FAILURE);
+				goto err;
 			}
+			break;
+		case 'p':
+			region_dir = optarg;
 			break;
 		case 'R': case 'r':
 			if (ttype != T_NOTSET && ttype != T_REP)
@@ -175,7 +178,7 @@ main(argc, argv)
 						LF_SET(DB_STAT_ALL);
 						break;
 					default:
-						return (usage());
+						goto usage_err;
 					}
 			break;
 		case 's':
@@ -189,13 +192,13 @@ main(argc, argv)
 argcombo:			fprintf(stderr, DB_STR_A("5006",
 				    "%s: illegal option combination\n",
 				    "%s\n"), progname);
-				return (usage());
+				goto usage_err;
 			}
 			ttype = T_TXN;
 			break;
 		case 'V':
 			printf("%s\n", db_version(NULL, NULL, NULL));
-			return (EXIT_SUCCESS);
+			goto done;
 		case 'X': case 'x':
 			if (ttype != T_NOTSET && ttype != T_MUTEX)
 				goto argcombo;
@@ -207,7 +210,7 @@ argcombo:			fprintf(stderr, DB_STR_A("5006",
 							LF_SET(DB_STAT_ALL);
 							break;
 						default:
-							return (usage());
+							goto usage_err;
 					}
 			break;
 		case 'Z':
@@ -215,15 +218,18 @@ argcombo:			fprintf(stderr, DB_STR_A("5006",
 			break;
 		case '?':
 		default:
-			return (usage());
+			goto usage_err;
 		}
 	argc -= optind;
 	argv += optind;
 
+	if (argc != 0)
+		goto usage_err;
+
 	switch (ttype) {
 	case T_DB:
 		if (db == NULL)
-			return (usage());
+			goto usage_err;
 		break;
 	case T_ENV:
 	case T_LOCK:
@@ -234,11 +240,11 @@ argcombo:			fprintf(stderr, DB_STR_A("5006",
 	case T_TXN:
 		break;
 	case T_NOTSET:
-		return (usage());
+		goto usage_err;
 	}
 
 	if (LF_ISSET(DB_STAT_ALL | DB_STAT_ALLOC) == DB_STAT_ALLOC)
-		return (usage());
+		goto usage_err;
 
 	/* Handle possible interruptions. */
 	__db_util_siginit();
@@ -270,6 +276,12 @@ retry:	if ((ret = db_env_create(&dbenv, 0)) != 0) {
 	if (passwd != NULL &&
 	    (ret = dbenv->set_encrypt(dbenv, passwd, DB_ENCRYPT_AES)) != 0) {
 		dbenv->err(dbenv, ret, "set_passwd");
+		goto err;
+	}
+
+	if (region_dir != NULL &&
+	    (ret = dbenv->set_region_dir(dbenv, region_dir)) != 0) {
+		dbenv->err(dbenv, ret, "region_dir");
 		goto err;
 	}
 
@@ -368,14 +380,15 @@ retry:	if ((ret = db_env_create(&dbenv, 0)) != 0) {
 	}
 
 	if (0) {
-err:		exitval = 1;
+usage_err:	usage();
+err:		exitval = EXIT_FAILURE;
 	}
-	if (dbp != NULL && (ret = dbp->close(dbp, DB_NOSYNC)) != 0) {
-		exitval = 1;
+done:	if (dbp != NULL && (ret = dbp->close(dbp, DB_NOSYNC)) != 0) {
+		exitval = EXIT_FAILURE;
 		dbenv->err(dbenv, ret, DB_STR("5008", "close"));
 	}
 	if (dbenv != NULL && (ret = dbenv->close(dbenv, 0)) != 0) {
-		exitval = 1;
+		exitval = EXIT_FAILURE;
 		fprintf(stderr,
 		    "%s: dbenv->close: %s\n", progname, db_strerror(ret));
 	}
@@ -386,7 +399,7 @@ err:		exitval = 1;
 	/* Resend any caught signal. */
 	__db_util_sigresend();
 
-	return (exitval == 0 ? EXIT_SUCCESS : EXIT_FAILURE);
+	return (exitval);
 }
 
 /*
@@ -453,15 +466,14 @@ err:	dbenv->err(dbenv, ret, "DB_ENV->open");
 	return (1);
 }
 
-int
+void
 usage()
 {
 	fprintf(stderr, "usage: %s %s\n", progname,
 	    "-d file [-fN] [-h home] [-P password] [-s database]");
 	fprintf(stderr, "usage: %s %s\n\t%s\n", progname,
 	    "[-cEelmrtVx] [-C Aclop]",
-	    "[-h home] [-L A] [-M Ah] [-P password] [-R A] [-X A] [-aNZ]");
-	return (EXIT_FAILURE);
+"[-h home] [-L A] [-M Ah] [-P password] [-p region_dir] [-R A] [-X A] [-aNZ]");
 }
 
 int

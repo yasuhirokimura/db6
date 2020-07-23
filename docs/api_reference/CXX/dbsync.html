@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -64,7 +64,12 @@ Db::sync(u_int32_t flags);</pre>
          once all applications using the database have successfully called
          <a class="xref" href="dbclose.html" title="Db::close()">Db::close()</a>, atomically
          replace the original database with the updated copy.
-    </p>
+   </p>
+      <p>
+         When called on a database that has been opened with sliced
+         support, the <code class="methodname">Db::sync()</code> method is
+         automatically called on each supporting slice database. 
+     </p>
       <p>
          The <code class="methodname">Db::sync()</code> <span>
             
@@ -79,7 +84,7 @@ Db::sync(u_int32_t flags);</pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp59118600"></a>Parameters</h3>
+              <h3 class="title"><a id="idp100262160"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -87,7 +92,7 @@ Db::sync(u_int32_t flags);</pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp59117952"></a>flags</h4>
+                <h4 class="title"><a id="idp100261872"></a>flags</h4>
               </div>
             </div>
           </div>
@@ -101,7 +106,7 @@ Db::sync(u_int32_t flags);</pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp59037616"></a>Errors</h3>
+              <h3 class="title"><a id="idp100227552"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -119,7 +124,7 @@ Db::sync(u_int32_t flags);</pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp59122784"></a> <span>DbRepHandleDeadException or</span> DB_REP_HANDLE_DEAD</h4>
+                <h4 class="title"><a id="idp100268272"></a> <span>DbRepHandleDeadException or</span> DB_REP_HANDLE_DEAD</h4>
               </div>
             </div>
           </div>
@@ -141,7 +146,7 @@ Db::sync(u_int32_t flags);</pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp59119680"></a><span>DbDeadlockException or </span>DB_REP_LOCKOUT</h4>
+                <h4 class="title"><a id="idp100262672"></a><span>DbDeadlockException or </span>DB_REP_LOCKOUT</h4>
               </div>
             </div>
           </div>
@@ -158,7 +163,7 @@ Db::sync(u_int32_t flags);</pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp59123320"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp100273392"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -171,7 +176,7 @@ Db::sync(u_int32_t flags);</pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp58963568"></a>Class</h3>
+              <h3 class="title"><a id="idp100266544"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -183,7 +188,7 @@ Db::sync(u_int32_t flags);</pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp59126928"></a>See Also</h3>
+              <h3 class="title"><a id="idp100249376"></a>See Also</h3>
             </div>
           </div>
         </div>

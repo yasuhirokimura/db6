@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -30,7 +30,6 @@ To set custom attributes:
     config.setSortedDuplicates(true);
     config.setKeyCreator(new MyKeyCreator());
 </pre>
-<p>
 <hr>
 <p>
 NOTE: There are two situations where the use of secondary databases without
@@ -52,8 +51,7 @@ of transactions, the exception will cause the transaction to abort.  Without
 transactions, it is the responsibility of the caller to handle the results
 of the incomplete update or to take steps to prevent this situation from
 happening in the first place.
-<p>
-</hr>
+<hr>
 <p>
 @see Environment#openSecondaryDatabase Environment.openSecondaryDatabase
 @see SecondaryDatabase
@@ -110,7 +108,6 @@ public class SecondaryConfig extends DatabaseConfig implements Cloneable {
     false.
     <p>
     @return whether automatic population of the secondary is allowed.
-    <p>
     @see #setAllowPopulate
     */
     public boolean getAllowPopulate() {
@@ -146,7 +143,6 @@ public class SecondaryConfig extends DatabaseConfig implements Cloneable {
     false.
     <p>
     @return whether the secondary key is immutable.
-    <p>
     @see #setImmutableSecondaryKey
     */
     public boolean getImmutableSecondaryKey() {
@@ -177,7 +173,6 @@ public class SecondaryConfig extends DatabaseConfig implements Cloneable {
     <p>
     @return the user-supplied object used for creating single-valued secondary
     keys.
-    <p>
     @see #setKeyCreator
     */
     public SecondaryKeyCreator getKeyCreator() {
@@ -205,7 +200,6 @@ public class SecondaryConfig extends DatabaseConfig implements Cloneable {
     <p>
     @return the user-supplied object used for creating multi-valued secondary
     keys.
-    <p>
     @see #setKeyCreator
     */
     public SecondaryMultiKeyCreator getMultiKeyCreator() {

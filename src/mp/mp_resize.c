@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2006, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2006, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -406,17 +406,15 @@ static int
 __memp_remove_bucket(dbmp)
 	DB_MPOOL *dbmp;
 {
-	ENV *env;
 	MPOOL *mp;
 	u_int32_t high_mask, new_bucket, old_bucket;
 
-	env = dbmp->env;
 	mp = dbmp->reginfo[0].primary;
 
 	old_bucket = mp->nbuckets - 1;
 
 	/* We should always be removing buckets from the last region. */
-	DB_ASSERT(env, NREGION(mp, old_bucket) == mp->nreg - 1);
+	DB_ASSERT(dbmp->env, NREGION(mp, old_bucket) == mp->nreg - 1);
 	MP_MASK(mp->nbuckets - 1, high_mask);
 	new_bucket = old_bucket & (high_mask >> 1);
 

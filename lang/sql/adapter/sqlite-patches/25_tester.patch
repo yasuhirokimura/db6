@@ -78,6 +78,15 @@
        } else {
          puts " Ok"
        }
+@@ -883,7 +907,7 @@
+   sqlite3_reset_auto_extension
+ 
+   sqlite3_soft_heap_limit 0
+-  set nTest [incr_ntest]
++  set nTest [set_test_counter count]
+   set nErr [set_test_counter errors]
+ 
+   set nKnown 0
 @@ -1224,12 +1248,6 @@
    return $ret
  }
@@ -220,7 +229,7 @@
      $db eval { SELECT * FROM sqlite_master }
      do_test $testname [list $db eval "PRAGMA main.journal_mode"] {wal}
    }
-+  forcedelete test.db-journal/__db.register
++  catch { forcedelete test.db-journal/__db.register }
  }
  
  proc permutation {} {

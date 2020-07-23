@@ -19,6 +19,7 @@ set IGNORE_CASES {
   cast-3.[37]		{# differences in representing numbers }
   cast-3.1[37]		{# differences in representing numbers }
   cast-3.23		{# differences in representing numbers }
+  capi3d-4.2.3		{# Vacuum works with SQL in progress in BDB, not in SQLite }
   collate5-2.1.[134]	{# Result order doesn't match with NOCASE collation }
   collate5-2.[23].[13]
   e_select-4.9.1        {# sqlite changed formerly working test, investigating }
@@ -47,9 +48,10 @@ set IGNORE_CASES {
   autovacuum-3.[36]	{# BDB allows setting vacuum at any time while SQLite does not }
   expr-13.[14567]	{# differences in representing numbers }
   pagesize-1.[14]	{# different page size defaults }
+  misc8-1.4		{# Different behavior of rollback between BDB and SQLite, #24498 }
   nan-*			{# Output is system dependent ("inf"/"Infinity") }
+  rollback-1.[56]	{# Different behavior of rollback between BDB and SQLite, #24498 }
   savepoint7-2.2	{# Different messages when aborting a txn. }
-  select5-5.5		{# Duplicate index sorting bug #23469. }
   tempdb-2.[23]		{# Uses open file counts, #17964 }
   thread003.1.2		{# BDB db file size not accurate until close, #17965 }
   thread1-2.[3467]	{# BDB expects different results for threaded case. }
@@ -64,7 +66,7 @@ set IGNORE_CASES {
   vacuum2-4.1		{# In DBSQL, metadata settings cannot be changed by vacuum. #18545 }
   vacuum2-4.[47]	{# vacuum setting is not persistent }
   vacuum2-5.[234]	{# Concurrent vacuum works in Berkeley DB }
-  where8-3.10		{# Duplicate index sorting bug #23469. }
+  vacuum2-6.3		{# The collation function cannot be changed by vacuum in BDB }
   zeroblob-1.1.1	{# Makes assumptions about memory usage }
 }
 
@@ -109,6 +111,7 @@ set EXCLUDE_CASES {
   pagesize-1.3		{# different default page size }
   pagesize-2.*.3	{# file size }
   pagesize-2.*.30	{# different default page size }
+  pagesize-3.*		{# different default page size }
   rdonly-*
   server1-1.[5679]	{# Two read threads block }
   server1-2.[23456]	{# Two read threads block }
@@ -148,6 +151,12 @@ if {[string first "windows" [string tolower $tcl_platform(os)]] >=0 } {
 # manydb.test fails on HP-UX because of resource limitations, not a real bug 
 if {$tcl_platform(os) == "HP-UX"} {
   lappend EXCLUDE_CASES manydb-*
+}
+
+# fts3conf-3.test has some test failures on bigendian systems because it 
+# looks at raw data on the disk. 
+if {$tcl_platform(byteOrder) == "bigEndian"} {
+  lappend IGNORE_CASES fts3conf-3.\[1234568\]*
 }
 
 # These errors only appear if encryption is turned on

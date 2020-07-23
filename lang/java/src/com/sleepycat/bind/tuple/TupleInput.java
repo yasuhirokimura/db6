@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2000, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2000, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 
@@ -538,6 +538,8 @@ public class TupleInput extends FastInputStream {
      * buffer, including the terminator.  Used with string values that were
      * written using {@link TupleOutput#writeString(String)}.
      *
+     * @return the byte length.
+     *
      * @throws IndexOutOfBoundsException if no null terminating byte is found
      * in the buffer.
      *
@@ -560,6 +562,8 @@ public class TupleInput extends FastInputStream {
     /**
      * Reads an unsorted packed integer.
      *
+     * @return the int value.
+     *
      * @see <a href="package-summary.html#integerFormats">Integer Formats</a>
      */
     public final int readPackedInt() {
@@ -574,6 +578,8 @@ public class TupleInput extends FastInputStream {
     /**
      * Returns the byte length of a packed integer.
      *
+     * @return the byte length.
+     *
      * @see <a href="package-summary.html#integerFormats">Integer Formats</a>
      */
     public final int getPackedIntByteLength() {
@@ -582,6 +588,8 @@ public class TupleInput extends FastInputStream {
 
     /**
      * Reads an unsorted packed long integer.
+     *
+     * @return the long value.
      *
      * @see <a href="package-summary.html#integerFormats">Integer Formats</a>
      */
@@ -597,6 +605,8 @@ public class TupleInput extends FastInputStream {
     /**
      * Returns the byte length of a packed long integer.
      *
+     * @return the byte length.
+     *
      * @see <a href="package-summary.html#integerFormats">Integer Formats</a>
      */
     public final int getPackedLongByteLength() {
@@ -605,6 +615,8 @@ public class TupleInput extends FastInputStream {
 
     /**
      * Reads a sorted packed integer.
+     *
+     * @return the int value.
      *
      * @see <a href="package-summary.html#integerFormats">Integer Formats</a>
      */
@@ -620,6 +632,8 @@ public class TupleInput extends FastInputStream {
     /**
      * Returns the byte length of a sorted packed integer.
      *
+     * @return the byte length.
+     *
      * @see <a href="package-summary.html#integerFormats">Integer Formats</a>
      */
     public final int getSortedPackedIntByteLength() {
@@ -628,6 +642,8 @@ public class TupleInput extends FastInputStream {
 
     /**
      * Reads a sorted packed long integer.
+     *
+     * @return the long value.
      *
      * @see <a href="package-summary.html#integerFormats">Integer Formats</a>
      */
@@ -643,6 +659,8 @@ public class TupleInput extends FastInputStream {
     /**
      * Returns the byte length of a sorted packed long integer.
      *
+     * @return the byte length.
+     *
      * @see <a href="package-summary.html#integerFormats">Integer Formats</a>
      */
     public final int getSortedPackedLongByteLength() {
@@ -651,6 +669,8 @@ public class TupleInput extends FastInputStream {
 
     /**
      * Reads a {@code BigInteger}.
+     *
+     * @return the non-null BigInteger value.
      *
      * @see <a href="package-summary.html#integerFormats">Integer Formats</a>
      */
@@ -669,6 +689,8 @@ public class TupleInput extends FastInputStream {
     /**
      * Returns the byte length of a {@code BigInteger}.
      *
+     * @return the byte length.
+     *
      * @see <a href="package-summary.html#integerFormats">Integer Formats</a>
      */
     public final int getBigIntegerByteLength() {
@@ -685,6 +707,8 @@ public class TupleInput extends FastInputStream {
     /**
      * Reads an unsorted {@code BigDecimal}.
      *
+     * @return the non-null BigDecimal value.
+     *
      * @see <a href="package-summary.html#bigDecimalFormats">BigDecimal
      * Formats</a>
      */
@@ -700,6 +724,8 @@ public class TupleInput extends FastInputStream {
     
     /**
      * Returns the byte length of an unsorted {@code BigDecimal}.
+     *
+     * @return the byte length.
      *
      * @see <a href="package-summary.html#bigDecimalFormats">BigDecimal
      * Formats</a>
@@ -727,6 +753,8 @@ public class TupleInput extends FastInputStream {
      * Reads a sorted {@code BigDecimal}, with support for correct default 
      * sorting.
      *
+     * @return the non-null BigDecimal value.
+     *
      * @see <a href="package-summary.html#bigDecimalFormats">BigDecimal
      * Formats</a>
      */
@@ -751,7 +779,7 @@ public class TupleInput extends FastInputStream {
      * Reads a sorted {@code BigDecimal} in normalized format with a single
      * digit to the left of the decimal point.
      */
-    private final BigDecimal readSortedNormalizedBigDecimal() { 
+    private BigDecimal readSortedNormalizedBigDecimal() {
 
         StringBuilder valStr = new StringBuilder(32);
         int subVal = readSortedPackedInt();
@@ -794,6 +822,8 @@ public class TupleInput extends FastInputStream {
     
     /**
      * Returns the byte length of a sorted {@code BigDecimal}.
+     *
+     * @return the byte length.
      *
      * @see <a href="package-summary.html#bigDecimalFormats">BigDecimal
      * Formats</a>

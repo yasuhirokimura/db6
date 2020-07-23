@@ -8,20 +8,20 @@
     <meta name="generator" content="DocBook XSL Stylesheets V1.73.2" />
     <link rel="start" href="index.html" title="Berkeley DB C API Reference" />
     <link rel="up" href="rep.html" title="Chapter 10.  Replication Methods" />
-    <link rel="prev" href="repmgrset_incoming_queue_max.html" title="DB_ENV-&gt;repmgr_set_incoming_queue_max()" />
+    <link rel="prev" href="repmgrset_socket.html" title="DB_ENV-&gt;repmgr_set_socket()" />
     <link rel="next" href="repmgr_site_by_eid.html" title="DB_ENV-&gt;repmgr_site_by_eid()" />
   </head>
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
           <th colspan="3" align="center">DB_ENV-&gt;repmgr_site()</th>
         </tr>
         <tr>
-          <td width="20%" align="left"><a accesskey="p" href="repmgrset_incoming_queue_max.html">Prev</a> </td>
+          <td width="20%" align="left"><a accesskey="p" href="repmgrset_socket.html">Prev</a> </td>
           <th width="60%" align="center">Chapter 10. 
                 Replication Methods
         </th>
@@ -78,7 +78,7 @@ DB_ENV-&gt;repmgr_site(DB_ENV *env, const char *host,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp4344184"></a>Parameters</h3>
+              <h3 class="title"><a id="idp7505760"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -86,19 +86,22 @@ DB_ENV-&gt;repmgr_site(DB_ENV *env, const char *host,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp4343448"></a>host</h4>
+                <h4 class="title"><a id="idp7517024"></a>host</h4>
               </div>
             </div>
           </div>
           <p>
-                  The site's host identification string, generally a TCP/IP host name.
+                  The site's host identification string, generally a TCP/IP
+                  host name.   IPv6 and IPv4 addresses in numeric format
+                  are also accepted.  If multiple addresses are defined
+                  for a host name, an IPv6 address is used whenever possible.
              </p>
         </div>
         <div class="sect3" lang="en" xml:lang="en">
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp4352024"></a>port</h4>
+                <h4 class="title"><a id="idp7599344"></a>port</h4>
               </div>
             </div>
           </div>
@@ -110,7 +113,7 @@ DB_ENV-&gt;repmgr_site(DB_ENV *env, const char *host,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp4352432"></a>sitep</h4>
+                <h4 class="title"><a id="idp7615648"></a>sitep</h4>
               </div>
             </div>
           </div>
@@ -123,7 +126,7 @@ DB_ENV-&gt;repmgr_site(DB_ENV *env, const char *host,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp4352880"></a>flags</h4>
+                <h4 class="title"><a id="idp7623136"></a>flags</h4>
               </div>
             </div>
           </div>
@@ -137,7 +140,7 @@ DB_ENV-&gt;repmgr_site(DB_ENV *env, const char *host,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp4345040"></a>Errors</h3>
+              <h3 class="title"><a id="idp7620576"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -154,7 +157,7 @@ DB_ENV-&gt;repmgr_site(DB_ENV *env, const char *host,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp4342520"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp7582544"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -168,7 +171,7 @@ DB_ENV-&gt;repmgr_site(DB_ENV *env, const char *host,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp4302208"></a>Class</h3>
+              <h3 class="title"><a id="idp7613040"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -180,7 +183,7 @@ DB_ENV-&gt;repmgr_site(DB_ENV *env, const char *host,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp4348088"></a>See Also</h3>
+              <h3 class="title"><a id="idp7620384"></a>See Also</h3>
             </div>
           </div>
         </div>
@@ -194,16 +197,14 @@ DB_ENV-&gt;repmgr_site(DB_ENV *env, const char *host,
       <hr />
       <table width="100%" summary="Navigation footer">
         <tr>
-          <td width="40%" align="left"><a accesskey="p" href="repmgrset_incoming_queue_max.html">Prev</a> </td>
+          <td width="40%" align="left"><a accesskey="p" href="repmgrset_socket.html">Prev</a> </td>
           <td width="20%" align="center">
             <a accesskey="u" href="rep.html">Up</a>
           </td>
           <td width="40%" align="right"> <a accesskey="n" href="repmgr_site_by_eid.html">Next</a></td>
         </tr>
         <tr>
-          <td width="40%" align="left" valign="top">
-        DB_ENV-&gt;repmgr_set_incoming_queue_max()
-     </td>
+          <td width="40%" align="left" valign="top">DB_ENV-&gt;repmgr_set_socket() </td>
           <td width="20%" align="center">
             <a accesskey="h" href="index.html">Home</a>
           </td>

@@ -1,13 +1,39 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2010, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2010, 2016 Oracle and/or its affiliates.  All rights reserved.
  */
 
 #include <errno.h>
 
 #include "sqliteInt.h"
 #include <db.h>
+
+/* Internal DB functions that are used by adapter source files. */
+extern int __db_check_chksum(ENV *, void *, DB_CIPHER *, u_int8_t *, void *,
+    size_t, int);
+extern void __db_chksum(void *, u_int8_t *, size_t, u_int8_t *, u_int8_t *);
+extern int __env_encrypt(DB_ENV *, u_int8_t *, u_int8_t *, size_t);
+extern int __env_encrypt_adj_size(DB_ENV *, size_t, size_t *);
+extern int __env_decrypt(DB_ENV *, u_int8_t *, u_int8_t *, size_t);
+extern int __env_ref_get(DB_ENV *, u_int32_t *);
+extern int __os_closehandle(ENV *, DB_FH *);
+extern int __os_dirlist(ENV *, const char *, int, char ***, int *);
+extern void __os_dirfree(ENV *, char **, int);
+extern int __os_exists(ENV *, const char *, int *);
+extern int __os_fileid(ENV *, const char *, int, u_int8_t *);
+extern int __os_io(ENV *, int, DB_FH *, db_pgno_t, u_int32_t, u_int32_t,
+    u_int32_t, u_int8_t *, size_t *);
+extern int __os_ioinfo(ENV *, const char *, DB_FH *, u_int32_t *, u_int32_t *,
+    u_int32_t *);
+extern int __os_mkdir(ENV *, const char *, int);
+extern int __os_open(ENV *, const char *, u_int32_t, u_int32_t, int, DB_FH **);
+extern int __os_read(ENV *, DB_FH *, void *, size_t, size_t *);
+extern int __os_rename(ENV *, const char *, const char *, u_int32_t);
+extern int __os_seek(ENV *, DB_FH *, db_pgno_t, u_int32_t, off_t);
+extern int __os_unlink(ENV *, const char *, int);
+extern int __os_write(ENV *, DB_FH *, void *, size_t, size_t *);
+extern void __os_yield(ENV *, u_long, u_long);
 
 #ifdef BDBSQL_SHARE_PRIVATE
 /* BDBSQL_SHARE_PRIVATE implies BDBSQL_SINGLE_PROCESS */

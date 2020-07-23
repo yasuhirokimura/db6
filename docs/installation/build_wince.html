@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -51,12 +51,12 @@
             <dl>
               <dt>
                 <span class="sect2">
-                  <a href="build_wince.html#idm781000">Building Berkeley DB for Windows Mobile</a>
+                  <a href="build_wince.html#idm288144">Building Berkeley DB for Windows Mobile</a>
                 </span>
               </dt>
               <dt>
                 <span class="sect2">
-                  <a href="build_wince.html#idp83064">Changing Build Configuration Type</a>
+                  <a href="build_wince.html#idm3944112">Changing Build Configuration Type</a>
                 </span>
               </dt>
               <dt>
@@ -86,17 +86,17 @@
             <dl>
               <dt>
                 <span class="sect2">
-                  <a href="build_winec_intro.html#idp121088">Building Berkeley DB for Windows Embedded Compact 7</a>
+                  <a href="build_winec_intro.html#idp105424">Building Berkeley DB for Windows Embedded Compact 7</a>
                 </span>
               </dt>
               <dt>
                 <span class="sect2">
-                  <a href="build_winec_intro.html#idp139816">Changing Build Configuration Type</a>
+                  <a href="build_winec_intro.html#idp104176">Changing Build Configuration Type</a>
                 </span>
               </dt>
               <dt>
                 <span class="sect2">
-                  <a href="build_winec_intro.html#idp151176">Troubleshooting Common Build Errors</a>
+                  <a href="build_winec_intro.html#idp110736">Troubleshooting Common Build Errors</a>
                 </span>
               </dt>
             </dl>
@@ -116,12 +116,12 @@
           <dl>
             <dt>
               <span class="sect2">
-                <a href="build_wince.html#idm781000">Building Berkeley DB for Windows Mobile</a>
+                <a href="build_wince.html#idm288144">Building Berkeley DB for Windows Mobile</a>
               </span>
             </dt>
             <dt>
               <span class="sect2">
-                <a href="build_wince.html#idp83064">Changing Build Configuration Type</a>
+                <a href="build_wince.html#idm3944112">Changing Build Configuration Type</a>
               </span>
             </dt>
             <dt>
@@ -139,7 +139,7 @@
         <p>
         The <code class="filename">build_wince</code> directory in the
         Berkeley DB distribution contains project files for Microsoft
-        Visual 2005 with the Mobile SDK installed:
+        Visual 2008 with the Mobile SDK installed:
     </p>
         <div class="informaltable">
           <table border="1" width="80%">
@@ -156,12 +156,12 @@
             <tbody>
               <tr>
                 <td align="center">Berkeley_DB.sln</td>
-                <td align="center">Visual Studio 2005
+                <td align="center">Visual Studio 2008
                         solution</td>
               </tr>
               <tr>
-                <td align="center">*.vcproj</td>
-                <td align="center">Visual Studio 2005 project
+                <td align="center">VS8\*.vcproj</td>
+                <td align="center">Visual Studio 2008 project
                         files</td>
               </tr>
             </tbody>
@@ -175,7 +175,7 @@
           <div class="titlepage">
             <div>
               <div>
-                <h3 class="title"><a id="idm781000"></a>Building Berkeley DB for Windows Mobile</h3>
+                <h3 class="title"><a id="idm288144"></a>Building Berkeley DB for Windows Mobile</h3>
               </div>
             </div>
           </div>
@@ -183,7 +183,7 @@
             <div class="titlepage">
               <div>
                 <div>
-                  <h4 class="title"><a id="idm681000"></a>Visual Studio 2005</h4>
+                  <h4 class="title"><a id="idm1105968"></a>Visual Studio 2008</h4>
                 </div>
               </div>
             </div>
@@ -210,7 +210,7 @@
             <div class="titlepage">
               <div>
                 <div>
-                  <h4 class="title"><a id="idp87832"></a>Build results</h4>
+                  <h4 class="title"><a id="idm3162560"></a>Build results</h4>
                 </div>
               </div>
             </div>
@@ -245,9 +245,9 @@
             <p>
                 When building your application during development,
                 you must link against
-                <code class="filename">libdb_small61sd.lib</code>
+                <code class="filename">libdb_small62sd.lib</code>
                 or against
-                <code class="filename">libdb_sql61sd.lib</code>
+                <code class="filename">libdb_sql62sd.lib</code>
                 for SQL features. You can also build using a release
                 version of the Berkeley DB libraries and tools, which
                 will be placed in the
@@ -264,7 +264,7 @@
           <div class="titlepage">
             <div>
               <div>
-                <h3 class="title"><a id="idp83064"></a>Changing Build Configuration Type</h3>
+                <h3 class="title"><a id="idm3944112"></a>Changing Build Configuration Type</h3>
               </div>
             </div>
           </div>
@@ -292,22 +292,22 @@
               <tbody>
                 <tr>
                   <td align="center">db_small_static</td>
-                  <td align="center">libdb_small61s.lib</td>
+                  <td align="center">libdb_small62s.lib</td>
                   <td align="center">Static Library</td>
                 </tr>
                 <tr>
                   <td align="center">db_static</td>
-                  <td align="center">libdb61s.lib</td>
+                  <td align="center">libdb62s.lib</td>
                   <td align="center">Static Library</td>
                 </tr>
                 <tr>
                   <td align="center">db_sql</td>
-                  <td align="center">libdb_sql61.dll</td>
+                  <td align="center">libdb_sql62.dll</td>
                   <td align="center">Dynamic Library</td>
                 </tr>
                 <tr>
                   <td align="center">db_sql_static</td>
-                  <td align="center">libdb_sql61s.lib</td>
+                  <td align="center">libdb_sql62s.lib</td>
                   <td align="center">Static Library</td>
                 </tr>
               </tbody>
@@ -315,7 +315,7 @@
           </div>
           <p>
             To change a project configuration type in Visual Studio
-            2005, select a project and do the following: 
+            2008, select a project and do the following: 
         </p>
           <div class="orderedlist">
             <ol type="1">
@@ -333,7 +333,7 @@
           </div>
           <p>
             Note: After this change, the output file names change to
-            the Visual Studio 2005 defaults based on the project
+            the Visual Studio 2008 defaults based on the project
             name.
         </p>
         </div>
@@ -352,9 +352,9 @@
             project files supplied with Berkeley DB.
         </p>
           <p> 
-            The Visual Studio 2005 project files will by default
-            build for Pocket PC 2003 and Smartphone 2003, and Windows
-            Mobile 6.5.3 Professional. If you want to build for other
+            The Visual Studio 2008 project files will by default
+            build for Windows Mobile 6.5.3 Professional. If you want 
+	    to build for other
             platforms such as Windows Mobile 6.0, 6.1, or 6.5, you
             need to follow the steps provided in this section.
         </p>
@@ -370,7 +370,7 @@
             <div class="titlepage">
               <div>
                 <div>
-                  <h4 class="title"><a id="idp95336"></a>Visual Studio 2005</h4>
+                  <h4 class="title"><a id="idm3520016"></a>Visual Studio 2008</h4>
                 </div>
               </div>
             </div>
@@ -417,7 +417,7 @@
             <div class="titlepage">
               <div>
                 <div>
-                  <h4 class="title"><a id="idp102720"></a>BDB SQL Notes</h4>
+                  <h4 class="title"><a id="idm3735776"></a>BDB SQL Notes</h4>
                 </div>
               </div>
             </div>

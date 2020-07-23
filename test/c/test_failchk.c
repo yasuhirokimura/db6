@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2014, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -67,7 +67,7 @@ void   *tstart __P((void *));
 int	usage __P((const char *));
 const char   *util_annotate __P((const DB_ENV *, char *, size_t));
 void	util_errcall __P((const DB_ENV *, const char *, const char *));
-void	util_msgcall __P((const DB_ENV *, const char *));
+void	util_msgcall __P((const DB_ENV *, const char *, const char *));
 void	word __P((void));
 int	writer __P((int));
 
@@ -144,7 +144,7 @@ main(argc, argv)
 	extern int errno, optind;
 	DB_TXN *txnp;
 	pthread_t *tids;
-	sig_t sig;
+	void (*sig)();
 	int ch, do_failchk, i, init, pid, ret;
 	char syscmd[100];
 	void *retp;
@@ -612,14 +612,17 @@ util_errcall(dbenv, errpfx, msg)
  *	Annotate messages with timestamp and thread id, + ???
  */
 void
-util_msgcall(dbenv, msg)
+util_msgcall(dbenv, msgpfx, msg)
 	const DB_ENV *dbenv;
+	const char *msgpfx;
 	const char *msg;
 {
 	char header[UTIL_ANNOTATE_STRLEN];
 
 	util_annotate(dbenv, header, sizeof(header));
-	fprintf(stderr, "%s%s\n", header, msg);
+	if (msgpfx == NULL)
+		msgpfx = "";
+	fprintf(stderr, "%s%s%s\n", header, msgpfx, msg);
 	fflush(stderr);
 }
 

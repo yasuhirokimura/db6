@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2009, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2009, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 using System;
@@ -67,13 +67,17 @@ namespace BerkeleyDB {
         /// </summary>
         public uint MinKey { get { return st.bt_minkey; } }
         /// <summary>
-        /// Number of blob records.
+        /// Deprecated.  Replaced by nExternalFiles.
         /// </summary>
-        public uint nBlobRecords { get { return st.bt_nblobs; } }
+        public uint nBlobRecords { get { return st.bt_ext_files; } }
         /// <summary>
         /// Number of data items. 
         /// </summary>
         public uint nData { get { return st.bt_ndata; } }
+	/// <summary>
+        /// Number of external files.
+        /// </summary>
+        public uint nExternalFiles { get { return st.bt_ext_files; } }
         /// <summary>
         /// Number of unique keys. 
         /// </summary>

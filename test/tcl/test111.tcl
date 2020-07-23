@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2005, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2005, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -183,39 +183,10 @@ proc test111 { method {nentries 10000} {tnum "111"} args } {
 		error_check_good db_sync [$db sync] 0
 
 		puts "\tTest$tnum.c: Do a dump_file on contents."
-		if { $txnenv == 1 } {
-			set t [$env txn]
-			error_check_good txn [is_valid_txn $t $env] TRUE
-			set txn "-txn $t"
-		}
-		dump_file $db $txn $t1
-		if { $txnenv == 1 } {
-			error_check_good txn_commit [$t commit] 0
-		}
+		dump_file_env $env $db $t1
 
 		puts "\tTest$tnum.d: Compact and verify database."
-		for {set commit 0} {$commit <= $txnenv} {incr commit} {
-			if { $txnenv == 1 } {
-				set t [$env txn]
-				error_check_good txn [is_valid_txn $t $env] TRUE
-				set txn "-txn $t"
-			}
-			if {[catch {eval {$db compact} $txn {-freespace}} ret] } {
-				error "FAIL: db compact: $ret"
-			}
-			if { $txnenv == 1 } {
-				if { $commit == 0 } {
-					puts "\tTest$tnum.d: Aborting."
-					error_check_good txn_abort [$t abort] 0
-				} else {
-					puts "\tTest$tnum.d: Committing."
-					error_check_good txn_commit [$t commit] 0
-				}
-			}
-			error_check_good db_sync [$db sync] 0
-			error_check_good verify_dir \
-			    [verify_dir $testdir "" 0 0 $nodump ] 0
-		}
+		compact_and_verify $env $db $tnum $nodump
 
 		set size2 [file size $filename]
 		set count2 [stat_field $db stat "Page count"]
@@ -231,15 +202,7 @@ proc test111 { method {nentries 10000} {tnum "111"} args } {
 	}
 
 		puts "\tTest$tnum.e: Contents are the same after compaction."
-		if { $txnenv == 1 } {
-			set t [$env txn]
-			error_check_good txn [is_valid_txn $t $env] TRUE
-			set txn "-txn $t"
-		}
-		dump_file $db $txn $t2
-		if { $txnenv == 1 } {
-			error_check_good txn_commit [$t commit] 0
-		}
+		dump_file_env $env $db $t2
 
 		if { [is_hash $method] == 1 } {
 			filesort $t1 $t1.sort
@@ -297,39 +260,10 @@ proc test111 { method {nentries 10000} {tnum "111"} args } {
 		error_check_good db_sync [$db sync] 0
 
 		puts "\tTest$tnum.h: Save contents."
-		if { $txnenv == 1 } {
-			set t [$env txn]
-			error_check_good txn [is_valid_txn $t $env] TRUE
-			set txn "-txn $t"
-		}
-		dump_file $db $txn $t1
-		if { $txnenv == 1 } {
-			error_check_good t_commit [$t commit] 0
-		}
+		dump_file_env $env $db $t1
 
 		puts "\tTest$tnum.i: Compact and verify database again."
-		for {set commit 0} {$commit <= $txnenv} {incr commit} {
-			if { $txnenv == 1 } {
-				set t [$env txn]
-				error_check_good txn [is_valid_txn $t $env] TRUE
-				set txn "-txn $t"
-			}
-			if {[catch {eval {$db compact} $txn {-freespace}} ret] } {
-				error "FAIL: db compact: $ret"
-			}
-			if { $txnenv == 1 } {
-				if { $commit == 0 } {
-					puts "\tTest$tnum.i1: Aborting."
-					error_check_good txn_abort [$t abort] 0
-				} else {
-					puts "\tTest$tnum.i2: Committing."
-					error_check_good txn_commit [$t commit] 0
-				}
-			}
-			error_check_good db_sync [$db sync] 0
-			error_check_good verify_dir \
-			    [verify_dir $testdir "" 0 0 $nodump ] 0
-		}
+		compact_and_verify $env $db $tnum $nodump
 
 		set size4 [file size $filename]
 		set count4 [stat_field $db stat "Page count"]
@@ -361,15 +295,8 @@ proc test111 { method {nentries 10000} {tnum "111"} args } {
 		}
 
 		puts "\tTest$tnum.j: Contents are the same after compaction."
-		if { $txnenv == 1 } {
-			set t [$env txn]
-			error_check_good txn [is_valid_txn $t $env] TRUE
-			set txn "-txn $t"
-		}
-		dump_file $db $txn $t2
-		if { $txnenv == 1 } {
-			error_check_good t_commit [$t commit] 0
-		}
+		dump_file_env $env $db $t2
+
 		if { [is_hash $method] == 1 } {
 			filesort $t1 $t1.sort
 			filesort $t2 $t2.sort

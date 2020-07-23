@@ -57,8 +57,8 @@ START_DIR=`pwd`
 D=`pwd`/../release
 R="$D/db-${VERSION}"
 RNC="$D/db-$VERSION.NC"
-DOCS=`pwd`/../../docs_books-6.1
-DB_ADDONS=`pwd`/../../db_addons-6.1
+DOCS=`pwd`/../../docs_books
+DB_ADDONS=`pwd`/../../db_addons
 
 if [ ! -d $DB_ADDONS ]; then
 	echo "buildpkg requires a db_addons repository at the same level as the db repository."
@@ -188,6 +188,12 @@ cd $R && find . -name 'tags' | xargs rm -f
 
 # Remove the build directory
 ### cd $R && rm -rf build_run
+
+# Build the Java API and Thrift Server components
+cd $R && rm -rf build_java && mkdir build_java
+cd $R/build_java && ../dist/configure --enable-java && make -j4 >& mklog
+cd $R/dist && echo `pwd` && sh s_thrift -db $R/build_java/db.jar -addons $DB_ADDONS/..
+rm -rf $R/build_java
 
 (cd $R/dist && ./s_perm)
 

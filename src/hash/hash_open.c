@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  */
 /*
  * Copyright (c) 1990, 1993, 1994
@@ -107,11 +107,11 @@ __ham_open(dbp, ip, txn, name, base_pgno, flags)
 			hashp->h_hash = dbmeta->version < 5
 			? __ham_func4 : __ham_func5;
 		hashp->h_nelem = hcp->hdr->nelem;
-		if (F_ISSET(dbmeta, DB_HASH_DUP))
+		if (F_ISSET(dbmeta, HASHM_DUP))
 			F_SET(dbp, DB_AM_DUP);
-		if (F_ISSET(dbmeta, DB_HASH_DUPSORT))
+		if (F_ISSET(dbmeta, HASHM_DUPSORT))
 			F_SET(dbp, DB_AM_DUPSORT);
-		if (F_ISSET(dbmeta, DB_HASH_SUBDB))
+		if (F_ISSET(dbmeta, HASHM_SUBDB))
 			F_SET(dbp, DB_AM_SUBDB);
 		if (PGNO(hcp->hdr) == PGNO_BASE_MD &&
 		    !F_ISSET(dbp, DB_AM_RECOVER) &&
@@ -119,10 +119,10 @@ __ham_open(dbp, ip, txn, name, base_pgno, flags)
 		    __memp_set_last_pgno(dbp->mpf, dbmeta->last_pgno)) != 0)
 			goto err;
 	} else if (!IS_RECOVERING(env) && !F_ISSET(dbp, DB_AM_RECOVER)) {
+		ret = USR_ERR(env, EINVAL);
 		__db_errx(env, DB_STR_A("1124",
 		    "%s: Invalid hash meta page %lu", "%s %lu"),
 		    name, (u_long)base_pgno);
-		ret = EINVAL;
 	}
 
 	/* Release the meta data page */
@@ -195,11 +195,10 @@ __ham_metachk(dbp, name, hashm)
 	 * and type based on metadata info.
 	 */
 	if ((ret = __db_fchk(env,
-	    "DB->open", hashm->dbmeta.flags,
-	    DB_HASH_DUP | DB_HASH_SUBDB | DB_HASH_DUPSORT)) != 0)
+	    "DB->open", hashm->dbmeta.flags, HASHM_MASK)) != 0)
 		return (ret);
 
-	if (F_ISSET(&hashm->dbmeta, DB_HASH_DUP))
+	if (F_ISSET(&hashm->dbmeta, HASHM_DUP))
 		F_SET(dbp, DB_AM_DUP);
 	else
 		if (F_ISSET(dbp, DB_AM_DUP)) {
@@ -209,7 +208,7 @@ __ham_metachk(dbp, name, hashm)
 			return (EINVAL);
 		}
 
-	if (F_ISSET(&hashm->dbmeta, DB_HASH_SUBDB))
+	if (F_ISSET(&hashm->dbmeta, HASHM_SUBDB))
 		F_SET(dbp, DB_AM_SUBDB);
 	else
 		if (F_ISSET(dbp, DB_AM_SUBDB)) {
@@ -219,9 +218,9 @@ __ham_metachk(dbp, name, hashm)
 			return (EINVAL);
 		}
 
-	if (F_ISSET(&hashm->dbmeta, DB_HASH_DUPSORT)) {
+	if (F_ISSET(&hashm->dbmeta, HASHM_DUPSORT)) {
 		if (dbp->dup_compare == NULL)
-			dbp->dup_compare = __bam_defcmp;
+			dbp->dup_compare = __dbt_defcmp;
 	} else
 		if (dbp->dup_compare != NULL) {
 			__db_errx(env, DB_STR_A("1129",
@@ -243,14 +242,15 @@ __ham_metachk(dbp, name, hashm)
 	/* Blob databases must be upgraded. */
 	if (vers == 9 && (dbp->blob_file_id != 0 || dbp->blob_sdb_id != 0)) {
 	    __db_errx(env, DB_STR_A("1208",
-"%s: databases that support blobs must be upgraded.", "%s"),
+"%s: databases that support external files must be upgraded.", "%s"),
 		    name);
 		return (EINVAL);
 	}
 #ifndef HAVE_64BIT_TYPES
 	if (dbp->blob_file_id != 0 || dbp->blob_sdb_id != 0) {
 		__db_errx(env, DB_STR_A("1202",
-		    "%s: blobs require 64 integer compiler support.", "%s"),
+		    "%s: external files require 64 integer compiler support.",
+		    "%s"),
 		    name);
 		return (EINVAL);
 	}
@@ -313,6 +313,8 @@ __ham_init_meta(dbp, meta, pgno, lsnp)
 		DB_ASSERT(env, meta->dbmeta.encrypt_alg != 0);
 		meta->crypto_magic = meta->dbmeta.magic;
 	}
+	if (FLD_ISSET(dbp->open_flags, DB_SLICED))
+		FLD_SET(meta->dbmeta.metaflags, DBMETA_SLICED);
 	meta->dbmeta.type = P_HASHMETA;
 	meta->dbmeta.free = PGNO_INVALID;
 	meta->dbmeta.last_pgno = pgno;
@@ -328,11 +330,15 @@ __ham_init_meta(dbp, meta, pgno, lsnp)
 	SET_BLOB_META_SDB_ID(meta, dbp->blob_sdb_id, HMETA);
 
 	if (F_ISSET(dbp, DB_AM_DUP))
-		F_SET(&meta->dbmeta, DB_HASH_DUP);
+		F_SET(&meta->dbmeta, HASHM_DUP);
 	if (F_ISSET(dbp, DB_AM_SUBDB))
-		F_SET(&meta->dbmeta, DB_HASH_SUBDB);
+		F_SET(&meta->dbmeta, HASHM_SUBDB);
 	if (dbp->dup_compare != NULL)
-		F_SET(&meta->dbmeta, DB_HASH_DUPSORT);
+		F_SET(&meta->dbmeta, HASHM_DUPSORT);
+	if (FLD_ISSET(dbp->open_flags, DB_SLICED)) {
+		FLD_SET(meta->dbmeta.metaflags, DBMETA_SLICED);
+		F_SET(&meta->dbmeta, HASHM_SLICED);
+	}
 
 #ifdef HAVE_PARTITION
 	if ((part = dbp->p_internal) != NULL) {

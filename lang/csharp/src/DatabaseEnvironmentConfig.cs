@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2009, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2009, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 using System;
@@ -151,32 +151,46 @@ namespace BerkeleyDB {
         /// </para>
         /// </remarks>
         public string CreationDir;
-        /// <summary>
-        /// The path of the directory where blobs are stored.
+	/// <summary>
+        /// The path of the directory where external files are stored,
+	/// replaces BlobFileDir.
         /// </summary>
-        public string BlobDir;
+        public string ExternalFileDir;
+	/// <summary>
+	/// Deprecated.  Replaced by ExternalFileDir.
+	/// </summary>
+	public string BlobDir;
 
         internal bool blobThresholdIsSet;
         private uint blobThreshold;
         /// <summary>
         /// The size in bytes which is used to determine when a data item will
-        /// be stored as a blob.
+        /// be stored as an external file.
         /// <para>
         /// Any data item that is equal to or larger in size than the
-        /// threshold value is automatically stored as a blob.
+        /// threshold value is automatically stored as an external file.
         /// </para>
         /// <para>
         /// If the threshold value is 0, databases opened in the environment
-        /// default to never using blob support.
+        /// default to never using external file support.
         /// </para>
         /// <para>
-        /// It is illegal to enable blob support in the environment if any of 
-        /// <see cref="DatabaseEnvironmentConfig.TxnSnapshot"/>,
-        /// <see cref="DatabaseEnvironmentConfig.UseReplication"/>,
+        /// It is illegal to enable external file support in the environment if 
+        /// any of <see cref="DatabaseEnvironmentConfig.TxnSnapshot"/>,
         /// and <see cref="DatabaseEnvironmentConfig.UseMVCC"/> is set to true.
         /// </para>
         /// </summary>
-        public uint BlobThreshold {
+        public uint ExternalFileThreshold {
+            get { return blobThreshold; }
+            set {
+                blobThresholdIsSet = true;
+                blobThreshold = value;
+            }
+        }
+	/// <summary>
+        /// Deprecated.  Replaced by ExternalFileThreshold.
+        /// </summary>
+	public uint BlobThreshold {
             get { return blobThreshold; }
             set {
                 blobThresholdIsSet = true;
@@ -225,6 +239,18 @@ namespace BerkeleyDB {
         /// </para>
         /// </remarks>
         public string ErrorPrefix;
+        /// <summary>
+        /// The prefix string that appears before informational messages issued
+        /// by Berkeley DB.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// For databases opened inside of a DatabaseEnvironment, setting
+        /// MessagePrefix affects the entire environment and is equivalent to
+        /// setting <see cref="DatabaseEnvironment.MessagePrefix"/>.
+        /// </para>
+        /// </remarks>
+        public string MessagePrefix;
         /// <summary>
         /// The permissions for any intermediate directories created by Berkeley
         /// DB.
@@ -899,6 +925,7 @@ namespace BerkeleyDB {
                 ret |= FreeThreaded ? DbConstants.DB_THREAD : 0;
                 ret |= Lockdown ? DbConstants.DB_LOCKDOWN : 0;
                 ret |= Private ? DbConstants.DB_PRIVATE : 0;
+                ret |= Register ? DbConstants.DB_REGISTER : 0;
                 ret |= RunFatalRecovery ? DbConstants.DB_RECOVER_FATAL : 0;
                 ret |= RunRecovery ? DbConstants.DB_RECOVER : 0;
                 ret |= SystemMemory ? DbConstants.DB_SYSTEM_MEM : 0;

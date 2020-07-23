@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 
@@ -534,7 +534,7 @@ public class DatabaseTest {
     }
 
     /*
-     * Test setting the blob directory and threshold value.
+     * Test setting the external file directory and threshold value.
      */
     @Test public void test14()
         throws DatabaseException, Exception, FileNotFoundException
@@ -547,60 +547,62 @@ public class DatabaseTest {
         envc.setAllowCreate(true);
         envc.setInitializeCache(true);
 
-        // Test setting the blob directory.
+        // Test setting the external file directory.
         String dir[] = {"null", "", "BLOBDIR"};
         for (int i = -1; i < dir.length; i++) {
             TestUtils.removeall(true, true, TestUtils.BASETEST_DBDIR,
                 TestUtils.getDBFileName(DATABASETEST_DBNAME));
-            // Set the blob directory.
+            // Set the external file directory.
             if (i >= 0) {
                 if (dir[i].compareTo("null") == 0)
-                    envc.setBlobDir(null);
+                    envc.setExternalFileDir(null);
                 else
-                    envc.setBlobDir(new java.io.File(dir[i]));
+                    envc.setExternalFileDir(new java.io.File(dir[i]));
             }
-            // Set the blob threshold value.
-            envc.setBlobThreshold(10485760);
+            // Set the external file threshold value.
+            envc.setExternalFileThreshold(10485760);
             // Open the env.
             options.db_env = new Environment(TestUtils.BASETEST_DBFILE, envc);
-            // Verify the blob directory and threshold value.
+            // Verify the external file directory and threshold value.
             assertEquals(10485760,
-                options.db_env.getConfig().getBlobThreshold());
+                options.db_env.getConfig().getExternalFileThreshold());
             if (i == -1 || dir[i].compareTo("null") == 0)
-                assertNull(options.db_env.getConfig().getBlobDir());
+                assertNull(options.db_env.getConfig().getExternalFileDir());
             else
-                assertEquals(0, options.db_env.getConfig().getBlobDir().
+                assertEquals(0, options.db_env.getConfig().getExternalFileDir().
                     toString().compareTo(dir[i]));
             options.db_env.close();
         }
 
-        // Test setting the db blob threshold value and open it with no env.
+        // Test setting the db external file threshold value and open it with
+	// no env.
         test_blob_db(0, null, 3,
             TestUtils.BASETEST_DBDIR + File.separator + "DBBLOB",
             0, "DatabaseTest::test14 ", DatabaseType.BTREE);
 
-        // Test setting the blob directory in the database and then
+        // Test setting the external file directory in the database and then
         // opening the db within env and verifying the setting is ignored.
         test_blob_db(3, null, 0, "DBBLOB",
             0, "DatabaseTest::test14 ", DatabaseType.BTREE);
         test_blob_db(3, "ENVBLOB", 0, "DBBLOB",
             0, "DatabaseTest::test14 ", DatabaseType.BTREE);
 
-        // Test setting the blob directory in the environment.
+        // Test setting the external file directory in the environment.
         test_blob_db(3, "ENVBLOB", 0, null,
             0, "DatabaseTest::test14 ", DatabaseType.BTREE);
 
-        // Test the db blob threshold value defaults to env blob threshold
-        // value.
+        // Test the db external file threshold value defaults to env external
+        // file threshold value.
         test_blob_db(3, null, 0, null,
             0, "DatabaseTest::test14 ", DatabaseType.BTREE);
 
-        // Test setting db own blob threshold and open it within the env.
+        // Test setting db own external file threshold and open it within the
+	// env.
         test_blob_db(4, null, 3, null,
             0, "DatabaseTest::test14 ", DatabaseType.HASH);
 
-        // Test putting the data items whose size does not reach the blob
-        // threshold but set as blob data items.
+        // Test putting the data items whose size does not reach the external
+        // file threshold but set as external file data items.
         test_blob_db(3, null, 0, null,
             1, "DatabaseTest::test14 ", DatabaseType.HEAP);
     }
@@ -812,32 +814,35 @@ public class DatabaseTest {
 
     }
 
-    // Test if the BLOB basic APIs work by the following steps:
-    // 1) configure the blob threshold value and blob directory;
+    // Test if the external file basic APIs work by the following steps:
+    // 1) configure the external file threshold value and external file
+    // directory;
     // 2) open the database with/without the environment;
-    // 3) insert and verify the blob data by database methods;
-    // 4) insert blob data by cursor, update the blob data and verify
-    // the update by database stream;
-    // 5) verify the blob configs, whether the blobs are created in
-    // expected location and the stats;
+    // 3) insert and verify the external file data by database methods;
+    // 4) insert external file data by cursor, update the external file data and
+    // verify the update by database stream;
+    // 5) verify the external file configs, whether the external files are
+    // created in expected location and the stats;
     // 6) close the database and environment.
     //
-    // The parameter "env_threshold" indicates the blob threshold value
+    // The parameter "env_threshold" indicates the external file threshold value
     // set in the environment and whether the database is opened within
     // the enviornment. If it is <= 0, open the database without the
     // enviornment. Otherwise open the database within the enviornment.
-    // The parameter "blobdbt" indicates whether DatabaseEntry.setBlob()
+    // The parameter "external filedbt" indicates whether 
+    // DatabaseEntry.setExternalFile()
     // is called on the data items to put. If it is not 0, set the data
-    // items as blob data and make its size < the blob threshold. Otherwise
+    // items as external file data and make its size < the external file 
+    // threshold. Otherwise
     // make the size of the data item reach the threshold and do not set
-    // the data item as blob data.
+    // the data item as external file data.
     void test_blob_db(int env_threshold, String env_blob_dir,
         int db_threshold, String db_blob_dir, int blobdbt,
         String errpfx, DatabaseType dbtype)
         throws DatabaseException, Exception, FileNotFoundException
     {
-        // The blob threshold is set at least once either in the environment
-        // or in the database.
+        // The external file threshold is set at least once either in the
+        // environment or in the database.
         if (env_threshold <= 0 && db_threshold <= 0)
             return;
 
@@ -856,17 +861,17 @@ public class DatabaseTest {
             envc.setAllowCreate(true);
             envc.setErrorStream(TestUtils.getErrorStream());
             envc.setInitializeCache(true);
-            envc.setBlobThreshold(env_threshold);
+            envc.setExternalFileThreshold(env_threshold);
             if (env_blob_dir != null)
-                envc.setBlobDir(new java.io.File(env_blob_dir));
+                envc.setExternalFileDir(new java.io.File(env_blob_dir));
             options.db_env = new Environment(TestUtils.BASETEST_DBFILE, envc);
         }
 
         // Configure and open the database.
         if (db_threshold > 0)
-            options.db_config.setBlobThreshold(db_threshold);
+            options.db_config.setExternalFileThreshold(db_threshold);
         if (db_blob_dir != null)
-            options.db_config.setBlobDir(new java.io.File(db_blob_dir));
+            options.db_config.setExternalFileDir(new java.io.File(db_blob_dir));
         if (options.db_env == null)
             options.database =
                 new Database(TestUtils.getDBFileName(DATABASETEST_DBNAME),
@@ -876,8 +881,9 @@ public class DatabaseTest {
                 DATABASETEST_DBNAME, null, options.db_config);
         }
 
-        // Insert and verify some blob data by database method, and then
-        // update the blob data by database stream and verify the update.
+        // Insert and verify some external file data by database method, and
+        // then update the external file data by database stream and verify
+	// the update.
         Cursor cursor = options.database.openCursor(null, null);
         DatabaseStream dbs;
         DatabaseStreamConfig dbs_config = new DatabaseStreamConfig();
@@ -895,11 +901,12 @@ public class DatabaseTest {
             kdbt.setData(records[i].getBytes());
             data = records[i];
             if (blobdbt != 0) {
-                ddbt.setBlob(true);
-                assertTrue(ddbt.getBlob());
+                ddbt.setExternalFile(true);
+                assertTrue(ddbt.getExternalFile());
             } else {
                 for (int j = 1;
-                    j < options.database.getConfig().getBlobThreshold(); j++)
+                    j < options.database.getConfig().getExternalFileThreshold();
+		    j++)
                     data = data + records[i];
             }
             ddbt.setData(data.getBytes());
@@ -908,12 +915,13 @@ public class DatabaseTest {
             else
                 options.database.put(null, kdbt, ddbt);
 
-            // Verify the blob data by database get method.
+            // Verify the external file data by database get method.
             assertEquals(OperationStatus.SUCCESS,
                 options.database.get(null, kdbt, ddbt, null));
             assertArrayEquals(data.getBytes(), ddbt.getData());
 
-            // Update the blob data by database stream and verify the update.
+            // Update the external file data by database stream and verify the
+	    // update.
             assertEquals(OperationStatus.SUCCESS,
                 cursor.getSearchKey(kdbt, ddbt, null));
             dbs = cursor.openDatabaseStream(dbs_config);
@@ -927,14 +935,14 @@ public class DatabaseTest {
         }
         cursor.close();
 
-        // Insert the blob data by cursor, update the blob data by database
-        // stream and verify the update.
+        // Insert the external file data by cursor, update the external file
+        // data by database stream and verify the update.
         if (dbtype != DatabaseType.HEAP) {
             cursor = options.database.openCursor(null, null);
             kdbt = new DatabaseEntry("abc".getBytes());
             ddbt = new DatabaseEntry("abc".getBytes());
-            ddbt.setBlob(true);
-            assertEquals(true, ddbt.getBlob());
+            ddbt.setExternalFile(true);
+            assertEquals(true, ddbt.getExternalFile());
             assertEquals(OperationStatus.SUCCESS,
                 cursor.putKeyFirst(kdbt, ddbt));
 
@@ -983,20 +991,20 @@ public class DatabaseTest {
             cursor.close();
         }
 
-        // Verify the blob config of the enviornment.
+        // Verify the external file config of the enviornment.
         if (options.db_env != null && env_threshold > 0) {
             assertEquals(env_threshold,
-                options.db_env.getConfig().getBlobThreshold());
+                options.db_env.getConfig().getExternalFileThreshold());
             if (env_blob_dir == null)
-                assertNull(options.db_env.getConfig().getBlobDir());
+                assertNull(options.db_env.getConfig().getExternalFileDir());
             else
                 assertEquals(0, options.db_env.getConfig().
-                    getBlobDir().toString().compareTo(env_blob_dir));
+                    getExternalFileDir().toString().compareTo(env_blob_dir));
         }
 
-        // Verify the blob config of the database.
+        // Verify the external file config of the database.
         assertEquals(db_threshold > 0 ? db_threshold : env_threshold,
-            options.database.getConfig().getBlobThreshold());
+            options.database.getConfig().getExternalFileThreshold());
         String blrootdir;
         if (options.db_env != null) {
             if (env_blob_dir == null)
@@ -1009,10 +1017,10 @@ public class DatabaseTest {
             blrootdir = db_blob_dir;
         }
         assertEquals(0, options.database.getConfig().
-            getBlobDir().toString().compareTo(blrootdir));
+            getExternalFileDir().toString().compareTo(blrootdir));
 
-        // Verify the blobs are created in the expected location.
-        // This part of test is disabled since the Database.getBlobSubDir()
+        // Verify the external files are created in the expected location.
+        // This part of test is disabled since the Database.getBlobFileSubDir()
         // is not expsed to users.
         //if (options.db_env != null)
         //    blrootdir = options.db_env.getHome().toString() + "/" + blrootdir;
@@ -1024,32 +1032,34 @@ public class DatabaseTest {
         // Verify the stats.
         if (dbtype == DatabaseType.HASH) {
             HashStats stats = (HashStats)options.database.getStats(null, null);
-            assertEquals(records.length + 1, stats.getNumBlobs());
+            assertEquals(records.length + 1, stats.getExtFiles());
         } else if (dbtype == DatabaseType.HEAP) {
             HeapStats stats = (HeapStats)options.database.getStats(null, null);
-            assertEquals(records.length, stats.getHeapNumBlobs());
+            assertEquals(records.length, stats.getHeapExtFiles());
         } else {
             BtreeStats stats =
                (BtreeStats)options.database.getStats(null, null);
-            assertEquals(records.length + 1, stats.getNumBlobs());
+            assertEquals(records.length + 1, stats.getExtFiles());
         }
 
-        // Close the database and set up the blob directory configuration
-        // used in removing the database.
+        // Close the database and set up the external file directory
+        // configuration used in removing the database.
         options.database.close();
         if (options.db_env != null)
             blrootdir = TestUtils.BASETEST_DBDIR + File.separator + blrootdir;
-        options.db_config.setBlobDir(new File(blrootdir));
+        options.db_config.setExternalFileDir(new File(blrootdir));
 
-        // TestUtils.removeall does not work on the blob database since it
-        // removes the database with the default database configuration. So
-        // remove the blob database with blob configuration here.
+        // TestUtils.removeall does not work on the external file database since
+        // it removes the database with the default database configuration. So
+        // remove the external file database with external file configuration
+	// here.
         Database.remove(TestUtils.getDBFileName(DATABASETEST_DBNAME),
             null, options.db_config);
 
-        // All blobs are deleted but the blob directory remains after db
-        // remove. Verify it and delete the blob directory.
-        File[] files = options.db_config.getBlobDir().listFiles();
+        // All external files are deleted but the external file directory
+        // remains after db remove. Verify it and delete the external file
+	// directory.
+        File[] files = options.db_config.getExternalFileDir().listFiles();
         assertTrue(files.length > 0);
         for (int i = 0; i < files.length; i++) {
             if (files[i].isDirectory())

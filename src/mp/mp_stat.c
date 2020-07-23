@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -87,8 +87,17 @@ __memp_stat(env, gspp, fspp, flags)
 	u_int32_t i;
 	uintmax_t tmp_wait, tmp_nowait;
 
+	/*
+	 * The array holding the lengths related to the buffer allocated
+	 * for *fspp.  The first element of the array holds the number of
+	 * entries allocated.  The second element of the array holds the
+	 * total number of bytes allocated.
+	 */
+	u_int32_t fsp_len[2];
+
 	dbmp = env->mp_handle;
 	mp = dbmp->reginfo[0].primary;
+	tfsp = NULL;
 
 	/* Global statistics. */
 	if (gspp != NULL) {
@@ -200,36 +209,56 @@ __memp_stat(env, gspp, fspp, flags)
 	if (fspp != NULL) {
 		*fspp = NULL;
 
-		/* Count the MPOOLFILE structures. */
-		i = 0;
-		/*
-		 * Allow space for the first __memp_get_files() to align the
-		 * structure array to uintmax_t, DB_MPOOL_STAT's most
-		 * restrictive field.  [#23150]
-		 */
-		len = sizeof(uintmax_t);
-		if ((ret = __memp_walk_files(env,
-		     mp, __memp_count_files, &len, &i, flags)) != 0)
-			return (ret);
+		while (*fspp == NULL) {
+			/* Count the MPOOLFILE structures. */
+			i = 0;
+			/*
+			 * Allow space for the first __memp_get_files() to
+			 * align the structure array to uintmax_t,
+			 * DB_MPOOL_STAT's most restrictive field.  [#23150]
+			 */
+			len = sizeof(uintmax_t);
+			if ((ret = __memp_walk_files(env,
+			     mp, __memp_count_files, &len, &i, flags)) != 0)
+				return (ret);
 
-		if (i == 0)
-			return (0);
-		len += sizeof(DB_MPOOL_FSTAT *);	/* Trailing NULL */
+			if (i == 0)
+				return (0);
 
-		/* Allocate space */
-		if ((ret = __os_umalloc(env, len, fspp)) != 0)
-			return (ret);
+			/*
+			 * Copy the number of DB_MPOOL_FSTAT entries and the
+			 * number of bytes allocated for them into fsp_len. Do
+			 * not count the space reserved for allignment.
+			 */
+			fsp_len[0] = i;
+			fsp_len[1] = len - sizeof(uintmax_t);
 
-		tfsp = *fspp;
-		*tfsp = NULL;
+			/* Space for the trailing NULL. */
+			len += sizeof(DB_MPOOL_FSTAT *);
 
-		/*
-		 * Files may have been opened since we counted, don't walk
-		 * off the end of the allocated space.
-		 */
-		if ((ret = __memp_walk_files(env,
-		    mp, __memp_get_files, &tfsp, &i, flags)) != 0)
-			return (ret);
+			/* Allocate space */
+			if ((ret = __os_umalloc(env, len, fspp)) != 0)
+				return (ret);
+
+			tfsp = *fspp;
+			*tfsp = NULL;
+
+			/*
+			 * Files may have been opened since we counted, if we
+			 * walk off the end of the allocated space specified
+			 * in fsp_len, retry.
+			 */
+			if ((ret = __memp_walk_files(env,
+			    mp, __memp_get_files, &tfsp,
+			    fsp_len, flags)) != 0) {
+				if (ret == DB_BUFFER_SMALL) {
+					__os_ufree(env, *fspp);
+					*fspp = NULL;
+					tfsp = NULL;
+				} else
+					return (ret);
+			}
+		}
 
 		*++tfsp = NULL;
 	}
@@ -315,20 +344,21 @@ __memp_count_files(env, mfp, argp, countp, flags)
  *	+-----------------------------------------------+
  */
 static int
-__memp_get_files(env, mfp, argp, countp, flags)
+__memp_get_files(env, mfp, argp, fsp_len, flags)
 	ENV *env;
 	MPOOLFILE *mfp;
 	void *argp;
-	u_int32_t *countp;
+	u_int32_t fsp_len[];
 	u_int32_t flags;
 {
 	DB_MPOOL *dbmp;
 	DB_MPOOL_FSTAT **tfsp, *tstruct;
 	char *name, *tname;
-	size_t nlen;
+	size_t nlen, tlen;
 
-	if (*countp == 0)
-		return (0);
+	/* We walked through more files than argp was allocated for. */
+	if (fsp_len[0] == 0)
+		return DB_BUFFER_SMALL;
 
 	dbmp = env->mp_handle;
 	tfsp = *(DB_MPOOL_FSTAT ***)argp;
@@ -340,9 +370,9 @@ __memp_get_files(env, mfp, argp, countp, flags)
 		 * because uintmax_t might require stricter alignment than
 		 * pointers; e.g., IP32 LL64 SPARC. [#23150]
 		 */
-		tstruct = (DB_MPOOL_FSTAT *)&tfsp[*countp + 1];
+		tstruct = (DB_MPOOL_FSTAT *)&tfsp[fsp_len[0] + 1];
 		tstruct = ALIGNP_INC(tstruct, sizeof(uintmax_t));
-		tname = (char *)&tstruct[*countp];
+		tname = (char *)&tstruct[fsp_len[0]];
 		*tfsp = tstruct;
 	} else {
 		/*
@@ -356,6 +386,17 @@ __memp_get_files(env, mfp, argp, countp, flags)
 
 	name = __memp_fns(dbmp, mfp);
 	nlen = strlen(name) + 1;
+
+	/* The space required for file names is larger than
+	 *argp was allocated for.
+	 */
+	tlen = sizeof(DB_MPOOL_FSTAT *) + sizeof(DB_MPOOL_FSTAT) + nlen;
+	if (fsp_len[1] < tlen)
+		return DB_BUFFER_SMALL;
+	else
+		/* Count down the number of bytes left in argp. */
+		fsp_len[1] -= tlen;
+
 	memcpy(tname, name, nlen);
 	memcpy(tstruct, &mfp->stat, sizeof(mfp->stat));
 	tstruct->file_name = tname;
@@ -364,7 +405,9 @@ __memp_get_files(env, mfp, argp, countp, flags)
 	tstruct->st_pagesize = mfp->pagesize;
 
 	*(DB_MPOOL_FSTAT ***)argp = tfsp;
-	(*countp)--;
+
+	/* Count down the number of entries left in argp. */
+	fsp_len[0]--;
 
 	if (LF_ISSET(DB_STAT_CLEAR))
 		memset(&mfp->stat, 0, sizeof(mfp->stat));

@@ -399,9 +399,6 @@ cmd ::= DROP VIEW ifexists(E) fullname(X). {
 cmd ::= select(X).  {
   SelectDest dest = {SRT_Output, 0, 0, 0, 0, 0};
   sqlite3Select(pParse, X, &dest);
-  sqlite3ExplainBegin(pParse->pVdbe);
-  sqlite3ExplainSelect(pParse->pVdbe, X);
-  sqlite3ExplainFinish(pParse->pVdbe);
   sqlite3SelectDelete(pParse->db, X);
 }
 
@@ -412,35 +409,95 @@ cmd ::= select(X).  {
 %type oneselect {Select*}
 %destructor oneselect {sqlite3SelectDelete(pParse->db, $$);}
 
-select(A) ::= with(W) selectnowith(X). { 
-  if( X ){
-    X->pWith = W; 
+%include {
+  /*
+  ** For a compound SELECT statement, make sure p->pPrior->pNext==p for
+  ** all elements in the list.  And make sure list length does not exceed
+  ** SQLITE_LIMIT_COMPOUND_SELECT.
+  */
+  static void parserDoubleLinkSelect(Parse *pParse, Select *p){
+    if( p->pPrior ){
+      Select *pNext = 0, *pLoop;
+      int mxSelect, cnt = 0;
+      for(pLoop=p; pLoop; pNext=pLoop, pLoop=pLoop->pPrior, cnt++){
+        pLoop->pNext = pNext;
+        pLoop->selFlags |= SF_Compound;
+      }
+      if( (p->selFlags & SF_MultiValue)==0 && 
+        (mxSelect = pParse->db->aLimit[SQLITE_LIMIT_COMPOUND_SELECT])>0 &&
+        cnt>mxSelect
+      ){
+        sqlite3ErrorMsg(pParse, "too many terms in compound SELECT");
+      }
+    }
+  }
+}
+
+select(A) ::= with(W) selectnowith(X). {
+  Select *p = X;
+  if( p ){
+    p->pWith = W;
+    parserDoubleLinkSelect(pParse, p);
   }else{
     sqlite3WithDelete(pParse->db, W);
   }
-  A = X; 
+  A = p;
 }
 
 selectnowith(A) ::= oneselect(X).                      {A = X;}
 %ifndef SQLITE_OMIT_COMPOUND_SELECT
 selectnowith(A) ::= selectnowith(X) multiselect_op(Y) oneselect(Z).  {
-  if( Z ){
-    Z->op = (u8)Y;
-    Z->pPrior = X;
+  Select *pRhs = Z;
+  if( pRhs && pRhs->pPrior ){
+    SrcList *pFrom;
+    Token x;
+    x.n = 0;
+    parserDoubleLinkSelect(pParse, pRhs);
+    pFrom = sqlite3SrcListAppendFromTerm(pParse,0,0,0,&x,pRhs,0,0);
+    pRhs = sqlite3SelectNew(pParse,0,pFrom,0,0,0,0,0,0,0);
+  }
+  if( pRhs ){
+    pRhs->op = (u8)Y;
+    pRhs->pPrior = X;
+    pRhs->selFlags &= ~SF_MultiValue;
     if( Y!=TK_ALL ) pParse->hasCompound = 1;
   }else{
     sqlite3SelectDelete(pParse->db, X);
   }
-  A = Z;
+  A = pRhs;
 }
 %type multiselect_op {int}
 multiselect_op(A) ::= UNION(OP).             {A = @OP;}
 multiselect_op(A) ::= UNION ALL.             {A = TK_ALL;}
 multiselect_op(A) ::= EXCEPT|INTERSECT(OP).  {A = @OP;}
 %endif SQLITE_OMIT_COMPOUND_SELECT
-oneselect(A) ::= SELECT distinct(D) selcollist(W) from(X) where_opt(Y)
+oneselect(A) ::= SELECT(S) distinct(D) selcollist(W) from(X) where_opt(Y)
                  groupby_opt(P) having_opt(Q) orderby_opt(Z) limit_opt(L). {
   A = sqlite3SelectNew(pParse,W,X,Y,P,Q,Z,D,L.pLimit,L.pOffset);
+#if SELECTTRACE_ENABLED
+  /* Populate the Select.zSelName[] string that is used to help with
+  ** query planner debugging, to differentiate between multiple Select
+  ** objects in a complex query.
+  **
+  ** If the SELECT keyword is immediately followed by a C-style comment
+  ** then extract the first few alphanumeric characters from within that
+  ** comment to be the zSelName value.  Otherwise, the label is #N where
+  ** is an integer that is incremented with each SELECT statement seen.
+  */
+  if( A!=0 ){
+    const char *z = S.z+6;
+    int i;
+    sqlite3_snprintf(sizeof(A->zSelName), A->zSelName, "#%d",
+                     ++pParse->nSelect);
+    while( z[0]==' ' ) z++;
+    if( z[0]=='/' && z[1]=='*' ){
+      z += 2;
+      while( z[0]==' ' ) z++;
+      for(i=0; sqlite3Isalnum(z[i]); i++){}
+      sqlite3_snprintf(sizeof(A->zSelName), A->zSelName, "%.*s", i, z);
+    }
+  }
+#endif /* SELECTRACE_ENABLED */
 }
 oneselect(A) ::= values(X).    {A = X;}
 
@@ -450,13 +507,16 @@ values(A) ::= VALUES LP nexprlist(X) RP. {
   A = sqlite3SelectNew(pParse,X,0,0,0,0,0,SF_Values,0,0);
 }
 values(A) ::= values(X) COMMA LP exprlist(Y) RP. {
-  Select *pRight = sqlite3SelectNew(pParse,Y,0,0,0,0,0,SF_Values,0,0);
+  Select *pRight, *pLeft = X;
+  pRight = sqlite3SelectNew(pParse,Y,0,0,0,0,0,SF_Values|SF_MultiValue,0,0);
+  if( ALWAYS(pLeft) ) pLeft->selFlags &= ~SF_MultiValue;
   if( pRight ){
     pRight->op = TK_ALL;
-    pRight->pPrior = X;
+    pLeft = X;
+    pRight->pPrior = pLeft;
     A = pRight;
   }else{
-    A = X;
+    A = pLeft;
   }
 }
 
@@ -812,7 +872,7 @@ expr(A) ::= VARIABLE(X).     {
   spanSet(&A, &X, &X);
 }
 expr(A) ::= expr(E) COLLATE ids(C). {
-  A.pExpr = sqlite3ExprAddCollateToken(pParse, E.pExpr, &C);
+  A.pExpr = sqlite3ExprAddCollateToken(pParse, E.pExpr, &C, 1);
   A.zStart = E.zStart;
   A.zEnd = &C.z[C.n];
 }
@@ -919,7 +979,7 @@ expr(A) ::= expr(X) NOT NULL(E). {spanUnaryPostfix(&A,pParse,TK_NOTNULL,&X,&E);}
   ** unary TK_ISNULL or TK_NOTNULL expression. */
   static void binaryToUnaryIfNull(Parse *pParse, Expr *pY, Expr *pA, int op){
     sqlite3 *db = pParse->db;
-    if( db->mallocFailed==0 && pY->op==TK_NULL ){
+    if( pY && pA && pY->op==TK_NULL ){
       pA->op = (u8)op;
       sqlite3ExprDelete(db, pA->pRight);
       pA->pRight = 0;
@@ -999,11 +1059,38 @@ expr(A) ::= expr(W) between_op(N) expr(X) AND expr(Y). [BETWEEN] {
       */
       A.pExpr = sqlite3PExpr(pParse, TK_INTEGER, 0, 0, &sqlite3IntTokens[N]);
       sqlite3ExprDelete(pParse->db, X.pExpr);
+    }else if( Y->nExpr==1 ){
+      /* Expressions of the form:
+      **
+      **      expr1 IN (?1)
+      **      expr1 NOT IN (?2)
+      **
+      ** with exactly one value on the RHS can be simplified to something
+      ** like this:
+      **
+      **      expr1 == ?1
+      **      expr1 <> ?2
+      **
+      ** But, the RHS of the == or <> is marked with the EP_Generic flag
+      ** so that it may not contribute to the computation of comparison
+      ** affinity or the collating sequence to use for comparison.  Otherwise,
+      ** the semantics would be subtly different from IN or NOT IN.
+      */
+      Expr *pRHS = Y->a[0].pExpr;
+      Y->a[0].pExpr = 0;
+      sqlite3ExprListDelete(pParse->db, Y);
+      /* pRHS cannot be NULL because a malloc error would have been detected
+      ** before now and control would have never reached this point */
+      if( ALWAYS(pRHS) ){
+        pRHS->flags &= ~EP_Collate;
+        pRHS->flags |= EP_Generic;
+      }
+      A.pExpr = sqlite3PExpr(pParse, N ? TK_NE : TK_EQ, X.pExpr, pRHS, 0);
     }else{
       A.pExpr = sqlite3PExpr(pParse, TK_IN, X.pExpr, 0, 0);
       if( A.pExpr ){
         A.pExpr->x.pList = Y;
-        sqlite3ExprSetHeight(pParse, A.pExpr);
+        sqlite3ExprSetHeightAndFlags(pParse, A.pExpr);
       }else{
         sqlite3ExprListDelete(pParse->db, Y);
       }
@@ -1016,8 +1103,8 @@ expr(A) ::= expr(W) between_op(N) expr(X) AND expr(Y). [BETWEEN] {
     A.pExpr = sqlite3PExpr(pParse, TK_SELECT, 0, 0, 0);
     if( A.pExpr ){
       A.pExpr->x.pSelect = X;
-      ExprSetProperty(A.pExpr, EP_xIsSelect);
-      sqlite3ExprSetHeight(pParse, A.pExpr);
+      ExprSetProperty(A.pExpr, EP_xIsSelect|EP_Subquery);
+      sqlite3ExprSetHeightAndFlags(pParse, A.pExpr);
     }else{
       sqlite3SelectDelete(pParse->db, X);
     }
@@ -1028,8 +1115,8 @@ expr(A) ::= expr(W) between_op(N) expr(X) AND expr(Y). [BETWEEN] {
     A.pExpr = sqlite3PExpr(pParse, TK_IN, X.pExpr, 0, 0);
     if( A.pExpr ){
       A.pExpr->x.pSelect = Y;
-      ExprSetProperty(A.pExpr, EP_xIsSelect);
-      sqlite3ExprSetHeight(pParse, A.pExpr);
+      ExprSetProperty(A.pExpr, EP_xIsSelect|EP_Subquery);
+      sqlite3ExprSetHeightAndFlags(pParse, A.pExpr);
     }else{
       sqlite3SelectDelete(pParse->db, Y);
     }
@@ -1042,8 +1129,8 @@ expr(A) ::= expr(W) between_op(N) expr(X) AND expr(Y). [BETWEEN] {
     A.pExpr = sqlite3PExpr(pParse, TK_IN, X.pExpr, 0, 0);
     if( A.pExpr ){
       A.pExpr->x.pSelect = sqlite3SelectNew(pParse, 0,pSrc,0,0,0,0,0,0,0);
-      ExprSetProperty(A.pExpr, EP_xIsSelect);
-      sqlite3ExprSetHeight(pParse, A.pExpr);
+      ExprSetProperty(A.pExpr, EP_xIsSelect|EP_Subquery);
+      sqlite3ExprSetHeightAndFlags(pParse, A.pExpr);
     }else{
       sqlite3SrcListDelete(pParse->db, pSrc);
     }
@@ -1055,8 +1142,8 @@ expr(A) ::= expr(W) between_op(N) expr(X) AND expr(Y). [BETWEEN] {
     Expr *p = A.pExpr = sqlite3PExpr(pParse, TK_EXISTS, 0, 0, 0);
     if( p ){
       p->x.pSelect = Y;
-      ExprSetProperty(p, EP_xIsSelect);
-      sqlite3ExprSetHeight(pParse, p);
+      ExprSetProperty(p, EP_xIsSelect|EP_Subquery);
+      sqlite3ExprSetHeightAndFlags(pParse, p);
     }else{
       sqlite3SelectDelete(pParse->db, Y);
     }
@@ -1070,7 +1157,7 @@ expr(A) ::= CASE(C) case_operand(X) case_exprlist(Y) case_else(Z) END(E). {
   A.pExpr = sqlite3PExpr(pParse, TK_CASE, X, 0, 0);
   if( A.pExpr ){
     A.pExpr->x.pList = Z ? sqlite3ExprListAppend(pParse,Y,Z) : Y;
-    sqlite3ExprSetHeight(pParse, A.pExpr);
+    sqlite3ExprSetHeightAndFlags(pParse, A.pExpr);
   }else{
     sqlite3ExprListDelete(pParse->db, Y);
     sqlite3ExprDelete(pParse->db, Z);
@@ -1131,14 +1218,14 @@ uniqueflag(A) ::= .        {A = OE_None;}
 idxlist_opt(A) ::= .                         {A = 0;}
 idxlist_opt(A) ::= LP idxlist(X) RP.         {A = X;}
 idxlist(A) ::= idxlist(X) COMMA nm(Y) collate(C) sortorder(Z).  {
-  Expr *p = sqlite3ExprAddCollateToken(pParse, 0, &C);
+  Expr *p = sqlite3ExprAddCollateToken(pParse, 0, &C, 1);
   A = sqlite3ExprListAppend(pParse,X, p);
   sqlite3ExprListSetName(pParse,A,&Y,1);
   sqlite3ExprListCheckLength(pParse, A, "index");
   if( A ) A->a[A->nExpr-1].sortOrder = (u8)Z;
 }
 idxlist(A) ::= nm(Y) collate(C) sortorder(Z). {
-  Expr *p = sqlite3ExprAddCollateToken(pParse, 0, &C);
+  Expr *p = sqlite3ExprAddCollateToken(pParse, 0, &C, 1);
   A = sqlite3ExprListAppend(pParse,0, p);
   sqlite3ExprListSetName(pParse, A, &Y, 1);
   sqlite3ExprListCheckLength(pParse, A, "index");

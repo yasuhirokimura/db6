@@ -1,7 +1,7 @@
 /*
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1998, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1998, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -518,7 +518,7 @@ retry2:		cp = jc->j_workcurs[i];
 					 * beginning (setting workcurs NULL
 					 * will achieve this next go-round).
 					 *
-					 * XXX: This is likely to break
+					 * !!!: This is likely to break
 					 * horribly if any two cursors are
 					 * both sorted, but have different
 					 * specified sort functions.  For,
@@ -796,7 +796,10 @@ __db_join_getnext(dbc, key, data, exhausted, opmods)
 	int (*func) __P((DB *, const DBT *, const DBT *, size_t *));
 
 	dbp = dbc->dbp;
-	func = (dbp->dup_compare == NULL) ? __bam_defcmp : dbp->dup_compare;
+	if (dbp->dup_compare == NULL)
+		func = __dbt_defcmp;
+	else
+		(void)dbp->get_dup_compare(dbp, &func);
 
 	switch (exhausted) {
 	case 0:
@@ -834,7 +837,7 @@ __db_join_getnext(dbc, key, data, exhausted, opmods)
 		ret = __dbc_get(dbc, key, data, opmods | DB_GET_BOTHC);
 		break;
 	default:
-		ret = EINVAL;
+		ret = USR_ERR(dbc->env, EINVAL);
 		break;
 	}
 

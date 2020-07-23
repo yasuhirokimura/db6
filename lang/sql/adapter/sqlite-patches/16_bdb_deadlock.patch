@@ -1,6 +1,6 @@
 --- src/vdbe.c
 +++ src/vdbe.c
-@@ -1215,7 +1215,10 @@
+@@ -1322,7 +1322,10 @@
    ** The statement transaction is never a top-level transaction.  Hence
    ** the RELEASE call below can never fail.
    */
@@ -12,7 +12,7 @@
    rc = sqlite3VdbeCloseStatement(p, SAVEPOINT_RELEASE);
    if( NEVER(rc!=SQLITE_OK) ){
      break;
-@@ -3001,7 +3004,7 @@
+@@ -3074,7 +3074,7 @@
        goto abort_due_to_error;
      }
  
@@ -24,7 +24,7 @@
 @@ -6273,6 +6276,14 @@
    testcase( sqlite3GlobalConfig.xLog!=0 );
    sqlite3_log(rc, "statement aborts at %d: [%s] %s", 
-                    pc, p->zSql, p->zErrMsg);
+                    (int)(pOp - aOp), p->zSql, p->zErrMsg);
 +  /* Force a rollback if a locked or busy error happens. BDBSQL*/
 +  if ( p->rc == SQLITE_LOCKED || p->rc == SQLITE_BUSY ) {
 +	p->errorAction = OE_Abort;
@@ -38,7 +38,7 @@
    rc = SQLITE_ERROR;
 --- src/vdbeblob.c
 +++ src/vdbeblob.c
-@@ -156,6 +156,7 @@
+@@ -152,6 +152,7 @@
    Table *pTab;
    Parse *pParse = 0;
    Incrblob *pBlob = 0;
@@ -46,7 +46,7 @@
  
    flags = !!flags;                /* flags = (flags ? 1 : 0); */
    *ppBlob = 0;
-@@ -259,7 +260,7 @@
+@@ -266,7 +266,7 @@
      assert( pBlob->pStmt || db->mallocFailed );
      if( pBlob->pStmt ){
        Vdbe *v = (Vdbe *)pBlob->pStmt;
@@ -55,7 +55,7 @@
  
        sqlite3VdbeAddOpList(v, sizeof(openBlob)/sizeof(VdbeOpList), openBlob);
  
-@@ -307,6 +308,10 @@
+@@ -309,6 +309,10 @@
          pParse->nTab = 1;
          sqlite3VdbeMakeReady(v, pParse);
        }

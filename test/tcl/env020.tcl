@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2011, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2011, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -464,6 +464,7 @@ proc env020_init { } {
 		"log flush"
 		"log handle"
 		"log region"
+		"lsn history"
 		"mpoolfile handle"
 		"mpool buffer"
 		"mpool filehandle"
@@ -517,6 +518,10 @@ proc env020_init { } {
 		"Next page number expected"
 		"Not waiting for any missed pages"
 		"Page number of first page we have after missed pages"
+		"Number of duplicate external file data messages received"
+		"Number of external file data messages written to disk"
+		"Number of external file data messages re-requested"
+		"Number of external file update messages re-requested"
 		"Number of duplicate master conditions originally detected at this site"
 		"Current environment ID"
 		"No current environment ID"
@@ -648,6 +653,8 @@ proc env020_init { } {
 		"Number of automatic replication process takeovers"
 		"Number of messages discarded due to incoming queue full"
 		"Incoming message size in queue"
+		"Number of write operations forwarded by this client"
+		"Number of write operations received by this master"
 	}
 
 	set repmgr_statprt_pattern_sites {
@@ -750,15 +757,16 @@ proc env020_init { } {
 		"IsAlive"
 		"ThreadId"
 		"ThreadIdString"
-		"Blob dir"
+		"External file dir"
 		"Log dir"
 		"Metadata dir"
+		"Region dir"
 		"Tmp dir"
 		"Data dir"
 		"Intermediate directory mode"
 		"Shared memory key"
 		"Password"
-		"Blob threshold"
+		"External file threshold"
 		"App private"
 		"Api1 internal"
 		"Api2 internal"
@@ -1216,7 +1224,7 @@ proc env020_bt_stat_print {} {
 		"Number of levels in the tree"
 		"Number of unique keys in the tree"
 		"Number of data items in the tree"
-		"Number of blobs in the tree"
+		"Number of external files in the tree"
 		"Number of tree internal pages"
 		"Number of bytes free in tree internal pages"
 		"Number of tree leaf pages"
@@ -1256,7 +1264,7 @@ proc env020_ham_stat_print {} {
 		"Number of data items in the database"
 		"Number of hash buckets"
 		"Number of bytes free on bucket pages"
-		"Number of blobs"
+		"Number of external files"
 		{Number of hash overflow \(big item\) pages}
 		{Number of bytes free in hash overflow \(big item\) pages}
 		"Number of bucket overflow pages"
@@ -1291,7 +1299,7 @@ proc env020_heap_stat_print {} {
 		"Heap magic number"
 		"Heap version number"
 		"Number of records in the database"
-		"Number of blobs in the database"
+		"Number of external files in the database"
 		"Number of database pages"
 		"Underlying database page size"
 		"Number of database regions"

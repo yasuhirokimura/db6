@@ -422,6 +422,7 @@ static int btree_from_db(
   return TCL_OK;
 }
 
+
 /*
 ** Register commands with the TCL interpreter.
 */

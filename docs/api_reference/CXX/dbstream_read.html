@@ -7,14 +7,14 @@
     <link rel="stylesheet" href="apiReference.css" type="text/css" />
     <meta name="generator" content="DocBook XSL Stylesheets V1.73.2" />
     <link rel="start" href="index.html" title="Berkeley DB C++ API Reference" />
-    <link rel="up" href="blob.html" title="Chapter 14.  Binary Large Objects" />
+    <link rel="up" href="blob.html" title="Chapter 14.  External Files" />
     <link rel="prev" href="dbstream_close.html" title="DbStream::close()" />
     <link rel="next" href="dbstream_size.html" title="DbStream::size()" />
   </head>
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -23,7 +23,7 @@
         <tr>
           <td width="20%" align="left"><a accesskey="p" href="dbstream_close.html">Prev</a> </td>
           <th width="60%" align="center">Chapter 14. 
-                Binary Large Objects
+                External Files
         </th>
           <td width="20%" align="right"> <a accesskey="n" href="dbstream_size.html">Next</a></td>
         </tr>
@@ -45,8 +45,8 @@ DbStream::read(Dbt *data, db_off_t offset, u_int32_t size,
                u_int32_t flags); </pre>
       <p>
         The <code class="methodname">DbStream::read()</code> method reads
-        <span class="bold"><strong>size</strong></span> bytes from the BLOB, starting
-        at <span class="bold"><strong>offset</strong></span>, into the
+        <span class="bold"><strong>size</strong></span> bytes from the external file,
+	starting at <span class="bold"><strong>offset</strong></span>, into the
         DBT <span class="bold"><strong>data</strong></span>.
      </p>
       <p>
@@ -67,7 +67,7 @@ DbStream::read(Dbt *data, db_off_t offset, u_int32_t size,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp63876208"></a>Parameters</h3>
+              <h3 class="title"><a id="idp108915488"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -75,7 +75,7 @@ DbStream::read(Dbt *data, db_off_t offset, u_int32_t size,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp63875560"></a>data</h4>
+                <h4 class="title"><a id="idp108914240"></a>data</h4>
               </div>
             </div>
           </div>
@@ -97,21 +97,22 @@ DbStream::read(Dbt *data, db_off_t offset, u_int32_t size,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp63862400"></a>offset</h4>
+                <h4 class="title"><a id="idp108889728"></a>offset</h4>
               </div>
             </div>
           </div>
           <p>
                   The <span class="bold"><strong>offset</strong></span> parameter
                   indicates the starting position, in bytes, from the
-                  beginning of the BLOB where you want the read to begin.
+                  beginning of the external file where you want the read to
+                  begin.
              </p>
         </div>
         <div class="sect3" lang="en" xml:lang="en">
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp63854288"></a>size</h4>
+                <h4 class="title"><a id="idp108874640"></a>size</h4>
               </div>
             </div>
           </div>
@@ -124,7 +125,7 @@ DbStream::read(Dbt *data, db_off_t offset, u_int32_t size,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp63863264"></a>flags</h4>
+                <h4 class="title"><a id="idp108889312"></a>flags</h4>
               </div>
             </div>
           </div>
@@ -137,7 +138,7 @@ DbStream::read(Dbt *data, db_off_t offset, u_int32_t size,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp63841792"></a>Errors</h3>
+              <h3 class="title"><a id="idp108882592"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -155,7 +156,7 @@ DbStream::read(Dbt *data, db_off_t offset, u_int32_t size,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp63886776"></a>DB_BUFFER_SMALL</h4>
+                <h4 class="title"><a id="idp108934480"></a>DB_BUFFER_SMALL</h4>
               </div>
             </div>
           </div>
@@ -169,7 +170,7 @@ DbStream::read(Dbt *data, db_off_t offset, u_int32_t size,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp63886216"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp108927424"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -184,24 +185,24 @@ DbStream::read(Dbt *data, db_off_t offset, u_int32_t size,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp63881288"></a>Class</h3>
+              <h3 class="title"><a id="idp108923808"></a>Class</h3>
             </div>
           </div>
         </div>
         <p>
-            <a class="link" href="blob.html" title="Chapter 14.  Binary Large Objects">DbStream</a>  
+            <a class="link" href="blob.html" title="Chapter 14.  External Files">DbStream</a>  
         </p>
       </div>
       <div class="sect2" lang="en" xml:lang="en">
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp63877504"></a>See Also</h3>
+              <h3 class="title"><a id="idp108918816"></a>See Also</h3>
             </div>
           </div>
         </div>
         <p>
-             <a class="xref" href="blob.html#bloblist" title="BLOBs and Related Methods">BLOBs and Related Methods</a> 
+             <a class="xref" href="blob.html#bloblist" title="External Files and Related Methods">External Files and Related Methods</a> 
         </p>
       </div>
     </div>

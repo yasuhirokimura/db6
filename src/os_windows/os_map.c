@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -325,7 +325,7 @@ __os_map(env, path, infop, fhp, len, is_region, is_system, is_rdonly, addr)
 	}
 
 	/*
-	 * XXX
+	 * !!!
 	 * DB: We have not implemented copy-on-write here.
 	 *
 	 * If this is an region in system memory, we try to open it using the
@@ -387,7 +387,7 @@ __os_map(env, path, infop, fhp, len, is_region, is_system, is_rdonly, addr)
 	}
 
 	/*
-	 * XXX
+	 * !!!
 	 * It turns out that the kernel object underlying the named section
 	 * is reference counted, but that the call to MapViewOfFile() above
 	 * does NOT increment the reference count! So, if we close the handle

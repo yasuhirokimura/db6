@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -12,6 +12,9 @@
 #if defined(__cplusplus)
 extern "C" {
 #endif
+
+#define	HMAC_OUTPUT_SIZE	20
+#define	HMAC_BLOCK_SIZE	64
 
 /*
  * Algorithm specific information.

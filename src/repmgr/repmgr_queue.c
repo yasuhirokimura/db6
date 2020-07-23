@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2006, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2006, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -25,7 +25,10 @@ __repmgr_queue_destroy(env)
 	REP *rep;
 	REPMGR_MESSAGE *m;
 	REPMGR_CONNECTION *conn;
+	u_int32_t mtype;
 	int ret, t_ret;
+
+	COMPQUIET(mtype, 0);
 
 	db_rep = env->rep_handle;
 	rep = db_rep->region;
@@ -49,6 +52,22 @@ __repmgr_queue_destroy(env)
 			    (t_ret = __repmgr_decr_conn_ref(env, conn)) != 0 &&
 			    ret == 0)
 				ret = t_ret;
+		}
+		if (m->msg_hdr.type == REPMGR_OWN_MSG) {
+			mtype = REPMGR_OWN_MSG_TYPE(m->msg_hdr);
+			if ((conn = m->v.gmdb_msg.conn) != NULL) {
+				/*
+				 * A site that removed itself may have already
+				 * closed its connections.
+				 */
+				if ((t_ret = __repmgr_close_connection(env,
+				    conn)) != 0 && ret == 0 &&
+				    mtype != REPMGR_REMOVE_REQUEST)
+					ret = t_ret;
+				if ((t_ret = __repmgr_decr_conn_ref(env,
+				    conn)) != 0 && ret == 0)
+					ret = t_ret;
+			}
 		}
 		__os_free(env, m);
 	}

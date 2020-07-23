@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -141,9 +141,13 @@
                 buffering in the Berkeley DB system?</strong>
             </span>
             <p>
-                While you cannot avoid double buffering entirely,
-                there are a few things you can do to address this
-                issue:
+                Some operating systems provide the support necessary to
+		avoid double buffering.  On those systems, you can attempt to
+		avoid double buffering by specifying the <a href="../api_reference/C/envset_flags.html#set_flags_DB_DIRECT_DB" class="olink">DB_DIRECT_DB</a> and
+		<a href="../api_reference/C/envlog_set_config.html#log_set_config_DB_LOG_DIRECT" class="olink">DB_LOG_DIRECT</a> flags.
+                Where that support is not available, or where experimentation
+		with it shows that is does not improve performance, there are
+		a few other things you can do to address this issue:
             </p>
             <p>
                 First, the Berkeley DB cache size can be explicitly
@@ -162,8 +166,15 @@
                 physical memory devoted to the system's file buffer
                 cache. Altering this type of resource configuration
                 may require appropriate privileges, or even operating
-                system reboots and/or rebuilds, on some
-                systems.
+                system reboots and/or rebuilds, on some systems.
+	    </p>
+            <p>
+		Microsoft Windows provides a
+		<code class="function">SetSystemFileCacheSize</code> function which
+		can be used to limit its cache size; without that
+		limit the Windows file cache can grow to nearly fill physical
+		memory, forcing the working sets of processes out to disk,
+		reducing system performance.
             </p>
             <p>
                 Third, changing the size of the Berkeley DB
@@ -177,11 +188,6 @@
                 additional system memory available for the file buffer
                 cache, especially on systems without a unified buffer
                 cache and VM system.
-            </p>
-            <p>
-                Finally, for operating systems that allow buffering
-                to be turned off, specifying the <a href="../api_reference/C/envset_flags.html#set_flags_DB_DIRECT_DB" class="olink">DB_DIRECT_DB</a> and
-                <a href="../api_reference/C/envlog_set_config.html#log_set_config_DB_LOG_DIRECT" class="olink">DB_LOG_DIRECT</a> flags will attempt to do so.
             </p>
           </li>
           <li>

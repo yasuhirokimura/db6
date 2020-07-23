@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2006, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2006, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -31,7 +31,7 @@ rep_setup(dbenv, argc, argv, setup_info)
 	DB_SITE *dbsite;
 	repsite_t site, *site_list;
 	extern char *optarg;
-	char ch, *portstr;
+	char ch, *last_colon, *portstr;
 	int ack_policy, got_self, i, maxsites, priority, ret;
 
 	got_self = maxsites = ret = site.peer = site.creator = 0;
@@ -58,11 +58,23 @@ rep_setup(dbenv, argc, argv, setup_info)
 		case 'L':
 			setup_info->self.creator = 1; /* FALLTHROUGH */
 		case 'l':
-			setup_info->self.host = strtok(optarg, ":");
-			if ((portstr = strtok(NULL, ":")) == NULL) {
-				fprintf(stderr, "Bad host specification.\n");
+			setup_info->self.host = optarg;
+			/*
+			 * The final colon in host:port string is the
+			 * boundary between the host and the port portions
+			 * of the string.
+			 */
+			if ((last_colon = strrchr(optarg, ':')) == NULL ) {
+				fprintf(stderr,
+				    "Bad local host specification.\n");
 				goto err;
 			}
+			/*
+			 * Separate the host and port portions of the
+			 * string for further processing.
+			 */
+			portstr = last_colon + 1;
+			*last_colon = '\0';
 			setup_info->self.port = (unsigned short)atoi(portstr);
 			setup_info->self.peer = 0;
 			got_self = 1;
@@ -77,11 +89,22 @@ rep_setup(dbenv, argc, argv, setup_info)
 			site.peer = 1; /* FALLTHROUGH */
 		case 'r':
 			site.host = optarg;
-			site.host = strtok(site.host, ":");
-			if ((portstr = strtok(NULL, ":")) == NULL) {
-				fprintf(stderr, "Bad host specification.\n");
+			/*
+			 * The final colon in host:port string is the
+			 * boundary between the host and the port portions
+			 * of the string.
+			 */
+			if ((last_colon = strrchr(site.host, ':')) == NULL ) {
+				fprintf(stderr,
+				    "Bad remote host specification.\n");
 				goto err;
 			}
+			/*
+			 * Separate the host and port portions of the
+			 * string for further processing.
+			 */
+			portstr = last_colon + 1;
+			*last_colon = '\0';
 			site.port = (unsigned short)atoi(portstr);
 			if (setup_info->site_list == NULL ||
 			    setup_info->remotesites >= maxsites) {

@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -91,7 +91,7 @@ DbEnv::rep_set_config(u_int32_t which, int onoff); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp62754440"></a>Parameters</h3>
+              <h3 class="title"><a id="idp106879264"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -99,7 +99,7 @@ DbEnv::rep_set_config(u_int32_t which, int onoff); </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp62754608"></a>which</h4>
+                <h4 class="title"><a id="idp106880000"></a>which</h4>
               </div>
             </div>
           </div>
@@ -275,6 +275,30 @@ DbEnv::rep_set_config(u_int32_t which, int onoff); </pre>
                     </p>
               </li>
               <li>
+                <p><a id="config_DB_REPMGR_CONF_FORWARD_WRITES"></a>
+                        <code class="literal">DB_REPMGR_CONF_FORWARD_WRITES</code>
+                    </p>
+                <p>
+                       By default, write operations cannot be performed on a
+                       replication client site. This option enables forwarding of
+                       simple client put and delete operations to the master site 
+                       for processing. These operations must use an implicit NULL 
+                       transaction ID to be forwarded.  Any other write
+                       operation that specifies a non-NULL transaction or uses a cursor  
+                        
+                       <span>throws a DatabaseException.</span> 
+                       This option is turned off by default. 
+                    </p>
+                <p>
+                       The master must have an open database handle for the database
+                       on which a forwarded write operation is being performed.
+                       All sites in the replication group should have the same value 
+                       for this configuration option. 
+                       (See the <a href="../../programmer_reference/comm_repsites.html#conf_writeforw" class="olink">Configuring for Write Forwarding</a> 
+                       section in the <em class="citetitle">Berkeley DB Programmer's Reference Guide</em> for more information.) 
+                    </p>
+              </li>
+              <li>
                 <p><a id="config_DB_REPMGR_CONF_PREFMAS_CLIENT"></a>
                         <code class="literal">DB_REPMGR_CONF_PREFMAS_CLIENT</code>
                     </p>
@@ -358,7 +382,7 @@ DbEnv::rep_set_config(u_int32_t which, int onoff); </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp62785192"></a>onoff</h4>
+                <h4 class="title"><a id="idp106901088"></a>onoff</h4>
               </div>
             </div>
           </div>
@@ -374,7 +398,7 @@ DbEnv::rep_set_config(u_int32_t which, int onoff); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp62762840"></a>Errors</h3>
+              <h3 class="title"><a id="idp106918336"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -392,7 +416,7 @@ DbEnv::rep_set_config(u_int32_t which, int onoff); </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp62765568"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp106940352"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -409,7 +433,7 @@ DbEnv::rep_set_config(u_int32_t which, int onoff); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp62780920"></a>Class</h3>
+              <h3 class="title"><a id="idp106908656"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -421,7 +445,7 @@ DbEnv::rep_set_config(u_int32_t which, int onoff); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp62760928"></a>See Also</h3>
+              <h3 class="title"><a id="idp106918928"></a>See Also</h3>
             </div>
           </div>
         </div>

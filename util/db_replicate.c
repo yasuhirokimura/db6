@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -12,7 +12,7 @@
 
 #ifndef lint
 static const char copyright[] =
-    "Copyright (c) 2010, 2014 Oracle and/or its affiliates.  All rights reserved.\n";
+    "Copyright (c) 2010, 2016 Oracle and/or its affiliates.  All rights reserved.\n";
 #endif
 
 int	 main __P((int, char *[]));
@@ -261,7 +261,7 @@ main(argc, argv)
 		__os_yield(dbenv->env, seconds, 0);
 		if (verbose) {
 			(void)time(&now);
-			dbenv->errx(dbenv, DB_STR_A("5095",
+			dbenv->msg(dbenv, DB_STR_A("5095",
 			    "db_replicate begin: %s", "%s"),
 			    __os_ctime(&now, time_buf));
 		}
@@ -369,7 +369,7 @@ event_callback(dbenv, which, info)
 
 	default:
 		db_replicate_logmsg(dbenv, "IGNORED");
-		dbenv->errx(dbenv, DB_STR_A("5097", "ignoring event %d",
+		dbenv->msg(dbenv, DB_STR_A("5097", "ignoring event %d",
 		    "%d"), which);
 	}
 }

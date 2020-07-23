@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2000, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2000, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 
@@ -145,6 +145,8 @@ public class CurrentTransaction {
 
     /**
      * Returns the underlying Berkeley DB environment.
+     *
+     * @return the Environment.
      */
     public final Environment getEnvironment() {
 
@@ -154,6 +156,8 @@ public class CurrentTransaction {
     /**
      * Returns the transaction associated with the current thread for this
      * environment, or null if no transaction is active.
+     *
+     * @return the Transaction.
      */
     public final Transaction getTransaction() {
 

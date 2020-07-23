@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -63,6 +63,11 @@ Db::associate(DbTxn *txnid, Db *secondary,
          in the <em class="citetitle">Berkeley DB Programmer's Reference Guide</em> for more information.
     </p>
       <p>
+         When called on a database that has been opened with sliced
+         support, the <code class="methodname">Db::associate()</code> method is
+         automatically called on each supporting slice database. 
+     </p>
+      <p>
          The <code class="methodname">Db::associate()</code> <span>
             
             <span>
@@ -76,7 +81,7 @@ Db::associate(DbTxn *txnid, Db *secondary,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp57557328"></a>Parameters</h3>
+              <h3 class="title"><a id="idp97330080"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -84,7 +89,7 @@ Db::associate(DbTxn *txnid, Db *secondary,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp57556392"></a>txnid</h4>
+                <h4 class="title"><a id="idp97328304"></a>txnid</h4>
               </div>
             </div>
           </div>
@@ -104,7 +109,7 @@ Db::associate(DbTxn *txnid, Db *secondary,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp57562344"></a>secondary</h4>
+                <h4 class="title"><a id="idp97337488"></a>secondary</h4>
               </div>
             </div>
           </div>
@@ -127,7 +132,7 @@ Db::associate(DbTxn *txnid, Db *secondary,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp57563904"></a>callback</h4>
+                <h4 class="title"><a id="idp97339664"></a>callback</h4>
               </div>
             </div>
           </div>
@@ -295,7 +300,7 @@ Db::associate(DbTxn *txnid, Db *secondary,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp57593584"></a>flags</h4>
+                <h4 class="title"><a id="idp97365296"></a>flags</h4>
               </div>
             </div>
           </div>
@@ -364,7 +369,7 @@ Db::associate(DbTxn *txnid, Db *secondary,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp57612608"></a>Errors</h3>
+              <h3 class="title"><a id="idp97432864"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -382,7 +387,7 @@ Db::associate(DbTxn *txnid, Db *secondary,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp57622184"></a> <span>DbRepHandleDeadException or</span> DB_REP_HANDLE_DEAD</h4>
+                <h4 class="title"><a id="idp97408256"></a> <span>DbRepHandleDeadException or</span> DB_REP_HANDLE_DEAD</h4>
               </div>
             </div>
           </div>
@@ -404,7 +409,7 @@ Db::associate(DbTxn *txnid, Db *secondary,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp57510280"></a><span>DbDeadlockException or </span>DB_REP_LOCKOUT</h4>
+                <h4 class="title"><a id="idp97360416"></a><span>DbDeadlockException or </span>DB_REP_LOCKOUT</h4>
               </div>
             </div>
           </div>
@@ -421,7 +426,7 @@ Db::associate(DbTxn *txnid, Db *secondary,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp57624984"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp97262192"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -437,7 +442,7 @@ Db::associate(DbTxn *txnid, Db *secondary,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp57513032"></a>Class</h3>
+              <h3 class="title"><a id="idp97355280"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -449,7 +454,7 @@ Db::associate(DbTxn *txnid, Db *secondary,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp57570944"></a>See Also</h3>
+              <h3 class="title"><a id="idp97340656"></a>See Also</h3>
             </div>
           </div>
         </div>

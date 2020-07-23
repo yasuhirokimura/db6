@@ -1,7 +1,7 @@
 /*
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2009, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2009, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -138,6 +138,26 @@ typedef LONG volatile *interlocked_val;
 	    (oval), (nval)) == (oval))
 #endif
 
+#if defined(HAVE_ATOMIC_GCC_BUILTIN)
+#define atomic_inc(env, p)	\
+	__atomic_add_fetch(&(p)->value, 1, __ATOMIC_SEQ_CST)
+#define atomic_dec(env, p)	\
+	__atomic_sub_fetch(&(p)->value, 1, __ATOMIC_SEQ_CST)
+#define atomic_compare_exchange(env, p, oval, nval)	\
+	__atomic_compare_exchange_int((p), (oval), (nval))
+static inline int __atomic_compare_exchange_int(
+	db_atomic_t *p, atomic_value_t oldval, atomic_value_t newval)
+{
+	atomic_value_t expected;
+	int ret;
+
+	expected = oldval;
+	ret = __atomic_compare_exchange_n(&p->value, &expected,
+	    newval, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+	return (ret);
+}
+#endif
+
 #if defined(HAVE_ATOMIC_X86_GCC_ASSEMBLY)
 /* x86/x86_64 gcc  */
 #define	atomic_inc(env, p)	__atomic_inc(p)
@@ -207,8 +227,10 @@ static inline int __atomic_compare_exchange_int(
 	(DB_ASSERT(env, atomic_read(p) == (oldval)),		\
 	atomic_init(p, (newval)), 1)
 #else
-#define atomic_inc(env, p)	__atomic_inc(env, p)
-#define atomic_dec(env, p)	__atomic_dec(env, p)
+#define	atomic_inc(env, p)	__atomic_inc_int(env, p)
+#define	atomic_dec(env, p)	__atomic_dec_int(env, p)
+#define atomic_compare_exchange(env, p, oldval, newval)	\
+	__atomic_compare_exchange_int(env, p, oldval, newval)
 #endif
 #endif
 

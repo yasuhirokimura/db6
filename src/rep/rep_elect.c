@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2004, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2004, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -159,7 +159,7 @@ __rep_elect_int(env, given_nsites, nvotes, flags)
 	ack = nvotes == 0 ? ELECTION_MAJORITY(nsites) : nvotes;
 
 	/*
-	 * XXX
+	 * !!!
 	 * If users give us less than a majority, they run the risk of
 	 * having a network partition.  However, this also allows the
 	 * scenario of master/1 client to elect the client.  Allow
@@ -672,7 +672,6 @@ __rep_vote1(env, rp, rec, eid)
 	DB_REP *db_rep;
 	LOG *lp;
 	REP *rep;
-	REP_OLD_VOTE_INFO *ovi;
 	VOTE1_CONTENT vote1;
 	__rep_egen_args egen_arg;
 	__rep_vote_info_v5_args tmpvi5;
@@ -700,19 +699,7 @@ __rep_vote1(env, rp, rec, eid)
 		return (ret);
 	}
 
-	/*
-	 * In 4.7 we changed to having fixed sized u_int32_t's from
-	 * non-fixed 'int' fields in the vote structure.
-	 */
-	if (rp->rep_version < DB_REPVERSION_47) {
-		ovi = (REP_OLD_VOTE_INFO *)rec->data;
-		tmpvi.egen = ovi->egen;
-		tmpvi.nsites = (u_int32_t)ovi->nsites;
-		tmpvi.nvotes = (u_int32_t)ovi->nvotes;
-		tmpvi.priority = (u_int32_t)ovi->priority;
-		tmpvi.tiebreaker = ovi->tiebreaker;
-		tmpvi.data_gen = 0;
-	} else if (rp->rep_version < DB_REPVERSION_52) {
+	if (rp->rep_version < DB_REPVERSION_52) {
 		if ((ret = __rep_vote_info_v5_unmarshal(env,
 		    &tmpvi5, rec->data, rec->size, NULL)) != 0)
 			return (ret);
@@ -744,15 +731,10 @@ __rep_vote1(env, rp, rec, eid)
 		    (u_long)vi->egen, (u_long)rep->egen));
 		egen_arg.egen = rep->egen;
 		REP_SYSTEM_UNLOCK(env);
-		if (rep->version < DB_REPVERSION_47)
-			DB_INIT_DBT(data_dbt, &egen_arg.egen,
-			    sizeof(egen_arg.egen));
-		else {
-			if ((ret = __rep_egen_marshal(env,
-			    &egen_arg, buf, __REP_EGEN_SIZE, &len)) != 0)
-				return (ret);
-			DB_INIT_DBT(data_dbt, buf, len);
-		}
+		if ((ret = __rep_egen_marshal(env,
+		    &egen_arg, buf, __REP_EGEN_SIZE, &len)) != 0)
+			return (ret);
+		DB_INIT_DBT(data_dbt, buf, len);
 		(void)__rep_send_message(env,
 		    eid, REP_ALIVE, &rp->lsn, &data_dbt, 0, 0);
 		return (0);
@@ -901,12 +883,11 @@ err:		REP_SYSTEM_UNLOCK(env);
  * __rep_vote2 --
  *	Handle incoming vote2 message on a client.
  *
- * PUBLIC: int __rep_vote2 __P((ENV *, __rep_control_args *, DBT *, int));
+ * PUBLIC: int __rep_vote2 __P((ENV *, DBT *, int));
  */
 int
-__rep_vote2(env, rp, rec, eid)
+__rep_vote2(env, rec, eid)
 	ENV *env;
-	__rep_control_args *rp;
 	DBT *rec;
 	int eid;
 {
@@ -915,7 +896,6 @@ __rep_vote2(env, rp, rec, eid)
 	DB_REP *db_rep;
 	LOG *lp;
 	REP *rep;
-	REP_OLD_VOTE_INFO *ovi;
 	__rep_vote_info_args tmpvi, *vi;
 	u_int32_t egen;
 	int ret;
@@ -950,21 +930,9 @@ __rep_vote2(env, rp, rec, eid)
 	 * election thread catches up we'll have the votes we
 	 * already received.
 	 */
-	/*
-	 * In 4.7 we changed to having fixed sized u_int32_t's from
-	 * non-fixed 'int' fields in the vote structure.
-	 */
-	if (rp->rep_version < DB_REPVERSION_47) {
-		ovi = (REP_OLD_VOTE_INFO *)rec->data;
-		tmpvi.egen = ovi->egen;
-		tmpvi.nsites = (u_int32_t)ovi->nsites;
-		tmpvi.nvotes = (u_int32_t)ovi->nvotes;
-		tmpvi.priority = (u_int32_t)ovi->priority;
-		tmpvi.tiebreaker = ovi->tiebreaker;
-	} else
-		if ((ret = __rep_vote_info_unmarshal(env,
-		    &tmpvi, rec->data, rec->size, NULL)) != 0)
-			return (ret);
+	if ((ret = __rep_vote_info_unmarshal(env,
+	    &tmpvi, rec->data, rec->size, NULL)) != 0)
+		return (ret);
 	vi = &tmpvi;
 	if (!IN_ELECTION_TALLY(rep) && vi->egen >= rep->egen) {
 		RPRINT(env, (env, DB_VERB_REP_ELECT,
@@ -1114,7 +1082,7 @@ __rep_cmp_vote(env, rep, eid, lsnp, priority, gen, data_gen, tiebreaker, flags)
 	u_int32_t priority;
 	u_int32_t data_gen, flags, gen, tiebreaker;
 {
-	int cmp, genlog_cmp, like_pri;
+	int cmp, genlog_cmp, genlog_cmp2, like_pri;
 
 	cmp = LOG_COMPARE(lsnp, &rep->w_lsn);
 	/*
@@ -1154,13 +1122,17 @@ __rep_cmp_vote(env, rep, eid, lsnp, priority, gen, data_gen, tiebreaker, flags)
 		 * for datagen.  Do not include datagen in the comparison if
 		 * this option is enabled.
 		 */
-		if (FLD_ISSET(rep->config, REP_C_ELECT_LOGLENGTH))
+		if (FLD_ISSET(rep->config, REP_C_ELECT_LOGLENGTH)) {
 			genlog_cmp = like_pri && cmp > 0;
-		else
+			genlog_cmp2 = like_pri && cmp == 0;
+		} else {
 			genlog_cmp = (like_pri && data_gen > rep->w_datagen) ||
 			    (like_pri && data_gen == rep->w_datagen && cmp > 0);
+			genlog_cmp2 = like_pri && data_gen >= rep->w_datagen &&
+			    cmp == 0;
+		}
 		if ((priority != 0 && rep->w_priority == 0) || genlog_cmp ||
-		    (cmp == 0 && (priority > rep->w_priority ||
+		    (genlog_cmp2 && (priority > rep->w_priority ||
 		    (priority == rep->w_priority &&
 		    (tiebreaker > rep->w_tiebreaker))))) {
 			RPRINT(env, (env, DB_VERB_REP_ELECT,
@@ -1465,7 +1437,6 @@ __rep_send_vote(env, lsnp,
 	DB_REP *db_rep;
 	DBT vote_dbt;
 	REP *rep;
-	REP_OLD_VOTE_INFO ovi;
 	__rep_vote_info_args vi;
 	__rep_vote_info_v5_args vi5;
 	u_int8_t buf[__REP_VOTE_INFO_SIZE];
@@ -1477,19 +1448,7 @@ __rep_send_vote(env, lsnp,
 	memset(&vi, 0, sizeof(vi));
 	memset(&vote_dbt, 0, sizeof(vote_dbt));
 
-	/*
-	 * In 4.7 we went to fixed sized fields.  They may not be
-	 * the same as the sizes in older versions.  In 5.2 we
-	 * added the data_gen.
-	 */
-	if (rep->version < DB_REPVERSION_47) {
-		ovi.egen = egen;
-		ovi.priority = (int) pri;
-		ovi.nsites = (int) nsites;
-		ovi.nvotes = (int) nvotes;
-		ovi.tiebreaker = tie;
-		DB_INIT_DBT(vote_dbt, &ovi, sizeof(ovi));
-	} else if (rep->version < DB_REPVERSION_52) {
+	if (rep->version < DB_REPVERSION_52) {
 		vi5.egen = egen;
 		vi5.priority = pri;
 		vi5.nsites = nsites;

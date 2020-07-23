@@ -42,6 +42,9 @@
 /* Define to 1 if platform reads and writes files atomically. */
 /* #undef HAVE_ATOMICFILEREAD */
 
+/* Define to 1 to use GCC's built-in atomic operations. */
+/* #undef HAVE_ATOMIC_GCC_BUILTIN */
+
 /* Define to 1 to use Solaris library routes for atomic operations. */
 /* #undef HAVE_ATOMIC_SOLARIS */
 
@@ -196,6 +199,9 @@
 /* Define to 1 if you have the `hstrerror' function. */
 /* #undef HAVE_HSTRERROR */
 
+/* Define to 1 if you have the `initstate_r' function. */
+/* #undef HAVE_INITSTATE_R */
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 /* #undef HAVE_INTTYPES_H */
 
@@ -262,6 +268,9 @@
 
 /* Define to 1 to use the GCC compiler and Alpha assembly language mutexes. */
 /* #undef HAVE_MUTEX_ALPHA_GCC_ASSEMBLY */
+
+/* Define to 1 to use the GCC compiler and ARM64 assembly language mutexes. */
+/* #undef HAVE_MUTEX_ARM64_GCC_ASSEMBLY */
 
 /* Define to 1 to use the GCC compiler and ARM assembly language mutexes. */
 /* #undef HAVE_MUTEX_ARM_GCC_ASSEMBLY */
@@ -438,6 +447,9 @@
 /* Define to 1 if you have the `random' function. */
 /* #undef HAVE_RANDOM */
 
+/* Define to 1 if you have the `random_r' function. */
+/* #undef HAVE_RANDOM_R /
+
 /* Define to 1 if building replication support. */
 /* #undef HAVE_REPLICATION */
 
@@ -471,8 +483,14 @@
 /* Define to 1 if thread identifier type db_threadid_t is integral. */
 #define HAVE_SIMPLE_THREAD_TYPE 1
 
+/* Define to 1 if building sliced environment support. */
+/* #undef HAVE_SLICES */
+
 /* Define to 1 if you have the `snprintf' function. */
 #define HAVE_SNPRINTF 1
+
+/* Define to 1 if you have the `srandom_r' function. */
+/* #undef HAVE_SRANDOM_R */
 
 /* Define to 1 if you have the `stat' function. */
 #define HAVE_STAT 1
@@ -607,16 +625,16 @@
 #define PACKAGE_NAME "Berkeley DB"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "Berkeley DB 6.1.19"
+#define PACKAGE_STRING "Berkeley DB 6.2.23"
 
 /* Define to the one symbol short name of this package. */
-#define PACKAGE_TARNAME "db-6.1.19"
+#define PACKAGE_TARNAME "db-6.2.23"
 
 /* Define to the home page for this package. */
 #define PACKAGE_URL "http://www.oracle.com/technology/software/products/berkeley-db/index.html"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "6.1.19"
+#define PACKAGE_VERSION "6.2.23"
 
 /* The size of a `char', as computed by sizeof. */
 /* #undef SIZEOF_CHAR */

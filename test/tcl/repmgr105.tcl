@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2009, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2009, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # TEST repmgr105
 # TEST Repmgr recognition of peer setting, across processes.
@@ -18,13 +18,14 @@ proc repmgr105 { } {
 
 proc repmgr105_sub { config } {
 	source ./include.tcl
+	global ipversion
 
 	set tnum "105" 
 	puts "Repmgr$tnum: Repmgr peer, with \"$config\" configuration."
 	set site_prog [setup_site_prog]
 
 	env_cleanup $testdir
-
+	set hoststr [get_hoststr $ipversion]
 	set ports [available_ports 4]
 	set mport [lindex $ports 0]
 	set portA [lindex $ports 1]
@@ -39,7 +40,7 @@ proc repmgr105_sub { config } {
 	make_dbconfig $masterdir {}
 	set cmds {
 		"home $masterdir"
-		"local $mport"
+		"local $hoststr $mport"
 		"output $testdir/moutput"
 		"open_env"
 		"start master"
@@ -58,9 +59,9 @@ proc repmgr105_sub { config } {
 	make_dbconfig $testdir/A {}
 	set a [open_site_prog [list \
 			       "home $testdir/A" \
-			       "local $portA" \
+			       "local $hoststr $portA" \
 			       "output $testdir/aoutput" \
-			       "remote 127.0.0.1 $mport" \
+			       "remote $hoststr $mport" \
 			       "open_env" \
 			       "start client"]]
 	set env [berkdb_env -home $testdir/A]
@@ -70,9 +71,9 @@ proc repmgr105_sub { config } {
 	make_dbconfig $testdir/B {}
 	set b [open_site_prog [list  \
 			       "home $testdir/B" \
-			       "local $portB" \
+			       "local $hoststr $portB" \
 			       "output $testdir/boutput" \
-			       "remote 127.0.0.1 $mport" \
+			       "remote $hoststr $mport" \
 			       "open_env" \
 			       "start client"]]
 	set env [berkdb_env -home $testdir/B]
@@ -91,12 +92,12 @@ proc repmgr105_sub { config } {
 
 	set c2 [list \
 		    "home $testdir/C" \
-		    "local [lindex $ports 3]" \
+		    "local $hoststr [lindex $ports 3]" \
 		    "output $testdir/c2output" \
 		    "open_env"]
 	set c [list \
 		   "home $testdir/C" \
-		   "local [lindex $ports 3]" \
+		   "local $hoststr [lindex $ports 3]" \
 		   "output $testdir/coutput" \
 		   "open_env"]
 	set lists [repmgr105_$config $c2 $c]
@@ -144,18 +145,21 @@ proc repmgr105_sub { config } {
 # shuffling.
 #
 proc repmgr105_position_chg { c2 c } {
+	global ipversion
+	set hoststr [get_hoststr $ipversion]
+
 	set remote_config [uplevel 1 {list \
-			   "remote 127.0.0.1 $mport" \
-			   "remote 127.0.0.1 $portB" \
-			   "remote -p 127.0.0.1 $portA"}]
+			   "remote $hoststr $mport" \
+			   "remote $hoststr $portB" \
+			   "remote -p $hoststr $portA"}]
 	set i [lsearch -exact $c2 "open_env"]
 
 	# It should be found, in the middle somewhere, or this will break.
 	set c2 "[lrange $c2 0 [expr $i - 1]] $remote_config [lrange $c2 $i end]"
 
 	set remote_config [uplevel 1 {list \
-			       "remote -p 127.0.0.1 $portA" \
-			       "remote 127.0.0.1 $mport"}]
+			       "remote -p $hoststr $portA" \
+			       "remote $hoststr $mport"}]
 	set i [lsearch -exact $c "open_env"]
 	set c "[lrange $c 0 [expr $i - 1]] $remote_config [lrange $c $i end]"
 
@@ -165,18 +169,21 @@ proc repmgr105_position_chg { c2 c } {
 # C2 first sets the peer as B, but then C comes along and changes it to A.
 #
 proc repmgr105_chg_site { c2 c } {
+	global ipversion
+	set hoststr [get_hoststr $ipversion]
+
 	set remote_config [uplevel 1 {list \
-			   "remote 127.0.0.1 $mport" \
-			   "remote -p 127.0.0.1 $portB"}]
+			   "remote $hoststr $mport" \
+			   "remote -p $hoststr $portB"}]
 	set i [lsearch -exact $c2 "open_env"]
 
 	# It should be found, in the middle somewhere, or this will break.
 	set c2 "[lrange $c2 0 [expr $i - 1]] $remote_config [lrange $c2 $i end]"
 
 	set remote_config [uplevel 1 {list \
-			       "remote 127.0.0.1 $portB" \
-			       "remote -p 127.0.0.1 $portA" \
-			       "remote 127.0.0.1 $mport"}]
+			       "remote $hoststr $portB" \
+			       "remote -p $hoststr $portA" \
+			       "remote $hoststr $mport"}]
 	set i [lsearch -exact $c "open_env"]
 	set c "[lrange $c 0 [expr $i - 1]] $remote_config [lrange $c $i end]"
 
@@ -190,18 +197,21 @@ proc repmgr105_chg_site { c2 c } {
 # first, and then C, in the ordered list.
 # 
 proc repmgr105_chg_after_open { c2 c } {
+	global ipversion
+	set hoststr [get_hoststr $ipversion]
+
 	set remote_config [uplevel 1 {list \
-			   "remote 127.0.0.1 $mport" \
-			   "remote 127.0.0.1 $portB" \
-			   "remote -p 127.0.0.1 $portA"}]
+			   "remote $hoststr $mport" \
+			   "remote $hoststr $portB" \
+			   "remote -p $hoststr $portA"}]
 	set i [lsearch -exact $c2 "open_env"]
 
 	# It should be found, in the middle somewhere, or this will break.
 	set c2 "[lrange $c2 0 [expr $i - 1]] $remote_config [lrange $c2 $i end]"
 
 	set remote_config [uplevel 1 {list \
-			       "remote -p 127.0.0.1 $portB" \
-			       "remote 127.0.0.1 $mport"}]
+			       "remote -p $hoststr $portB" \
+			       "remote $hoststr $mport"}]
 	set i [lsearch -exact $c "open_env"]
 	set c "[lrange $c 0 [expr $i - 1]] $remote_config [lrange $c $i end]"
 
@@ -212,7 +222,10 @@ proc repmgr105_chg_after_open { c2 c } {
 # previously discovered a bug.
 # 
 proc repmgr105_set_peer_after_open { c2 c } {
-	set remote_config [uplevel 1 {subst "remote -p 127.0.0.1 $portA"}]
+	global ipversion
+	set hoststr [get_hoststr $ipversion]
+
+	set remote_config [uplevel 1 {subst "remote -p $hoststr $portA"}]
 	lappend c $remote_config
 	return [list $c2 $c]
 }

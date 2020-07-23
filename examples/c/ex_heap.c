@@ -1,19 +1,44 @@
 /* 
  * See the file LICENSE for redistribution information.
  * 
- * Copyright (c) 2011, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2011, 2016 Oracle and/or its affiliates.  All rights reserved.
  * 
  * $Id$
+ *
+ * ex_heap -- A basic example about usage of heap access method.
+ *   
+ *   This program demonstrates the usage of heap access method of BDB and differences 
+ *   between the heap and btree access method. There are many kinds of access methods
+ *   for BDB, access methods determine how pages are stored in the file and how records
+ *   are stored on a page. Heap access method is one of the common used access method 
+ *   for BDB. The records are unsorted and the key indicates the page location within 
+ *   heap access method. It's feature is to reuse space easily and enable the database
+ *   to stay a constant size, which is different from btree access method.
  * 
- * This program demonstrates:
- *  1. Usage of heap access method.
- *  2. Differences between the heap and btree access methods.
+ *   The application initially populates a database, and then proceeds to move into
+ *   a process of adding and removing data. The sample application using a btree 
+ *   database will be run if the flag is specified. The system will keep a fairly 
+ *   constant amount of data in the database. After the insert/delete operation
+ *   is completed. The system will calculate the execution time and physical file
+ *   size to demonstrate the difference between btree database and heap database.
+ *   The outcome shows that heap access method will maintain a constant database 
+ *   size if the heap size is configured properly, while the btree database will
+ *   continue to grow. 
+ *
+ * Database: heap.db, btree.db
+ * Program name: ex_heap
+ *
+ * Options:
+ *   -b		run sample application using a btree database 
+ *   -c		specify the cache size for the environment
+ *   -d		test on variable-length data (default:fix-length)
+ *   -h [dir]	specify the home directory for the environment
+ *   -n		specify the number of records per repetition (default:10000)
+ *   -p		specify the pgsize of database
+ *   -r		set number of repetition (a pair of insertion and deletion, default:1)
+ *   -s		specify the heap size (bytes) for the heap database
+ *   -S		specify the heap size (gbytes) for the heap database
  * 
- * The application initially populates a database, and then proceeds to
- * move into a process of adding and removing data. Keeping a fairly
- * constant amount of data in the database. The heap access method will
- * maintain a constant database size if the heap size is configured properly,
- * while the btree database will continue to grow. 
  */
 
 #include <stdio.h>
@@ -22,9 +47,10 @@
 
 #include "db.h"
 
+
 #ifndef lint
 static const char copyright[] =
-    "Copyright (c) 2011, 2014 Oracle and/or its affiliates.  All rights reserved.\n";
+    "Copyright (c) 2011, 2016 Oracle and/or its affiliates.  All rights reserved.\n";
 #endif
 
 #define	BUFFER_LEN		30     /* Buffer size to hold data */
@@ -44,20 +70,15 @@ static const char copyright[] =
 #ifdef _WIN32
 #include <sys/timeb.h>
 #include <time.h>
-
+#include <winsock2.h>
 extern int getopt(int, char * const *, const char *);
 
-/* Implement a basic high resource timer with a POSIX interface for Windows.*/
-struct timeval {
-	time_t tv_sec;
-	long tv_usec;
-};
-
+/* Implement a basic high-resolution timer with a POSIX interface for Windows.*/
 int gettimeofday(struct timeval *tv, struct timezone *tz)
 {
 	struct _timeb now;
 	_ftime(&now);
-	tv->tv_sec = now.time;
+	tv->tv_sec = (long)now.time;
 	tv->tv_usec = now.millitm * NS_PER_US;
 	return (0);
 }
@@ -78,20 +99,31 @@ int	open_env __P((DB_ENV **, char *, u_int32_t));
 int	run_workload __P((DB *, int, int, int));
 void	usage __P((void));
 
-const char *progname = "ex_heap";
+const char *progname = "ex_heap"; /* Program name. */
 
 int
 main(argc, argv)
 	int argc;
 	char *argv[];
 {
-	extern char *optarg;
-	DB_ENV *dbenv;
-	DB *dbp;
-	u_int32_t cachesize, ghpsize, hpsize, pgsize;
-	char *home;
-	int ch, ret, ret_t, set_ghpsize, set_hpsize, test_btree, test_var_data;
-	int recs_per_rep, repeats;
+	extern char *optarg;	/* Set by getopt(): the argv being processed. */
+	DB_ENV *dbenv;		/* The environment handle. */
+	DB *dbp;		/* The database handle. */
+	u_int32_t cachesize;	/* The size of cache set for the environment. */
+	u_int32_t ghpsize;	/* The heap size (gbytes) for the heap database. */
+	u_int32_t hpsize;	/* The heap size (bytes) for the heap database. */
+	u_int32_t pgsize;	/* The page size of database. */
+	char *home;		/* The home directory for the program. */
+	int ch;			/* The current command line option char. */
+	int ret;		/* Return code from call into Berkeley DB. */
+	int ret_t;		/* Return code from close operation. */
+	int set_ghpsize;	/* Flag for setting gphsize. */
+	int set_hpsize;		/* Flag for setting hpsize. */
+	int test_btree;		/* Flag for running sample application using a btree database. */
+	int test_var_data;	/* Flag for testing variable-length data. */
+
+	int recs_per_rep;	/* Number of records per repetition. */
+	int repeats;		/* Repetition value. */
 
 	dbenv = NULL;
 	dbp = NULL;
@@ -104,34 +136,35 @@ main(argc, argv)
 	repeats = DEF_REPEATS;
 	test_var_data = 0; /* Default as fix-length data. */
 
+	/* Parse the command line arguments */
 	while ((ch = getopt(argc, argv, "bc:dh:n:p:r:S:s:")) != EOF)
 		switch (ch) {
-		case 'b':
+		case 'b':		/* Run sample application using a btree database. */
 			test_btree = 1;
 			break;
-		case 'c':
+		case 'c':		/* Specify the cache size for the environment. */
 			cachesize = atoi(optarg);
 			break;
-		case 'd':
+		case 'd':		/* Test on variable-length data. */
 			test_var_data = 1;
 			break;
-		case 'h':
+		case 'h':		/* Specify the home directory for the environment. */
 			home = optarg;
 			break;
-		case 'n':
+		case 'n':		/* Specify the number of records per repetition. */
 			recs_per_rep = atoi(optarg);
 			break;
-		case 'p':
+		case 'p':		/* Specify the pgsize of database. */
 			pgsize = atoi(optarg);
 			break;
-		case 'r':
+		case 'r':		/* Set number of repetition. */
 			repeats = atoi(optarg);
 			break;
-		case 's':
+		case 's':		/* Specify the heap size (bytes) for the heap database. */
 			set_hpsize = 1;
 			hpsize = atoi(optarg);
 			break;
-		case 'S':
+		case 'S':		/* Specify the heap size (gbytes) for the heap database. */
 			set_ghpsize = 1;
 			ghpsize = atoi(optarg);
 			break;
@@ -151,11 +184,12 @@ main(argc, argv)
 	if (!set_hpsize && !set_ghpsize)
 		hpsize = AVG_SPACE_PER_RECORD * (DEF_INIT_RECS + recs_per_rep);
 
+	/* Open the evnironment for usage. */
 	if ((ret = open_env(&dbenv, home, cachesize)) != 0) {
 		fprintf(stderr, "%s: open_env: %s", progname, db_strerror(ret));
 		goto err;
 	}
-
+	/* Open a heap database for insert/delete operations. */
 	if ((ret = open_db(&dbp, dbenv, DB_HEAP, home,
 	    ghpsize, hpsize, pgsize)) != 0) {
 		dbenv->err(dbenv, ret, "Failed to open heap database.");
@@ -180,7 +214,7 @@ main(argc, argv)
 			goto err;
 		}
 		dbp = NULL;
-
+		/* Open a b-tree database for insert/delete operations. */
 		if ((ret =
 		    open_db(&dbp, dbenv, DB_BTREE, home, 0, 0, pgsize)) != 0) {
 			dbenv->err(dbenv, ret,
@@ -214,35 +248,52 @@ err:
 	return (ret);
 }
 
+/*
+ * run_workload --
+ * 	Perform requested rounds of insert/delete operations.
+ *
+ * Parameters:
+ *	dbp		the database handle
+ *	repeats		the number of repetition (a pair of insertion and deletion)
+ *	recs_per_rep	the number of records per repetition
+ *	test_var	test on variable-length data flag
+ */
 int
 run_workload(dbp, repeats, recs_per_rep, test_var)
 	DB *dbp;
 	int repeats, recs_per_rep, test_var;
 {
-	DB_ENV *dbenv;
-	DBTYPE dbtype;
-	u_int32_t ghpsize, hpsize;
-	struct timeval end_time, start_time;
-	double *time_secs;
-	int *db_file_sizes, fsize, i, ret;
+	DB_ENV *dbenv;			/* The environment handle. */
+	DBTYPE dbtype;			/* The access method used by the database. */
+	u_int32_t ghpsize;		/* The heap size (gbytes). */
+	u_int32_t hpsize;		/* The heap size (bytes). */
+	struct timeval end_time;	/* The end time of each iteration. */
+	struct timeval start_time;	/* The start time of each iteration. */
+	double *time_secs;		/* The array of each iteration's run time. */
+	int *db_file_sizes;		/* The array of file sizes after each iteration. */
+	int fsize;			/* The file size after the current iteration. */
+	int i;				/* Iteration number. */
+	int ret;			/* The return value. */
 
 	dbenv = dbp->dbenv;
 	fsize = 0;
 	time_secs = NULL;
 	db_file_sizes = NULL;
 
+	/* Get the access method of the database. */
 	if ((ret = dbp->get_type(dbp, &dbtype)) != 0) {
 		dbenv->err(dbenv, ret, "DB->get_type");
 		goto err;
 	}
 
+	/* Get the heap size if the database uses the heap access method. */
 	if (dbtype == DB_HEAP &&
 	    (ret = dbp->get_heapsize(dbp, &ghpsize, &hpsize)) != 0) {
 		dbenv->err(dbenv, ret, "DB->get_heapsize");
 		goto err;
 	}
 
-	/* An array to record the physical database file size. */
+	/* Initialize the array holding file sizes after each iteration. */
 	if ((db_file_sizes =
 	    (int *)malloc((repeats + 1) * sizeof(int))) == NULL) {
 		fprintf(stderr,
@@ -252,7 +303,7 @@ run_workload(dbp, repeats, recs_per_rep, test_var)
 	}
 	memset(db_file_sizes, 0, (repeats + 1) * sizeof(int));
 
-	/* An array to record the running time for each repetition. */
+	/* Initialize the array holding each iteration's run time. */
 	if ((time_secs =
 	    (double *)malloc((repeats + 1) * sizeof(double))) == NULL) {
 		fprintf(stderr,
@@ -282,9 +333,14 @@ run_workload(dbp, repeats, recs_per_rep, test_var)
 	 * in the tables for subsequent iterations.
 	 */
 	for (i = 0; i <= repeats; i++) {
-		/* Time for each loop. */
+		/* Get the start time. */
 		(void)gettimeofday(&start_time, NULL);
 
+		/* 
+		 * Insert records into the database. Depending on the type
+		 * of the database, different types of keys are used. Calling
+		 * different functions to perform insertions.
+		 */
 		if ((dbtype == DB_HEAP) && (ret = insert_heap(dbp, dbenv,
 		    i == 0 ? DEF_INIT_RECS : recs_per_rep,
 		    i == 0 ? 0 : (DEF_INIT_RECS + (i - 1) * recs_per_rep),
@@ -303,20 +359,27 @@ run_workload(dbp, repeats, recs_per_rep, test_var)
 			goto err;
 		}
 
+		/* 
+		 * Delete the same number of records except for the first
+		 * iteration.
+		 */
 		if (i > 0 &&
 		    (ret = delete_recs(dbp, dbenv, recs_per_rep)) != 0) {
 			dbenv->err(dbenv, ret, "Failed to delete records.");
 			goto err;
 		}
 
+		/* Get the end time. */
 		(void)gettimeofday(&end_time, NULL);
+
+		/* Calculate the runtime. */
 		time_secs[i] =
 		    (((double)end_time.tv_sec * NS_PER_MS + 
 		    end_time.tv_usec) -
 		    ((double)start_time.tv_sec * NS_PER_MS + 
 		    start_time.tv_usec)) / NS_PER_MS;
 
-		/* Calculate the physical file size for each repetition. */
+		/* Calculate the physical file size. */
 		if ((ret = file_size(dbp, dbtype, &fsize)) != 0) {
 			dbenv->err(dbenv, ret, "Failed to calculate "
 			    "the file size on repeat %d.\n", i);
@@ -340,30 +403,43 @@ err:
 	return (ret);
 }
 
-/* Calculate the size of the given database. */ 
+/*
+ * file_size --
+ * 	Calculate the physical file size of the given database.
+ *
+ * Parameters:
+ *	dbp	the database handle
+ *	dbtype	the database type
+ *	fsize	the physical file size of database
+ */
 int
 file_size(dbp, dbtype, fsize)
 	DB *dbp;
 	DBTYPE dbtype;
 	int *fsize;
 {
-	DB_ENV *dbenv;
-	u_int32_t pgcnt, pgsize;
-	int ret, size;
-	void *statp;
+	DB_ENV *dbenv;		/* The environment handle. */
+	u_int32_t pgcnt;	/* The number of pages in the database. */
+	u_int32_t pgsize;	/* The page size. */
+	int ret;		/* The return value. */
+	int size;		/* The file size. */
+	void *statp;		/* The statistic pointer for database size. */
 
 	dbenv = dbp->dbenv;
 	pgsize = dbp->pgsize;
 	ret = size = 0;
 
+	/* Retrieve the database's statistics. */
 	if ((ret = dbp->stat(dbp, NULL, &statp, DB_FAST_STAT)) != 0) {
 		dbenv->err(dbenv, ret, "DB->stat");
 		return (ret);
 	}
 
+	/* Get the page count. */
 	pgcnt = (dbtype == DB_HEAP ? ((DB_HEAP_STAT *)statp)->heap_pagecnt :
 	    ((DB_BTREE_STAT *)statp)->bt_pagecnt);
 
+	/* the file size is the value of page count multiplied by the page size. */
 	size = pgcnt * pgsize;
 	*fsize = size;
 
@@ -373,18 +449,27 @@ file_size(dbp, dbtype, fsize)
 }
 
 /*
- * Insert an certain number of records to heap database,
- * with the key beginning with a specified value.
+ * insert_heap --
+ * 	Insert a specified number of records to a heap database,
+ *  with keys beginning with a specified value.
+ *
+ * Parameters:
+ *	dbp		the database handle
+ *	dbenv		the database environment
+ *	numrecs		the number of records to insert
+ *	start		the start position to insert records
+ *	test_var	test on variable-length data flag
  */
+
 int
 insert_heap(dbp, dbenv, numrecs, start, test_var)
 	DB *dbp;
 	DB_ENV *dbenv;
 	int numrecs, start, test_var;
 {
-	DB_HEAP_RID rid;
-	DBT key, data;
-	char buf[BUFFER_LEN];
+	DB_HEAP_RID rid;	/* The returned record id. */
+	DBT key, data;		/* The key/data pair. */
+	char buf[BUFFER_LEN];	/* The data buffer. */
 	int cnt, ret;
 
 	memset(&rid, 0, sizeof(DB_HEAP_RID));
@@ -393,12 +478,17 @@ insert_heap(dbp, dbenv, numrecs, start, test_var)
 
 	ret = 0;
 
+	/* For a heap database, the key must be an empty DB_HEAP_RID. */
 	key.data = &rid;
 	key.size = key.ulen = sizeof(DB_HEAP_RID);
 	key.flags = DB_DBT_USERMEM;
 	data.data = buf;
 	data.flags = DB_DBT_USERMEM;
 
+	/* 
+	 * Insert a certain number of records into btree database,
+	 * the data to insert is generated randomly.
+	 */
 	for (cnt = start; cnt < (numrecs + start) &&
 	    (ret = generate_data(buf, cnt, test_var)) == 0; ++cnt) {
 		data.size = data.ulen = (u_int32_t)strlen(buf) + 1;
@@ -414,9 +504,18 @@ insert_heap(dbp, dbenv, numrecs, start, test_var)
 }
 
 /*
- * Insert an certain number of records to btree database,
- * with the key beginning with a specified value.
+ * insert_btree --
+ * 	Insert a specified number of records to a btree database,
+ *  with keys beginning with a specified value.
+ *
+ * Parameters:
+ *	dbp		the database handle
+ *	dbenv		the database environment
+ *	numrecs		the number of records to insert
+ *	start		the start position to insert records
+ *	test_var	test on variable-length data flag
  */
+
 int
 insert_btree(dbp, dbenv, numrecs, start, test_var)
 	DB *dbp;
@@ -438,6 +537,10 @@ insert_btree(dbp, dbenv, numrecs, start, test_var)
 	data.data = buf;
 	data.flags = DB_DBT_USERMEM;
 
+	/* 
+	 * Insert a certain number of records into btree database,
+	 * the data to insert is generated by randomly.
+	 */
 	for (cnt = start; cnt < (numrecs + start) &&
 	    (ret = generate_data(buf, cnt, test_var)) == 0; ++cnt) {
 		data.size = data.ulen = (u_int32_t)strlen(buf) + 1;
@@ -451,7 +554,16 @@ insert_btree(dbp, dbenv, numrecs, start, test_var)
 	return (ret);
 }
 
-/* Generate the data for the specified record. */
+/*
+ * generate_data --
+ * 	Generate data for the specified record.
+ *
+ * Parameters:
+ *	buf		the buffer variable to hold data
+ *	rec_no		the record number
+ *	test_var	test on variable-length data flag
+ */
+
 int
 generate_data(buf, rec_no, test_var)
 	char *buf;
@@ -472,7 +584,16 @@ generate_data(buf, rec_no, test_var)
 	return (0);
 }
 
-/* Delete an certain number of records. */
+/*
+ * delete_recs --
+ * 	Delete a specified number of records.
+ *
+ * Parameters:
+ *	dbp	the database handle
+ *	dbenv	the database environment handle
+ *	numrecs	number of records to delete
+ */
+
 int
 delete_recs(dbp, dbenv, numrecs)
 	DB *dbp;
@@ -489,15 +610,13 @@ delete_recs(dbp, dbenv, numrecs)
 	dbcp = NULL;
 	cnt = ret = 0;
 
-	/*
-	 * Delete from the first entry, get the first entry using
-	 * the DBcursor, then delete it using the DB handle.
-	 */
+	/* Create a cursor to delete records. */
 	if ((ret = dbp->cursor(dbp, NULL, &dbcp, 0)) != 0) {
 		dbenv->err(dbenv, ret, "delete_recs:DB->cursor");
 		goto err;
 	}
 
+	/* Delete the first numrecs records. */
 	while ((ret = dbcp->get(dbcp, &key, &data, DB_NEXT)) == 0 &&
 	    cnt < numrecs) {
 		if ((ret = dbcp->del(dbcp, 0)) != 0) {
@@ -514,6 +633,10 @@ err:
 	return (ret);
 }
 
+/*
+ * usage --
+ *	Describe this program's command line options, then exit.
+ */
 void
 usage()
 {
@@ -540,6 +663,16 @@ usage()
 	exit(EXIT_FAILURE);
 }
 
+/*
+ * open_env --
+ * 	Open the environment before insert/delete operation
+ *
+ * Parameters:
+ *	dbenvp		the database environment handle
+ *	home		the home directory for the environment
+ *	cachesize	the cache size for the environment
+ */
+
 int
 open_env(dbenvp, home, cachesize)
 	DB_ENV **dbenvp;
@@ -558,9 +691,16 @@ open_env(dbenvp, home, cachesize)
 
 	*dbenvp = dbenv;
 
+	/*
+	 * Prefix any error messages with the name of this program and a ':'.
+	 * Setting the errfile to stderr is not necessary, since that is the
+	 * default; it is provided here as a placeholder showing where one
+	 * could direct error messages to an application-specific log file.
+	 */
 	dbenv->set_errfile(dbenv, stderr);
 	dbenv->set_errpfx(dbenv, progname);
 
+	/* Set cachesize for the database environment. */
 	if ((cachesize > 0) && (ret =
 	    dbenv->set_cachesize(dbenv, (u_int32_t)0, cachesize, 1)) != 0) {
 		dbenv->err(dbenv, ret, "DB_ENV->set_cachesize");
@@ -573,6 +713,19 @@ open_env(dbenvp, home, cachesize)
 	return (ret);
 }
 
+/*
+ * open_db --
+ * 	Open the database before insert/delete operation.
+ *
+ * Parameters:
+ *	dbpp	the database handle
+ *	dbenv	the database environment
+ *	dbtype	the database type
+ *	home	the home directory for the environment
+ *	gphsize	the heap size (gbytes) for the heap database
+ *	hpsize	the heap size (bytes) for the heap database
+ *	pgsize	the page size for the heap database
+ */
 int
 open_db(dbpp, dbenv, dbtype, home, ghpsize, hpsize, pgsize)
 	DB **dbpp;
@@ -596,18 +749,20 @@ open_db(dbpp, dbenv, dbtype, home, ghpsize, hpsize, pgsize)
 
 	*dbpp = dbp;
 
+	/* Set the record compare function for the btree database. */
 	if ((dbtype == DB_BTREE) &&
 	    (ret = dbp->set_bt_compare(dbp, compare_int)) != 0) {
 		dbp->err(dbp, ret, "DB->set_bt_compare");
 		goto err;
 	}
 
+	/* Set heap size for the heap database. */
 	if ((dbtype == DB_HEAP) && (ghpsize > 0 || hpsize > 0) &&
 	    (ret = dbp->set_heapsize(dbp, ghpsize, hpsize, 0)) != 0) {
 		dbenv->err(dbenv, ret, "DB->set_heapsize");
 		return (ret);
 	}
-
+	/* Set page size for the database. */
 	if ((pgsize > 0) && (ret = dbp->set_pagesize(dbp, pgsize)) != 0) {
 		dbenv->err(dbenv, ret, "DB->set_pagesize");
 		return (ret);
@@ -621,6 +776,16 @@ err:
 	return (ret);
 }
 
+/*
+ * compare_int --
+ * 	Compare two data value for btree database.
+ *
+ * Parameters:
+ *	dbp	the database handle
+ *	a	one of the data value use to compare
+ *	b	another data value use to compare
+ *	locp	lock handle
+ */
 int
 compare_int(dbp, a, b, locp)
 	DB *dbp;

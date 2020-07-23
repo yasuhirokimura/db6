@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2012, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2012, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -36,23 +36,25 @@ proc repmgr113 { {tnum "113"} } {
 
 proc repmgr113_loop { {tnum "113"} } {
 	global testdir
+	global ipversion
 
 	puts "\tRepmgr$tnum.loop: Run short-lived processes to\
 	    perform multiple takeovers."
 	env_cleanup $testdir
 
+	set hoststr [get_hoststr $ipversion]
 	foreach {mport c1port c2port} [available_ports 3] {}
 	file mkdir [set mdir $testdir/MASTER]
 	file mkdir [set c1dir $testdir/CLIENT1]
 	file mkdir [set c2dir $testdir/CLIENT2]
 	make_dbconfig $mdir \
-	    [list [list repmgr_site 127.0.0.1 $mport db_local_site on]]
+	    [list [list repmgr_site $hoststr $mport db_local_site on]]
 	make_dbconfig $c1dir \
-	    [list [list repmgr_site 127.0.0.1 $c1port db_local_site on] \
-	    [list repmgr_site 127.0.0.1 $mport db_bootstrap_helper on]]
+	    [list [list repmgr_site $hoststr $c1port db_local_site on] \
+	    [list repmgr_site $hoststr $mport db_bootstrap_helper on]]
 	make_dbconfig $c2dir \
-	    [list [list repmgr_site 127.0.0.1 $c2port db_local_site on] \
-	    [list repmgr_site 127.0.0.1 $mport db_bootstrap_helper on]]
+	    [list [list repmgr_site $hoststr $c2port db_local_site on] \
+	    [list repmgr_site $hoststr $mport db_bootstrap_helper on]]
 
 	puts "\t\tRepmgr$tnum.loop.a: Start master and client1."
 	set cmds {
@@ -248,27 +250,29 @@ proc repmgr113_loop { {tnum "113"} } {
 
 proc repmgr113_test { {tnum "113"} } {
 	global testdir
+	global ipversion
 
 	puts "\tRepmgr$tnum.test: Takeover in any subordinate process and\
 	    election delay due to the takeover on master"
 	env_cleanup $testdir
 
+	set hoststr [get_hoststr $ipversion]
 	foreach {mport c1port c2port c3port} [available_ports 4] {}
 	file mkdir [set mdir $testdir/MASTER]
 	file mkdir [set c1dir $testdir/CLIENT1]
 	file mkdir [set c2dir $testdir/CLIENT2]
 	file mkdir [set c3dir $testdir/CLIENT3]
 	make_dbconfig $mdir \
-	    [list [list repmgr_site 127.0.0.1 $mport db_local_site on]]
+	    [list [list repmgr_site $hoststr $mport db_local_site on]]
 	make_dbconfig $c1dir \
-	    [list [list repmgr_site 127.0.0.1 $c1port db_local_site on] \
-	    [list repmgr_site 127.0.0.1 $mport db_bootstrap_helper on]]
+	    [list [list repmgr_site $hoststr $c1port db_local_site on] \
+	    [list repmgr_site $hoststr $mport db_bootstrap_helper on]]
 	make_dbconfig $c2dir \
-	    [list [list repmgr_site 127.0.0.1 $c2port db_local_site on] \
-	    [list repmgr_site 127.0.0.1 $mport db_bootstrap_helper on]]
+	    [list [list repmgr_site $hoststr $c2port db_local_site on] \
+	    [list repmgr_site $hoststr $mport db_bootstrap_helper on]]
 	make_dbconfig $c3dir \
-	    [list [list repmgr_site 127.0.0.1 $c3port db_local_site on] \
-	    [list repmgr_site 127.0.0.1 $mport db_bootstrap_helper on]]
+	    [list [list repmgr_site $hoststr $c3port db_local_site on] \
+	    [list repmgr_site $hoststr $mport db_bootstrap_helper on]]
 
 	# Test case 1: Test listener takeover on master.
 	# 2 sites, master and client1
@@ -535,7 +539,7 @@ proc repmgr113_test { {tnum "113"} } {
 	# Remove client1.  Verify c1_4 doesn't take over listener role.
 	puts "\t\tRepmgr$tnum.test.n: Remove client1 and verify no takeover on\
 	    client1."
-	puts $m_8 "remove $c1port"
+	puts $m_8 "remove $hoststr $c1port"
 	await_condition {[expr [$m_env rep_get_nsites] == 1]}
 	tclsleep 3
 	set takeover_count [stat_field $c1_env repmgr_stat \
@@ -667,15 +671,17 @@ proc repmgr113_test { {tnum "113"} } {
 
 proc repmgr113_zero_nthreads { {tnum "113"} } {
 	global testdir
+	global ipversion
 
 	puts "\tRepmgr$tnum.zero.nthreads: Test automatic takeover by a\
 	    subordinate process configured with zero nthreads."
 	env_cleanup $testdir
 
+	set hoststr [get_hoststr $ipversion]
 	foreach {mport} [available_ports 1] {}
 	file mkdir [set mdir $testdir/MASTER]
 	make_dbconfig $mdir \
-	    [list [list repmgr_site 127.0.0.1 $mport db_local_site on]]
+	    [list [list repmgr_site $hoststr $mport db_local_site on]]
 
 	puts "\t\tRepmgr$tnum.zero.nthreads.a: Start master listener."
 	set cmds {
@@ -690,7 +696,7 @@ proc repmgr113_zero_nthreads { {tnum "113"} } {
 	    configured with 0 message threads."
 	set m_2 [berkdb_env -home $mdir -txn -rep -thread -event -errpfx \
 	    "MASTER" -errfile $testdir/m_2_output]
-	$m_2 repmgr -local [list 127.0.0.1 $mport] -start master -msgth 0
+	$m_2 repmgr -local [list $hoststr $mport] -start master -msgth 0
 
 	puts "\t\tRepmgr$tnum.zero.nthreads.c: Close listener, verify takeover\
 	    happens in the subordinate process."
@@ -708,6 +714,7 @@ proc repmgr113_zero_nthreads { {tnum "113"} } {
 
 proc repmgr113_prefmas { {tnum "113"} } {
 	global testdir
+	global ipversion
 
 	# Test case 10: Test listener takeover in preferred master repgroup.
 	# 2 sites, master and client
@@ -725,18 +732,19 @@ proc repmgr113_prefmas { {tnum "113"} } {
 	    master site."
 	env_cleanup $testdir
 
+	set hoststr [get_hoststr $ipversion]
 	foreach {mport cport} [available_ports 2] {}
 	file mkdir [set mdir $testdir/MASTER]
 	file mkdir [set cdir $testdir/CLIENT]
 	# The "all" ack_policy guarantees that replication is complete before
 	# put operations return.
 	make_dbconfig $mdir \
-	    [list [list repmgr_site 127.0.0.1 $mport db_local_site on] \
+	    [list [list repmgr_site $hoststr $mport db_local_site on] \
 	    "rep_set_config db_repmgr_conf_prefmas_master on" \
 	    "repmgr_set_ack_policy db_repmgr_acks_all"]
 	make_dbconfig $cdir \
-	    [list [list repmgr_site 127.0.0.1 $cport db_local_site on] \
-	    [list repmgr_site 127.0.0.1 $mport db_bootstrap_helper on] \
+	    [list [list repmgr_site $hoststr $cport db_local_site on] \
+	    [list repmgr_site $hoststr $mport db_bootstrap_helper on] \
 	    "rep_set_config db_repmgr_conf_prefmas_client on" \
 	    "repmgr_set_ack_policy db_repmgr_acks_all"]
 

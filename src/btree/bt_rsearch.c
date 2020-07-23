@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  */
 /*
  * Copyright (c) 1990, 1993, 1994, 1995, 1996
@@ -136,7 +136,7 @@ __bam_rsearch(dbc, recnop, flags, stop, exactp)
 				/*
 				 * Keep the page locked for serializability.
 				 *
-				 * XXX
+				 * !!!
 				 * This leaves the root page locked, which will
 				 * eliminate any concurrency.  A possible fix
 				 * would be to lock the last leaf page instead.

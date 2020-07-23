@@ -3,27 +3,27 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <title>Db::set_blob_threshold()</title>
+    <title>Db::set_ext_file_threshold()</title>
     <link rel="stylesheet" href="apiReference.css" type="text/css" />
     <meta name="generator" content="DocBook XSL Stylesheets V1.73.2" />
     <link rel="start" href="index.html" title="Berkeley DB C++ API Reference" />
-    <link rel="up" href="blob.html" title="Chapter 14.  Binary Large Objects" />
-    <link rel="prev" href="set_blob_dir.html" title="Db::set_blob_dir()" />
+    <link rel="up" href="blob.html" title="Chapter 14.  External Files" />
+    <link rel="prev" href="set_blob_dir.html" title="Db::set_ext_file_dir()" />
     <link rel="next" href="dbstream.html" title="Dbc::db_stream()" />
   </head>
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
-          <th colspan="3" align="center">Db::set_blob_threshold()</th>
+          <th colspan="3" align="center">Db::set_ext_file_threshold()</th>
         </tr>
         <tr>
           <td width="20%" align="left"><a accesskey="p" href="set_blob_dir.html">Prev</a> </td>
           <th width="60%" align="center">Chapter 14. 
-                Binary Large Objects
+                External Files
         </th>
           <td width="20%" align="right"> <a accesskey="n" href="dbstream.html">Next</a></td>
         </tr>
@@ -34,50 +34,48 @@
       <div class="titlepage">
         <div>
           <div>
-            <h2 class="title" style="clear: both"><a id="set_blob_threshold"></a>Db::set_blob_threshold()</h2>
+            <h2 class="title" style="clear: both"><a id="set_blob_threshold"></a>Db::set_ext_file_threshold()</h2>
           </div>
         </div>
       </div>
       <pre class="programlisting">#include &lt;db_cxx.h&gt;
  
 int
-Db::set_blob_threshold(u_int32_t bytes, u_int32_t flags);  </pre>
+Db::set_ext_file_threshold(u_int32_t bytes, u_int32_t flags);  </pre>
       <p>
-         The <code class="methodname">Db::set_blob_threshold()</code> method sets
+         The <code class="methodname">Db::set_ext_file_threshold()</code> method sets
          a size which is used to determine when a data item will be
-         stored as a BLOB. Data items sized less than this threshold are
-         stored as normal data within the database. Data items larger than
+         stored as an external file. Data items sized less than this threshold
+         are stored as normal data within the database. Data items larger than
          this size are stored on-disk in a subdirectory set aside for the
          purpose.
      </p>
       <p>
-         If this threshold value is set to <code class="literal">0</code>, then BLOBs
-         will never be used by the database.
+         If this threshold value is set to <code class="literal">0</code>, then external
+         files will never be used by the database.
      </p>
       <p>
-         It is illegal to set a BLOB threshold if any of the following flags
-         were specified for the database: 
-         <a class="link" href="dbset_flags.html#dbset_flags_DB_CHKSUM">DB_CHKSUM</a>,
-         <a class="link" href="dbset_flags.html#dbset_flags_DB_ENCRYPT">DB_ENCRYPT</a>,
+         It is illegal to set an external file threshold if any of the
+         following flags were specified for the database: 
          <a class="link" href="dbset_flags.html#dbset_flags_DB_DUP">DB_DUP</a>, and
          <a class="link" href="dbset_flags.html#dbset_flags_DB_DUPSORT">DB_DUPSORT</a>.
      </p>
       <p>
-         It is also illegal to set a BLOB threshold if compression is
+         It is also illegal to set an external file threshold if compression is
          turned on for the database. That is, if <a class="xref" href="dbset_bt_compress.html" title="Db::set_bt_compress()">Db::set_bt_compress()</a> has
          been called for the database handle.
      </p>
       <p>
-        This method configures the underlying database. The BLOB threshold
-        is stored in the database at database creation time. Any BLOB
-        threshold set after creating the database is ignored.
+        This method configures the underlying database. The external file
+        threshold is stored in the database at database creation time. Any
+        external file threshold set after creating the database is ignored.
      </p>
       <p>
          This method may not be called after <a class="xref" href="dbopen.html" title="Db::open()">Db::open()</a> is called.
      </p>
       <p>
          Unless otherwise specified, the
-         <code class="methodname">Db::set_blob_threshold()</code> <span>
+         <code class="methodname">Db::set_ext_file_threshold()</code> <span>
             
             <span>
                 method either returns a non-zero error value or throws an
@@ -90,7 +88,7 @@ Db::set_blob_threshold(u_int32_t bytes, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp63834688"></a>Parameters</h3>
+              <h3 class="title"><a id="idp108841792"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -98,21 +96,21 @@ Db::set_blob_threshold(u_int32_t bytes, u_int32_t flags);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp63835072"></a>bytes</h4>
+                <h4 class="title"><a id="idp108843072"></a>bytes</h4>
               </div>
             </div>
           </div>
           <p>
                  The <span class="bold"><strong>bytes</strong></span> parameter
                  identifies the threshold size, in bytes, beyond which a
-                 data item is stored as a BLOB.
+                 data item is stored as an external file.
              </p>
         </div>
         <div class="sect3" lang="en" xml:lang="en">
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp63819696"></a>flags</h4>
+                <h4 class="title"><a id="idp108815168"></a>flags</h4>
               </div>
             </div>
           </div>
@@ -125,12 +123,12 @@ Db::set_blob_threshold(u_int32_t bytes, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp63824264"></a>Errors</h3>
+              <h3 class="title"><a id="idp108831616"></a>Errors</h3>
             </div>
           </div>
         </div>
         <p>
-             The <code class="methodname">Db::set_blob_threshold()</code> <span>
+             The <code class="methodname">Db::set_ext_file_threshold()</code> <span>
             
             <span>
                 method may fail and throw a <a class="link" href="dbexception.html" title="Chapter 6. The DbException Class">DbException</a> 
@@ -143,7 +141,7 @@ Db::set_blob_threshold(u_int32_t bytes, u_int32_t flags);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp63844248"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp108858176"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -153,8 +151,6 @@ Db::set_blob_threshold(u_int32_t bytes, u_int32_t flags);  </pre>
                 compression is turned on for the database; or if the
                 database is configured with one or more of the following
                 flags:
-                <a class="link" href="dbset_flags.html#dbset_flags_DB_CHKSUM">DB_CHKSUM</a>,
-                <a class="link" href="dbset_flags.html#dbset_flags_DB_ENCRYPT">DB_ENCRYPT</a>,
                 <a class="link" href="dbset_flags.html#dbset_flags_DB_DUP">DB_DUP</a>, and
                 <a class="link" href="dbset_flags.html#dbset_flags_DB_DUPSORT">DB_DUPSORT</a>.
             </p>
@@ -164,7 +160,7 @@ Db::set_blob_threshold(u_int32_t bytes, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp63842704"></a>Class</h3>
+              <h3 class="title"><a id="idp108860288"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -176,12 +172,12 @@ Db::set_blob_threshold(u_int32_t bytes, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp63837152"></a>See Also</h3>
+              <h3 class="title"><a id="idp108846480"></a>See Also</h3>
             </div>
           </div>
         </div>
         <p>
-             <a class="xref" href="blob.html#bloblist" title="BLOBs and Related Methods">BLOBs and Related Methods</a> 
+             <a class="xref" href="blob.html#bloblist" title="External Files and Related Methods">External Files and Related Methods</a> 
         </p>
       </div>
     </div>
@@ -196,7 +192,7 @@ Db::set_blob_threshold(u_int32_t bytes, u_int32_t flags);  </pre>
           <td width="40%" align="right"> <a accesskey="n" href="dbstream.html">Next</a></td>
         </tr>
         <tr>
-          <td width="40%" align="left" valign="top">Db::set_blob_dir() </td>
+          <td width="40%" align="left" valign="top">Db::set_ext_file_dir() </td>
           <td width="20%" align="center">
             <a accesskey="h" href="index.html">Home</a>
           </td>

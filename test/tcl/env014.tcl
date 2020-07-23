@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2005, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2005, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -118,15 +118,16 @@ proc env014 { } {
 	error_check_good env_close [$env close] 0
 	error_check_good env_remove [berkdb envremove -force -home $testdir] 0
 
-  	# Enabling replication enables DB_LOG_BLOB, and it cannot be disabled
-	puts "\tEnv$tnum.i: Replication enables DB_LOG_BLOB."
+  	# Enabling replication enables DB_LOG_EXT_FILE, and it cannot be
+	# disabled
+	puts "\tEnv$tnum.i: Replication enables DB_LOG_EXT_FILE."
 	set env [berkdb_env_noerr -create -rep_master \
 	    -rep_transport [list 1 replsend]  -lock -txn -home $testdir]
 	error_check_good env_open [is_valid_env $env] TRUE
 	error_check_good log_blob_on [$env log_get_config blob] 1
 	catch {$env log_config blob off} ret
 	error_check_good log_blob_enable \
-	    [is_substr $ret "DB_LOG_BLOB must be enabled"] 1
+	    [is_substr $ret "DB_LOG_EXT_FILE must be enabled"] 1
 
 	error_check_good env_close [$env close] 0
 	error_check_good env_remove [berkdb envremove -force -home $testdir] 0

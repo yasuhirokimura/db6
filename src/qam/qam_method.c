@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1999, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1999, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -321,10 +321,11 @@ __qam_rr(dbp, ip, txn, name, subdb, newname, op)
 	}
 
 	/*
-	 * Since regular rename no longer opens the database, we may have
-	 * to do it here.
+	 * For rename/remove, there is no need to open the database
+	 * via __db_open.  It is good enough to just open its memory pool
+	 * which is necessary for in-mem databases.
 	 */
-	if (F_ISSET(dbp, DB_AM_OPEN_CALLED))
+	if (F2_ISSET(dbp, DB2_AM_MPOOL_OPENED))
 		tmpdbp = dbp;
 	else {
 		if ((ret = __db_create_internal(&tmpdbp, env, 0)) != 0)
@@ -344,17 +345,17 @@ __qam_rr(dbp, ip, txn, name, subdb, newname, op)
 	if (qp->page_ext != 0)
 		ret = __qam_nameop(tmpdbp, txn, newname, op);
 
-	if (!F_ISSET(dbp, DB_AM_OPEN_CALLED)) {
-err:		/*
+	if (!F2_ISSET(dbp, DB2_AM_MPOOL_OPENED)) {
+err:		
+		/* We need to remove the lock event we associated with this. */
+		if (txn != NULL)
+			__txn_remlock(env, txn, NULL, tmpdbp->locker);
+
+		/*
 		 * Since we copied the locker ID from the dbp, we'd better not
 		 * free it here.
 		 */
 		tmpdbp->locker = NULL;
-
-		/* We need to remove the lock event we associated with this. */
-		if (txn != NULL)
-			__txn_remlock(env,
-			    txn, &tmpdbp->handle_lock, DB_LOCK_INVALIDID);
 
 		if ((t_ret = __db_close(tmpdbp,
 		    txn, DB_NOSYNC)) != 0 && ret == 0)

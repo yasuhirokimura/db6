@@ -66,6 +66,8 @@ public class FunctionContext {
 
     /**
      * Retrieve number of rows for aggregate function.
+     *
+     * @return number of rows
      */
 
     public native int count();

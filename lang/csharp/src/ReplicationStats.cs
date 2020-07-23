@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2009, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2009, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 using System;
@@ -112,6 +112,22 @@ namespace BerkeleyDB {
         /// Log records received multiply. 
         /// </summary>
         public ulong DuplicateLogRecords { get { return st.st_log_duplicated; } }
+	/// <summary>
+        /// Duplicate external file messages received. 
+        /// </summary>
+	public ulong ExternalFileDuplicated { get { return st.st_ext_duplicated; } }
+        /// <summary>
+        /// External file messages received. 
+        /// </summary>
+        public ulong ExternalFileRecords { get { return st.st_ext_records; } }
+        /// <summary>
+        /// External file message rerequests. 
+        /// </summary>
+        public ulong ExternalFileRerequests { get { return st.st_ext_rereq; } }
+        /// <summary>
+        /// External file update message rerequests. 
+        /// </summary>
+        public ulong ExternalFileUpdateRerequests{ get { return st.st_ext_update_rereq; } }
         /// <summary>
         /// Number of lease validity checks. 
         /// </summary>

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2000, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2000, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 
@@ -118,6 +118,8 @@ public class TransactionRunner {
     /**
      * Returns the maximum number of retries that will be performed when
      * deadlocks are detected.
+     *
+     * @return the maximum number of retries.
      */
     public int getMaxRetries() {
 
@@ -128,6 +130,8 @@ public class TransactionRunner {
      * Changes the maximum number of retries that will be performed when
      * deadlocks are detected.
      * Calling this method does not impact transactions already running.
+     *
+     * @param maxRetries the maximum number of retries.
      */
     public void setMaxRetries(int maxRetries) {
 
@@ -139,6 +143,8 @@ public class TransactionRunner {
      * <code>run()</code> is called when a transaction is already active for
      * the current thread.
      * By default this property is false.
+     *
+     * @return whether nested transactions will be created.
      *
      * <p>Note that this method always returns false in the JE product, since
      * nested transactions are not supported by JE.</p>
@@ -153,6 +159,8 @@ public class TransactionRunner {
      * <code>run()</code> is called when a transaction is already active for
      * the current thread.
      * Calling this method does not impact transactions already running.
+     *
+     * @param allowNestedTxn whether nested transactions will be created.
      *
      * <p>Note that true may not be passed to this method in the JE product,
      * since nested transactions are not supported by JE.</p>
@@ -202,6 +210,8 @@ public class TransactionRunner {
      * is non-transactional, a transaction will not be used but the doWork()
      * method will still be called.  See the class description for more
      * information.
+     *
+     * @param worker the TransactionWorker.
      *
      * @throws DeadlockException when it is thrown by doWork() and the
      * maximum number of retries has occurred.  The transaction will have been

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2004, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2004, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -30,6 +30,7 @@
 static	int __envreg_add __P((ENV *, int *, u_int32_t));
 static	int __envreg_pid_compare __P((const void *, const void *));
 static	int __envreg_create_active_pid __P((ENV *, char *));
+static	int __envreg_add_active_pid __P((ENV*, char *));
 
 /*
  * Support for portable, multi-process database environment locking, based on
@@ -388,15 +389,18 @@ kill_all:	/*
 
 			/* Free active pid array if used. */
 			if (LF_ISSET(DB_FAILCHK_ISALIVE)) {
-				DB_GLOBAL(num_active_pids) = 0;
-				DB_GLOBAL(size_active_pids) = 0;
-				__os_free(env, DB_GLOBAL(active_pids));
+				env->num_active_pids = 0;
+				env->size_active_pids = 0;
+				__os_free(env, env->active_pids);
+				env->active_pids = NULL;
 			}
 
 			/* Detach from environment and deregister thread. */
 			if ((t_ret = __env_refresh(dbenv,
 			    orig_flags, 0)) != 0 && ret == 0)
 				ret = t_ret;
+			F_CLR(env, ENV_OPEN_CALLED);
+
 			if (ret == 0) {
 				if ((ret = __os_seek(env, dbenv->registry,
 				    0, 0, (u_int32_t)dead)) != 0 ||
@@ -626,6 +630,10 @@ __envreg_isalive(dbenv, pid, tid, flags )
 	db_threadid_t tid;
 	u_int32_t flags;
 {
+	ENV *env;
+
+	env = dbenv->env;
+
 	/* in this case we really do not care about tid, simply for lint */
 	DB_THREADID_INIT(tid);
 
@@ -633,15 +641,14 @@ __envreg_isalive(dbenv, pid, tid, flags )
 	if (!((flags == 0) || (flags == DB_MUTEX_PROCESS_ONLY)))
 		return (EINVAL);
 
-	if (DB_GLOBAL(active_pids) == NULL ||
-	    DB_GLOBAL(num_active_pids) == 0 || dbenv == NULL)
+	if (env->active_pids == NULL || env->num_active_pids == 0)
 		return (0);
 	/*
 	 * bsearch returns a pointer to an entry in active_pids if a match
 	 * is found on pid, else no match found it returns NULL.   This
 	 * routine will return a 1 if a match is found, else a 0.
 	 */
-	if (bsearch(&pid, DB_GLOBAL(active_pids), DB_GLOBAL(num_active_pids),
+	if (bsearch(&pid, env->active_pids, env->num_active_pids,
 	    sizeof(pid_t), __envreg_pid_compare))
 		return 1;
 
@@ -651,7 +658,8 @@ __envreg_isalive(dbenv, pid, tid, flags )
 /*
  * __envreg_create_active_pid --
  *	Create array of pids, if need more room in array then double size.
- *	Only add active pids from DB_REGISTER file into array.
+ *	Only add active pids from DB_REGISTER file into array. The given
+ *	active my_pid is also added into array.
  */
 static int
 __envreg_create_active_pid(env, my_pid)
@@ -662,13 +670,21 @@ __envreg_create_active_pid(env, my_pid)
 	char buf[PID_LEN + 10];
 	int    ret;
 	off_t  pos;
-	pid_t  pid, *tmparray;
-	size_t tmpsize, nr;
+	size_t nr;
 	u_int lcnt;
 
 	dbenv = env->dbenv;
 	pos = 0;
 	ret = 0;
+
+	/*
+	 * The process getting here has not been added to the DB_REGISTER
+	 * file yet, so include it as the first item in array
+	 */
+	if (env->num_active_pids == 0) {
+		if ((ret = __envreg_add_active_pid(env, my_pid)) != 0)
+			return (ret);
+	}
 
 	/*
 	 * Walk through DB_REGISTER file, we grab pid entries that are locked
@@ -694,53 +710,51 @@ __envreg_create_active_pid(env, my_pid)
 			if ((ret = REGISTRY_UNLOCK(env, pos)) != 0)
 				return (ret);
 		} else {
-			/* first, check to make sure we have room in arrary */
-			if (DB_GLOBAL(num_active_pids) + 1 >
-			    DB_GLOBAL(size_active_pids)) {
-				tmpsize =
-				   DB_GLOBAL(size_active_pids) * sizeof(pid_t);
-
-				/* start with 512, then double if must grow */
-				tmpsize = tmpsize > 0 ? tmpsize * 2 : 512;
-				if ((ret = __os_malloc
-				    (env, tmpsize, &tmparray )) != 0)
-					return (ret);
-
-				/* if array exists, then copy and free */
-				if (DB_GLOBAL(active_pids) != NULL) {
-					memcpy(tmparray,
-					    DB_GLOBAL(active_pids),
-					    DB_GLOBAL(num_active_pids) *
-					    sizeof(pid_t));
-					__os_free( env, DB_GLOBAL(active_pids));
-				}
-
-				DB_GLOBAL(active_pids) = tmparray;
-				DB_GLOBAL(size_active_pids) = tmpsize;
-
-				/*
-				 * The process getting here has not been added
-				 * to the DB_REGISTER file yet, so include it
-				 * as the first item in array
-				 */
-				if (DB_GLOBAL(num_active_pids) == 0) {
-					pid = (pid_t)strtoul(my_pid, NULL, 10);
-					DB_GLOBAL(active_pids)
-					   [DB_GLOBAL(num_active_pids)++] = pid;
-				}
-			}
-
-			/* insert into array */
-			pid = (pid_t)strtoul(buf, NULL, 10);
-			DB_GLOBAL(active_pids)
-			    [DB_GLOBAL(num_active_pids)++] = pid;
-
+			if ((ret = __envreg_add_active_pid(env, buf)) != 0)
+				return (ret);
 		}
 
 	}
 
 	/* lets sort the array to allow for binary search in isalive func */
-	qsort(DB_GLOBAL(active_pids), DB_GLOBAL(num_active_pids),
+	qsort(env->active_pids, env->num_active_pids,
 	    sizeof(pid_t), __envreg_pid_compare);
 	return (ret);
+}
+
+/*
+ * __envreg_add_active_pid --
+ *	Add an active pid into array, if need more room in array
+ *	then double size.
+ */
+static int
+__envreg_add_active_pid(env, pid)
+	ENV *env;
+	char *pid;
+{
+	int ret;
+	size_t tmpsize;
+
+	ret = 0;
+
+	/* first, check to make sure we have room in arrary */
+	if (env->num_active_pids + 1 >
+	    env->size_active_pids) {
+		tmpsize =
+		   env->size_active_pids * sizeof(pid_t);
+
+		/* start with 512, then double if must grow */
+		tmpsize = tmpsize > 0 ? tmpsize * 2 : 512;
+		if ((ret = __os_realloc
+		    (env, tmpsize, &(env->active_pids) )) != 0)
+			return (ret);
+
+		env->size_active_pids = tmpsize / sizeof(pid_t);
+	}
+
+	/* insert into array */
+	env->active_pids
+	    [env->num_active_pids++] = (pid_t)strtoul(pid, NULL, 10);
+
+	return (0);
 }

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -734,6 +734,14 @@ __lock_dump_locker(env, mbp, lt, lip)
 	    env->dbenv->thread_id_string(env->dbenv, lip->pid, lip->tid, buf));
 	__db_msgadd(env, mbp,
 	    " flags %-4x priority %-10u", lip->flags, lip->priority);
+	if (lip->parent_locker != INVALID_ROFF)
+		__db_msgadd(env, mbp, " parent %x",
+		    ((DB_LOCKER *)R_ADDR(&lt->reginfo,
+		    lip->parent_locker))->id);
+	if (lip->master_locker != INVALID_ROFF)
+		__db_msgadd(env, mbp, " master %x",
+		    ((DB_LOCKER *)R_ADDR(&lt->reginfo,
+		    lip->master_locker))->id);
 
 	if (timespecisset(&lip->tx_expire)) {
 #ifdef HAVE_STRFTIME

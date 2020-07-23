@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2000, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2000, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -20,7 +20,7 @@ using namespace std;
 int main(int argc, char *argv[])
 {
 	try {
-		DbEnv *dbenv = new DbEnv(0);
+		DbEnv *dbenv = new DbEnv((u_int32_t)0);
 		DbTxn *dbtxn;
 		u_int8_t conflicts[10];
 

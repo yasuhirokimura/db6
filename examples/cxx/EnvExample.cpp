@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1997, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1997, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -88,7 +88,7 @@ db_setup(const char *home, const char *data_dir, ostream& err_stream)
 	// Create an environment object and initialize it for error
 	// reporting.
 	//
-	DbEnv *dbenv = new DbEnv(0);
+	DbEnv *dbenv = new DbEnv((u_int32_t)0);
 	dbenv->set_error_stream(&err_stream);
 	dbenv->set_errpfx(progname);
 
@@ -148,7 +148,7 @@ void
 db_teardown(const char *home, const char *data_dir, ostream& err_stream)
 {
 	// Remove the shared database regions.
-	DbEnv *dbenv = new DbEnv(0);
+	DbEnv *dbenv = new DbEnv((u_int32_t)0);
 
 	dbenv->set_error_stream(&err_stream);
 	dbenv->set_errpfx(progname);

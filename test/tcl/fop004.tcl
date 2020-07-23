@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2000, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2000, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -39,7 +39,7 @@ proc fop004 { method { tnum "004" } args } {
 	cleanup $testdir NULL
 
 	# Look for incompatible configurations of blob.
-	foreach conf { "-encryptaes" "-encrypt" "-compress" "-dup" "-dupsort" \
+	foreach conf { "-compress" "-dup" "-dupsort" \
 	    "-read_uncommitted" "-multiversion" } {
 		if { [lsearch -exact $args $conf] != -1 } {
 			set skipblob 1

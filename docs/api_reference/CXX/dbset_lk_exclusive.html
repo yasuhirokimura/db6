@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -73,8 +73,9 @@ Db::set_lk_exclusive(int nowait_onoff); </pre>
         <h3 class="title">Note</h3>
         <p>
             This method is incompatible with the 
-            <a class="link" href="dbopen.html#open_DB_THREAD">DB_THREAD</a> configuration
-            flag.
+            <a class="link" href="dbopen.html#open_DB_THREAD">DB_THREAD</a> and
+            <a class="link" href="dbopen.html#dbopen_DB_SLICED">DB_SLICED</a>
+            configuration flags.
         </p>
       </div>
       <p>
@@ -123,7 +124,7 @@ Db::set_lk_exclusive(int nowait_onoff); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp58804056"></a>Parameters</h3>
+              <h3 class="title"><a id="idp99614176"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -131,7 +132,7 @@ Db::set_lk_exclusive(int nowait_onoff); </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp58804704"></a>nowait_onoff</h4>
+                <h4 class="title"><a id="idp99613696"></a>nowait_onoff</h4>
               </div>
             </div>
           </div>
@@ -149,7 +150,7 @@ Db::set_lk_exclusive(int nowait_onoff); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp58787048"></a>Errors</h3>
+              <h3 class="title"><a id="idp99613952"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -167,7 +168,7 @@ Db::set_lk_exclusive(int nowait_onoff); </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp58820936"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp99648320"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -175,8 +176,8 @@ Db::set_lk_exclusive(int nowait_onoff); </pre>
                 If the  method was called after 
                 <a class="xref" href="dbopen.html" title="Db::open()">Db::open()</a> 
                 was called; the method was called on a currently operating
-                replication client; or if an invalid flag value or
-                parameter was specified.
+                replication client; this method was called on a sliced database;
+                or if an invalid flag value or parameter was specified.
             </p>
         </div>
       </div>
@@ -184,7 +185,7 @@ Db::set_lk_exclusive(int nowait_onoff); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp58806160"></a>Class</h3>
+              <h3 class="title"><a id="idp99650816"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -196,7 +197,7 @@ Db::set_lk_exclusive(int nowait_onoff); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp58802480"></a>See Also</h3>
+              <h3 class="title"><a id="idp99644368"></a>See Also</h3>
             </div>
           </div>
         </div>

@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2005, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2005, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -190,18 +190,8 @@ proc test117 { method {nentries 10000} {tnum "117"} args } {
 			set in_use1 [expr $internal1 + $leaf1]
 			set free1 [stat_field $db stat "Pages on freelist"]
 
-			puts "\tTest$tnum.c: Do a dump_file on contents."
-			if { $txnenv == 1 } {
-				set t [$env txn]
-				error_check_good txn \
-				    [is_valid_txn $t $env] TRUE
-				set txn "-txn $t"
-			}
-			dump_file $db $txn $t1
-			if { $txnenv == 1 } {
-				error_check_good txn_commit [$t commit] 0
-				set txn ""
-			}
+			puts "\tTest$tnum.c: Save contents."
+			dump_file_env $env $db $t1
 
 			# Set up the compaction option value.
 			if { $compactopt == "-fillpercent" } {
@@ -277,17 +267,7 @@ proc test117 { method {nentries 10000} {tnum "117"} args } {
 
 				puts "\tTest$tnum.e:\
 				    Contents are the same after compaction."
-				if { $txnenv == 1 } {
-					set t [$env txn]
-					error_check_good txn \
-					    [is_valid_txn $t $env] TRUE
-					set txn "-txn $t"
-				}
-				dump_file $db $txn $t2
-				if { $txnenv == 1 } {
-					error_check_good txn_commit \
-					    [$t commit] 0
-				}
+				dump_file_env $env $db $t2
 				if { [is_hash $method] == 1 } {
 					filesort $t1 $t1.sort
 					filesort $t2 $t2.sort

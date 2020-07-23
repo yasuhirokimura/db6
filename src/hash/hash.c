@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  */
 /*
  * Copyright (c) 1990, 1993, 1994
@@ -344,15 +344,13 @@ __hamc_cmp(dbc, other_dbc, result)
 	DBC *dbc, *other_dbc;
 	int *result;
 {
-	ENV *env;
 	HASH_CURSOR *hcp, *ohcp;
 
-	env = dbc->env;
 	hcp = (HASH_CURSOR *)dbc->internal;
 	ohcp = (HASH_CURSOR *)other_dbc->internal;
 
-	DB_ASSERT (env, hcp->pgno == ohcp->pgno);
-	DB_ASSERT (env, hcp->indx == ohcp->indx);
+	DB_ASSERT(dbc->env, hcp->pgno == ohcp->pgno);
+	DB_ASSERT(dbc->env, hcp->indx == ohcp->indx);
 
 	/* Only compare the duplicate offsets if this is a duplicate item. */
 	if ((F_ISSET(hcp, H_ISDUP) && hcp->dup_off != ohcp->dup_off) ||
@@ -560,9 +558,9 @@ next:			ret = __ham_item_next(dbc, lock_type, pgnop);
 				ret = __ham_dup_return(dbc, data, flags);
 			break;
 		} else if (!F_ISSET(hcp, H_NOMORE)) {
+			ret = USR_ERR(env, EINVAL);
 			__db_errx(env, DB_STR("1130",
 			    "H_NOMORE returned to __hamc_get"));
-			ret = EINVAL;
 			break;
 		}
 
@@ -715,7 +713,7 @@ next_pg:
 				np += key_size;
 			} else if (HPAGE_PTYPE(hk) == H_BLOB) {
 				__db_errx(dbp->env, DB_STR("1185",
-				    "Blob item key."));
+				    "External file key."));
 				(void)__env_panic(dbp->env, DB_RUNRECOVERY);
 			} else {
 				if (need_pg) {
@@ -756,7 +754,7 @@ get_key_space:
 back_up:
 					if (indx != 0) {
 						indx -= 2;
-						/* XXX
+						/* !!!
 						 * It's not clear that this is
 						 * the right way to fix this,
 						 * but here goes.
@@ -902,7 +900,7 @@ get_space:
 				/*
 				 * Since space is an unsigned, if we happen
 				 * to wrap, then this comparison will turn out
-				 * to be true.  XXX Wouldn't it be better to
+				 * to be true.  !!! Wouldn't it be better to
 				 * simply check above that space is greater than
 				 * the value we're about to subtract???
 				 */
@@ -1598,7 +1596,7 @@ __ham_dup_return(dbc, val, flags)
 				cmp = -cmp;
 			} else if (((HKEYDATA *)hk)->type == H_BLOB) {
 				__db_errx(dbp->env, DB_STR("1186",
-		    "Error - found a blob file in a duplicate data set."));
+		    "Error - found an external file in a duplicate data set."));
 				(void)__env_panic(dbp->env, DB_RUNRECOVERY);
 			} else {
 				/*
@@ -1609,7 +1607,7 @@ __ham_dup_return(dbc, val, flags)
 				tmp_val.size = LEN_HDATA(dbp, hcp->page,
 				    dbp->pgsize, hcp->indx);
 				cmp = dbp->dup_compare == NULL ?
-				    __bam_defcmp(dbp, &tmp_val, val, NULL) :
+				    __dbt_defcmp(dbp, &tmp_val, val, NULL) :
 				    dbp->dup_compare(dbp, &tmp_val, val, NULL);
 			}
 

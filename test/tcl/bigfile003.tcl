@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2013, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2013, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -41,7 +41,7 @@ proc bigfile003 { args } {
 	
 	# We need about 10 GB of free space to run this test
 	# successfully. 
-	set space_available [diskfree-k $testdir]
+	set space_available [diskfree-k "$testdir"]
 	if { [expr $space_available < 11000000] } {
 		puts "Skipping bigfile003, not enough disk space."
 		return

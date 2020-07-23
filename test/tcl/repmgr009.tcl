@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2007, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2007, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -33,6 +33,7 @@ proc repmgr009_sub { method niter tnum largs } {
 	global testdir
 	global rep_verbose
 	global verbose_type
+	global ipversion
 	set nsites 2
 
 	set verbargs ""
@@ -42,6 +43,7 @@ proc repmgr009_sub { method niter tnum largs } {
 
 	env_cleanup $testdir
 	set ports [available_ports [expr $nsites * 5]]
+	set hoststr [get_hoststr $ipversion]
 
 	replsetup $testdir/MSGQUEUEDIR
 
@@ -63,7 +65,7 @@ proc repmgr009_sub { method niter tnum largs } {
 
 	puts "\tRepmgr$tnum.b: Call repmgr without open master (error)."
 	catch {$masterenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 0]] \
+	    -local [list $hoststr [lindex $ports 0]] \
 	    -start master} res
 	error_check_good errchk [is_substr $res "invalid command"] 1
 
@@ -74,16 +76,16 @@ proc repmgr009_sub { method niter tnum largs } {
 	puts "\tRepmgr$tnum.d1: Call repmgr with 0 msgth (error)."
 	set masterenv [eval $ma_envcmd]
 	catch {$masterenv repmgr -start master -msgth 0 \
-	    -local [list 127.0.0.1 [lindex $ports 0]]} res
+	    -local [list $hoststr [lindex $ports 0]]} res
 	error_check_good no_threads [is_substr $res "nthreads parameter"] 1
 	error_check_good allow_msgth_nonzero [$masterenv repmgr \
-	    -start master -local [list 127.0.0.1 [lindex $ports 0]]] 0
+	    -start master -local [list $hoststr [lindex $ports 0]]] 0
 	error_check_good masterenv_close [$masterenv close] 0
 
 	puts "\tRepmgr$tnum.d2: Call repmgr with no startup flags (error)."
 	set masterenv [eval $ma_envcmd]
 	catch {$masterenv repmgr -start none \
-	    -local [list 127.0.0.1 [lindex $ports 0]]} res
+	    -local [list $hoststr [lindex $ports 0]]} res
 	error_check_good no_flags [is_substr $res "non-zero flags value"] 1
 	error_check_good masterenv_close [$masterenv close] 0
 
@@ -91,7 +93,7 @@ proc repmgr009_sub { method niter tnum largs } {
 	repladd 1
 	set masterenv [eval $ma_envcmd]
 	$masterenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 0]] \
+	    -local [list $hoststr [lindex $ports 0]] \
 	    -start master
 
 	puts "\tRepmgr$tnum.f: Start repmgr with no local sites (error)."
@@ -99,7 +101,7 @@ proc repmgr009_sub { method niter tnum largs } {
 	    -home $clientdir -txn -rep -thread"
 	set clientenv [eval $cl_envcmd]
 	catch {$clientenv repmgr -ack all \
-	    -remote [list 127.0.0.1 [lindex $ports 7]] \
+	    -remote [list $hoststr [lindex $ports 7]] \
 	    -start client} res
 	error_check_good errchk [is_substr $res \
 	    "local site must be named before calling repmgr_start"] 1
@@ -108,8 +110,8 @@ proc repmgr009_sub { method niter tnum largs } {
 	puts "\tRepmgr$tnum.g: Start repmgr with two local sites (error)."
 	set clientenv [eval $cl_envcmd]
 	catch {$clientenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 8]] \
-	    -local [list 127.0.0.1 [lindex $ports 9]] \
+	    -local [list $hoststr [lindex $ports 8]] \
+	    -local [list $hoststr [lindex $ports 9]] \
 	    -start client} res
 	error_check_good errchk [string match "*already*set*" $res] 1
 	error_check_good client_close [$clientenv close] 0
@@ -118,15 +120,15 @@ proc repmgr009_sub { method niter tnum largs } {
 	repladd 2
 	set clientenv [eval $cl_envcmd -recover]
 	$clientenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 1]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] \
+	    -local [list $hoststr [lindex $ports 1]] \
+	    -remote [list $hoststr [lindex $ports 0]] \
 	    -start client
 	await_startup_done $clientenv
 
 	puts "\tRepmgr$tnum.i: Start repmgr a second time (error)."
 	catch {$clientenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 1]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] \
+	    -local [list $hoststr [lindex $ports 1]] \
+	    -remote [list $hoststr [lindex $ports 0]] \
 	    -start client} res
 	error_check_good errchk [is_substr $res "repmgr is already started"] 1
 
@@ -172,7 +174,7 @@ proc repmgr009_sub { method niter tnum largs } {
 
 	puts "\tRepmgr$tnum.q: Call repmgr after rep_start (error)."
 	catch {$masterenv2 repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 0]] \
+	    -local [list $hoststr [lindex $ports 0]] \
 	    -start master} res
 	# Internal repmgr calls return EINVAL after hitting
 	# base API application test.

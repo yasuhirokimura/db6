@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -186,8 +186,8 @@ struct __mpool { /* SHARED */
 	u_int32_t htab_buckets;		/* Number of hash table entries. */
 	u_int32_t last_checked;		/* Last bucket checked for free. */
 	u_int32_t lru_priority;		/* Priority counter for buffer LRU. */
-	u_int32_t lru_generation;	/* Allocation race condition detector. */
-	u_int32_t htab_mutexes;		/* Number of hash mutexes per region. */
+	u_int32_t lru_generation;      /* Allocation race condition detector. */
+	u_int32_t htab_mutexes;	       /* Number of hash mutexes per region. */
 
 	 /*
 	  * The pages field keeps track of the number of pages in the cache
@@ -409,7 +409,7 @@ struct __mpoolfile { /* SHARED */
 	db_mutex_t  mtx_write;		/* block writers while updating.*/
 	db_pgno_t   low_pgno, high_pgno;/* Low and high backup range.*/
 #endif
-	
+
 	/* Protected by MPOOLFILE mutex. */
 	u_int32_t revision;		/* Bumped on any movement subdbs. */
 	u_int32_t mpf_cnt;		/* Ref count: DB_MPOOLFILEs. */

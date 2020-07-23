@@ -1,7 +1,7 @@
 #
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2010, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2010, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -41,6 +41,7 @@ proc basic_repmgr_test { niter inmemdb inmemlog \
 	global overflowword1
 	global overflowword2
 	global databases_in_memory
+	global ipversion
 	set overflowword1 "0"
 	set overflowword2 "0"
 	set nsites 3
@@ -66,6 +67,7 @@ proc basic_repmgr_test { niter inmemdb inmemlog \
 
 	env_cleanup $testdir
 	set ports [available_ports $nsites]
+	set hoststr [get_hoststr $ipversion]
 
 	set masterdir $testdir/MASTERDIR
 	set clientdir $testdir/CLIENTDIR
@@ -110,7 +112,7 @@ proc basic_repmgr_test { niter inmemdb inmemlog \
 	    -lock_max_locks 10000 -lock_max_objects 10000 $repmemarg"
 	set masterenv [eval $ma_envcmd]
 	$masterenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 0]] \
+	    -local [list $hoststr [lindex $ports 0]] \
 	    -start master
 
 	# Open first client
@@ -121,9 +123,9 @@ proc basic_repmgr_test { niter inmemdb inmemlog \
 	    -lock_max_locks 10000 -lock_max_objects 10000 $repmemarg"
 	set clientenv [eval $cl_envcmd]
 	$clientenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 1]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] \
-	    -remote [list 127.0.0.1 [lindex $ports 2]] \
+	    -local [list $hoststr [lindex $ports 1]] \
+	    -remote [list $hoststr [lindex $ports 0]] \
+	    -remote [list $hoststr [lindex $ports 2]] \
 	    -start client
 	await_startup_done $clientenv
 
@@ -135,9 +137,9 @@ proc basic_repmgr_test { niter inmemdb inmemlog \
 	    -lock_max_locks 10000 -lock_max_objects 10000 $repmemarg"
 	set clientenv2 [eval $cl2_envcmd]
 	$clientenv2 repmgr -ack all  \
-	    -local [list 127.0.0.1 [lindex $ports 2]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] \
-	    -remote [list 127.0.0.1 [lindex $ports 1]] \
+	    -local [list $hoststr [lindex $ports 2]] \
+	    -remote [list $hoststr [lindex $ports 0]] \
+	    -remote [list $hoststr [lindex $ports 1]] \
 	    -start client
 	await_startup_done $clientenv2
 

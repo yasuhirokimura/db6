@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1999, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1999, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -322,7 +322,7 @@ tcl_DbcPut(interp, objc, objv, dbc)
 			flag = DB_BEFORE;
 			break;
 		case DBCPUT_BLOB:
-			data.flags |= DB_DBT_BLOB;
+			data.flags |= DB_DBT_EXT_FILE;
 			break;
 		case DBCPUT_CURRENT:
 			FLAG_CHECK(flag);

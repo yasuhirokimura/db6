@@ -7,14 +7,14 @@
     <link rel="stylesheet" href="apiReference.css" type="text/css" />
     <meta name="generator" content="DocBook XSL Stylesheets V1.73.2" />
     <link rel="start" href="index.html" title="Berkeley DB C API Reference" />
-    <link rel="up" href="blob.html" title="Chapter 13.  Binary Large Objects" />
+    <link rel="up" href="blob.html" title="Chapter 13.  External Files" />
     <link rel="prev" href="dbstream.html" title="DBC-&gt;db_stream()" />
     <link rel="next" href="dbstream_read.html" title="DB_STREAM-&gt;read()" />
   </head>
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -23,7 +23,7 @@
         <tr>
           <td width="20%" align="left"><a accesskey="p" href="dbstream.html">Prev</a> </td>
           <th width="60%" align="center">Chapter 13. 
-                Binary Large Objects
+                External Files
         </th>
           <td width="20%" align="right"> <a accesskey="n" href="dbstream_read.html">Next</a></td>
         </tr>
@@ -45,8 +45,8 @@ DB_STREAM-&gt;close(DB_STREAM *dbs, u_int32_t flags);  </pre>
       <p>
          The <code class="methodname">DB_STREAM-&gt;close()</code> method flushes any
          unwritten data to disk, frees allocated resources, and closes the
-         underlying file which contains the BLOB. You open a BLOB stream
-         using <a class="xref" href="dbstream.html" title="DBC-&gt;db_stream()">DBC-&gt;db_stream()</a>.
+         underlying file which contains the external file. You open an external
+	 file stream using <a class="xref" href="dbstream.html" title="DBC-&gt;db_stream()">DBC-&gt;db_stream()</a>.
      </p>
       <p>
          Once this method is called, the stream can not be used again even
@@ -65,7 +65,7 @@ DB_STREAM-&gt;close(DB_STREAM *dbs, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp5013296"></a>Parameters</h3>
+              <h3 class="title"><a id="idp8804672"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -73,7 +73,7 @@ DB_STREAM-&gt;close(DB_STREAM *dbs, u_int32_t flags);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp5014840"></a>flags</h4>
+                <h4 class="title"><a id="idp8808480"></a>flags</h4>
               </div>
             </div>
           </div>
@@ -86,7 +86,7 @@ DB_STREAM-&gt;close(DB_STREAM *dbs, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp5024160"></a>Errors</h3>
+              <h3 class="title"><a id="idp8787072"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -102,7 +102,7 @@ DB_STREAM-&gt;close(DB_STREAM *dbs, u_int32_t flags);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp5000552"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp8807712"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -115,24 +115,24 @@ DB_STREAM-&gt;close(DB_STREAM *dbs, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp5028016"></a>Class</h3>
+              <h3 class="title"><a id="idp8830832"></a>Class</h3>
             </div>
           </div>
         </div>
         <p>
-            <a class="link" href="blob.html" title="Chapter 13.  Binary Large Objects">DB_STREAM</a>  
+            <a class="link" href="blob.html" title="Chapter 13.  External Files">DB_STREAM</a>  
         </p>
       </div>
       <div class="sect2" lang="en" xml:lang="en">
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp5028680"></a>See Also</h3>
+              <h3 class="title"><a id="idp8822976"></a>See Also</h3>
             </div>
           </div>
         </div>
         <p>
-             <a class="xref" href="blob.html#bloblist" title="BLOBs and Related Methods">BLOBs and Related Methods</a> 
+             <a class="xref" href="blob.html#bloblist" title="External Files and Related Methods">External Files and Related Methods</a> 
         </p>
       </div>
     </div>

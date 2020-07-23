@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2012, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2012, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -41,19 +41,25 @@ proc repmgr035 { { nsites 3 } args } {
 	puts "Repmgr035: $mvlist"
 	puts "Repmgr035: $msg2"
 	set count 1
-	set total [llength $mvlist]
 	set slist [upgrade_setup_sites $nsites]
+	set dbopts { diskonly diskandinmem }
+	set total [expr [llength $mvlist] * [llength $dbopts]]
 	foreach i $mvlist {
-		puts "Repmgr035: Test iteration $count of $total: $i"
-		repmgr035_sub $count $i $nsites $slist
-		incr count
+		foreach j $dbopts {
+			puts "Repmgr035: Test iteration $count of $total:\
+			    $i $j"
+			repmgr035_sub $count $i $nsites $slist $j
+			incr count
+		}
 	}
 }
 
-proc repmgr035_sub { iter mv nsites slist } {
+proc repmgr035_sub { iter mv nsites slist dbopt } {
 	source ./include.tcl
+	global ipversion
 	set method [lindex $mv 0]
 	set vers [lindex $mv 1]
+	set hoststr [get_hoststr $ipversion]
 
 	puts "\tRepmgr035.$iter.a: Set up."
 	# Whatever directory we started this process from is referred
@@ -182,8 +188,8 @@ proc repmgr035_sub { iter mv nsites slist } {
 		      	    SKIP \
 			    START $role \
 			    $op $sid $controldir \
-			    $sitedir($i) $reputils_path \
-			    [lindex $ports $i] $remote_ports &]
+			    $sitedir($i) $reputils_path $hoststr \
+			    [lindex $ports $i] $remote_ports $dbopt &]
 		}
 
 		watch_procs $pids 20
@@ -207,8 +213,8 @@ proc repmgr035_sub { iter mv nsites slist } {
 		      	    SKIP \
 			    VERIFY $role \
 		    	    {LOG DB} $siteid($i) $controldir \
-			    $sitedir($i) $reputils_path \
-			    [lindex $ports $i] $remote_ports &]
+			    $sitedir($i) $reputils_path $hoststr \
+			    [lindex $ports $i] $remote_ports $dbopt &]
 		}
 
 		watch_procs $pids 10
@@ -225,6 +231,11 @@ proc repmgr035_sub { iter mv nsites slist } {
 			error_check_good db_cmp \
 			    [filecmp $sitedir($mindex)/VERIFY/dbdump \
 			    $sitedir($i)/VERIFY/dbdump] 0
+			if { $dbopt == "diskandinmem" } {
+				error_check_good db_inmem_cmp [filecmp \
+				    $sitedir($mindex)/VERIFY/dbinmemdump \
+				    $sitedir($i)/VERIFY/dbinmemdump] 0
+			}
 			set upg [lindex $siteupg $i]
 			# !!!
 			# Although db_printlog works and can read old logs,
@@ -257,9 +268,12 @@ proc repmgr035_sub { iter mv nsites slist } {
 }
 
 proc repmgr035_method_version { } {
+	global valid_releases
 
 	set mv {}
-	set versions {db-5.0.32 db-5.1.29 db-5.2.42 db-5.3.28 db-6.0.30}
+	set versions "$valid_releases(50) $valid_releases(51)\
+	    $valid_releases(52) $valid_releases(53)\
+	    $valid_releases(60) $valid_releases(61)"
 	set versions_len [expr [llength $versions] - 1]
 
 	# Walk through the list of versions and pair each with btree method.

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1999, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1999, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -161,7 +161,7 @@ __os_posix_err(error)
 	case ERROR_FILE_NOT_FOUND:
 	case ERROR_INVALID_DRIVE:
 	case ERROR_PATH_NOT_FOUND:
-		return (ENOENT);
+		return (USR_ERR(env, ENOENT));
 
 	case ERROR_NO_MORE_FILES:
 	case ERROR_TOO_MANY_OPEN_FILES:

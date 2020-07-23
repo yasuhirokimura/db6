@@ -1,15 +1,16 @@
 --- Makefile.in
 +++ Makefile.in
-@@ -164,7 +164,7 @@
+@@ -168,7 +168,7 @@
  LIBOBJS0 = alter.lo analyze.lo attach.lo auth.lo \
           backup.lo bitvec.lo btmutex.lo btree.lo build.lo \
-          callback.lo complete.lo ctime.lo date.lo db_encrypt.lo db_pragma.lo \
--         db_shell.lo delete.lo expr.lo fault.lo fkey.lo \
-+         db_sequence.lo db_shell.lo delete.lo expr.lo fault.lo fkey.lo \
-          fts3.lo fts3_aux.lo fts3_expr.lo fts3_hash.lo fts3_icu.lo \
+          callback.lo complete.lo ctime.lo date.lo dbstat.lo db_encrypt.lo \
+-         db_pragma.lo db_shell.lo delete.lo expr.lo fault.lo fkey.lo \
+-         fts3.lo fts3_aux.lo fts3_expr.lo fts3_hash.lo fts3_icu.lo \
++         db_pragma.lo db_sequence.lo db_shell.lo delete.lo expr.lo fault.lo \
++         fkey.lo fts3.lo fts3_aux.lo fts3_expr.lo fts3_hash.lo fts3_icu.lo \
           fts3_porter.lo fts3_snippet.lo fts3_tokenizer.lo fts3_tokenizer1.lo \
           fts3_tokenize_vtab.lo \
-@@ -211,6 +211,7 @@
+@@ -216,6 +216,7 @@
    $(TOP)/src/date.c \
    $(TOP)/../adapter/db_encrypt.c \
    $(TOP)/../adapter/db_pragma.c \
@@ -17,7 +18,7 @@
    $(TOP)/../adapter/db_shell.c \
    $(TOP)/src/delete.c \
    $(TOP)/src/expr.c \
-@@ -410,6 +411,7 @@
+@@ -424,6 +425,7 @@
    $(TOP)/../adapter/backup.c \
    $(TOP)/src/bitvec.c \
    $(TOP)/../adapter/btree.c \
@@ -25,7 +26,7 @@
    $(TOP)/src/build.c \
    $(TOP)/src/ctime.c \
    $(TOP)/src/date.c \
-@@ -626,6 +628,10 @@
+@@ -669,6 +671,10 @@
  		$(TOP)/../adapter/btreeInt.h
  	$(LTCOMPILE) $(TEMP_STORE) -c $(TOP)/../adapter/db_pragma.c
  
@@ -44,10 +45,10 @@
  
 +extern int add_sequence_functions(sqlite3 *db);
 +
- #if !defined(SQLITE_OMIT_TRACE) && defined(SQLITE_ENABLE_IOTRACE)
  /*
- ** If the following function pointer is not NULL and if
-@@ -2532,6 +2534,13 @@
+ ** When compiling the test fixture or with debugging enabled (on Win32),
+ ** this variable being set to non-zero will cause OSTRACE macros to emit
+@@ -2786,6 +2786,13 @@
    db->pDfltColl = sqlite3FindCollSeq(db, SQLITE_UTF8, "BINARY", 0);
    assert( db->pDfltColl!=0 );
  
@@ -58,12 +59,12 @@
 +  add_sequence_functions(db);
 +  /* End Berkeley DB customization. */
 +
-   /* Also add a UTF-8 case-insensitive collation sequence. */
-   createCollation(db, "NOCASE", SQLITE_UTF8, 0, nocaseCollatingFunc, 0);
- 
+   /* Parse the filename/URI argument. */
+   db->openFlags = flags;
+   rc = sqlite3ParseUri(zVfs, zFilename, &flags, &db->pVfs, &zOpen, &zErrMsg);
 --- tool/mksqlite3c.tcl
 +++ tool/mksqlite3c.tcl
-@@ -271,6 +271,7 @@
+@@ -310,6 +310,7 @@
     backup.c
     db_encrypt.c
     db_pragma.c

@@ -49,12 +49,15 @@ static void __dbj_env_feedback(DB_ENV *dbenv, int opcode, int percent)
 		__dbj_detach();
 }
 
-static void __dbj_message(const DB_ENV *dbenv, const char *msg)
+static void __dbj_message(const DB_ENV *dbenv,
+    const char *prefix, const char *msg)
 {
 	int detach;
 	JNIEnv *jenv = __dbj_get_jnienv(&detach);
 	jobject jdbenv = (jobject)DB_ENV_INTERNAL(dbenv);
 	jobject jmsg;
+
+	COMPQUIET(prefix, NULL);
 
 	if (jdbenv != NULL){
 		jmsg = (*jenv)->NewStringUTF(jenv, msg);
@@ -427,6 +430,9 @@ static int __dbj_seckey_create(DB *db,
 	DBT *tresult;
 	int ret;
 
+	jskeys = NULL;
+	jkeyarr = jdataarr = NULL;
+	jkey = jdata = NULL;
 	if (jdb == NULL) {
 		ret = EINVAL;
 		goto err;
@@ -537,6 +543,8 @@ static int __dbj_append_recno(DB *db, DBT *dbt, db_recno_t recno)
 	jbyteArray jdbtarr;
 	int ret;
 
+	jdbtarr = NULL;
+	jdbt = NULL;
 	if (jdb == NULL) {
 		ret = EINVAL;
 		goto err;
@@ -1102,6 +1110,44 @@ err:	if (detach)
 		__dbj_detach();
 	return (ret);
 }
+
+static int __dbj_slice(const DB *db, const DBT *dbt1, DBT *dbt2)
+{
+	int detach;
+	JNIEnv *jenv = __dbj_get_jnienv(&detach);
+	jobject jdb = (jobject)DB_INTERNAL(db);
+	jobject jdbt1, jdbt2;
+	jbyteArray jdbtarr1, jdbtarr2;
+	DBT_LOCKED lresult;
+	int ret;
+
+	if (jdb == NULL) {
+		ret = EINVAL;
+		goto err;
+	}
+
+	jdbt1 = jdbt2 = NULL;
+
+	DBT_COPYOUT(1);
+	DBT_COPYOUT(2);
+
+	ret = (int)(*jenv)->CallNonvirtualIntMethod(jenv, jdb, db_class,
+	    slice_method, jdbt1, jdbt2);
+
+	if ((*jenv)->ExceptionOccurred(jenv)) {
+		/* The exception will be thrown, so this could be any error. */
+		ret = EINVAL;
+		goto err;
+	}
+
+	DBT_COPYIN_DATA(2);
+
+err:	DBT_COPIED_FREE(1);
+	DBT_COPIED_FREE(2);
+	if (detach)
+		__dbj_detach();
+	return (ret);
+}
 %}
 
 JAVA_CALLBACK(int (*backup_close_fcn)(DB_ENV *,
@@ -1114,8 +1160,8 @@ JAVA_CALLBACK(void (*db_errcall_fcn)(const DB_ENV *,
     const char *, const char *), com.sleepycat.db.ErrorHandler, error)
 JAVA_CALLBACK(void (*env_feedback_fcn)(DB_ENV *, int, int),
     com.sleepycat.db.FeedbackHandler, env_feedback)
-JAVA_CALLBACK(void (*db_msgcall_fcn)(const DB_ENV *, const char *),
-    com.sleepycat.db.MessageHandler, message)
+JAVA_CALLBACK(void (*db_msgcall_fcn)(const DB_ENV *,
+    const char *, const char *), com.sleepycat.db.MessageHandler, message)
 JAVA_CALLBACK(void (*db_panic_fcn)(DB_ENV *, int),
     com.sleepycat.db.PanicHandler, panic)
 JAVA_CALLBACK(void (*event_notify)(DB_ENV *, u_int32_t, void *),
@@ -1170,3 +1216,5 @@ JAVA_CALLBACK(u_int32_t (*h_hash_fcn)(DB *, const void *, u_int32_t),
     com.sleepycat.db.Hasher, h_hash)
 JAVA_CALLBACK(int (*rep_view_fcn)(DB_ENV *, const char *, int *, u_int32_t),
     com.sleepycat.db.ReplicationViewHandler, rep_view);
+JAVA_CALLBACK(int (*slice_fcn)(const DB *, const DBT *, DBT *), 
+    com.sleepycat.db.Slice, slice)

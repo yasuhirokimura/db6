@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -145,6 +145,11 @@
                 The <code class="literal">UMRW</code> option should not be
                 specified when configuring to build production
                 binaries.
+            </p>
+            <p>
+                This flag can also be used to prevent data in the heap
+                from leaking onto unused parts of database pages when
+                using the environment flag DB_PRIVATE.
             </p>
           </li>
         </ul>

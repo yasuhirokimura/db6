@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2006, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2006, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -106,7 +106,7 @@ err:
     return 0;
 }
 
-RepMgr::RepMgr() : app_config(0), dbenv(0)
+RepMgr::RepMgr() : app_config(0), dbenv((u_int32_t)0)
 {
 }
 

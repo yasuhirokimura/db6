@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -29,7 +29,7 @@ extern "C" {
  * priority is DB_LOCK_DEFPRIORITY.
  */
 #define	DB_LOCK_DEFPRIORITY	100
-#define DB_LOCK_MAXPRIORITY	UINT32_MAX
+#define	DB_LOCK_MAXPRIORITY	UINT32_MAX
 
 /*
  * Out of band value for a lock.  Locks contain an offset into a lock region,
@@ -40,7 +40,7 @@ extern "C" {
 #define	LOCK_INIT(lock)		do {			\
 	(lock).off = LOCK_INVALID;			\
 	UMRW_SET_VALUE((lock).mode, DB_LOCK_NG);	\
-} while(0)
+} while (0)
 
 /*
  * Macro to identify a write lock for the purpose of counting locks
@@ -75,8 +75,8 @@ typedef struct __db_lockregion { /* SHARED */
 	db_mutex_t	mtx_dd;		/* mutex for lock object dd list. */
 	db_mutex_t	mtx_lockers;	/* mutex for locker allocation. */
 	SH_TAILQ_HEAD(__dobj) dd_objs;	/* objects with waiters */
+	roff_t		locker_mem_off;	/* offset of lockers array */
 					/* free locker header */
-        roff_t          locker_mem_off; /* block memory for lockers */
 	SH_TAILQ_HEAD(__flocker) free_lockers;
 	SH_TAILQ_HEAD(__lkrs) lockers;	/* list of lockers */
 
@@ -145,7 +145,7 @@ struct __db_locker { /* SHARED */
 	u_int32_t nwrites;		/* Number of write locks held. */
 	u_int32_t priority;		/* Deadlock resolution priority. */
 	u_int32_t nrequest;             /* number of requests. */
-	
+
 	roff_t  master_locker;		/* Locker of master transaction. */
 	roff_t  parent_locker;		/* Parent of this child. */
 	SH_LIST_HEAD(_child) child_locker;	/* List of descendant txns;
@@ -169,7 +169,8 @@ struct __db_locker { /* SHARED */
 #define	DB_LOCKER_TIMEOUT	0x0004	/* Has timeout set. */
 #define	DB_LOCKER_FAMILY_LOCKER 0x0008	/* Part of a family of lockers. */
 #define	DB_LOCKER_HANDLE_LOCKER 0x0010	/* Not associated with a thread. */
-#define	DB_LOCKER_FREE 		0x0020	/* Diag: it is on the free list. */
+#define	DB_LOCKER_FREE		0x0020	/* Diag: it is on the free list. */
+#define	DB_LOCKER_TRADED	0x0040	/* Diag: lock_trade cleared parent. */
 	u_int32_t flags;
 };
 
@@ -187,8 +188,8 @@ typedef struct __db_lockpart{ /* SHARED */
 	SH_TAILQ_HEAD(__flock) free_locks;
 					/* free obj header */
 	SH_TAILQ_HEAD(__fobj) free_objs;
-        roff_t          lock_mem_off;   /* block memory for locks */
-        roff_t          lockobj_mem_off;/* block memory for lockobjs */
+	roff_t          lock_mem_off;   /* block memory for locks */
+	roff_t          lockobj_mem_off;/* block memory for lockobjs */
 #ifdef HAVE_STATISTICS
 	DB_LOCK_PSTAT	part_stat;	/* Partition stats. */
 #endif
@@ -226,8 +227,9 @@ struct __db_locktab {
 
 struct __db_lock { /* SHARED */
 	/*
-	 * Wait on mutex to wait on lock.  You reference your own mutex with
-	 * ID 0 and others reference your mutex with ID 1.
+	 * Wait on this mutex to wait on lock. You create this struct and
+	 * MUTEX_LOCK() it once, then do so again, in order to block. Some other
+	 * thread will MUTEX_UNLOCK() it after removing its conflicting lock.
 	 */
 	db_mutex_t	mtx_lock;
 

@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -169,24 +169,80 @@ t1 </pre>
           </li>
           <li>
             <p>
+             Enable user authentication if required. 
+             </p>
+            <p>
+             By default, user authentication is disabled. To enable it, edit
+             <code class="literal">&lt;db&gt;/build_android/jdbc/jni/Android.mk</code> and
+             change <code class="literal">BDB_ENABLE_USERAUTH</code> from false to true.
+             </p>
+            <p>
+                For more information, see "User Authentication" section in
+                <em class="citetitle">Berkeley DB Getting Started with the SQL APIs</em>.
+            </p>
+          </li>
+          <li>
+            <p>
+             Enable key-store based user authentication if required.
+             </p>
+            <p>
+             By default, key-store based user authentication is disabled. To enable it,
+             edit <code class="literal">&lt;db&gt;/build_android/jdbc/jni/Android.mk</code> and
+             change <code class="literal">BDB_ENABLE_USERAUTH_KEYSTORE</code> from false to true. 
+             The BDB encryption must also be enabled. 
+            </p>
+            <p>
+                For more information, see "Key-store Based User Authentication" section in
+                the <em class="citetitle">Berkeley DB Getting Started with the SQL APIs</em>.
+            </p>
+          </li>
+          <li>
+            <p>
                 Build the Android NDK: 
             </p>
             <pre class="programlisting">$ cd &lt;db&gt;/build_android/jdbc/jni
-$ &lt;ndk-install-directory&gt;/ndk-build </pre>
+$ &lt;ndk-install-directory&gt;/ndk-build APP_ABI:=&lt;ABI&gt;</pre>
             <p>
                 This results in the following required files:
             </p>
             <table class="simplelist" border="0" summary="Simple list">
               <tr>
-                <td>&lt;db&gt;/build_android/jdbc/libs/armeabi/liboracle-jdbc.so</td>
+                <td>&lt;db&gt;/build_android/jdbc/libs/&lt;ABI&gt;/liboracle-jdbc.so</td>
               </tr>
               <tr>
-                <td>&lt;db&gt;/build_android/jdbc/libs/armeabi/dbsql</td>
+                <td>&lt;db&gt;/build_android/jdbc/libs/&lt;ABI&gt;/dbsql</td>
               </tr>
               <tr>
                 <td>&lt;db&gt;/build_unix/jdbc/sqlite.jar</td>
               </tr>
             </table>
+            <p>
+                If you are using a 6.1.x or lower version of the product,
+                the supported ABI is armeabi. If you are using a 6.2.x or
+                higher version of the product, the supported ABIs are
+                armeabi-v7a and arm64-v8a.
+            </p>
+            <p>
+                If you are targeting a 64-bit arm platform, 
+                you need to change the 
+		<code class="literal">build_android/db_config.h</code>
+                file to undefine 
+		<code class="literal">HAVE_MUTEX_ARM_GCC_ASSEMBLY</code>
+                and define 
+		<code class="literal">HAVE_MUTEX_ARM64_GCC_ASSEMBLY</code>
+                like the following:
+                </p>
+            <pre class="programlisting">
+/* Define to 1 to use the GCC compiler and ARM64 assembly 
+   language mutexes. */
+#define HAVE_MUTEX_ARM64_GCC_ASSEMBLY 1
+
+/* Define to 1 to use the GCC compiler and ARM assembly 
+   language mutexes. */
+/* #undef HAVE_MUTEX_ARM_GCC_ASSEMBLY */
+                </pre>
+            <p>
+            </p>
           </li>
         </ol>
       </div>

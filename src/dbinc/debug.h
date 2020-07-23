@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1998, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1998, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -40,9 +40,9 @@ extern "C" {
 #endif
 
 #if defined(HAVE_ERROR_HISTORY)
-#define DB_DEBUG_MSG	__db_debug_msg
+#define	DB_DEBUG_MSG	__db_debug_msg
 #else
-#define DB_DEBUG_MSG	if (0) __db_debug_msg
+#define	DB_DEBUG_MSG	if (0) __db_debug_msg
 #endif
 
 /*
@@ -92,19 +92,19 @@ typedef enum {
  * implmentation requires pthreads' version of thread local storage.
  */
 #ifdef HAVE_ERROR_HISTORY
-#define USR_ERR(env, errcode)		__db_diags((env), (errcode))
-#define DBC_ERR(dbc, errcode)		__dbc_diags((dbc), (errcode))
-#define MUTEX_ERR(env, mutex, errcode)	__mutex_diags((env), (mutex), (errcode))
-#define DISCARD_HISTORY(env)		__db_deferred_discard()
+#define	USR_ERR(env, errcode)		__db_diags((env), (errcode))
+#define	DBC_ERR(dbc, errcode)		__dbc_diags((dbc), (errcode))
+#define	MUTEX_ERR(env, mutex, errcode)	__mutex_diags((env), (mutex), (errcode))
+#define	DISCARD_HISTORY(env)		__db_deferred_discard()
 /* Save at most 10KB of error history in an API call. Adjust this as desired. */
-#define DB_ERROR_HISTORY_SIZE		(10 * 1024)
+#define	DB_ERROR_HISTORY_SIZE		(10 * 1024)
 #else
-#define USR_ERR(env, errcode)		(errcode)
-#define DBC_ERR(dbc, errcode)		(errcode)
-#define MUTEX_ERR(env, mutex, errcode)	(errcode)
-#define DISCARD_HISTORY(env)		NOP_STATEMENT
+#define	USR_ERR(env, errcode)		(errcode)
+#define	DBC_ERR(dbc, errcode)		(errcode)
+#define	MUTEX_ERR(env, mutex, errcode)	(errcode)
+#define	DISCARD_HISTORY(env)		NOP_STATEMENT
 /* No space is needed when error history is disabled. */
-#define DB_ERROR_HISTORY_SIZE		0
+#define	DB_ERROR_HISTORY_SIZE		0
 #endif
 
 /*
@@ -113,7 +113,6 @@ typedef enum {
  * variadic argument list (and then rescanned), by functions other than the
  * original routine that took the variadic list of arguments.
  */
-#if defined(STDC_HEADERS) || defined(__cplusplus)
 #define	DB_REAL_ERR(dbenv, error, error_set, app_call, fmt) {		\
 	va_list __ap;							\
 									\
@@ -137,36 +136,9 @@ typedef enum {
 	    ((app_call) || F_ISSET((dbenv)->env, ENV_NO_OUTPUT_SET))))	\
 		__db_errfile(dbenv, error, error_set, fmt, __ap);	\
 	va_end(__ap);							\
-	DISCARD_HISTORY((dbenv)->env);						\
+	DISCARD_HISTORY((dbenv)->env);					\
 }
-#else
-#define	DB_REAL_ERR(dbenv, error, error_set, app_call, fmt) {		\
-	va_list __ap;							\
-									\
-	/* Call the application's callback function, if specified. */	\
-	va_start(__ap);							\
-	if ((dbenv) != NULL && (dbenv)->db_errcall != NULL)		\
-		__db_errcall(dbenv, error, error_set, fmt, __ap);	\
-	va_end(__ap);							\
-									\
-	/*								\
-	 * If the application specified a file descriptor, write to it.	\
-	 * If we wrote to neither the application's callback routine or	\
-	 * its file descriptor, and it's an application error message	\
-	 * using {DbEnv,Db}.{err,errx} or the application has never	\
-	 * configured an output channel, default by writing to stderr.	\
-	 */								\
-	va_start(__ap);							\
-	if ((dbenv) == NULL ||						\
-	    (dbenv)->db_errfile != NULL ||				\
-	    ((dbenv)->db_errcall == NULL &&				\
-	    ((app_call) || F_ISSET((dbenv)->env, ENV_NO_OUTPUT_SET))))	\
-		 __db_errfile(env, error, error_set, fmt, __ap);	\
-	va_end(__ap);							\
-	DISCARD_HISTORY(env);						\
-}
-#endif
-#if defined(STDC_HEADERS) || defined(__cplusplus)
+
 #define	DB_REAL_MSG(dbenv, fmt) {					\
 	va_list __ap;							\
 									\
@@ -177,42 +149,20 @@ typedef enum {
 	va_end(__ap);							\
 									\
 	/*								\
-	 * If the application specified a file descriptor, write to it.	\
-	 * If we wrote to neither the application's callback routine or	\
-	 * its file descriptor, write to stdout.			\
+	 * If the application specified a file descriptor and its value	\
+	 * is not NULL, write to it. If the application specified a	\
+	 * file descriptor and its value is NULL, write nothing.	\
+	 * The file descriptor is initialized to stdout, so if the	\
+	 * application doesn't override it and there isn't a callback	\
+	 * function then write to stdout.				\
 	 */								\
 	va_start(__ap, fmt);						\
 	if ((dbenv) == NULL ||						\
-	    (dbenv)->db_msgfile != NULL ||				\
-	    (dbenv)->db_msgcall == NULL) {				\
+	    ((dbenv)->db_msgcall == NULL &&				\
+	    (dbenv)->db_msgfile != NULL))				\
 		__db_msgfile(dbenv, fmt, __ap);				\
-	}								\
 	va_end(__ap);							\
 }
-#else
-#define	DB_REAL_MSG(dbenv, fmt) {					\
-	va_list __ap;							\
-									\
-	/* Call the application's callback function, if specified. */	\
-	va_start(__ap);							\
-	if ((dbenv) != NULL && (dbenv)->db_msgcall != NULL)		\
-		__db_msgcall(dbenv, fmt, __ap);				\
-	va_end(__ap);							\
-									\
-	/*								\
-	 * If the application specified a file descriptor, write to it.	\
-	 * If we wrote to neither the application's callback routine or	\
-	 * its file descriptor, write to stdout.			\
-	 */								\
-	va_start(__ap);							\
-	if ((dbenv) == NULL ||						\
-	    (dbenv)->db_msgfile != NULL ||				\
-	    (dbenv)->db_msgcall == NULL) {				\
-		__db_msgfile(dbenv, fmt, __ap);				\
-	}								\
-	va_end(__ap);							\
-}
-#endif
 
 /*
  * Debugging macro to log operations.
@@ -229,7 +179,7 @@ typedef enum {
 #define	LOG_OP(C, T, O, K, A, F) {					\
 	DB_LSN __lsn;							\
 	DBT __op;							\
-	if (DBC_LOGGING((C))) {						\
+	if ((C)->dbp->log_filename != NULL && DBC_LOGGING((C))) {	\
 		memset(&__op, 0, sizeof(__op));				\
 		__op.data = O;						\
 		__op.size = (u_int32_t)strlen(O) + 1;			\
@@ -269,7 +219,7 @@ typedef enum {
 	if ((env)->test_abort == (val)) {				\
 		/* ABORT the TXN */					\
 		(env)->test_abort = 0;					\
-		(ret) = EINVAL;						\
+		(ret) = USR_ERR(env, EINVAL);				\
 		goto db_tr_err;						\
 	}								\
 } while (0)
@@ -290,7 +240,7 @@ typedef enum {
 	if (__env->test_abort == (val)) {				\
 		/* Abort the transaction. */				\
 		__env->test_abort = 0;					\
-		(ret) = EINVAL;						\
+		(ret) = USR_ERR(__env, EINVAL);				\
 		goto db_tr_err;						\
 	}								\
 } while (0)

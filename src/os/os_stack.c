@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2001, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2001, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -72,10 +72,7 @@ __os_stack_text(env, result, bufsize, nframes, skip)
 {
 	DB_MSGBUF mb;
 
-	DB_MSGBUF_INIT(&mb);
-	mb.buf = mb.cur = result;
-	mb.len = bufsize;
-	F_SET(&mb, DB_MSGBUF_PREALLOCATED);
+	DB_MSGBUF_INIT_BUFFER(&mb, result, bufsize);
 	__os_stack_msgadd(env, &mb, nframes, skip, NULL);
 }
 

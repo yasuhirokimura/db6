@@ -10,9 +10,6 @@ set sqldir [file dirname $argv0]
 set testdir $sqldir/../../lang/sql/sqlite/test
 
 source $testdir/tester.tcl
-# Contains the definition of do_sync and do_multi_proc_test
-source $sqldir/../../test/tcl_utils/multi_proc_utils.tcl
-# Contains the definition of available_ports
 source $sqldir/../../test/tcl_utils/common_test_utils.tcl
 source $testdir/../../../../test/sql/bdb_util.tcl
 # Skip this test if threads are not enabled.  The do_sync function
@@ -44,7 +41,7 @@ do_multi_proc_test bdb_multi_proc-1 [list {
     set testdir ../lang/sql/sqlite/test
     # For the definition of do_test
     source $testdir/tester.tcl
-    source ../test/tcl_utils/multi_proc_utils.tcl
+    source ../test/tcl_utils/common_test_utils.tcl
     sqlite3 db procs.db
 
     # Create the tables
@@ -91,7 +88,7 @@ do_multi_proc_test bdb_multi_proc-1 [list {
     set testdir ../lang/sql/sqlite/test
     # For the definition of do_test
     source $testdir/tester.tcl
-    source ../test/tcl_utils/multi_proc_utils.tcl
+    source ../test/tcl_utils/common_test_utils.tcl
     sqlite3 db procs.db
 
     # Wait while the other process creates the table
@@ -151,7 +148,7 @@ do_multi_proc_test bdb_multi_proc-2 [list {
     set testdir ../lang/sql/sqlite/test
     # For the definition of do_test
     source $testdir/tester.tcl
-    source ../test/tcl_utils/multi_proc_utils.tcl
+    source ../test/tcl_utils/common_test_utils.tcl
     sqlite3 db procs.db
 
     # Create the tables
@@ -212,7 +209,7 @@ do_multi_proc_test bdb_multi_proc-2 [list {
     set testdir ../lang/sql/sqlite/test
     # For the definition of do_test
     source $testdir/tester.tcl
-    source ../test/tcl_utils/multi_proc_utils.tcl
+    source ../test/tcl_utils/common_test_utils.tcl
     sqlite3 db procs.db
 
     # Wait while process 1 creates the table
@@ -270,7 +267,7 @@ do_multi_proc_test bdb_multi_proc-2 [list {
     set testdir ../lang/sql/sqlite/test
     # For the definition of do_test
     source $testdir/tester.tcl
-    source ../test/tcl_utils/multi_proc_utils.tcl
+    source ../test/tcl_utils/common_test_utils.tcl
     sqlite3 db procs.db
 
     # Wait while process 1 creates the table
@@ -339,11 +336,11 @@ do_multi_proc_test bdb_multi_proc-3 [list {
     set cmd_args [ lindex $argv 0 ]
     set syncPort [ lindex $cmd_args 0 ]
     set remoteSyncPorts [lindex $cmd_args 1 ]
-    set timeout 20
+    set timeout 30
 
     set testdir ../lang/sql/sqlite/test
     source $testdir/tester.tcl
-    source ../test/tcl_utils/multi_proc_utils.tcl
+    source ../test/tcl_utils/common_test_utils.tcl
     sqlite3 db procs2.db
 
     # Create the table 1
@@ -353,47 +350,52 @@ do_multi_proc_test bdb_multi_proc-3 [list {
 	}
     } {}
 
-    # Wait on process 2
+    # Wake up process 2
     do_test bdb_multi_proc-3.1.2 {
 	set ret [do_sync $syncPort $remoteSyncPorts $timeout]
     } {0}
 
-    # Start the transaction
+    # Wait on process 2
     do_test bdb_multi_proc-3.1.3 {
+	set ret [do_sync $syncPort $remoteSyncPorts $timeout]
+    } {0}
+
+    # Start the transaction
+    do_test bdb_multi_proc-3.1.4 {
 	db eval { 
 	    BEGIN IMMEDIATE;
 	}
     } {}
 
     # Wait on process 2
-    do_test bdb_multi_proc-3.1.4 {
+    do_test bdb_multi_proc-3.1.5 {
 	set ret [do_sync $syncPort $remoteSyncPorts $timeout]
     } {0}
 
     # Insert into the table we created
-    do_test bdb_multi_proc-3.1.5 {
+    do_test bdb_multi_proc-3.1.6 {
 	db eval { 
 	    INSERT INTO t1 VALUES(1);
 	}
     } {}
 
     # Wake up process 2
-    do_test bdb_multi_proc-3.1.6 {
+    do_test bdb_multi_proc-3.1.7 {
 	set ret [do_sync $syncPort $remoteSyncPorts $timeout]
     } {0}
 
     # Let process 2 become blocked
-    after 3000
+    after 6000
 
     # Insert into the table Process 2 created
-    do_test bdb_multi_proc-3.1.7 {
+    do_test bdb_multi_proc-3.1.8 {
 	db eval { 
 	    INSERT INTO t2 VALUES(2);
 	}
     } {}
 
     # End the transaction letting process 2 continue
-    do_test bdb_multi_proc-3.1.8 {
+    do_test bdb_multi_proc-3.1.9 {
 	db eval { 
 	    COMMIT;
 	}
@@ -410,41 +412,46 @@ do_multi_proc_test bdb_multi_proc-3 [list {
 
     set testdir ../lang/sql/sqlite/test
     source $testdir/tester.tcl
-    source ../test/tcl_utils/multi_proc_utils.tcl
+    source ../test/tcl_utils/common_test_utils.tcl
     sqlite3 db procs2.db
 
-    # Create the table2
+    # Wait on process 1
     do_test bdb_multi_proc-3.2.1 {
+	set ret [do_sync $syncPort $remoteSyncPorts $timeout]
+    } {0}
+
+    # Create the table2
+    do_test bdb_multi_proc-3.2.2 {
 	db eval { 
 	    CREATE TABLE t2(a);
 	}
     } {}
 
-    # Wait on process 1
-    do_test bdb_multi_proc-3.2.2 {
+    # Wake up process 1
+    do_test bdb_multi_proc-3.2.3 {
 	set ret [do_sync $syncPort $remoteSyncPorts $timeout]
     } {0}
 
     # Start the transaction
-    do_test bdb_multi_proc-3.2.3 {
+    do_test bdb_multi_proc-3.2.4 {
 	db eval { 
 	    BEGIN IMMEDIATE;
 	}
     } {}
 
     # Wait on process 1
-    do_test bdb_multi_proc-3.2.4 {
+    do_test bdb_multi_proc-3.2.5 {
 	set ret [do_sync $syncPort $remoteSyncPorts $timeout]
     } {0}
 
     # Let process 1 insert first
-    do_test bdb_multi_proc-3.2.5 {
+    do_test bdb_multi_proc-3.2.6 {
 	set ret [do_sync $syncPort $remoteSyncPorts $timeout]
     } {0}
 
     # Insert into the table we created, will become
     # blocked here until process 1 commits
-    do_test bdb_multi_proc-3.2.6 {
+    do_test bdb_multi_proc-3.2.7 {
 	db eval { 
 	    INSERT INTO t2 VALUES(2);
 	}
@@ -489,7 +496,7 @@ do_multi_proc_test bdb_multi_proc-4 [list {
     set testdir ../lang/sql/sqlite/test
     # For the definition of do_test
     source $testdir/tester.tcl
-    source ../test/tcl_utils/multi_proc_utils.tcl
+    source ../test/tcl_utils/common_test_utils.tcl
     sqlite3 db procs.db
 	
     do_test bdb_sequences-4.1.1 {
@@ -533,7 +540,7 @@ do_multi_proc_test bdb_multi_proc-4 [list {
     set testdir ../lang/sql/sqlite/test
     # For the definition of do_test
     source $testdir/tester.tcl
-    source ../test/tcl_utils/multi_proc_utils.tcl
+    source ../test/tcl_utils/common_test_utils.tcl
     sqlite3 db procs.db
 
     # Wait while the other process creates the sequence.
@@ -631,7 +638,7 @@ do_multi_proc_test bdb_multi_proc-5.1 [list {
     set testdir ../lang/sql/sqlite/test
     # For the definition of do_test
     source $testdir/tester.tcl
-    source ../test/tcl_utils/multi_proc_utils.tcl
+    source ../test/tcl_utils/common_test_utils.tcl
     sqlite3 db $sitedir/rep.db
 
     do_test bdb_multi_proc-5.1.1.1 {
@@ -662,7 +669,7 @@ do_multi_proc_test bdb_multi_proc-5.1 [list {
     set testdir ../lang/sql/sqlite/test
     # For the definition of do_test
     source $testdir/tester.tcl
-    source ../test/tcl_utils/multi_proc_utils.tcl
+    source ../test/tcl_utils/common_test_utils.tcl
     sqlite3 db $sitedir/rep.db
 
     # Wait while the other process inserts data
@@ -764,7 +771,7 @@ do_multi_proc_test bdb_multi_proc-5.2 [list {
     set testdir ../lang/sql/sqlite/test
     # For the definition of do_test
     source $testdir/tester.tcl
-    source ../test/tcl_utils/multi_proc_utils.tcl
+    source ../test/tcl_utils/common_test_utils.tcl
     sqlite3 db $sitedir/rep.db
 
     db eval "pragma replication_local_site='$localaddr';"
@@ -806,7 +813,7 @@ do_multi_proc_test bdb_multi_proc-5.2 [list {
     set testdir ../lang/sql/sqlite/test
     # For the definition of do_test
     source $testdir/tester.tcl
-    source ../test/tcl_utils/multi_proc_utils.tcl
+    source ../test/tcl_utils/common_test_utils.tcl
     sqlite3 db $sitedir/rep.db
 
     db eval "
@@ -948,14 +955,14 @@ do_multi_proc_test bdb_multi_proc-5.3 [list {
     lappend remoteSyncPorts [lindex $cmd_args 4 ]
     set sitedir [lindex $cmd_args 5 ]
     set localaddr [lindex $cmd_args 6 ]
-    set timeout 60
+    set timeout 120
     set delay 12000
 
     # The scripts are run relative to the build_X directory 
     set testdir ../lang/sql/sqlite/test
     # For the definition of do_test
     source $testdir/tester.tcl
-    source ../test/tcl_utils/multi_proc_utils.tcl
+    source ../test/tcl_utils/common_test_utils.tcl
     sqlite3 db $sitedir/rep.db
 
     db eval "pragma replication_local_site='$localaddr';"
@@ -1022,14 +1029,14 @@ do_multi_proc_test bdb_multi_proc-5.3 [list {
     lappend remoteSyncPorts [lindex $cmd_args 3 ]
     lappend remoteSyncPorts [lindex $cmd_args 4 ]
     set sitedir [lindex $cmd_args 5 ]
-    set timeout 60
+    set timeout 120
     set delay 12000
 
     # The scripts are run relative to the build_X directory 
     set testdir ../lang/sql/sqlite/test
     # For the definition of do_test
     source $testdir/tester.tcl
-    source ../test/tcl_utils/multi_proc_utils.tcl
+    source ../test/tcl_utils/common_test_utils.tcl
 
     # Sync 1, Wait while Master Process 1 starts up
     do_test bdb_multi_proc-5.3.2.1 {
@@ -1129,14 +1136,14 @@ do_multi_proc_test bdb_multi_proc-5.3 [list {
     lappend remoteSyncPorts [lindex $cmd_args 3 ]
     lappend remoteSyncPorts [lindex $cmd_args 4 ]
     set sitedir [lindex $cmd_args 5 ]
-    set timeout 60
+    set timeout 120
     set delay 12000
 
     # The scripts are run relative to the build_X directory 
     set testdir ../lang/sql/sqlite/test
     # For the definition of do_test
     source $testdir/tester.tcl
-    source ../test/tcl_utils/multi_proc_utils.tcl
+    source ../test/tcl_utils/common_test_utils.tcl
 
     # Spend a lot of time waiting for other processes
     # to do work, before joining.
@@ -1248,13 +1255,13 @@ do_multi_proc_test bdb_multi_proc-5.3 [list {
     set sitedir [lindex $cmd_args 5 ]
     set localaddr [lindex $cmd_args 6 ]
     set remoteaddr [lindex $cmd_args 7 ]
-    set timeout 60
+    set timeout 120
 
     # The scripts are run relative to the build_X directory 
     set testdir ../lang/sql/sqlite/test
     # For the definition of do_test
     source $testdir/tester.tcl
-    source ../test/tcl_utils/multi_proc_utils.tcl
+    source ../test/tcl_utils/common_test_utils.tcl
 
     # Sync 1, Wait while Master Process 1 starts up
     do_test bdb_multi_proc-5.3.4.1 {
@@ -1352,13 +1359,13 @@ do_multi_proc_test bdb_multi_proc-5.3 [list {
     set sitedir [lindex $cmd_args 5 ]
     set localaddr [lindex $cmd_args 6 ]
     set remoteaddr [lindex $cmd_args 7 ]
-    set timeout 60
+    set timeout 120
 
     # The scripts are run relative to the build_X directory 
     set testdir ../lang/sql/sqlite/test
     # For the definition of do_test
     source $testdir/tester.tcl
-    source ../test/tcl_utils/multi_proc_utils.tcl
+    source ../test/tcl_utils/common_test_utils.tcl
 
     # Sync 1, Wait while Master Process 1 starts up
     do_test bdb_multi_proc-5.3.5.1 {

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -26,7 +26,6 @@ All commonly used environment attributes have convenience setter/getter
 methods defined in this class.  For example, to change the default
 transaction timeout setting for an environment, the application should
 do the following:
-<p>
 <blockquote><pre>
     // customize an environment configuration
     EnvironmentConfig envConfig = new EnvironmentConfig();
@@ -49,7 +48,6 @@ environment properties.  Immutable properties may be specified when the
 first Environment handle (instance) is opened for a given physical
 environment.  When more handles are opened for the same environment, the
 following rules apply:
-<p>
 <ol>
 <li>Immutable properties must equal the original values specified when
 constructing an Environment handle for an already open environment.  When a
@@ -61,7 +59,6 @@ handle for an already open environment.
 After an Environment has been constructed, its mutable properties may
 be changed using
 {@link Environment#setConfig}.
-<p>
 */
 public class EnvironmentConfig implements Cloneable {
     /*
@@ -91,8 +88,9 @@ public class EnvironmentConfig implements Cloneable {
     private java.util.Vector dataDirs = new java.util.Vector();
     private int envid = 0;
     private String errorPrefix = null;
+    private String messagePrefix = null;
     private java.io.OutputStream errorStream = null;
-    private java.io.OutputStream messageStream = null;
+    private java.io.OutputStream messageStream = System.out;
     private byte[][] lockConflicts = null;
     private LockDetectMode lockDetectMode = LockDetectMode.NONE;
     private int initMutexes = 0;
@@ -120,6 +118,7 @@ public class EnvironmentConfig implements Cloneable {
     private int mpTableSize = 0;
     private int partitionLocks = 0;
     private String password = null;
+    private java.io.File regionDirectory = null;
     private long regionMemoryMax = 0L;
     private int replicationClockskewFast = 0;
     private int replicationClockskewSlow = 0;
@@ -187,7 +186,6 @@ public class EnvironmentConfig implements Cloneable {
     private boolean replicationInMemory = false;
     private boolean txnNoSync = false;
     private boolean txnNoWait = false;
-    private boolean txnNotDurable = false;
     private boolean txnSnapshot = false;
     private boolean txnWriteNoSync = false;
     private boolean yieldCPU = false;
@@ -209,6 +207,7 @@ public class EnvironmentConfig implements Cloneable {
     private boolean verboseReplicationTest = false;
     private boolean verboseRepmgrConnfail = false;
     private boolean verboseRepmgrMisc = false;
+    private boolean verboseSlice = false;
     private boolean verboseWaitsFor = false;
 
     /* Callbacks */
@@ -256,73 +255,45 @@ True if the database environment is configured to create any
     }
 
     /**
-    Sets the path of a directory where blobs are stored.
-    <p>
-    The blobs of each {@link com.sleepycat.db.Database Database} opened
-    within this {@link com.sleepycat.db.Environment Environment} are
-    stored under this directory.
-    <p>
-    This path can not be set after opening the environment.
+    @deprecated Replaced with {@link #setExternalFileDir}.
     <p>
     @param dir
-    The path of a directory where blobs are stored.
+    The path of a directory where external files are stored.
     */
     public void setBlobDir(java.io.File dir) {
-        this.blobDir = dir;
+        setExternalFileDir(dir);
     }
 
     /**
-    Returns the path of a directory where blobs are stored.
-    <p>
-    The blobs of each {@link com.sleepycat.db.Database Database} opened
-    within this {@link com.sleepycat.db.Environment Environment} are
-    stored under this directory.
+    @deprecated Replaced with {@link #getExternalFileDir}
     <p>
     @return
-    The path of a directory where blobs are stored.
+    The path of a directory where external files are stored.
     */
     public java.io.File getBlobDir() {
-        return blobDir;
+        return getExternalFileDir();
     }
 
     /**
-    Set the default blob threshold for databases opened in this environment.
-    The blob threshold is the size in bytes which is used to determine when
-    a data item will be stored as a blob.
-    <p>
-    Any data item that is equal to or larger in size than the
-    threshold value will automatically be stored as a blob.
-    <p>
-    It is illegal to enable blob in the environment if any of
-    {@link com.sleepycat.db.EnvironmentConfig#setTxnSnapshot EnvironmentConfig.setTxnSnapshot},
-    {@link com.sleepycat.db.EnvironmentConfig#setInitializeReplication EnvironmentConfig.setInitializeReplication},
-    and {@link com.sleepycat.db.EnvironmentConfig#setMultiversion EnvironmentConfig.setMultiversion}
-    is called with true value.
-    <p>
-    This threshold value can be set any time before and after opening the
-    environment.
-    <p>
+    @deprecated Replaced with {@link #setExternalFileThreshold}.
     @param value
     The size in bytes which is used to determine when a data item will
-    be stored as a blob. If 0, databases opened in the environment will default
-    to never using blob.
+    be stored as an external file. If 0, databases opened in the environment
+    will default to never using external files.
     */
     public void setBlobThreshold(int value) {
-        this.blobThreshold = value;
+        setExternalFileThreshold(value);
     }
 
     /**
-    Return the environment wide default blob threshold value. The blob
-    threshold is the size in bytes which is used to determine when a data item
-    will be stored as a blob.
-    <p>
+    @deprecated Replaced with {@link #getExternalFileThreshold}.
     @return
-    The blob threshold value in bytes beyond which data items are
-    stored as blobs. If 0, databases opened in the environment will default to
-    never using blobs.
+    The size in bytes which is used to determine when a data item will
+    be stored as an external file. If 0, databases opened in the environment
+    will default to never using external files.
     */
     public int getBlobThreshold() {
-        return blobThreshold;
+        return getExternalFileThreshold();
     }
 
     /**
@@ -363,9 +334,6 @@ This method may be called at any time during the life of the application.
 @param cacheSize
 The size of the shared memory buffer pool, that is, the size of the
 cache.
-<p>
-<p>
-@throws DatabaseException if a failure occurs.
     */
     public void setCacheSize(final long cacheSize) {
         this.cacheSize = cacheSize;
@@ -388,6 +356,7 @@ The size of the shared memory buffer pool, that is, the cache.
     nearest multiple of the cache region size, which is the initial cache size
     divded by the number of regions specified to {@link #setCacheCount}. If no
     value is specified, it defaults to the initial cache size.
+    @param cacheMax the maximum size of the cache
     */
     public void setCacheMax(final long cacheMax) {
         this.cacheMax = cacheMax;
@@ -416,7 +385,6 @@ be allocated contiguously by a process.  This method allows applications
 to break the cache broken up into a number of  equally sized, separate
 pieces of memory.
 <p>
-<p>
 The database environment's cache size may also be set using the environment's
 DB_CONFIG file.  The syntax of the entry in that file is a single line
 with the string "set_cachesize", one or more whitespace characters, and the cache size specified in three parts: the gigabytes of cache, the
@@ -439,9 +407,6 @@ This method may be called at any time during the life of the application.
 <p>
 @param cacheCount
 The number of shared memory buffer pools, that is, the number of caches.
-<p>
-<p>
-@throws DatabaseException if a failure occurs.
     */
     public void setCacheCount(final int cacheCount) {
         this.cacheCount = cacheCount;
@@ -501,63 +466,66 @@ True if the Concurrent Data Store applications are configured to
     }
 
     /**
-    Sets the path of a directory to be used as the location to create the
-access method database files. When the open function is used to create a file
-it will be created relative to this path.
+    Set the path of a directory to be used as the location to create the
+    access method database files. When the open function is used to create a file
+    it will be created relative to this path. Note that this path must first be
+    added by {@link com.sleepycat.db.EnvironmentConfig#addDataDir java.io.File}
+    @param dir the path of a directory to be used as the location to create
+    the access method database files
     */
     public void setCreateDir(java.io.File dir) {
         createDir = dir;
     }
 
     /**
-    Returns the path of a directory to be used as the location to create the
-access method database files.
-@return
-The path of a directory to be used as the location to create the access method 
-database files.
+    Return the path of a directory to be used as the location to create the
+    access method database files.
+    @return
+    The path of a directory to be used as the location to create the access method 
+    database files.
     */
     public java.io.File getCreateDir() {
         return createDir;
     }
 
     /**
-    Set the path of a directory to be used as the location of the access
-    method database files.
+    Add the path of a directory to be used as the location of the access method database files.
     <p>
     Paths specified to {@link com.sleepycat.db.Environment#openDatabase Environment.openDatabase} and
     {@link com.sleepycat.db.Environment#openSecondaryDatabase Environment.openSecondaryDatabase} will be searched
     relative to this path.  Paths set using this method are additive, and
     specifying more than one will result in each specified directory
-    being searched for database files.  If any directories are
-    specified, created database files will always be created in the
-    first path specified.
+    being searched for database files. Call {@link com.sleepycat.db.EnvironmentConfig#setCreateDir java.io.File}
+    to set the directory where access method database files will be created.
     <p>
     If no database directories are specified, database files must be named
     either by absolute paths or relative to the environment home directory.
     <p>
-    The database environment's data directories may also be set using the environment's
-DB_CONFIG file.  The syntax of the entry in that file is a single line
-with the string "set_data_dir", one or more whitespace characters, and the directory name.
+    The database environment's data directories may also be configured using the environment's
+    DB_CONFIG file. The syntax of the entry in that file is a single line
+    with the string "add_data_dir", one or more whitespace characters, and the directory name.
     <p>
     This method configures only operations performed using a single a
-{@link com.sleepycat.db.Environment Environment} handle, not an entire database environment.
+    {@link com.sleepycat.db.Environment Environment} handle, not an entire database environment.
     <p>
-    This method may not be called after the
-environment has been opened.
-If joining an existing database environment, the
-information specified to this method must be consistent with the
-existing environment or corruption can occur.
+    This method may not be called after the environment has been opened.
+    If joining an existing database environment, the information specified
+    to this method must be consistent with the existing environment or
+    corruption can occur.
     <p>
-    @param dataDir
+    @param dataDir the path to a directory to be used as the location of
+    the access method database files
     A directory to be used as a location for database files.
     On Windows platforms, this argument will be interpreted as a UTF-8
-string, which is equivalent to ASCII for Latin characters.
+    string, which is equivalent to ASCII for Latin characters.
     */
     public void addDataDir(final java.io.File dataDir) {
         this.dataDirs.add(dataDir);
     }
 
-    /** @deprecated replaced by {@link #addDataDir(java.io.File)} */
+    /** @deprecated replaced by {@link #addDataDir(java.io.File)}
+    @param dataDir the data directory
+    */
     public void addDataDir(final String dataDir) {
         this.addDataDir(new java.io.File(dataDir));
     }
@@ -746,6 +714,7 @@ True if the database environment has been configured to flush log
     Berkeley DB uses the Rijndael/AES (also known as the Advanced
     Encryption Standard and Federal Information Processing
     Standard (FIPS) 197) algorithm for encryption or decryption.
+    @param password the password used to perform encryption and decryption
     */
     public void setEncrypted(final String password) {
         this.password = password;
@@ -879,6 +848,75 @@ The OutputStream for displaying error messages.
     */
     public java.io.OutputStream getErrorStream() {
         return errorStream;
+    }
+
+/**
+    Sets the path of a directory where external files are stored.
+    <p>
+    The external files of each {@link com.sleepycat.db.Database Database} opened
+    within this {@link com.sleepycat.db.Environment Environment} are
+    stored under this directory.
+    <p>
+    This path can not be set after opening the environment.
+    <p>
+    @param dir
+    The path of a directory where external files are stored.
+    */
+    public void setExternalFileDir(java.io.File dir) {
+        this.blobDir = dir;
+    }
+
+    /**
+    Returns the path of a directory where external files are stored.
+    <p>
+    The external files of each {@link com.sleepycat.db.Database Database} opened
+    within this {@link com.sleepycat.db.Environment Environment} are
+    stored under this directory.
+    <p>
+    @return
+    The path of a directory where external files are stored.
+    */
+    public java.io.File getExternalFileDir() {
+        return blobDir;
+    }
+
+    /**
+    Set the default external file threshold for databases opened in this
+    environment.  The external file threshold is the size in bytes which is
+    used to determine when a data item will be stored as an external file.
+    <p>
+    Any data item that is equal to or larger in size than the
+    threshold value will automatically be stored as an external file.
+    <p>
+    It is illegal to enable external files in the environment if any of
+    {@link com.sleepycat.db.EnvironmentConfig#setTxnSnapshot EnvironmentConfig.setTxnSnapshot},
+    and {@link com.sleepycat.db.EnvironmentConfig#setMultiversion EnvironmentConfig.setMultiversion}
+    is called with true value.
+    <p>
+    This threshold value can be set any time before and after opening the
+    environment.
+    <p>
+    @param value
+    The size in bytes which is used to determine when a data item will
+    be stored as an external file. If 0, databases opened in the environment
+    will default to never using external files.
+    */
+    public void setExternalFileThreshold(int value) {
+        this.blobThreshold = value;
+    }
+
+    /**
+    Return the environment wide default external file threshold value. The
+    external file threshold is the size in bytes which is used to determine
+    when a record will be stored as an external file.
+    <p>
+    @return
+    The external file threshold value in bytes beyond which data items are
+    stored as external files. If 0, databases opened in the environment will
+    default to never using external files.
+    */
+    public int getExternalFileThreshold() {
+        return blobThreshold;
     }
 
     /**
@@ -1481,10 +1519,7 @@ This method may be called at any time during the life of the application.
 The timeout value, specified as an unsigned 32-bit number of
 microseconds, limiting the maximum timeout to roughly 71 minutes.
 <p>
-<p>
 @throws IllegalArgumentException if an invalid parameter was specified.
-<p>
-@throws DatabaseException if a failure occurs.
     */
     public void setLockTimeout(final long lockTimeout) {
         this.lockTimeout = lockTimeout;
@@ -1547,25 +1582,45 @@ True if the system has been configured to to automatically remove log
     }
 
     /**
-    Enable full logging of blob data.  Required for HA and the hotbackup
-    utility.
+    @deprecated Replaced with {@link #setLogExternalFileContent}.
     <p>
-    @param logBlobContent
-    If true, enable full logging of blob data.
+    @param logExternalFileContent
+    If true, enable full logging of external file data.
     */
-    public void setLogBlobContent(final boolean logBlobContent) {
+    public void setLogBlobContent(final boolean logExternalFileContent) {
+        setLogExternalFileContent(logExternalFileContent);
+    }
+
+    /**
+    @deprecated Replaced with {@link #getLogExternalFileContent}.
+    <p>
+    @return
+    True if full logging of external file data is enabled.
+    */
+    public boolean getLogBlobContent() {
+        return getLogExternalFileContent();
+    }
+
+    /**
+    Enable full logging of external file data.  Required for HA and the
+    hotbackup utility.
+    <p>
+    @param logExternalFileContent
+    If true, enable full logging of external file data.
+    */
+    public void setLogExternalFileContent(final boolean logExternalFileContent) {
         this.logBlobContent = logBlobContent;
     }
 
     /**
-    Return true if full logging of blob data is enabled.
+    Return true if full logging of external file data is enabled.
     <p>
     This method may be called at any time during the life of the application.
     <p>
     @return
-    True if full logging of blob data is enabled.
+    True if full logging of external file data is enabled.
     */
-    public boolean getLogBlobContent() {
+    public boolean getLogExternalFileContent() {
         return logBlobContent;
     }
 
@@ -1904,6 +1959,7 @@ The handler for application-specific log records.
 
     /**
     Set the number of lock table partitions in the Berkeley DB environment.
+    @param partitions the number of lock table partitions
     */
     public void setLockPartitions(final int partitions) {
         this.partitionLocks = partitions;
@@ -1911,6 +1967,7 @@ The handler for application-specific log records.
 
     /**
     Returns the number of lock table partitions in the Berkeley DB environment.
+    @return the number of lock table partitions
     */
     public int getLockPartitions() {
         return this.partitionLocks;
@@ -2386,6 +2443,30 @@ The function to be called with an informational message.
     }
 
     /**
+    Set the prefix string that appears before informational messages.
+<p>
+This method may be called at any time during the life of the application.
+<p>
+@param messagePrefix
+The prefix string that appears before informational messages.
+    */
+    public void setMessagePrefix(final String messagePrefix) {
+        this.messagePrefix = messagePrefix;
+    }
+
+    /**
+Return the prefix string that appears before informational messages.
+<p>
+This method may be called at any time during the life of the application.
+<p>
+@return
+The prefix string that appears before informational messages.
+    */
+    public String getMessagePrefix() {
+        return messagePrefix;
+    }
+
+    /**
     Set an OutputStream for displaying informational messages.
 <p>
 There are interfaces in the Berkeley DB library which either directly
@@ -2397,6 +2478,10 @@ The {@link com.sleepycat.db.EnvironmentConfig#setMessageStream EnvironmentConfig
 {@link com.sleepycat.db.DatabaseConfig#setMessageStream DatabaseConfig.setMessageStream} methods are used to display
 these messages for the application.  In this case, the message will
 include a trailing newline character.
+<p>
+The informational message will consist of the prefix string and a colon
+("<b>:</b>") (if a prefix string was previously specified using
+{@link com.sleepycat.db.EnvironmentConfig#setMessagePrefix EnvironmentConfig.setMessagePrefix} or {@link com.sleepycat.db.DatabaseConfig#setMessagePrefix DatabaseConfig.setMessagePrefix}), an informational string, and a trailing newline character.
 <p>
 Setting messageStream to null unconfigures the interface.
 <p>
@@ -2797,6 +2882,50 @@ The function to be called if the database environment panics.
     */
     public PanicHandler getPanicHandler() {
         return panicHandler;
+    }
+
+    /**
+    Set the path of a directory to be used as the location of region files.
+    <p>
+    Region files created by Berkeley DB will be created in this
+    directory.  If no region directory is specified, regioin files are
+    created in the environment home directory.
+    <p>
+    The database environment's region directory may also be set using the
+    environment's DB_CONFIG file.  The syntax of the entry in that file is 
+    a single line with the string "set_region_dir", one or more whitespace
+    characters, and the directory name.
+    Because the DB_CONFIG file is read when the database environment is
+    opened, it will silently overrule configuration done before that time.
+    <p>
+    This method configures only operations performed using a single a
+    {@link com.sleepycat.db.Environment Environment} handle, not an entire
+    database environment.
+    <p>
+    This method may not be called after the environment has been opened.
+    If joining an existing database environment, the
+    information specified to this method must be consistent with the
+    existing environment or corruption can occur.
+    <p>
+    @param regionDirectory
+    The directory used to store the region files.
+    On Windows platforms, this argument will be interpreted as a UTF-8
+    string, which is equivalent to ASCII for Latin characters.
+    */
+    public void setRegionDirectory(final java.io.File regionDirectory) {
+        this.regionDirectory = regionDirectory;
+    }
+
+    /**
+    Return the path of a directory to be used as the location of region files.
+    <p>
+    This method may be called at any time during the life of the application.
+    <p>
+    @return
+    The path of a directory to be used as the location of region files.
+    */
+    public java.io.File getRegionDirectory() {
+        return regionDirectory;
     }
 
     /**
@@ -3343,7 +3472,7 @@ The base segment ID.
     <li>The directory /tmp.
     <li>The directory C:/temp.
     <li>The directory C:/tmp.
-    </ol</blockquote>
+    </ol></blockquote>
     <p>
     Note: the environment variables are only checked if the database
     environment has been configured with one of
@@ -3376,7 +3505,9 @@ string, which is equivalent to ASCII for Latin characters.
         this.temporaryDirectory = temporaryDirectory;
     }
 
-    /** @deprecated replaced by {@link #setTemporaryDirectory(java.io.File)} */
+    /** @deprecated replaced by {@link #setTemporaryDirectory(java.io.File)}
+    @param temporaryDirectory the temporary directory
+    */
     public void setTemporaryDirectory(final String temporaryDirectory) {
         this.setTemporaryDirectory(new java.io.File(temporaryDirectory));
     }
@@ -3822,47 +3953,6 @@ True if the transactions have been configured to not wait for locks by default.
     }
 
     /**
-    Configure the system to not write log records.
-    <p>
-    This means that transactions exhibit the ACI (atomicity, consistency,
-    and isolation) properties, but not D (durability); that is, database
-    integrity will be maintained, but if the application or system
-    fails, integrity will not persist.  All database files must be
-    verified and/or restored from backup after a failure.  In order to
-    ensure integrity after application shut down, all database handles
-    must be closed without specifying noSync, or all database changes
-    must be flushed from the database environment cache using the
-    {@link com.sleepycat.db.Environment#checkpoint Environment.checkpoint}.
-    <p>
-    This method only affects the specified {@link com.sleepycat.db.Environment Environment} handle (and
-any other library handles opened within the scope of that handle).
-For consistent behavior across the environment, all {@link com.sleepycat.db.Environment Environment}
-handles opened in the database environment must either call this method
-or the configuration should be specified in the database environment's
-DB_CONFIG configuration file.
-    <p>
-    This method may be called at any time during the life of the application.
-    <p>
-    @param txnNotDurable
-    If true, configure the system to not write log records.
-    */
-    public void setTxnNotDurable(final boolean txnNotDurable) {
-        this.txnNotDurable = txnNotDurable;
-    }
-
-    /**
-Return true if the system has been configured to not write log records.
-<p>
-This method may be called at any time during the life of the application.
-<p>
-@return
-True if the system has been configured to not write log records.
-    */
-    public boolean getTxnNotDurable() {
-        return txnNotDurable;
-    }
-
-    /**
     Configure the database environment to run transactions at snapshot
     isolation by default.  See {@link TransactionConfig#setSnapshot} for more
     information.
@@ -3967,10 +4057,7 @@ This method may be called at any time during the life of the application.
 The timeout value, specified as an unsigned 32-bit number of
 microseconds, limiting the maximum timeout to roughly 71 minutes.
 <p>
-<p>
 @throws IllegalArgumentException if an invalid parameter was specified.
-<p>
-@throws DatabaseException if a failure occurs.
     */
     public void setTxnTimeout(final long txnTimeout) {
         this.txnTimeout = txnTimeout;
@@ -4195,6 +4282,9 @@ True if the database environment is configured to accept information
         case DbConstants.DB_VERB_REP_TEST:
             verboseReplicationTest = enable;
             break;
+        case DbConstants.DB_VERB_SLICE:
+            verboseSlice = enable;
+            break;
         case DbConstants.DB_VERB_WAITSFOR:
             verboseWaitsFor = enable;
             break;
@@ -4252,6 +4342,8 @@ True if the database environment is configured to accept information
             return verboseReplicationSystem;
         case DbConstants.DB_VERB_REP_TEST:
             return verboseReplicationTest;
+        case DbConstants.DB_VERB_SLICE:
+            return verboseSlice;
         case DbConstants.DB_VERB_WAITSFOR:
             return verboseWaitsFor;
         default:
@@ -4539,6 +4631,11 @@ True if the system has been configured to yield the processor
             dbenv.set_errpfx(errorPrefix);
         if (errorStream != oldConfig.errorStream)
             dbenv.set_error_stream(errorStream);
+        if (messagePrefix != oldConfig.messagePrefix && messagePrefix != null &&
+            !messagePrefix.equals(oldConfig.messagePrefix))
+            dbenv.set_msgpfx(messagePrefix);
+        if (messageStream != oldConfig.messageStream)
+            dbenv.set_message_stream(messageStream);
 
         // We always set DB_TIME_NOTGRANTED in the Java API, because
         // LockNotGrantedException extends DeadlockException, so there's no
@@ -4606,11 +4703,6 @@ True if the system has been configured to yield the processor
         if (!txnNoWait && oldConfig.txnNoWait)
             offFlags |= DbConstants.DB_TXN_NOWAIT;
 
-        if (txnNotDurable && !oldConfig.txnNotDurable)
-            onFlags |= DbConstants.DB_TXN_NOT_DURABLE;
-        if (!txnNotDurable && oldConfig.txnNotDurable)
-            offFlags |= DbConstants.DB_TXN_NOT_DURABLE;
-
         if (txnSnapshot && !oldConfig.txnSnapshot)
             onFlags |= DbConstants.DB_TXN_SNAPSHOT;
         if (!txnSnapshot && oldConfig.txnSnapshot)
@@ -4642,7 +4734,7 @@ True if the system has been configured to yield the processor
             dbenv.log_set_config(DbConstants.DB_LOG_AUTO_REMOVE, logAutoRemove);
 
         if (logBlobContent != oldConfig.logBlobContent)
-            dbenv.log_set_config(DbConstants.DB_LOG_BLOB, logBlobContent);
+            dbenv.log_set_config(DbConstants.DB_LOG_EXT_FILE, logBlobContent);
 
         if (logInMemory != oldConfig.logInMemory)
             dbenv.log_set_config(DbConstants.DB_LOG_IN_MEMORY, logInMemory);
@@ -4697,6 +4789,9 @@ True if the system has been configured to yield the processor
         if (verboseRepmgrMisc != oldConfig.verboseRepmgrMisc)
             dbenv.set_verbose(DbConstants.DB_VERB_REPMGR_MISC,
                 verboseRepmgrMisc);
+        if (verboseSlice != oldConfig.verboseSlice)
+            dbenv.set_verbose(DbConstants.DB_VERB_SLICE,
+                verboseSlice);
         if (verboseWaitsFor != oldConfig.verboseWaitsFor)
             dbenv.set_verbose(DbConstants.DB_VERB_WAITSFOR, verboseWaitsFor);
 
@@ -4747,9 +4842,9 @@ True if the system has been configured to yield the processor
 	    dbenv.set_backup_config(DbConstants.DB_BACKUP_WRITE_DIRECT, 0);
 
         if (blobDir != oldConfig.blobDir)
-            dbenv.set_blob_dir(blobDir.toString());
+            dbenv.set_ext_file_dir(blobDir.toString());
         if (blobThreshold != oldConfig.blobThreshold)
-            dbenv.set_blob_threshold(blobThreshold, 0);
+            dbenv.set_ext_file_threshold(blobThreshold, 0);
 
         if (cacheSize != oldConfig.cacheSize ||
             cacheCount != oldConfig.cacheCount)
@@ -4810,6 +4905,10 @@ True if the system has been configured to yield the processor
             dbenv.set_msgfile(msgfile.toString());
         if (password != null)
             dbenv.set_encrypt(password, DbConstants.DB_ENCRYPT_AES);
+        if (regionDirectory != oldConfig.regionDirectory &&
+            regionDirectory != null &&
+            !regionDirectory.equals(oldConfig.regionDirectory))
+            dbenv.set_region_dir(regionDirectory.toString());
         if (replicationClockskewFast != oldConfig.replicationClockskewFast ||
             replicationClockskewSlow != oldConfig.replicationClockskewSlow)
             dbenv.rep_set_clockskew(replicationClockskewFast, replicationClockskewSlow);
@@ -4950,7 +5049,6 @@ True if the system has been configured to yield the processor
         overwrite = ((envFlags & DbConstants.DB_OVERWRITE) != 0);
         txnNoSync = ((envFlags & DbConstants.DB_TXN_NOSYNC) != 0);
         txnNoWait = ((envFlags & DbConstants.DB_TXN_NOWAIT) != 0);
-        txnNotDurable = ((envFlags & DbConstants.DB_TXN_NOT_DURABLE) != 0);
         txnSnapshot = ((envFlags & DbConstants.DB_TXN_SNAPSHOT) != 0);
         txnWriteNoSync = ((envFlags & DbConstants.DB_TXN_WRITE_NOSYNC) != 0);
         yieldCPU = ((envFlags & DbConstants.DB_YIELDCPU) != 0);
@@ -4960,7 +5058,7 @@ True if the system has been configured to yield the processor
             directLogIO = dbenv.log_get_config(DbConstants.DB_LOG_DIRECT);
             dsyncLog = dbenv.log_get_config(DbConstants.DB_LOG_DSYNC);
             logAutoRemove = dbenv.log_get_config(DbConstants.DB_LOG_AUTO_REMOVE);
-            logBlobContent = dbenv.log_get_config(DbConstants.DB_LOG_BLOB);
+            logBlobContent = dbenv.log_get_config(DbConstants.DB_LOG_EXT_FILE);
             logInMemory = dbenv.log_get_config(DbConstants.DB_LOG_IN_MEMORY);
             logNoSync = dbenv.log_get_config(DbConstants.DB_LOG_NOSYNC);
             logZero = dbenv.log_get_config(DbConstants.DB_LOG_ZERO);
@@ -4983,6 +5081,7 @@ True if the system has been configured to yield the processor
         verboseReplicationTest = dbenv.get_verbose(DbConstants.DB_VERB_REP_TEST);
         verboseRepmgrConnfail = dbenv.get_verbose(DbConstants.DB_VERB_REPMGR_CONNFAIL);
         verboseRepmgrMisc = dbenv.get_verbose(DbConstants.DB_VERB_REPMGR_MISC);
+        verboseSlice = dbenv.get_verbose(DbConstants.DB_VERB_SLICE);
         verboseWaitsFor = dbenv.get_verbose(DbConstants.DB_VERB_WAITSFOR);
 
         /* Callbacks */
@@ -5006,10 +5105,10 @@ True if the system has been configured to yield the processor
 	    dbenv.get_backup_config(DbConstants.DB_BACKUP_WRITE_DIRECT);
 	backup_write_direct = (write_direct == 1) ? true : false;
 
-        String blobDirStr = dbenv.get_blob_dir();
+        String blobDirStr = dbenv.get_ext_file_dir();
         if (blobDirStr != null)
             blobDir = new java.io.File(blobDirStr);
-        blobThreshold = dbenv.get_blob_threshold();
+        blobThreshold = dbenv.get_ext_file_threshold();
 
         if (initializeCache) {
             cacheSize = dbenv.get_cachesize();
@@ -5034,8 +5133,13 @@ True if the system has been configured to yield the processor
         for (int i = 0; i < dataDirArray.length; i++)
             dataDirs.set(i, new java.io.File(dataDirArray[i]));
 
+	regionDirectory = (dbenv.get_region_dir() == null) ? null :
+            new java.io.File(dbenv.get_region_dir());
+
         errorPrefix = dbenv.get_errpfx();
         errorStream = dbenv.get_error_stream();
+        messagePrefix = dbenv.get_msgpfx();
+        messageStream = dbenv.get_message_stream();
 
         if (initializeLocking) {
             lockConflicts = dbenv.get_lk_conflicts();

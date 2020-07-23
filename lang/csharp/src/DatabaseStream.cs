@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2013, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2013, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 using System;
@@ -13,7 +13,7 @@ using BerkeleyDB.Internal;
 namespace BerkeleyDB {
     /// <summary>
     /// A class representing a database stream,
-    /// which allows streaming access to blobs.
+    /// which allows streaming access to external files.
     /// </summary>
     public class DatabaseStream : IDisposable{
         /// <summary>
@@ -56,7 +56,8 @@ namespace BerkeleyDB {
         /// <para>
         /// After Close has been called, regardless of its result, the database
         /// stream handle cannot be used again.
-        /// Always close the stream when you have finished accessing the BLOB.
+        /// Always close the stream when you have finished accessing the
+	/// external file.
         /// </para>
         /// </summary>
         /// <exception cref="DatabaseException"></exception>
@@ -85,10 +86,10 @@ namespace BerkeleyDB {
         }
 
         /// <summary>
-        /// Read from the blob accessed by this database stream.
+        /// Read from the external file accessed by this database stream.
         /// </summary>
         /// <param name="offset">
-        /// The position in bytes in the blob where the reading starts.
+        /// The position in bytes in the file where the reading starts.
         /// </param>
         /// <param name="size">
         /// The number of bytes to read.
@@ -107,11 +108,11 @@ namespace BerkeleyDB {
         }
 
         /// <summary>
-        /// Return the size of the blob in bytes accessed by the database
-        /// stream.
+        /// Return the size of the external file in bytes accessed by the
+        /// database stream.
         /// </summary>
         /// <returns>
-        /// Return the size of the blob in bytes accessed by the database
+        /// Return the size of the file in bytes accessed by the database
         /// stream.
         /// </returns>
         public Int64 Size() {
@@ -121,14 +122,14 @@ namespace BerkeleyDB {
         }
 
         /// <summary>
-        /// Write to the blob accessed by the database stream.
+        /// Write to the external file accessed by the database stream.
         /// </summary>
         /// <param name="data">
         /// The <see cref="DatabaseEntry"/> containing the data to write.
-        /// into the blob.
+        /// into the file.
         /// </param>
         /// <param name="offset">
-        /// The position in bytes in the blob where the writing starts.
+        /// The position in bytes in the file where the writing starts.
         /// </param>
         /// <returns>
         /// True if the writing succeeds and false otherwise.

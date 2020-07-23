@@ -7,14 +7,14 @@
     <link rel="stylesheet" href="apiReference.css" type="text/css" />
     <meta name="generator" content="DocBook XSL Stylesheets V1.73.2" />
     <link rel="start" href="index.html" title="Berkeley DB C API Reference" />
-    <link rel="up" href="blob.html" title="Chapter 13.  Binary Large Objects" />
-    <link rel="prev" href="set_blob_threshold.html" title="DB-&gt;set_blob_threshold()" />
+    <link rel="up" href="blob.html" title="Chapter 13.  External Files" />
+    <link rel="prev" href="set_blob_threshold.html" title="DB-&gt;set_ext_file_threshold()" />
     <link rel="next" href="dbstream_close.html" title="DB_STREAM-&gt;close()" />
   </head>
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -23,7 +23,7 @@
         <tr>
           <td width="20%" align="left"><a accesskey="p" href="set_blob_threshold.html">Prev</a> </td>
           <th width="60%" align="center">Chapter 13. 
-                Binary Large Objects
+                External Files
         </th>
           <td width="20%" align="right"> <a accesskey="n" href="dbstream_close.html">Next</a></td>
         </tr>
@@ -44,8 +44,8 @@ int
 DBC-&gt;db_stream(DBC *dbc, DB_STREAM **dbs, u_int32_t flags);  </pre>
       <p>
          The <code class="methodname">DBcursor-&gt;db_stream()</code> method points to a
-         key/value pair where the data item is a binary large object
-         (BLOB). Use the <span class="bold"><strong>flags</strong></span> parameter
+         key/value pair where the data item is an external file. 
+	 Use the <span class="bold"><strong>flags</strong></span> parameter
          to indicate whether the stream is to be opened for reading, or for
          reading and writing.
      </p>
@@ -57,7 +57,8 @@ DBC-&gt;db_stream(DBC *dbc, DB_STREAM **dbs, u_int32_t flags);  </pre>
          Close this stream using <a class="xref" href="dbstream_close.html" title="DB_STREAM-&gt;close()">DB_STREAM-&gt;close()</a>.
      </p>
       <p>
-         If the data item is not a BLOB, this method returns an error.
+         If the data item is not an external file, this method returns an
+         error.
      </p>
       <p>
          Unless otherwise specified, the
@@ -72,7 +73,7 @@ DBC-&gt;db_stream(DBC *dbc, DB_STREAM **dbs, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp4997160"></a>Parameters</h3>
+              <h3 class="title"><a id="idp8777648"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -80,7 +81,7 @@ DBC-&gt;db_stream(DBC *dbc, DB_STREAM **dbs, u_int32_t flags);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp5005016"></a>dbs</h4>
+                <h4 class="title"><a id="idp8791584"></a>dbs</h4>
               </div>
             </div>
           </div>
@@ -94,15 +95,15 @@ DBC-&gt;db_stream(DBC *dbc, DB_STREAM **dbs, u_int32_t flags);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp5000744"></a>flags</h4>
+                <h4 class="title"><a id="idp8782992"></a>flags</h4>
               </div>
             </div>
           </div>
           <p>
                   The <span class="bold"><strong>flags</strong></span> parameter 
                   must be set by bitwise inclusively 
-                  <span class="bold"><strong>OR</strong></span>'ing together one or more of
-                  the following values:
+                  <span class="bold"><strong>OR</strong></span>'ing together one or more
+                  of the following values:
              </p>
           <div class="itemizedlist">
             <ul type="disc">
@@ -131,8 +132,8 @@ DBC-&gt;db_stream(DBC *dbc, DB_STREAM **dbs, u_int32_t flags);  </pre>
                      </p>
                 <p>
                          Indicates that the stream is to be opened for
-                         read and write access. The stream is sync'd to disc after
-                         each write, instead of when the stream is closed.
+                         read and write access. The stream is sync'd to disc
+                         after each write, instead of when the stream is closed.
                     </p>
               </li>
             </ul>
@@ -143,7 +144,7 @@ DBC-&gt;db_stream(DBC *dbc, DB_STREAM **dbs, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp5021680"></a>Errors</h3>
+              <h3 class="title"><a id="idp8820320"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -159,13 +160,13 @@ DBC-&gt;db_stream(DBC *dbc, DB_STREAM **dbs, u_int32_t flags);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp5027216"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp8830704"></a>EINVAL</h4>
               </div>
             </div>
           </div>
           <p>
-                If the data item is not a BLOB; or if an invalid flag or
-                parameter is specified.
+                If the data item is not an external file; or if an invalid flag
+                or parameter is specified.
             </p>
         </div>
       </div>
@@ -173,7 +174,7 @@ DBC-&gt;db_stream(DBC *dbc, DB_STREAM **dbs, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp5025888"></a>Class</h3>
+              <h3 class="title"><a id="idp8828128"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -185,12 +186,12 @@ DBC-&gt;db_stream(DBC *dbc, DB_STREAM **dbs, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp5022864"></a>See Also</h3>
+              <h3 class="title"><a id="idp8822304"></a>See Also</h3>
             </div>
           </div>
         </div>
         <p>
-             <a class="xref" href="blob.html#bloblist" title="BLOBs and Related Methods">BLOBs and Related Methods</a> 
+             <a class="xref" href="blob.html#bloblist" title="External Files and Related Methods">External Files and Related Methods</a> 
         </p>
       </div>
     </div>
@@ -205,7 +206,7 @@ DBC-&gt;db_stream(DBC *dbc, DB_STREAM **dbs, u_int32_t flags);  </pre>
           <td width="40%" align="right"> <a accesskey="n" href="dbstream_close.html">Next</a></td>
         </tr>
         <tr>
-          <td width="40%" align="left" valign="top">DB-&gt;set_blob_threshold() </td>
+          <td width="40%" align="left" valign="top">DB-&gt;set_ext_file_threshold() </td>
           <td width="20%" align="center">
             <a accesskey="h" href="index.html">Home</a>
           </td>

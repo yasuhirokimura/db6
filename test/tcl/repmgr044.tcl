@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2014, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -44,6 +44,7 @@ proc repmgr044_groupsize { method niter tnum largs } {
 	global rep_verbose
 	global verbose_type
 	global databases_in_memory
+	global ipversion
 	set nsites 3
 	set omethod [convert_method $method]
 
@@ -53,6 +54,7 @@ proc repmgr044_groupsize { method niter tnum largs } {
 	}
 
 	env_cleanup $testdir
+	set hoststr [get_hoststr $ipversion]
 	set ports [available_ports $nsites]
 
 	set masterdir $testdir/MASTERDIR
@@ -71,7 +73,7 @@ proc repmgr044_groupsize { method niter tnum largs } {
 	set masterenv [eval $ma_envcmd]
 	$masterenv rep_config {mgrprefmasmaster on}
 	$masterenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 0]] -start client
+	    -local [list $hoststr [lindex $ports 0]] -start client
 	await_expected_master $masterenv
 
 	puts "\tRepmgr$tnum.gs.b: Start client site."
@@ -81,8 +83,8 @@ proc repmgr044_groupsize { method niter tnum largs } {
 	set clientenv [eval $cl_envcmd]
 	$clientenv rep_config {mgrprefmasclient on}
 	$clientenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 1]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] -start client
+	    -local [list $hoststr [lindex $ports 1]] \
+	    -remote [list $hoststr [lindex $ports 0]] -start client
 	await_startup_done $clientenv
 
 	#
@@ -100,7 +102,7 @@ proc repmgr044_groupsize { method niter tnum largs } {
 	puts "\tRepmgr$tnum.gs.d1: Shut down and remove client, perform master\
 	    transactions."
 	error_check_good clientenv_close [$clientenv close] 0
-	$masterenv repmgr -remove [list 127.0.0.1 [lindex $ports 1]]
+	$masterenv repmgr -remove [list $hoststr [lindex $ports 1]]
 	eval rep_test $method $masterenv NULL $niter $start 0 0 $largs
 	incr start $niter
 
@@ -108,8 +110,8 @@ proc repmgr044_groupsize { method niter tnum largs } {
 	set clientenv [eval $cl_envcmd]
 	$clientenv rep_config {mgrprefmasclient on}
 	$clientenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 1]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] -start client
+	    -local [list $hoststr [lindex $ports 1]] \
+	    -remote [list $hoststr [lindex $ports 0]] -start client
 	await_startup_done $clientenv
 	# Allow time for extra message cycle needed for gmdb version catch up.
 	tclsleep 3
@@ -132,7 +134,7 @@ proc repmgr044_groupsize { method niter tnum largs } {
 	set masterenv [eval $ma_envcmd]
 	$masterenv rep_config {mgrprefmasmaster on}
 	$masterenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 0]] -start client
+	    -local [list $hoststr [lindex $ports 0]] -start client
 	await_startup_done $masterenv
 	await_expected_master $masterenv
 
@@ -150,7 +152,7 @@ proc repmgr044_groupsize { method niter tnum largs } {
 	incr start $niter
 
 	puts "\tRepmgr$tnum.gs.e2: Remove preferred master site."
-	$clientenv repmgr -remove [list 127.0.0.1 [lindex $ports 0]]
+	$clientenv repmgr -remove [list $hoststr [lindex $ports 0]]
 	eval rep_test $method $clientenv NULL $niter $start 0 0 $largs
 	incr start $niter
 
@@ -159,7 +161,7 @@ proc repmgr044_groupsize { method niter tnum largs } {
 	set masterenv [eval $ma_envcmd]
 	$masterenv rep_config {mgrprefmasmaster on}
 	$masterenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 0]] -start client
+	    -local [list $hoststr [lindex $ports 0]] -start client
 	await_startup_done $masterenv
 	await_expected_master $masterenv
 
@@ -179,8 +181,8 @@ proc repmgr044_groupsize { method niter tnum largs } {
 	    -errpfx CLIENT2 -home $client2dir -txn -rep -thread -event"
 	set client2env [eval $cl2_envcmd]
 	$client2env repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 2]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] -start client
+	    -local [list $hoststr [lindex $ports 2]] \
+	    -remote [list $hoststr [lindex $ports 0]] -start client
 	await_startup_done $client2env
 
 	puts "\tRepmgr$tnum.gs.f2: Run/verify transactions at preferred\
@@ -190,7 +192,7 @@ proc repmgr044_groupsize { method niter tnum largs } {
 	rep_verify $masterdir $masterenv $clientdir $clientenv 1 1 1
 
 	puts "\tRepmgr$tnum.gs.f3: Remove second client site from repgroup."
-	$masterenv repmgr -remove [list 127.0.0.1 [lindex $ports 2]]
+	$masterenv repmgr -remove [list $hoststr [lindex $ports 2]]
 	await_event $client2env local_site_removed
 	error_check_good client2_close [$client2env close] 0
 	eval rep_test $method $masterenv NULL $niter $start 0 0 $largs
@@ -209,7 +211,7 @@ proc repmgr044_groupsize { method niter tnum largs } {
 	set masterenv [eval $ma_envcmd]
 	$masterenv rep_config {mgrprefmasmaster on}
 	$masterenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 0]] -start client
+	    -local [list $hoststr [lindex $ports 0]] -start client
 	await_startup_done $masterenv
 	await_expected_master $masterenv
 
@@ -251,6 +253,7 @@ proc repmgr044_mastertrans { method niter tnum largs } {
 
 	global verbose_type
 	global databases_in_memory
+	global ipversion
 	set nsites 3
 	set omethod [convert_method $method]
 
@@ -260,6 +263,7 @@ proc repmgr044_mastertrans { method niter tnum largs } {
 	}
 
 	env_cleanup $testdir
+	set hoststr [get_hoststr $ipversion]
 	set ports [available_ports $nsites]
 
 	set masterdir $testdir/MASTERDIR
@@ -277,7 +281,7 @@ proc repmgr044_mastertrans { method niter tnum largs } {
 	set masterenv [eval $ma_envcmd]
 	$masterenv rep_config {mgrprefmasmaster on}
 	$masterenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 0]] -start client
+	    -local [list $hoststr [lindex $ports 0]] -start client
 	await_expected_master $masterenv
 
 	puts "\tRepmgr$tnum.mx.b: Start client site."
@@ -287,8 +291,8 @@ proc repmgr044_mastertrans { method niter tnum largs } {
 	set clientenv [eval $cl_envcmd]
 	$clientenv rep_config {mgrprefmasclient on}
 	$clientenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 1]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] -start client
+	    -local [list $hoststr [lindex $ports 1]] \
+	    -remote [list $hoststr [lindex $ports 0]] -start client
 	await_startup_done $clientenv
 
 	#
@@ -321,7 +325,7 @@ proc repmgr044_mastertrans { method niter tnum largs } {
 	    master."
 	error_check_good masterenv_close [$masterenv close] 0
 	await_expected_master $clientenv
-	$clientenv repmgr -remove [list 127.0.0.1 [lindex $ports 0]]
+	$clientenv repmgr -remove [list $hoststr [lindex $ports 0]]
 	eval rep_test $method $clientenv NULL $niter $start 0 0 $largs
 	incr start $niter
 
@@ -331,7 +335,7 @@ proc repmgr044_mastertrans { method niter tnum largs } {
 	set clientenv [eval $cl_envcmd -recover]
 	$clientenv rep_config {mgrprefmasmaster on}
 	$clientenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 1]] -start client
+	    -local [list $hoststr [lindex $ports 1]] -start client
 	await_expected_master $clientenv
 	# On some slower platforms, it takes the repmgr startup in
 	# the election thread a bit longer to finish and release its
@@ -347,8 +351,8 @@ proc repmgr044_mastertrans { method niter tnum largs } {
 	set client2env [eval $cl2_envcmd]
 	$client2env rep_config {mgrprefmasclient on}
 	$client2env repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 2]] \
-	    -remote [list 127.0.0.1 [lindex $ports 1]] -start client
+	    -local [list $hoststr [lindex $ports 2]] \
+	    -remote [list $hoststr [lindex $ports 1]] -start client
 	await_startup_done $client2env
 	eval rep_test $method $clientenv NULL $niter $start 0 0 $largs
 	incr start $niter
@@ -364,7 +368,7 @@ proc repmgr044_mastertrans { method niter tnum largs } {
 	set clientenv [eval $cl_envcmd]
 	$clientenv rep_config {mgrprefmasmaster on}
 	$clientenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 1]] -start client
+	    -local [list $hoststr [lindex $ports 1]] -start client
 	await_startup_done $clientenv
 	await_expected_master $clientenv
 

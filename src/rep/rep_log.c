@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2004, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2004, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -155,15 +155,10 @@ __rep_allreq(env, rp, eid)
 			if ((ret = __logc_version(logc, &nf_args.version)) != 0)
 				break;
 			memset(&newfiledbt, 0, sizeof(newfiledbt));
-			if (rep->version < DB_REPVERSION_47)
-				DB_INIT_DBT(newfiledbt, &nf_args.version,
-				    sizeof(nf_args.version));
-			else {
-				if ((ret = __rep_newfile_marshal(env, &nf_args,
-				    buf, __REP_NEWFILE_SIZE, &len)) != 0)
-					goto err;
-				DB_INIT_DBT(newfiledbt, buf, len);
-			}
+			if ((ret = __rep_newfile_marshal(env, &nf_args,
+			    buf, __REP_NEWFILE_SIZE, &len)) != 0)
+				goto err;
+			DB_INIT_DBT(newfiledbt, buf, len);
 			(void)__rep_send_message(env,
 			    eid, REP_NEWFILE, &oldfilelsn, &newfiledbt,
 			    REPCTL_RESEND, 0);
@@ -440,22 +435,12 @@ __rep_log_split(env, ip, rp, rec, ret_lsnp, last_lsnp)
 		 * First thing in the buffer is the length.  Then the LSN
 		 * of this record, then the record itself.
 		 */
-		if (rp->rep_version < DB_REPVERSION_47) {
-			memcpy(&b_args.len, p, sizeof(b_args.len));
-			p += sizeof(b_args.len);
-			memcpy(&tmprp.lsn, p, sizeof(DB_LSN));
-			p += sizeof(DB_LSN);
-			logrec.data = p;
-			logrec.size = b_args.len;
-			p += b_args.len;
-		} else {
-			if ((ret = __rep_bulk_unmarshal(env,
-			    &b_args, p, rec->size, &p)) != 0)
-				return (ret);
-			tmprp.lsn = b_args.lsn;
-			logrec.data = b_args.bulkdata.data;
-			logrec.size = b_args.len;
-		}
+		if ((ret = __rep_bulk_unmarshal(env,
+		    &b_args, p, rec->size, &p)) != 0)
+			return (ret);
+		tmprp.lsn = b_args.lsn;
+		logrec.data = b_args.bulkdata.data;
+		logrec.size = b_args.len;
 		VPRINT(env, (env, DB_VERB_REP_MISC,
 		    "log_rep_split: Processing LSN [%lu][%lu]",
 		    (u_long)tmprp.lsn.file, (u_long)tmprp.lsn.offset));
@@ -574,9 +559,7 @@ __rep_logreq(env, rp, rec, eid)
 	ZERO_LSN(lr_args.endlsn);
 
 	if (rec != NULL && rec->size != 0) {
-		if (rp->rep_version < DB_REPVERSION_47)
-			lr_args.endlsn = *(DB_LSN *)rec->data;
-		else if ((ret = __rep_logreq_unmarshal(env, &lr_args,
+		if ((ret = __rep_logreq_unmarshal(env, &lr_args,
 		    rec->data, rec->size, NULL)) != 0)
 			return (ret);
 		RPRINT(env, (env, DB_VERB_REP_MISC,
@@ -724,15 +707,10 @@ __rep_logreq(env, rp, rec, eid)
 			if ((ret = __logc_version(logc, &nf_args.version)) != 0)
 				break;
 			memset(&newfiledbt, 0, sizeof(newfiledbt));
-			if (rep->version < DB_REPVERSION_47)
-				DB_INIT_DBT(newfiledbt, &nf_args.version,
-				    sizeof(nf_args.version));
-			else {
-				if ((ret = __rep_newfile_marshal(env, &nf_args,
-				    buf, __REP_NEWFILE_SIZE, &len)) != 0)
-					goto err;
-				DB_INIT_DBT(newfiledbt, buf, len);
-			}
+			if ((ret = __rep_newfile_marshal(env, &nf_args,
+			    buf, __REP_NEWFILE_SIZE, &len)) != 0)
+				goto err;
+			DB_INIT_DBT(newfiledbt, buf, len);
 			(void)__rep_send_message(env,
 			    eid, REP_NEWFILE, &oldfilelsn, &newfiledbt,
 			    REPCTL_RESEND, 0);
@@ -876,15 +854,10 @@ __rep_loggap_req(env, rep, lsnp, gapflags)
 			type = REP_ALL_REQ;
 		memset(&max_lsn_dbt, 0, sizeof(max_lsn_dbt));
 		lr_args.endlsn = lp->max_wait_lsn;
-		if (rep->version < DB_REPVERSION_47)
-			DB_INIT_DBT(max_lsn_dbt, &lp->max_wait_lsn,
-			    sizeof(DB_LSN));
-		else {
-			if ((ret = __rep_logreq_marshal(env, &lr_args, buf,
-			    __REP_LOGREQ_SIZE, &len)) != 0)
-				goto err;
-			DB_INIT_DBT(max_lsn_dbt, buf, len);
-		}
+		if ((ret = __rep_logreq_marshal(env, &lr_args, buf,
+		    __REP_LOGREQ_SIZE, &len)) != 0)
+			goto err;
+		DB_INIT_DBT(max_lsn_dbt, buf, len);
 		max_lsn_dbtp = &max_lsn_dbt;
 		/*
 		 * Gap requests are "new" and can go anywhere, unless
@@ -1035,7 +1008,7 @@ __rep_chk_newfile(env, logc, rep, rp, eid)
 			 * client asked for a log record
 			 * we no longer have and it is
 			 * outdated.
-			 * XXX - This could be optimized by
+			 * Note: This could be optimized by
 			 * having the master perform and
 			 * send a REP_UPDATE message.  We
 			 * currently want the client to set
@@ -1058,17 +1031,11 @@ __rep_chk_newfile(env, logc, rep, rp, eid)
 			    &nf_args.version)) == 0) {
 				memset(&newfiledbt, 0,
 				    sizeof(newfiledbt));
-				if (rep->version < DB_REPVERSION_47)
-					DB_INIT_DBT(newfiledbt,
-					    &nf_args.version,
-					    sizeof(nf_args.version));
-				else {
-					if ((ret = __rep_newfile_marshal(env,
-					    &nf_args, buf, __REP_NEWFILE_SIZE,
-					    &len)) != 0)
-						return (ret);
-					DB_INIT_DBT(newfiledbt, buf, len);
-				}
+				if ((ret = __rep_newfile_marshal(env,
+				    &nf_args, buf, __REP_NEWFILE_SIZE,
+				    &len)) != 0)
+					return (ret);
+				DB_INIT_DBT(newfiledbt, buf, len);
 				(void)__rep_send_message(env, eid,
 				    REP_NEWFILE, &endlsn,
 				    &newfiledbt, REPCTL_RESEND, 0);

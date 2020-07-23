@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -101,6 +101,26 @@
           <dt>
             <span class="sect2">
               <a href="addedpragmas.html#replication_pragmas">Replication PRAGMAs</a>
+            </span>
+          </dt>
+          <dt>
+            <span class="sect2">
+              <a href="addedpragmas.html#bdb_add_user_auth">PRAGMA bdbsql_userauth_add</a>
+            </span>
+          </dt>
+          <dt>
+            <span class="sect2">
+              <a href="addedpragmas.html#bdb_user_login">PRAGMA bdbsql_user_login</a>
+            </span>
+          </dt>
+          <dt>
+            <span class="sect2">
+              <a href="addedpragmas.html#bdb_user_edit">PRAGMA bdbsql_user_edit</a>
+            </span>
+          </dt>
+          <dt>
+            <span class="sect2">
+              <a href="addedpragmas.html#delete_user">PRAGMA bdbsql_user_delete</a>
             </span>
           </dt>
         </dl>
@@ -414,7 +434,7 @@
         <p>
                     Fourteen PRAGMAs were added to manage and control replication.
                     They are described in 
-                    <a class="xref" href="sqlrep.html" title="Chapter 4. Using Replication with the SQL API">Using Replication with the SQL API</a>:
+                    <a class="xref" href="sqlrep.html" title="Chapter 5. Using Replication with the SQL API">Using Replication with the SQL API</a>:
                 </p>
         <div class="note" style="margin-left: 0.5in; margin-right: 0.5in;">
           <h3 class="title">Note</h3>
@@ -499,6 +519,86 @@
                         </p>
             </li>
           </ul>
+        </div>
+      </div>
+      <div class="sect2" lang="en" xml:lang="en">
+        <div class="titlepage">
+          <div>
+            <div>
+              <h3 class="title"><a id="bdb_add_user_auth"></a>PRAGMA bdbsql_userauth_add</h3>
+            </div>
+          </div>
+        </div>
+        <pre class="programlisting">PRAGMA bdbsql_userauth_add = "user:password:isAdmin";</pre>
+        <p>
+                    Creates a new user. isAdmin should only be 0 (non-admin user) or 1 (admin user).
+                </p>
+        <div class="note" style="margin-left: 0.5in; margin-right: 0.5in;">
+          <h3 class="title">Note</h3>
+          <p>
+                        ':' is not alowed to appear in the user name/password
+                        when working with BDB SQL user authentication pragmas.
+                    </p>
+        </div>
+      </div>
+      <div class="sect2" lang="en" xml:lang="en">
+        <div class="titlepage">
+          <div>
+            <div>
+              <h3 class="title"><a id="bdb_user_login"></a>PRAGMA bdbsql_user_login</h3>
+            </div>
+          </div>
+        </div>
+        <pre class="programlisting">PRAGMA bdbsql_user_login = "user:password";</pre>
+        <p>
+                    Authenticates a user.
+                </p>
+        <div class="note" style="margin-left: 0.5in; margin-right: 0.5in;">
+          <h3 class="title">Note</h3>
+          <p>
+                        ':' is not alowed to appear in the user name/password
+                        when working with BDB SQL user authentication pragmas.
+                    </p>
+        </div>
+      </div>
+      <div class="sect2" lang="en" xml:lang="en">
+        <div class="titlepage">
+          <div>
+            <div>
+              <h3 class="title"><a id="bdb_user_edit"></a>PRAGMA bdbsql_user_edit</h3>
+            </div>
+          </div>
+        </div>
+        <pre class="programlisting">PRAGMA bdbsql_user_edit = "user:password:isAdmin";</pre>
+        <p>
+                    Change a user's login credentials or admin privilege. isAdmin should only be 0 (non-admin user) or 1 (admin user).
+                </p>
+        <div class="note" style="margin-left: 0.5in; margin-right: 0.5in;">
+          <h3 class="title">Note</h3>
+          <p>
+                        ':' is not alowed to appear in the user name/password
+                        when working with BDB SQL user authentication pragmas.
+                    </p>
+        </div>
+      </div>
+      <div class="sect2" lang="en" xml:lang="en">
+        <div class="titlepage">
+          <div>
+            <div>
+              <h3 class="title"><a id="delete_user"></a>PRAGMA bdbsql_user_delete</h3>
+            </div>
+          </div>
+        </div>
+        <pre class="programlisting">PRAGMA bdbsql_user_delete = "user";</pre>
+        <p>
+                    Deletes a user.
+                </p>
+        <div class="note" style="margin-left: 0.5in; margin-right: 0.5in;">
+          <h3 class="title">Note</h3>
+          <p>
+                        ':' is not alowed to appear in the user name/password
+                        when working with BDB SQL user authentication pragmas.
+                    </p>
         </div>
       </div>
     </div>

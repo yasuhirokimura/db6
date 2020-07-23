@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 
@@ -28,6 +28,8 @@ public class EvolveStats {
 
     /**
      * The total number of entities read during eager evolution.
+     *
+     * @return the number of entities read.
      */
     public int getNRead() {
         return nRead;
@@ -35,6 +37,8 @@ public class EvolveStats {
 
     /**
      * The total number of entities converted during eager evolution.
+     *
+     * @return the number of entities converted.
      */
     public int getNConverted() {
         return nConverted;

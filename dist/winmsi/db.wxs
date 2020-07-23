@@ -9,7 +9,7 @@
      Keywords="Embedded Database Datastore"
      Description='@PRODUCT_NAME@ @PROD_WIX_VERSION@'
      Comments='includes sources and binaries' InstallerVersion='300'
-     Compressed='yes' Platform="x86"
+     Compressed='yes' Platform="@WIN_BUILD@"
      Languages="1033" SummaryCodepage="1252" />
     <!-- The upgrade id should be the same to the UpgradeCode of the previous version you want upgrade -->
     <Upgrade Id='2ef4dbf0-b1a7-11e2-af6c-001e4f951af2'>
@@ -41,7 +41,7 @@
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="DesktopFolder" Name="." />
       <Directory Id="FavoritesFolder" Name="." />
-      <Directory Id="ProgramFilesFolder" Name=".">
+      <Directory Id="@PROGRAM_FILES_FOLDER@" Name=".">
         <Directory Id="OracleFolder" Name="Oracle">
           <Directory Id="INSTALLDIR"
                    Name="@PRODUCT_NAME@ @PROD_WIX_VERSION@">
@@ -64,7 +64,7 @@
      ignored.
     -->
     <DirectoryRef Id="INSTALLDIR">
-      <Merge Id="VCRedist" SourceFile="@MERGE_MODULES_LOCATION@" DiskId="1" Language="0"/>
+      <Merge Id="VCRedist" SourceFile="C:\Program Files (x86)\Common Files\Merge Modules\@MERGE_MODULES_LOCATION@" DiskId="1" Language="0"/>
     </DirectoryRef>
     <!-- Features:
 	o required stuff

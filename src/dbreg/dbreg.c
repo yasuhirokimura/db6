@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -1001,7 +1001,7 @@ __dbreg_log_id(dbp, txn, id, needlock)
 	fid_dbt.data = dbp->fileid;
 	fid_dbt.size = DB_FILE_ID_LEN;
 
-	op = !F_ISSET(dbp, DB_AM_OPEN_CALLED) ? DBREG_PREOPEN :
+	op = !F2_ISSET(dbp, DB2_AM_MPOOL_OPENED) ? DBREG_PREOPEN :
 	    (F_ISSET(dbp, DB_AM_INMEM) ?
 	    (F2_ISSET(dbp, DB2_AM_EXCL) ? DBREG_XREOPEN : DBREG_REOPEN):
 	    (F2_ISSET(dbp, DB2_AM_EXCL) ? DBREG_XOPEN : DBREG_OPEN));

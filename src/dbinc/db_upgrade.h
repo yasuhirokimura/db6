@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -242,7 +242,6 @@ typedef struct hashhdr {	/* Disk resident portion */
 	 */
 } HASHHDR;
 
-
 /************************************************************************
  BLOB RECORD LAYOUTS
  ************************************************************************/
@@ -297,7 +296,7 @@ typedef struct _bblob60 {
 typedef struct _heapblob60 {
 	u_int8_t flags;			/* 00: Flags describing record. */
 	u_int8_t unused;		/* 01: Padding. */
-	u_int16_t size;			/* 02-03: The size of the stored data piece. */
+	u_int16_t size;			/* 02-03: Size of stored data piece. */
 	u_int8_t  encoding;		/*    04: Encoding of blob file. */
 	u_int8_t  unused2[3];		/* 05-07: Padding, unused. */
 	u_int32_t id_lo;		/* 08-11: Blob file identifier. */
@@ -312,16 +311,16 @@ typedef struct _heapblob60 {
 	u_int32_t file_id_hi;		/* 72-75: File directory hi. */
 } HEAPBLOBHDR60;
 
-#define HEAPBLOBREC60_SIZE		(sizeof(HEAPBLOBHDR60))
+#define	HEAPBLOBREC60_SIZE		(sizeof(HEAPBLOBHDR60))
 
-#define GET_BLOB60_FILE_ID(e, p, o, ret)				\
+#define	GET_BLOB60_FILE_ID(e, p, o, ret)				\
 	GET_LO_HI(e, (p)->file_id_lo, (p)->file_id_hi, o, ret);
 
-#define GET_BLOB60_SDB_ID(e, p, o, ret)					\
+#define	GET_BLOB60_SDB_ID(e, p, o, ret)					\
 	GET_LO_HI(e, (p)->sdb_id_lo, (p)->sdb_id_hi, o, ret);
 
 /* Return a uintmax_t version of blob_id. */
-#define GET_BLOB60_ID(e, p, o, ret)	do {				\
+#define	GET_BLOB60_ID(e, p, o, ret)	do {				\
 	DB_ASSERT((e), sizeof(o) <= 8);					\
 	if (sizeof(o) == 8) {						\
 		(o) = (p).id_hi;					\
@@ -330,7 +329,7 @@ typedef struct _heapblob60 {
 	} else {							\
 		if ((p).id_hi > 0) {					\
 			__db_errx((e), DB_STR("0766",			\
-			    "Blob identifier overflow."));		\
+			    "External file identifier overflow."));	\
 			(ret) = EINVAL;					\
 		}							\
 		(o) = (p).id_lo;					\
@@ -338,7 +337,7 @@ typedef struct _heapblob60 {
 } while (0);
 
 /* Return a off_t version of blob size. */
-#define GET_BLOB60_SIZE(e, p, o, ret)	do {				\
+#define	GET_BLOB60_SIZE(e, p, o, ret)	do {				\
 	DB_ASSERT((e), sizeof(o) <= 8);					\
 	if (sizeof(o) == 8) {						\
 		(o) = (p).size_hi;					\
@@ -347,12 +346,12 @@ typedef struct _heapblob60 {
 	} else {							\
 		if ((p).size_hi > 0) {					\
 			__db_errx((e), DB_STR("0767",			\
-			    "Blob size overflow."));			\
+			    "External file size overflow."));		\
 			(ret) = EINVAL;					\
 		}							\
 		if ((p).size_lo > INT_MAX) {				\
 			__db_errx((e), DB_STR("0768",			\
-			    "Blob size overflow."));			\
+			    "External file size overflow."));		\
 			(ret) = EINVAL;					\
 		}							\
 		(o) = (int32_t)(p).size_lo;				\

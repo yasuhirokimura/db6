@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -72,7 +72,9 @@
                 The first step in tuning the cache size is to use the
                 db_stat utility (or the statistics returned by the
                 <a href="../api_reference/C/dbstat.html" class="olink">DB-&gt;stat()</a> function) to measure the effectiveness of the
-                cache. The goal is to maximize the cache's hit rate.
+                cache. The goal is to maximize the cache's hit rate
+                without adversely affecting memory management in
+                the operating system.
                 Typically, increasing the size of the cache until the
                 hit rate reaches 100% or levels off will yield the
                 best performance. However, if your working set is

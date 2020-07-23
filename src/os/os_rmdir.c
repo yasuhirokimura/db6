@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1997, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1997, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -32,7 +32,7 @@ __os_rmdir(env, name)
 
 	RETRY_CHK((rmdir(name)), ret);
 	if (ret != 0)
-		return (__os_posix_err(ret));
+		return (USR_ERR(env, __os_posix_err(ret)));
 
 	return (ret);
 }

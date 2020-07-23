@@ -177,7 +177,7 @@ $(SQLITE3_A10N_O):	$(SQLITE3_A10N_C)
 	$(LIBTOOL) --mode=compile $(CC) -c $(CFLAGS) $(SQLITE3_A10N_C)
 
 libsqlite_jni.la:	sqlite_jni.lo $(SQLITE3_A10N_O)
-	$(LIBTOOL) --mode=link $(CC) $(CFLAGS) -o libsqlite_jni.la \
+	$(LIBTOOL) --mode=link $(CC) $(CFLAGS) -shrext $(JMODSUFFIX) -o libsqlite_jni.la \
 	    sqlite_jni.lo $(SQLITE3_A10N_O) -rpath $(NATIVE_LIB_DIR) \
 	    -module -avoid-version $(LIBS)
 

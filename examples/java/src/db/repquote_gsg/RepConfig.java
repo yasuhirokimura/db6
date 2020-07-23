@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2001, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2001, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -68,13 +68,6 @@ public class RepConfig
         return thisHost;
     }
 
-    public ReplicationHostAddress getThisHostAddress()
-    {
-        if (!gotListenAddress)
-              System.err.println("Warning: no host specified, returning default.");
-        return thisHost.getAddress();
-      }
-
     public boolean gotListenAddress() {
         return gotListenAddress;
     }
@@ -99,13 +92,6 @@ public class RepConfig
         if (currOtherHost >= otherHosts.size())
             return null;
         return (ReplicationHostAddress)otherHosts.get(currOtherHost);
-    }
-
-    public ReplicationHostAddress getOtherHost(int i)
-    {
-        if (i >= otherHosts.size())
-            return null;
-        return (ReplicationHostAddress)otherHosts.get(i);
     }
 }
 

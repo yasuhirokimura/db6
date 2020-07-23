@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2009, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2009, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 using System;
@@ -29,7 +29,8 @@ namespace BerkeleyDB {
         private ReplicationViewDelegate replicationViewHandler;
         private SetThreadIDDelegate threadIDHandler;
         private SetThreadNameDelegate threadNameHandler;
-        private string _pfx;
+        private string _errpfx;
+        private string _msgpfx;
         private DBTCopyDelegate CopyDelegate;
         private BDB_BackupCloseDelegate doBackupCloseRef;
         private BDB_BackupOpenDelegate doBackupOpenRef;
@@ -86,14 +87,15 @@ namespace BerkeleyDB {
             dbenv.api2_internal.notifyHandler(
                 (NotificationEvent)eventcode, event_info);
         }
-        private static void doErrFeedback(IntPtr env, string pfx, string msg) {
+        private static void doErrFeedback(IntPtr env, string errpfx, string msg) {
             DB_ENV dbenv = new DB_ENV(env, false);
             dbenv.api2_internal.errFeedbackHandler(
-                dbenv.api2_internal._pfx, msg);
+                dbenv.api2_internal._errpfx, msg);
         }
-        private static void doMsgFeedback(IntPtr env, string msg) {
+        private static void doMsgFeedback(IntPtr env, string msgpfx, string msg) {
             DB_ENV dbenv = new DB_ENV(env, false);
-            dbenv.api2_internal.msgFeedbackHandler(msg);
+            dbenv.api2_internal.msgFeedbackHandler(
+                dbenv.api2_internal._msgpfx, msg);
         }
         private static void doFeedback(IntPtr env, int opcode, int percent) {
             DB_ENV dbenv = new DB_ENV(env, false);
@@ -192,9 +194,11 @@ namespace BerkeleyDB {
             foreach (string dirname in cfg.DataDirs)
                 dbenv.add_data_dir(dirname);
             if (cfg.BlobDir != null)
-                dbenv.set_blob_dir(cfg.BlobDir);
+                dbenv.set_ext_file_dir(cfg.BlobDir);
+            if (cfg.ExternalFileDir != null)
+                dbenv.set_ext_file_dir(cfg.ExternalFileDir);
             if (cfg.blobThresholdIsSet)
-                dbenv.set_blob_threshold(cfg.BlobThreshold, 0);
+                dbenv.set_ext_file_threshold(cfg.BlobThreshold, 0);
             if (cfg.CreationDir != null)
                 dbenv.set_create_dir(cfg.CreationDir);
             if (cfg.encryptionIsSet)
@@ -205,6 +209,7 @@ namespace BerkeleyDB {
             if (cfg.ErrorFeedback != null)
                 ErrorFeedback = cfg.ErrorFeedback;
             ErrorPrefix = cfg.ErrorPrefix;
+            MessagePrefix = cfg.MessagePrefix;
             if (cfg.EventNotify != null)
                 EventNotify = cfg.EventNotify;
             if (cfg.Feedback != null)
@@ -340,6 +345,8 @@ namespace BerkeleyDB {
                     dbenv.rep_set_config(DbConstants.DB_REP_CONF_INMEM, 1);
                 if (cfg.RepSystemCfg.leaseTimeoutIsSet)
                     RepLeaseTimeout = cfg.RepSystemCfg.LeaseTimeout;
+                if (cfg.RepSystemCfg.writeForwardTimeoutIsSet)
+                    RepWriteForwardTimeout = cfg.RepSystemCfg.WriteForwardTimeout;
                 if (!cfg.RepSystemCfg.AutoInit)
                     RepAutoInit = false;
                 if (cfg.RepSystemCfg.NoBlocking)
@@ -382,6 +389,8 @@ namespace BerkeleyDB {
                     RepPrefmasMaster = true;
                 if (cfg.RepSystemCfg.PrefmasClient)
                     RepPrefmasClient = true;
+                if (cfg.RepSystemCfg.ForwardWrites)
+                    RepForwardWrites = true;
             }
 
         }
@@ -511,39 +520,58 @@ namespace BerkeleyDB {
         }
         
         /// <summary>
-        /// The path of the directory where blobs are stored.
+        /// The path of the directory where external files are stored.
         /// </summary>
-        public string BlobDir {
+        public string ExternalFileDir {
             get {
                 string dir;
-                dbenv.get_blob_dir(out dir);
+                dbenv.get_ext_file_dir(out dir);
+                return dir;
+            }
+        }
+        /// <summary>
+        /// Deprecated.  Replaced by ExternalFileDir.
+        /// </summary>
+	public string BlobDir {
+            get {
+                string dir;
+                dbenv.get_ext_file_dir(out dir);
                 return dir;
             }
         }
         /// <summary>
         /// The size in bytes which is used to determine when a data item 
-        /// is stored as a blob.
+        /// is stored as an external file.
         /// <para>
         /// Any data item that is equal to or larger in size than the
-        /// threshold value is automatically stored as a blob.
+        /// threshold value is automatically stored as an external file.
         /// </para>
         /// <para>
         /// If the threshold value is 0, databases opened in the environment
-        /// default to never using blob support.
-        /// </para>
-        /// <para>
-        /// It is illegal to enable blob support if replication is enabled for the
-        /// environment.
+        /// default to never using external file support.
         /// </para>
         /// </summary>
-        public uint BlobThreshold {
+        public uint ExternalFileThreshold {
             get {
                 uint ret = 0;
-                dbenv.get_blob_threshold(ref ret);
+                dbenv.get_ext_file_threshold(ref ret);
                 return ret;
             }
             set {
-                dbenv.set_blob_threshold(value, 0);
+                dbenv.set_ext_file_threshold(value, 0);
+            }
+        }
+	/// <summary>
+        /// Deprecated.  Replaced by ExternalFileThreshold.
+        /// </summary>
+	public uint BlobThreshold {
+            get {
+                uint ret = 0;
+                dbenv.get_ext_file_threshold(ref ret);
+                return ret;
+            }
+            set {
+                dbenv.set_ext_file_threshold(value, 0);
             }
         }
         
@@ -729,8 +757,24 @@ namespace BerkeleyDB {
         /// </para>
         /// </remarks>
         public string ErrorPrefix {
-            get { return _pfx; }
-            set { _pfx = value; }
+            get { return _errpfx; }
+            set { _errpfx = value; }
+        }
+
+        /// <summary>
+        /// The prefix string that appears before informational messages issued
+        /// by Berkeley DB.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// For databases opened inside of a DatabaseEnvironment, setting
+        /// MessagePrefix affects the entire environment and is equivalent to
+        /// setting <see cref="DatabaseEnvironment.MessagePrefix"/>.
+        /// </para>
+        /// </remarks>
+        public string MessagePrefix {
+            get { return _msgpfx; }
+            set { _msgpfx = value; }
         }
 
         /// <summary>
@@ -1054,17 +1098,30 @@ namespace BerkeleyDB {
             }
         }
         /// <summary>
-        /// If true, enables full logging of blob data.
+        /// If true, enables full logging of external file data.
         /// Required if using HA or the hotbackup utility.
+        /// </summary>
+        public bool LogExternalFileContent {
+            get {
+                int onoff = 0;
+                dbenv.log_get_config(DbConstants.DB_LOG_EXT_FILE, ref onoff);
+                return (onoff != 0);
+            }
+            set {
+                dbenv.log_set_config(DbConstants.DB_LOG_EXT_FILE, value ? 1 : 0);
+            }
+        }
+	/// <summary>
+        /// Deprecated.  Replaced by LogExternalFileContent
         /// </summary>
         public bool LogBlobContent {
             get {
                 int onoff = 0;
-                dbenv.log_get_config(DbConstants.DB_LOG_BLOB, ref onoff);
+                dbenv.log_get_config(DbConstants.DB_LOG_EXT_FILE, ref onoff);
                 return (onoff != 0);
             }
             set {
-                dbenv.log_set_config(DbConstants.DB_LOG_BLOB, value ? 1 : 0);
+                dbenv.log_set_config(DbConstants.DB_LOG_EXT_FILE, value ? 1 : 0);
             }
         }
         /// <summary>
@@ -1594,6 +1651,21 @@ namespace BerkeleyDB {
                 return (flags & DbConstants.DB_PRIVATE) != 0;
             }
         }
+	/// <summary>
+        /// The path of a directory to be used as the location of region files.
+        /// Region files created by the Environment are stored in this
+	/// directory.
+        /// </summary>
+        public string RegionDir {
+            get {
+                string ret;
+                dbenv.get_region_dir(out ret);
+                return ret;
+            }
+            private set {
+                dbenv.set_region_dir(value);
+            }
+        }
         /// <summary>
         /// The gigabytes component of the byte-count limit on the amount of
         /// memory to be used by shared structures in the main environment
@@ -1862,6 +1934,17 @@ namespace BerkeleyDB {
             get { return getRepTimeout(DbConstants.DB_REP_LEASE_TIMEOUT); }
             set { 
                 dbenv.rep_set_timeout(DbConstants.DB_REP_LEASE_TIMEOUT, value);
+            }
+        }
+        /// <summary>
+        /// Configure the amount of time a Replication Manager client waits
+        /// for a response from a forwarded write operation before returning
+        /// a failure indication. The default value is 5 seconds.
+        /// </summary>
+        public uint RepWriteForwardTimeout {
+            get { return getRepTimeout(DbConstants.DB_REP_WRITE_FORWARD_TIMEOUT); }
+            set { 
+                dbenv.rep_set_timeout(DbConstants.DB_REP_WRITE_FORWARD_TIMEOUT, value);
             }
         }
         /// <summary>
@@ -2142,6 +2225,24 @@ namespace BerkeleyDB {
             set { 
                 dbenv.rep_set_config(
                     DbConstants.DB_REPMGR_CONF_PREFMAS_CLIENT, value ? 1 : 0);
+            }
+        }
+        /// <summary>
+        /// Enable simple write forwarding for this site. By default, write
+        /// operations cannot be performed on a replication client site. This
+        /// option enables forwarding of simple client put and delete operations
+        /// to the master site for processing. These operations must use an implicit
+        /// NULL transaction ID to be forwarded. Any other write operation that
+        /// specifies a non-NULL transaction throws a DatabaseException. The master
+        /// must have an open database handle for the database on which a forwarded
+        /// write operation is being performed. All sites in the replication group 
+        /// should have the same value for this configuration option.
+        /// </summary>
+        public bool RepForwardWrites {
+            get { return getRepConfig(DbConstants.DB_REPMGR_CONF_FORWARD_WRITES); }
+            set { 
+                dbenv.rep_set_config(
+                    DbConstants.DB_REPMGR_CONF_FORWARD_WRITES, value ? 1 : 0);
             }
         }
         /// <summary>
@@ -3658,6 +3759,7 @@ namespace BerkeleyDB {
         /// not yet been committed or aborted. Calling CloseForceSyncAndForceSyncEnv
         /// has the effect of both CloseForceSync and CloseForceSyncEnv. See
         /// CloseForceSync and CloseForceSyncEnv documentation for more details.
+        /// </para>
         /// </remarks>
         public void CloseForceSyncAndForceSyncEnv() {
             dbenv.close(DbConstants.DB_FORCESYNC | DbConstants.DB_FORCESYNCENV);

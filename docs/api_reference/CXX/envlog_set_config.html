@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -69,7 +69,7 @@ DbEnv::log_set_config(u_int32_t flags, int onoff); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp61504568"></a>Parameters</h3>
+              <h3 class="title"><a id="idp104648800"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -77,7 +77,7 @@ DbEnv::log_set_config(u_int32_t flags, int onoff); </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp61532696"></a>flags</h4>
+                <h4 class="title"><a id="idp104660048"></a>flags</h4>
               </div>
             </div>
           </div>
@@ -129,14 +129,14 @@ DbEnv::log_set_config(u_int32_t flags, int onoff); </pre>
               </li>
               <li>
                 <p><a id="log_set_config_DB_LOG_BLOB"></a>
-                        <code class="literal">DB_LOG_BLOB</code>
+                        <code class="literal">DB_LOG_EXT_FILE</code>
                     </p>
                 <p>
                         Enables full logging of 
-                        <a class="link" href="blob.html" title="Chapter 14.  Binary Large Objects">BLOB</a> data. Only use
-                        this flag if using replication or running a hot
+                        <a class="link" href="blob.html" title="Chapter 14.  External Files">external file</a> data. Only
+                        use this flag if using replication or running a hot
                         backup; otherwise, it will impose a performance
-                        penalty on BLOB operations.
+                        penalty on external file operations.
                     </p>
                 <p>
                         This flag is off by default, unless Replication is
@@ -144,7 +144,7 @@ DbEnv::log_set_config(u_int32_t flags, int onoff); </pre>
                         on by default.
                     </p>
                 <p>
-                        The <code class="literal">DB_LOG_BLOB</code> flag may be
+                        The <code class="literal">DB_LOG_EXT_FILE</code> flag may be
                         used to configure Berkeley DB at any time during
                         the life of the application.
                     </p>
@@ -329,7 +329,7 @@ DbEnv::log_set_config(u_int32_t flags, int onoff); </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp61557264"></a>onoff</h4>
+                <h4 class="title"><a id="idp104655312"></a>onoff</h4>
               </div>
             </div>
           </div>
@@ -344,7 +344,7 @@ DbEnv::log_set_config(u_int32_t flags, int onoff); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp61528808"></a>Errors</h3>
+              <h3 class="title"><a id="idp104637952"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -362,7 +362,7 @@ DbEnv::log_set_config(u_int32_t flags, int onoff); </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp61555072"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp104687280"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -375,7 +375,7 @@ DbEnv::log_set_config(u_int32_t flags, int onoff); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp61549760"></a>Class</h3>
+              <h3 class="title"><a id="idp104645360"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -387,7 +387,7 @@ DbEnv::log_set_config(u_int32_t flags, int onoff); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp61529456"></a>See Also</h3>
+              <h3 class="title"><a id="idp104702224"></a>See Also</h3>
             </div>
           </div>
         </div>

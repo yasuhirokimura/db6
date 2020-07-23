@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2006, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2006, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -153,17 +153,16 @@ __repmgr_accept(env)
 			return (ret);
 		}
 	}
-	RPRINT(env, (env, DB_VERB_REPMGR_MISC, "accepted a new connection"));
+	__repmgr_print_addr(env, (struct sockaddr *)&siaddr,
+	    "accepted new connection", 1, 0);
 
 	if ((ret =
 	    __repmgr_new_connection(env, &conn, s, CONN_NEGOTIATE)) != 0) {
 		(void)closesocket(s);
 		return (ret);
 	}
-	if ((ret = __repmgr_set_keepalive(env, conn)) != 0) {
-		(void)__repmgr_destroy_conn(env, conn);
+	if ((ret = __repmgr_set_keepalive(env, conn)) != 0)
 		return (ret);
-	}
 	if ((ret = __repmgr_set_nonblock_conn(conn)) != 0) {
 		__db_err(env, ret, DB_STR("3616",
 		    "can't set nonblock after accept"));

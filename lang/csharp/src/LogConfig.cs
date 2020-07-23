@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2009, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2009, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 using System;
@@ -78,9 +78,14 @@ namespace BerkeleyDB {
         /// </para>
         /// </remarks>
         public bool InMemory;
-        /// <summary>
-        /// If true, enables full logging of blob data.
-        /// Required if using HA or the hotbackup utility.
+	/// <summary>
+        /// If true, enables full logging of external file data.
+        /// Required if using HA or the hotbackup utility.  Replaces
+	/// LogBlobContent.
+        /// </summary>
+        public bool LogExternalFileContent;
+	/// <summary>
+        /// Deprecated.  Replaced by LogExternalFileContent.
         /// </summary>
         public bool LogBlobContent;
         /// <summary>
@@ -114,8 +119,8 @@ namespace BerkeleyDB {
                     ret |= DbConstants.DB_LOG_DSYNC;
                 if (InMemory)
                     ret |= DbConstants.DB_LOG_IN_MEMORY;
-                if (LogBlobContent)
-                    ret |= DbConstants.DB_LOG_BLOB;
+                if (LogExternalFileContent || LogBlobContent)
+		    ret |= DbConstants.DB_LOG_EXT_FILE;
                 if (NoBuffer)
                     ret |= DbConstants.DB_LOG_DIRECT;
                 if (NoSync)

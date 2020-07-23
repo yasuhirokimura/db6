@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2013, 2014 Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2013, 2016 Oracle and/or its affiliates. All rights reserved.
 #
 # $Id$
 #
@@ -36,6 +36,7 @@ proc test151 { method {tnum "151"} args } {
 	set txnenv 0
 	set extent 0
 	set chksum 0
+	set dbremove_args ""
 	set eindex [lsearch -exact $args "-chksum"]
 	if { $eindex != -1 && $databases_in_memory == 0 &&\
 	    $repfiles_in_memory == 0} {
@@ -57,11 +58,26 @@ proc test151 { method {tnum "151"} args } {
 		}
 		set testfile test$tnum.db
 		set testfile2 test$tnum.2.db
+		set testfile3 test$tnum.3.db
+		set badfile wordlist
 		append dump_args "-h $testdir"
 		append loadr_args "-h $testdir"
+		append dbremove_args "-env $env"
 	} else {
 		set testfile $testdir/test$tnum.db
 		set testfile2 $testdir/test$tnum.2.db
+		set testfile3 $testdir/test$tnum.3.db
+		set badfile $testdir/wordlist
+	}
+
+	set eindex [lsearch -regexp $args "-encrypt.*"]
+	if { $eindex != -1 } {
+		set encrypt_flag [lindex $args $eindex]
+		append dbremove_args " $encrypt_flag"
+		if { $encrypt_flag != "-encrypt" } {
+			incr eindex
+			append dbremove_args " " [lindex $args $eindex]	
+		}
 	}
 
 	# Under these circumstances db_dump will generate
@@ -133,6 +149,22 @@ proc test151 { method {tnum "151"} args } {
 		error_check_good db_close [$db close] 0
 	}
 
+	if { [is_hash $method] == 1 } {
+		# Create a database with custom hash function, then fill it.
+		puts "Test$tnum: Preparing $testfile3."
+		set db [eval {berkdb_open -create -mode 0644 -hashproc test151_hash }\
+		    $args $omethod $testfile3]
+		error_check_good dbopen [is_valid_db $db] TRUE
+		if { $txnenv == 1 } { 
+			set txn [$env txn]
+		}
+		error_check_good db_fill [populate $db $method $txn 10 0 0] 0
+		if { $txnenv == 1 } { 
+			error_check_good txn_commit [$txn commit] 0
+		}
+		error_check_good db_close [$db close] 0
+	}
+
 	puts "Test$tnum: testing db_dump."
 
 	set binname db_dump
@@ -151,9 +183,25 @@ proc test151 { method {tnum "151"} args } {
 		test151_execmd "$binname -l $dump_args $testfile2 $std_redirect"
 	}
 
+	# For hash database with custom hash functions, -v v flag returns
+	# DB_VERIFY_BAD.
+	if { [is_hash $method] == 1 } {
+		test151_execmd "$binname -v v $dump_args $testfile3 $std_redirect"\
+		    [list "DB_VERIFY_BAD"]
+		# Remove the database so the general verification doesn't fail
+		error_check_good dbremove [eval {berkdb dbremove} $dbremove_args\
+		    $testfile3] 0
+	}
+
+	# wordlist is not a valid database file, error with DB_VERIFY_BAD is allowed.
+	file copy $test_path/wordlist $testdir/wordlist
+	test151_execmd "$binname -v o $dump_args $badfile $std_redirect"\
+	    [list "DB_VERIFY_BAD"]
+
 	# All remaining options.
-	set flaglist [list "-d a" "-d h" "-d r" "-f $dump_file" "-N" "-p" "-r" "-k" ""]
-	
+	set flaglist [list "-d a" "-d h" "-d r" "-f $dump_file" "-N" "-p" "-r"\
+	    "-k" "" "-v o" "-v v"]
+
 	foreach flag $flaglist {
 		test151_execmd "$binname $flag $dump_args\
 		    $testfile $std_redirect"
@@ -310,4 +358,9 @@ proc test151_execmd { execmd {allowed_errs ""} } {
 		}
 	}
 	puts "FAIL: got $result while executing '$execmd'"
+}
+
+# Simple hash comparison.
+proc test151_hash { a } {
+	return 1
 }

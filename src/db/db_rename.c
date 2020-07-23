@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2001, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2001, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -75,19 +75,27 @@ __env_dbrename_pp(dbenv, txn, name, subdb, newname, flags)
 		if ((ret = __db_txn_auto_init(env, ip, &txn)) != 0)
 			goto err;
 		txn_local = 1;
-	} else
-		if (txn != NULL && !TXN_ON(env) &&
-		    (!CDB_LOCKING(env) || !F_ISSET(txn, TXN_FAMILY))) {
-			ret = __db_not_txn_env(env);
-			goto err;
-		}
+	} else if (txn != NULL && !TXN_ON(env) &&
+	    (!CDB_LOCKING(env) || !F_ISSET(txn, TXN_FAMILY))) {
+		ret = __db_not_txn_env(env);
+		goto err;
+	}
 
 	LF_CLR(DB_AUTO_COMMIT);
 
 	if ((ret = __db_create_internal(&dbp, env, 0)) != 0)
 		goto err;
 
-	ret = __db_rename_int(dbp, ip, txn, name, subdb, newname, flags);
+#ifdef HAVE_SLICES
+	/*
+	 * Rename the slices (if any) first, because then container's portion
+	 * of the database needs to the used in order to rename the slices.
+	 */
+	ret = __db_slice_rename(dbp, txn, name, subdb, newname, flags);
+#endif
+	if (ret == 0)
+		ret = __db_rename_int(dbp, ip, txn,
+		    name, subdb, newname, flags);
 
 	if (txn_local) {
 		/*
@@ -239,9 +247,9 @@ __db_rename_int(dbp, ip, txn, name, subdb, newname, flags)
 	DB_TEST_RECOVERY(dbp, DB_TEST_PREDESTROY, ret, name);
 
 	if (name == NULL && subdb == NULL) {
+		ret = USR_ERR(env, EINVAL);
 		__db_errx(env, DB_STR("0503",
 		    "Rename on temporary files invalid"));
-		ret = EINVAL;
 		goto err;
 	}
 

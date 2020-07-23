@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2009, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2009, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 using System;
@@ -72,6 +72,8 @@ namespace BerkeleyDB {
                     cfg.EncryptionPassword, (uint)cfg.EncryptAlgorithm);
             if (cfg.ErrorPrefix != null)
                 ErrorPrefix = cfg.ErrorPrefix;
+            if (cfg.MessagePrefix != null)
+                MessagePrefix = cfg.MessagePrefix;
             if (cfg.ErrorFeedback != null)
                 ErrorFeedback = cfg.ErrorFeedback;
             if (cfg.Feedback != null)
@@ -110,9 +112,9 @@ namespace BerkeleyDB {
         }
         #endregion Constructor
 
-        private static void doMsgFeedback(IntPtr dbp, string msg) {
+        private static void doMsgFeedback(IntPtr dbp, string msgpfx, string msg) {
             DB db = new DB(dbp, false);
-            db.api_internal.msgFeedbackHandler(msg);
+            db.api_internal.msgFeedbackHandler(msgpfx, msg);
         }
 
         #region Callbacks
@@ -322,6 +324,21 @@ namespace BerkeleyDB {
         public string ErrorPrefix {
             get { return env.ErrorPrefix; }
             set { env.ErrorPrefix = value; }
+        }
+        /// <summary>
+        /// The prefix string that appears before informational messages issued
+        /// by Berkeley DB.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// For databases opened inside of a DatabaseEnvironment, setting
+        /// MessagePrefix affects the entire environment and is equivalent to
+        /// setting <see cref="DatabaseEnvironment.MessagePrefix"/>.
+        /// </para>
+        /// </remarks>
+        public string MessagePrefix {
+            get { return env.MessagePrefix; }
+            set { env.MessagePrefix = value; }
         }
         /// <summary>
         /// Monitor progress within long running operations.

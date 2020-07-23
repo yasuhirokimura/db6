@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -69,7 +69,7 @@ loop:	renv = NULL;
 		ret = __os_strdup(env, "process-private", &infop->name);
 	else {
 		(void)snprintf(buf, sizeof(buf), "%s", DB_REGION_ENV);
-		ret = __db_appname(env, DB_APP_NONE, buf, NULL, &infop->name);
+		ret = __db_appname(env, DB_APP_REGION, buf, NULL, &infop->name);
 	}
 	if (ret != 0)
 		goto err;
@@ -300,7 +300,7 @@ user_map_functions:
 	if (dbenv->blob_threshold != 0 &&
 	    renv->blob_threshold != dbenv->blob_threshold)
 		__db_msg(env, DB_STR("1591",
-"Warning: Ignoring blob_threshold size when joining environment"));
+"Warning: Ignoring ext_file_threshold size when joining environment"));
 
 	/*
 	 * Get a reference to the underlying REGION information for this
@@ -368,8 +368,6 @@ creation:
 	nregions = __memp_max_regions(env) + 5;
 	size = nregions * sizeof(REGION);
 	size += dbenv->passwd_len;
-	size += (dbenv->thr_max + dbenv->thr_max / 4) *
-	    __env_alloc_size(sizeof(DB_THREAD_INFO));
 	/* Space for replication buffer. */
 	if (init_flagsp != NULL && FLD_ISSET(*init_flagsp, DB_INITENV_REP))
 		size += MEGABYTE;
@@ -382,7 +380,11 @@ creation:
 	tregion.segid = INVALID_REGION_SEGID;
 
 	if ((tregion.max = dbenv->memory_max) == 0) {
-		/* Add some slop. */
+		/*
+		 * No maximum memory limit was given. Calculate how large the
+		 * main region could become if all of the explicit configuration
+		 * limits for lock, txn, log, thread are hit, plus some spare.
+		 */
 		size += 16 * 1024;
 		tregion.max = (roff_t)size;
 
@@ -391,10 +393,10 @@ creation:
 		tregion.max += (roff_t)__log_region_max(env);
 		tregion.max += (roff_t)__env_thread_max(env);
 	} else if (tregion.size > tregion.max) {
+		ret = USR_ERR(env, EINVAL);
 		__db_errx(env, DB_STR_A("1542",
 	"Minimum environment memory size %ld is bigger than spcified max %ld.",
 		    "%ld %ld"), (u_long)tregion.size, (u_long)tregion.max);
-		ret = EINVAL;
 		goto err;
 	} else if (F_ISSET(env, ENV_PRIVATE))
 		infop->max_alloc = dbenv->memory_max;
@@ -492,10 +494,10 @@ creation:
 	 * the REGION structure.
 	 */
 	if ((ret = __env_des_get(env, infop, infop, &rp)) != 0) {
-find_err:	__db_errx(env, DB_STR_A("1544",
+find_err:	if (ret == 0)
+			ret = USR_ERR(env, EINVAL);
+		__db_errx(env, DB_STR_A("1544",
 		    "%s: unable to find environment", "%s"), infop->name);
-		if (ret == 0)
-			ret = EINVAL;
 		goto err;
 	}
 	infop->rp = rp;
@@ -510,7 +512,7 @@ find_err:	__db_errx(env, DB_STR_A("1544",
 	 * attach to the shared memory segment.  So, we write the shared memory
 	 * identifier into the file, to be read by those other processes.
 	 *
-	 * XXX
+	 * !!!
 	 * This is really OS-layer information, but I can't see any easy way
 	 * to move it down there without passing down information that it has
 	 * no right to know, e.g., that this is the one-and-only REGENV region
@@ -1009,10 +1011,10 @@ __env_remove_file(env)
 	const char *dir;
 	char saved_char, *p, **names, *path, buf[sizeof(DB_REGION_FMT) + 20];
 
-	/* Get the full path of a file in the environment. */
+	/* Get the full path of a region file in the environment. */
 	(void)snprintf(buf, sizeof(buf), "%s", DB_REGION_ENV);
 	if ((ret = __db_appname(env,
-	    DB_APP_NONE, buf, NULL, &path)) != 0)
+	    DB_APP_REGION, buf, NULL, &path)) != 0)
 		return;
 
 	/* Get the parent directory for the environment. */
@@ -1072,7 +1074,7 @@ __env_remove_file(env)
 
 		/* Remove the file. */
 		if (__db_appname(env,
-		    DB_APP_NONE, names[cnt], NULL, &path) == 0) {
+		    DB_APP_REGION, names[cnt], NULL, &path) == 0) {
 			/*
 			 * Overwrite region files.  Temporary files would have
 			 * been maintained in encrypted format, so there's no
@@ -1089,7 +1091,7 @@ __env_remove_file(env)
 
 	if (lastrm != -1)
 		if (__db_appname(env,
-		    DB_APP_NONE, names[lastrm], NULL, &path) == 0) {
+		    DB_APP_REGION, names[lastrm], NULL, &path) == 0) {
 			(void)__os_unlink(env, path, 1);
 			__os_free(env, path);
 		}
@@ -1136,7 +1138,7 @@ __env_region_attach(env, infop, init, max)
 	/* Join/create the underlying region. */
 	(void)snprintf(buf, sizeof(buf), DB_REGION_FMT, infop->id);
 	if ((ret = __db_appname(env,
-	    DB_APP_NONE, buf, NULL, &infop->name)) != 0)
+	    DB_APP_REGION, buf, NULL, &infop->name)) != 0)
 		goto err;
 	if ((ret = __env_sys_attach(env, infop, rp)) != 0)
 		goto err;

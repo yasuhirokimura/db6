@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  */
 /*
  * Copyright (c) 1990, 1993, 1994, 1995, 1996
@@ -479,6 +479,7 @@ err:		for (; epg <= cp->csp; ++epg) {
 			child = NULL;
 			goto stop;
 		}
+		F_SET(dbc, C_ROOT_COLLAPSED);
 		child = NULL;
 
 		if (0) {

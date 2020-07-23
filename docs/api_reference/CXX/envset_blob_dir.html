@@ -3,27 +3,27 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <title>DbEnv::set_blob_dir()</title>
+    <title>DbEnv::set_ext_file_dir()</title>
     <link rel="stylesheet" href="apiReference.css" type="text/css" />
     <meta name="generator" content="DocBook XSL Stylesheets V1.73.2" />
     <link rel="start" href="index.html" title="Berkeley DB C++ API Reference" />
-    <link rel="up" href="blob.html" title="Chapter 14.  Binary Large Objects" />
-    <link rel="prev" href="envget_blob_threshold.html" title="DbEnv::get_blob_threshold()" />
-    <link rel="next" href="envset_blob_threshold.html" title="DbEnv::set_blob_threshold()" />
+    <link rel="up" href="blob.html" title="Chapter 14.  External Files" />
+    <link rel="prev" href="envget_blob_threshold.html" title="DbEnv::get_ext_file_threshold()" />
+    <link rel="next" href="envset_blob_threshold.html" title="DbEnv::set_ext_file_threshold()" />
   </head>
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
-          <th colspan="3" align="center">DbEnv::set_blob_dir()</th>
+          <th colspan="3" align="center">DbEnv::set_ext_file_dir()</th>
         </tr>
         <tr>
           <td width="20%" align="left"><a accesskey="p" href="envget_blob_threshold.html">Prev</a> </td>
           <th width="60%" align="center">Chapter 14. 
-                Binary Large Objects
+                External Files
         </th>
           <td width="20%" align="right"> <a accesskey="n" href="envset_blob_threshold.html">Next</a></td>
         </tr>
@@ -34,27 +34,27 @@
       <div class="titlepage">
         <div>
           <div>
-            <h2 class="title" style="clear: both"><a id="envset_blob_dir"></a>DbEnv::set_blob_dir()</h2>
+            <h2 class="title" style="clear: both"><a id="envset_blob_dir"></a>DbEnv::set_ext_file_dir()</h2>
           </div>
         </div>
       </div>
       <pre class="programlisting">#include &lt;db_cxx.h&gt;
  
 int
-DbEnv::set_blob_dir(const char *dir);  </pre>
+DbEnv::set_ext_file_dir(const char *dir);  </pre>
       <p>
-         The <code class="methodname">DbEnv::set_blob_dir()</code> method sets the
-         directory where BLOB data is stored. Use this method when the
+         The <code class="methodname">DbEnv::set_ext_file_dir()</code> method sets the
+         directory where external file data is stored. Use this method when the
          database is opened within an encompassing environment. If an
-         environment is not in use, use <a class="xref" href="set_blob_dir.html" title="Db::set_blob_dir()">Db::set_blob_dir()</a> instead.
+         environment is not in use, use <a class="xref" href="set_blob_dir.html" title="Db::set_ext_file_dir()">Db::set_ext_file_dir()</a> instead.
      </p>
       <p>
-         By default, if this method is not called then BLOB data is placed
+         By default, if this method is not called then external file data is placed
          in a subdirectory within the DB's environment.
      </p>
       <p>
-         Once this method has been used, you can call <a class="xref" href="envget_blob_dir.html" title="DbEnv::get_blob_dir()">DbEnv::get_blob_dir()</a> to
-         identify the current storage location used for BLOB data.
+         Once this method has been used, you can call <a class="xref" href="envget_blob_dir.html" title="DbEnv::get_ext_file_dir()">DbEnv::get_ext_file_dir()</a> to
+         identify the current storage location used for external file data.
      </p>
       <p>
          This method configures operations performed using the specified
@@ -66,7 +66,7 @@ DbEnv::set_blob_dir(const char *dir);  </pre>
      </p>
       <p>
          Unless otherwise specified, the
-         <code class="methodname">DbEnv::set_blob_dir()</code> <span>
+         <code class="methodname">DbEnv::set_ext_file_dir()</code> <span>
             
             <span>
                 method either returns a non-zero error value or throws an
@@ -79,7 +79,7 @@ DbEnv::set_blob_dir(const char *dir);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp63924672"></a>Parameters</h3>
+              <h3 class="title"><a id="idp108964208"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -87,12 +87,12 @@ DbEnv::set_blob_dir(const char *dir);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp63922072"></a>dir</h4>
+                <h4 class="title"><a id="idp109002912"></a>dir</h4>
               </div>
             </div>
           </div>
           <p>
-                 Provides the name of the directory where BLOB data is to
+                 Provides the name of the directory where external file data is to
                  be stored. If an absolute path is not provided, then the
                  directory identified here is relative to the environment's
                  home directory.
@@ -103,12 +103,12 @@ DbEnv::set_blob_dir(const char *dir);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp63925752"></a>Errors</h3>
+              <h3 class="title"><a id="idp109005248"></a>Errors</h3>
             </div>
           </div>
         </div>
         <p>
-             The <code class="methodname">DbEnv::set_blob_dir()</code> <span>
+             The <code class="methodname">DbEnv::set_ext_file_dir()</code> <span>
             
             <span>
                 method may fail and throw a <a class="link" href="dbexception.html" title="Chapter 6. The DbException Class">DbException</a> 
@@ -121,7 +121,7 @@ DbEnv::set_blob_dir(const char *dir);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp63934288"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp109020576"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -135,7 +135,7 @@ DbEnv::set_blob_dir(const char *dir);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp63916744"></a>Class</h3>
+              <h3 class="title"><a id="idp108977936"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -147,12 +147,12 @@ DbEnv::set_blob_dir(const char *dir);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp63935312"></a>See Also</h3>
+              <h3 class="title"><a id="idp109017008"></a>See Also</h3>
             </div>
           </div>
         </div>
         <p>
-             <a class="xref" href="blob.html#bloblist" title="BLOBs and Related Methods">BLOBs and Related Methods</a> 
+             <a class="xref" href="blob.html#bloblist" title="External Files and Related Methods">External Files and Related Methods</a> 
         </p>
       </div>
     </div>
@@ -167,11 +167,11 @@ DbEnv::set_blob_dir(const char *dir);  </pre>
           <td width="40%" align="right"> <a accesskey="n" href="envset_blob_threshold.html">Next</a></td>
         </tr>
         <tr>
-          <td width="40%" align="left" valign="top">DbEnv::get_blob_threshold() </td>
+          <td width="40%" align="left" valign="top">DbEnv::get_ext_file_threshold() </td>
           <td width="20%" align="center">
             <a accesskey="h" href="index.html">Home</a>
           </td>
-          <td width="40%" align="right" valign="top"> DbEnv::set_blob_threshold()</td>
+          <td width="40%" align="right" valign="top"> DbEnv::set_ext_file_threshold()</td>
         </tr>
       </table>
     </div>

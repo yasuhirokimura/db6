@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -24,6 +24,9 @@
 static int __env_init_verify __P((ENV *, u_int32_t, DB_DISTAB *));
 
 /*
+ * __log_verify_pp --
+ *	The DB_ENV->log_verify() API call.
+ *
  * PUBLIC: int __log_verify_pp __P((DB_ENV *, const DB_LOG_VERIFY_CONFIG *));
  */
 int
@@ -39,9 +42,9 @@ __log_verify_pp(dbenv, lvconfig)
 	phome = NULL;
 
 	if (lvconfig == NULL) {
+		ret = USR_ERR(dbenv->env, EINVAL);
 		__db_errx(dbenv->env, DB_STR("2584",
 		    "Must provide a configuration structure."));
-		ret = EINVAL;
 		goto err;
 	}
 	if (!IS_ZERO_LSN(lvconfig->start_lsn) ||
@@ -53,19 +56,19 @@ __log_verify_pp(dbenv, lvconfig)
 	if ((!IS_ZERO_LSN(lvconfig->start_lsn) && lvconfig->start_time != 0) ||
 	    (!IS_ZERO_LSN(lvconfig->end_lsn) && lvconfig->end_time != 0) ||
 	    (lsnrg && timerg)) {
+		ret = USR_ERR(dbenv->env, EINVAL);
 		__db_errx(dbenv->env, DB_STR("2501",
 		    "Set either an lsn range or a time range to verify logs "
 		    "in the range, don't mix time and lsn."));
-		ret = EINVAL;
 		goto err;
 	}
 	phome = dbenv->env->db_home;
 	if (phome != NULL && lvconfig->temp_envhome != NULL &&
 	    strcmp(phome, lvconfig->temp_envhome) == 0) {
+		ret = USR_ERR(dbenv->env, EINVAL);
 		__db_errx(dbenv->env,
 		    "Environment home for log verification internal use "
 		    "overlaps with that of the environment to verify.");
-		ret = EINVAL;
 		goto err;
 	}
 
@@ -397,9 +400,9 @@ __env_init_verify(env, version, dtabp)
 		break;
 
 	default:
+		ret = USR_ERR(env, EINVAL);
 		__db_errx(env, DB_STR_A("2505", "Not supported version %lu",
 		    "%lu"), (u_long)version);
-		ret = EINVAL;
 		break;
 	}
 err:	return (ret);

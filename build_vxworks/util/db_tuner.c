@@ -1,7 +1,7 @@
 /* 
  * See the file LICENSE for redistribution information.
  * 
- * Copyright (c) 2011, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2011, 2016 Oracle and/or its affiliates.  All rights reserved.
  * 
  * $Id$
  * 
@@ -54,7 +54,7 @@
 
 #ifndef lint
 static const char copyright[] =
-    "Copyright (c) 2011, 2014 Oracle and/or its affiliates.  All rights reserved.\n";
+    "Copyright (c) 2011, 2016 Oracle and/or its affiliates.  All rights reserved.\n";
 #endif
 
 /*
@@ -247,7 +247,7 @@ db_tuner_main(argc, argv)
 		break;
 	default:
 		dbenv->errx(dbenv, DB_STR("5001",
-		    "%s: Unsupported database type"), progname);
+		    "Unsupported database type"));
 	}
 
 err:

@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2001, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2001, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -574,9 +574,9 @@ proc repl_verdel { test method { nclients 1 } } {
 	if { $stat == 1 } {
 		return
 	}
-	set utilflag ""
+	set utilflag "-b $masterdir/__db_bl"
 	if { $encrypt != 0 } {
-		set utilflag "-P $passwd"
+		append utilflag " -P $passwd"
 	}
 	foreach testfile $dbs {
 
@@ -2052,6 +2052,12 @@ proc rep_test_upg.recno.check { key data } {
 	error_check_good pid $i -1
 }
 
+proc rep_test_upg.inmem.check { key data } {
+	# Using -unknown method because client sites do not have access to
+	# the method. 
+	error_check_good "key/data mismatch" $data [chop_data -unknown data$key]
+}
+
 # In a situation where logs are being archived off a master, it's
 # possible for a client to get so far behind that there is a gap
 # where the highest numbered client log file is lower than the 
@@ -2290,7 +2296,7 @@ proc proc_msgs_once { elist {dupp NONE} {errp NONE} } {
 
 proc rep_verify { masterdir masterenv clientdir clientenv \
     {compare_shared_portion 0} {match 1} {logcompare 1} \
-    {dbname "test.db"} {datadir ""} } {
+    {dbname "test.db"} {datadir ""} {bt_cmp_func 0} {ham_cmp_func 0} } {
 	global util_path
 	global encrypt
 	global passwd
@@ -2372,18 +2378,33 @@ proc rep_verify { masterdir masterenv clientdir clientenv \
 		}
 	}
 
+	set bt_cmp_flag ""
+	set ham_cmp_flag ""
+	if { $bt_cmp_func != 0 } {
+		set bt_cmp_flag -btcompare
+	} else {
+		set bt_cmp_func ""
+	}
+	if { $ham_cmp_func != 0 } {
+		set ham_cmp_flag -hashcompare
+	} else {
+		set ham_cmp_func ""
+	}
+
 	# ... now the databases.
 	#
 	# We're defensive here and throw an error if a database does
 	# not exist.  If opening the first database succeeded but the
 	# second failed, we close the first before reporting the error.
 	#
-	if { [catch {eval {berkdb_open_noerr} -env $masterenv\
+	if { [catch {eval {berkdb_open_noerr} -env $masterenv \
+	    $bt_cmp_flag $bt_cmp_func $ham_cmp_flag $ham_cmp_func \
 	    -rdonly $dbname} db1] } {
 		error "FAIL:\
 		    Unable to open first db $dbname in rep_verify: $db1"
 	}
 	if { [catch {eval {berkdb_open_noerr} -env $clientenv\
+	    $bt_cmp_flag $bt_cmp_func $ham_cmp_flag $ham_cmp_func \
 	    -rdonly $dbname} db2] } {
 		error_check_good close_db1 [$db1 close] 0
 		error "FAIL:\
@@ -2457,10 +2478,27 @@ proc site_from_port { port n { rangeincr 10 } } {
 # Wait (a limited amount of time) for an arbitrary condition to become true,
 # polling once per second.  If time runs out we throw an error: a successful
 # return implies the condition is indeed true.
-# 
+# If we have a slow host, pause a second before returning. Slow hosts may
+# need the extra time to release locks and avoid deadlocks.
 proc await_condition { cond { limit 20 } } {
+	global slow_hosts
+	set slow 0
+	set hostname [info hostname]
+	if {[info exists slow_hosts]} {
+		foreach host $slow_hosts {
+			# The tcl hostname may be a fully qualified
+			# domain name, so match as a substring. 
+			if { [is_substr $hostname $host]} {
+				set slow 1
+			}
+		}
+	}
+	
 	for {set i 0} {$i < $limit} {incr i} {
 		if {[uplevel 1 [list expr $cond]]} {
+			if { $slow } {
+				tclsleep 1
+			}
 			return
 		}
 		tclsleep 1
@@ -3225,3 +3263,83 @@ proc upgradescr_verify { oplist mydir rep_env_cmd } {
 	error_check_good stat_rec $stat 0
 
 }
+
+# run_ipv4_tests is used to run all the repmgr tests using 
+# IPv4 addresses.  
+proc run_ipv4_tests { } {
+	global test_names
+	global ipversion
+	set orig_ipversion $ipversion
+	set ipversion 4
+
+	if { [catch { 
+		if { [catch { set s [setup_site_prog] } res ] != 0 } {
+			puts "Skipping repmgr_multiproc tests\
+			    because db_repsite is not built."
+		} else {
+			foreach test $test_names(repmgr_multiproc) {
+				puts "Running test $test with IPv4"
+				$test
+			}
+		}
+		foreach test $test_names(repmgr_other) {
+			puts "Running test $test with IPv4"
+			$test
+		}
+		foreach test $test_names(repmgr_basic) { 
+			puts "Running test $test with IPv4"
+			$test 100 1 1 1 1 1
+			$test 100 1 0 0 0 0
+			$test 100 0 1 0 0 0
+			$test 100 0 0 1 0 0
+			$test 100 0 0 0 1 0
+			$test 100 0 0 0 0 1
+			$test 100 0 0 0 0 0
+		}
+		flush stdout 
+		flush stderr
+	} res] != 0 } {
+		global errorInfo
+	
+		set ipversion $orig_ipversion
+		if {[string first FAIL $errorInfo] == -1} {
+			error "FAIL:[timestamp]\
+			    run_ipv4_tests: $test: $res"
+
+		} else {
+			error $res
+		}
+	}
+	set ipversion $orig_ipversion
+}
+
+# run_ipv4 is suitable for running a single repmgr test using
+# IPv4 addresses.  The repmgr tests don't take arguments, so neither
+# does this procedure. 
+proc run_ipv4 { test } {
+	global ipversion 
+	set orig_ipversion $ipversion
+	set ipversion 4
+
+	if { [catch { 
+		$test
+		flush stdout
+		flush stderr
+	} res] !=0 } {
+
+		global errorInfo
+	
+		set ipversion $orig_ipversion
+		set fnl [string first "\n" $errorInfo]
+		set theError [string range $errorInfo 0 [expr $fnl - 1]]
+		if {[string first FAIL $errorInfo] == -1} {
+			error "FAIL:[timestamp]\
+			    run_verbose: $test: $theError"
+
+		} else {
+			error $theError;
+		}
+	}
+	set ipversion $orig_ipversion
+}
+

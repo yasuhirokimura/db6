@@ -62,6 +62,8 @@ int __memp_get_mp_mmapsize __P((DB_ENV *, size_t *));
 int __memp_set_mp_mmapsize __P((DB_ENV *, size_t));
 int __memp_get_mp_pagesize __P((DB_ENV *, u_int32_t *));
 int __memp_set_mp_pagesize __P((DB_ENV *, u_int32_t));
+int __memp_get_reg_dir __P((DB_ENV *, const char **));
+int __memp_set_reg_dir __P((DB_ENV *, const char *));
 int __memp_get_mp_tablesize __P((DB_ENV *, u_int32_t *));
 int __memp_set_mp_tablesize __P((DB_ENV *, u_int32_t));
 int __memp_get_mp_mtxcount __P((DB_ENV *, u_int32_t *));

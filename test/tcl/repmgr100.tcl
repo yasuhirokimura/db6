@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2009, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2009, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 
 # TEST repmgr100
@@ -26,6 +26,7 @@ proc repmgr100 {  } {
 
 proc repmgr100_sub { tnum testopt } {
 	global testdir
+	global ipversion
 
 	set site_prog [setup_site_prog]
 
@@ -37,6 +38,7 @@ proc repmgr100_sub { tnum testopt } {
 	file mkdir $masterdir
 	file mkdir $clientdir
 
+	set hoststr [get_hoststr $ipversion]
 	set ports [available_ports 2]
 	set master_port [lindex $ports 0]
 	set client_port [lindex $ports 1]
@@ -52,7 +54,7 @@ proc repmgr100_sub { tnum testopt } {
 	fconfigure $master -buffering line
 	puts $master "home $masterdir"
 	set masconfig [list \
-	    [list repmgr_site 127.0.0.1 $master_port db_local_site on] \
+	    [list repmgr_site $hoststr $master_port db_local_site on] \
 	    "rep_set_timeout db_rep_heartbeat_send 250000"]
 	if { $testopt == "prefmas" } {
 		lappend masconfig \
@@ -84,10 +86,10 @@ proc repmgr100_sub { tnum testopt } {
 	set client [open "| $site_prog" "r+"]
 	fconfigure $client -buffering line
 	puts $client "home $clientdir"
-	puts $client "local $client_port"
+	puts $client "local $hoststr $client_port"
 	set cliconfig [list \
-	    [list repmgr_site 127.0.0.1 $client_port db_local_site on] \
-	    [list repmgr_site 127.0.0.1 $master_port db_bootstrap_helper on] \
+	    [list repmgr_site $hoststr $client_port db_local_site on] \
+	    [list repmgr_site $hoststr $master_port db_bootstrap_helper on] \
 	    "rep_set_timeout db_rep_heartbeat_monitor 400000"]
 	if { $testopt == "prefmas" } {
 		lappend cliconfig \

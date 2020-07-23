@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2011, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2011, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -28,6 +28,7 @@ public class ReplicationManagerSite {
 
     /**
     Close the site.
+    @throws DatabaseException if a failure occurs.
     */
     public void close()
         throws DatabaseException {
@@ -39,6 +40,7 @@ public class ReplicationManagerSite {
     Get the address of the site.
     <p>
     @return the address of the site.
+    @throws DatabaseException if a failure occurs.
     */
     public ReplicationHostAddress getAddress()
         throws DatabaseException {
@@ -51,6 +53,7 @@ public class ReplicationManagerSite {
     Get the address and configuration of the site.
     <p>
     @return the configuration of the site.
+    @throws DatabaseException if a failure occurs.
     */
     public ReplicationManagerSiteConfig getConfig()
         throws DatabaseException {
@@ -62,6 +65,7 @@ public class ReplicationManagerSite {
     Get the environment id of the site.
     <p>
     @return the environment id of the site.
+    @throws DatabaseException if a failure occurs.
     */
     public int getEid()
     	throws DatabaseException {
@@ -77,6 +81,7 @@ public class ReplicationManagerSite {
     <p>
     @param helper
     If true, the site will be a helper.
+    @throws DatabaseException if a failure occurs.
     */
     public void setBootstrapHelper(final boolean helper) 
         throws DatabaseException {
@@ -89,6 +94,7 @@ public class ReplicationManagerSite {
     <p>
     @return
     If the site is a helper for the local site.
+    @throws DatabaseException if a failure occurs.
     */
     public boolean getBootstrapHelper() 
         throws DatabaseException {
@@ -106,6 +112,7 @@ public class ReplicationManagerSite {
     <p>
     @param groupCreator
     If true, set the site to be a group creator.
+    @throws DatabaseException if a failure occurs.
     */
     public void setGroupCreator(final boolean groupCreator) 
         throws DatabaseException {
@@ -118,6 +125,7 @@ public class ReplicationManagerSite {
     <p>
     @return
     If the the site is a group creator.
+    @throws DatabaseException if a failure occurs.
     */
     public boolean getGroupCreator() 
         throws DatabaseException {
@@ -133,6 +141,7 @@ public class ReplicationManagerSite {
     <p>
     @param legacy
     If true, specify the site in a legacy group.
+    @throws DatabaseException if a failure occurs.
     */
     public void setLegacy(final boolean legacy) 
         throws DatabaseException {
@@ -145,6 +154,7 @@ public class ReplicationManagerSite {
     <p>
     @return
     If the site is in a legacy group.
+    @throws DatabaseException if a failure occurs.
     */
     public boolean getLegacy() 
         throws DatabaseException {
@@ -157,6 +167,7 @@ public class ReplicationManagerSite {
     <p>
     @param localSite
     If true, it is local site.
+    @throws DatabaseException if a failure occurs.
     */
     public void setLocalSite(final boolean localSite) 
         throws DatabaseException {
@@ -169,6 +180,7 @@ public class ReplicationManagerSite {
     <p>
     @return
     If the site is the local site.
+    @throws DatabaseException if a failure occurs.
     */
     public boolean getLocalSite() 
         throws DatabaseException {
@@ -183,6 +195,7 @@ public class ReplicationManagerSite {
     messages. It only makes sense to specify this for a remote site. 
     @param peer
     If true, it is peer to loca site.
+    @throws DatabaseException if a failure occurs.
     */
     public void setPeer(final boolean peer) 
         throws DatabaseException {
@@ -195,6 +208,7 @@ public class ReplicationManagerSite {
     <p>
     @return
     If the site is peer to local site.
+    @throws DatabaseException if a failure occurs.
     */
     public boolean getPeer()
         throws DatabaseException {
@@ -204,6 +218,7 @@ public class ReplicationManagerSite {
 
     /**
     Remove the site.
+    @throws DatabaseException if a failure occurs.
     */
     public void remove()
         throws DatabaseException {

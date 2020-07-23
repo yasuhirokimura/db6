@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 
@@ -86,10 +86,10 @@ import com.sleepycat.persist.model.SecondaryKey;
  * mapping:  It maps from secondary key to primary key, and then from primary
  * key to entity.  For example, consider this entity:</p>
  *
- * <p><table class="code" border="1">
+ * <div><table class="code" border="1" summary="">
  *   <tr><th>ID</th><th>Department</th><th>Name</th></tr>
  *   <tr><td>1</td><td>Engineering</td><td>Jane Smith</td></tr>
- * </table></p>
+ * </table></div>
  *
  * <p>The {@link PrimaryIndex} maps from id directly to the entity, or from
  * primary key 1 to the "Jane Smith" entity in the example.  The {@code
@@ -824,6 +824,7 @@ public class SecondaryIndex<SK, PK, E> extends BasicIndex<SK, E> {
      *
      * @return the secondary database.
      */
+    @Override
     public SecondaryDatabase getDatabase() {
         return secDb;
     }

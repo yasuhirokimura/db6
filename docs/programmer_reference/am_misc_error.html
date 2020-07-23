@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -101,6 +101,13 @@ if ((ret = dbp-&gt;open(dbp,
     </p>
       <pre class="programlisting">my_app: access.db: Permission denied.
 my_app: contact your system administrator: session ID was 14</pre>
+      <div class="note" style="margin-left: 0.5in; margin-right: 0.5in;">
+        <h3 class="title">Note</h3>
+        <p>
+            Equivalent methods exist for informational messages. See
+            <a href="../api_reference/C/dbmsg.html" class="olink">DB-&gt;msg()</a> and <a href="../api_reference/C/dbset_msgpfx.html" class="olink">DB-&gt;set_msgpfx()</a> for details.
+        </p>
+      </div>
     </div>
     <div class="navfooter">
       <hr />

@@ -3,7 +3,7 @@
  *
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
  */
 
 using System;
@@ -20,6 +20,7 @@ namespace BerkeleyDB.Internal {
 	internal uint bt_pagecnt;
 	internal uint bt_pagesize;
 	internal uint bt_minkey;
+	internal uint bt_ext_files;
 	internal uint bt_nblobs;
 	internal uint bt_re_len;
 	internal uint bt_re_pad;
@@ -43,6 +44,7 @@ namespace BerkeleyDB.Internal {
 	internal uint hash_metaflags;
 	internal uint hash_nkeys;
 	internal uint hash_ndata;
+	internal uint hash_ext_files;
 	internal uint hash_nblobs;
 	internal uint hash_pagecnt;
 	internal uint hash_pagesize;
@@ -63,6 +65,7 @@ namespace BerkeleyDB.Internal {
 	internal uint heap_magic;
 	internal uint heap_version;
 	internal uint heap_metaflags;
+	internal uint heap_ext_files;
 	internal uint heap_nblobs;
 	internal uint heap_nrecs;
 	internal uint heap_pagecnt;
@@ -271,6 +274,7 @@ namespace BerkeleyDB.Internal {
 	internal uint bt_pagecnt;
 	internal uint bt_pagesize;
 	internal uint bt_minkey;
+	internal uint bt_ext_files;
 	internal uint bt_nblobs;
 	internal uint bt_re_len;
 	internal uint bt_re_pad;
@@ -303,6 +307,8 @@ namespace BerkeleyDB.Internal {
 	internal uint st_site_total;
 	internal uint st_site_views;
 	internal ulong st_takeovers;
+	internal ulong st_write_ops_forwarded;	
+	internal ulong st_write_ops_received;	
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -329,6 +335,10 @@ namespace BerkeleyDB.Internal {
 	internal uint st_dupmasters;	
 	internal IntPtr st_env_id;
 	internal uint st_env_priority;
+	internal ulong st_ext_duplicated;
+	internal ulong st_ext_records;
+	internal ulong st_ext_rereq;
+	internal ulong st_ext_update_rereq;
 	internal ulong st_bulk_fills;
 	internal ulong st_bulk_overflows;
 	internal ulong st_bulk_records;
@@ -446,6 +456,12 @@ namespace BerkeleyDB.Internal {
 
 	internal uint xa_status;		
 
+
+	/*
+	 * This array of txnids can either be NULL, or it is a
+	 * DB_ENV->get_slice_count()-sized array. Any slices which have active
+	 * subordinate transactions have non-empty entries.
+	 */
     }
 
     internal struct TxnStatStruct {

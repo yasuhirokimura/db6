@@ -1,6 +1,6 @@
 --- src/test1.c
 +++ src/test1.c
-@@ -3626,7 +3626,7 @@
+@@ -3602,7 +3602,7 @@
      if( bytes>=0 ){
        bytes = bytes - (int)(zTail-zSql);
      }
@@ -9,27 +9,27 @@
        bytes = (int)strlen(zTail);
      }
      Tcl_ObjSetVar2(interp, objv[4], 0, Tcl_NewStringObj(zTail, bytes), 0);
-@@ -6297,8 +6297,6 @@
+@@ -6696,8 +6696,6 @@
    extern int sqlite3_hostid_num;
  #endif
    extern int sqlite3_max_blobsize;
 -  extern int sqlite3BtreeSharedCacheReport(void*,
 -                                          Tcl_Interp*,int,Tcl_Obj*CONST*);
+   static int iZero = 0;
    static struct {
       char *zName;
-      Tcl_CmdProc *xProc;
-@@ -6486,7 +6486,6 @@
+@@ -6891,7 +6891,6 @@
       { "tcl_variable_type",       tcl_variable_type, 0       },
  #ifndef SQLITE_OMIT_SHARED_CACHE
       { "sqlite3_enable_shared_cache", test_enable_shared, 0  },
 -     { "sqlite3_shared_cache_report", sqlite3BtreeSharedCacheReport, 0},
  #endif
       { "sqlite3_libversion_number", test_libversion_number, 0  },
- #ifdef SQLITE_ENABLE_COLUMN_METADATA
+      { "sqlite3_table_column_metadata", test_table_column_metadata, 0  },
 --- src/test2.c
 +++ src/test2.c
 @@ -21,475 +21,14 @@
- 
+
  extern const char *sqlite3ErrName(int);
  
 +#ifndef SQLITE_OMIT_DISKIO
@@ -323,7 +323,7 @@
 -){
 -  Pager *pPager;
 -  char zBuf[100];
--  DbPage *pPage;
+-  DbPage *pPage = 0;
 -  int pgno;
 -  int rc;
 -  if( argc!=3 ){
@@ -519,12 +519,10 @@
    pVfs = sqlite3_vfs_find(0);
    nFile = (int)strlen(argv[2]);
    zFile = sqlite3_malloc( nFile+2 );
-@@ -545,31 +90,6 @@
- }
- #endif
+@@ -547,30 +92,6 @@
  
--
--/*
+ 
+ /*
 -** test_control_pending_byte  PENDING_BYTE
 -**
 -** Set the PENDING_BYTE using the sqlite3_test_control() interface.
@@ -546,12 +544,13 @@
 -  rc = sqlite3_test_control(SQLITE_TESTCTRL_PENDING_BYTE, pbyte);
 -  Tcl_SetObjResult(interp, Tcl_NewIntObj(rc));
 -  return TCL_OK;
--}  
+-}
 -
- /*
- ** sqlite3BitvecBuiltinTest SIZE PROGRAM
- **
-@@ -604,58 +124,49 @@
+-/*
+ ** The sqlite3FaultSim() callback:
+ */
+ static Tcl_Interp *faultSimInterp = 0;
+@@ -687,59 +208,50 @@
    return TCL_OK;
  }  
  
@@ -614,8 +613,9 @@
      { "fake_big_file",           (Tcl_CmdProc*)fake_big_file       },
  #endif
      { "sqlite3BitvecBuiltinTest",(Tcl_CmdProc*)testBitvecBuiltinTest     },
--    { "sqlite3_test_control_pending_byte", (Tcl_CmdProc*)testPendingByte },
+-    { "sqlite3_test_control_pending_byte",  (Tcl_CmdProc*)testPendingByte },
 +    { "sqlite3_test_control_pending_byte", (Tcl_CmdProc*)t2_tcl_function_stub },
+     { "sqlite3_test_control_fault_install", (Tcl_CmdProc*)faultInstallCmd },
    };
    int i;
    for(i=0; i<sizeof(aCmd)/sizeof(aCmd[0]); i++){
@@ -652,7 +652,7 @@
 +}
 +
  extern const char *sqlite3ErrName(int);
-
+ 
  /*
 @@ -339,36 +348,6 @@
  }
@@ -701,7 +701,7 @@
    char zBuf[50];
  
    if( argc!=2 ){
-@@ -394,103 +372,13 @@
+@@ -394,108 +372,13 @@
  
    /* The cursor may be in "require-seek" state. If this is the case, the
    ** call to BtreeDataSize() will fix it. */
@@ -758,18 +758,21 @@
 -    char zErr[200];
 -    n1 = putVarint(zBuf, in);
 -    if( n1>9 || n1<1 ){
--      sprintf(zErr, "putVarint returned %d - should be between 1 and 9", n1);
+-      sqlite3_snprintf(sizeof(zErr), zErr,
+-         "putVarint returned %d - should be between 1 and 9", n1);
 -      Tcl_AppendResult(interp, zErr, 0);
 -      return TCL_ERROR;
 -    }
 -    n2 = getVarint(zBuf, &out);
 -    if( n1!=n2 ){
--      sprintf(zErr, "putVarint returned %d and getVarint returned %d", n1, n2);
+-      sqlite3_snprintf(sizeof(zErr), zErr,
+-          "putVarint returned %d and getVarint returned %d", n1, n2);
 -      Tcl_AppendResult(interp, zErr, 0);
 -      return TCL_ERROR;
 -    }
 -    if( in!=out ){
--      sprintf(zErr, "Wrote 0x%016llx and got back 0x%016llx", in, out);
+-      sqlite3_snprintf(sizeof(zErr), zErr,
+-          "Wrote 0x%016llx and got back 0x%016llx", in, out);
 -      Tcl_AppendResult(interp, zErr, 0);
 -      return TCL_ERROR;
 -    }
@@ -778,13 +781,15 @@
 -      n2 = getVarint32(zBuf, out32);
 -      out = out32;
 -      if( n1!=n2 ){
--        sprintf(zErr, "putVarint returned %d and GetVarint32 returned %d", 
+-        sqlite3_snprintf(sizeof(zErr), zErr,
+-          "putVarint returned %d and GetVarint32 returned %d", 
 -                  n1, n2);
 -        Tcl_AppendResult(interp, zErr, 0);
 -        return TCL_ERROR;
 -      }
 -      if( in!=out ){
--        sprintf(zErr, "Wrote 0x%016llx and got back 0x%016llx from GetVarint32",
+-        sqlite3_snprintf(sizeof(zErr), zErr,
+-          "Wrote 0x%016llx and got back 0x%016llx from GetVarint32",
 -            in, out);
 -        Tcl_AppendResult(interp, zErr, 0);
 -        return TCL_ERROR;
@@ -807,10 +812,11 @@
  ** usage:   btree_from_db  DB-HANDLE
  **
  ** This command returns the btree handle for the main database associated
-@@ -535,67 +423,6 @@
+@@ -539,66 +422,6 @@
+   return TCL_OK;
  }
  
- /*
+-/*
 -** Usage:   btree_ismemdb ID
 -**
 -** Return true if the B-Tree is in-memory.
@@ -870,12 +876,10 @@
 -}      
 -
 -
--
--/*
+ 
+ /*
  ** Register commands with the TCL interpreter.
- */
- int Sqlitetest3_Init(Tcl_Interp *interp){
-@@ -610,13 +437,13 @@
+@@ -615,13 +438,13 @@
       { "btree_cursor",             (Tcl_CmdProc*)btree_cursor             },
       { "btree_close_cursor",       (Tcl_CmdProc*)btree_close_cursor       },
       { "btree_next",               (Tcl_CmdProc*)btree_next               },
@@ -892,7 +896,7 @@
 +     { "btree_set_cache_size",     (Tcl_CmdProc*)t3_tcl_function_stub     }
    };
    int i;
- 
+
 --- src/test_btree.c
 +++ src/test_btree.c
 @@ -13,50 +13,3 @@
@@ -937,7 +941,7 @@
 -  BtShared *pBt = p->pBt;
 -  for(pCur=pBt->pCursor; pCur; pCur=pCur->pNext){
 -    MemPage *pPage = pCur->apPage[pCur->iPage];
--    char *zMode = pCur->wrFlag ? "rw" : "ro";
+-    char *zMode = (pCur->curFlags & BTCF_WriteFlag) ? "rw" : "ro";
 -    sqlite3DebugPrintf("CURSOR %p rooted at %4d(%s) currently at %d.%d%s\n",
 -       pCur, pCur->pgnoRoot, zMode,
 -       pPage ? pPage->pgno : 0, pCur->aiIdx[pCur->iPage],
@@ -948,7 +952,7 @@
 -}
 --- src/test_malloc.c
 +++ src/test_malloc.c
-@@ -749,7 +749,7 @@
+@@ -756,7 +756,7 @@
      int isNew;
  
      int aKey[MALLOC_LOG_KEYINTS];

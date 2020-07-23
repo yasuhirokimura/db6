@@ -7,14 +7,14 @@
     <link rel="stylesheet" href="gettingStarted.css" type="text/css" />
     <meta name="generator" content="DocBook XSL Stylesheets V1.73.2" />
     <link rel="start" href="index.html" title="Berkeley DB Programmer's Reference Guide" />
-    <link rel="up" href="program.html" title="Chapter 15.  Programmer Notes" />
+    <link rel="up" href="program.html" title="Chapter 17.  Programmer Notes" />
     <link rel="prev" href="program_runtime.html" title="Run-time configuration" />
     <link rel="next" href="program_faq.html" title="Programmer notes FAQ" />
   </head>
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -23,7 +23,7 @@
         </tr>
         <tr>
           <td width="20%" align="left"><a accesskey="p" href="program_runtime.html">Prev</a> </td>
-          <th width="60%" align="center">Chapter 15.  Programmer Notes </th>
+          <th width="60%" align="center">Chapter 17.  Programmer Notes </th>
           <td width="20%" align="right"> <a accesskey="n" href="program_faq.html">Next</a></td>
         </tr>
       </table>
@@ -146,7 +146,7 @@
     </p>
       <p> 
         The list of available events may be displayed by running
-        'make listprobes' after building the libdb-6.1
+        'make listprobes' after building the libdb-6.2
         shared library.
     </p>
       <div class="sect2" lang="en" xml:lang="en">
@@ -199,7 +199,7 @@
             the probes of the default Berkeley DB installation is:
         </p>
         <p>
-            <code class="code"> stap -l 'process("/usr/local/BerkeleyDB.6.1/lib/libdb-6.1.so").mark("*")'
+            <code class="code"> stap -l 'process("/usr/local/BerkeleyDB.6.2/lib/libdb-6.2.so").mark("*")'
             </code>
         </p>
         <p>
@@ -284,7 +284,7 @@
                         equivalent; SystemTap can obtain type
                         information directly from the debugging
                         symbols compiled into the
-                        libdb*-6.1.so shared library.
+                        libdb*-6.2.so shared library.
                     </dd>
             <dt>
               <span class="term"> locktimes </span>

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2011, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2011, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -94,7 +94,7 @@ retry:	if ((ret = __db_create_internal(&dbp, dbenv->env, 0)) == 0 &&
 		}
 	}
 
-	/* Hot backup requires DB_LOG_BLOB. */
+	/* Hot backup requires DB_LOG_BLOB/DB_LOG_EXT_FILE. */
 	if (ret == 0 && dbp->blob_threshold != 0 &&
 	    (ret = backup_lgconf_chk(dbenv)) != 0)
 		goto err;
@@ -121,9 +121,9 @@ retry:	if ((ret = __db_create_internal(&dbp, dbenv->env, 0)) == 0 &&
 	/*
 	 * Copy blob files.  Since no locking is done here, it is possible
 	 * that a blob file may be copied in the middle of being written.
-	 * This is not a problem since hotbackup requires DB_LOG_BLOB and
-	 * catastrophic recovery, which will fix any inconsistances in the
-	 * blob files.
+	 * This is not a problem since hotbackup requires
+	 * DB_LOG_BLOB/DB_LOG_EXT_FILE and catastrophic recovery, which will
+	 * fix any inconsistances in the blob files.
 	 */
 	if (ret == 0 && dbp->blob_threshold != 0 &&
 	    (t_ret = __blob_copy_all(dbp, target, flags)) != 0)
@@ -286,7 +286,7 @@ backup_data_copy(dbenv, file, from_dir, to_dir, log)
 				    from_dir, PATH_SEPARATOR[0], file);
 			goto done;
 		}
-		__db_err(env, ret, "%s", buf);
+		__db_err(env, ret, "%s", from);
 		goto err;
 	}
 
@@ -735,7 +735,7 @@ __db_backup_pp(dbenv, target, flags)
 		return (EINVAL);
 	}
 
-	/* Hot backup requires DB_LOG_BLOB. */
+	/* Hot backup requires DB_LOG_BLOB/DB_LOG_EXT_FILE. */
 	if ((ret = __env_get_blob_threshold_int(env, &bytes)) != 0 ||
 	    (bytes != 0 && (ret = backup_lgconf_chk(dbenv)) != 0))
 		return (ret);
@@ -803,10 +803,10 @@ __db_backup(dbenv, target, ip, remove_max, flags)
 		if (!LF_ISSET(DB_BACKUP_SINGLE_DIR) &&
 		    dbenv->db_blob_dir != NULL &&
 		    __os_abspath(dbenv->db_blob_dir)) {
+			ret = USR_ERR(env, EINVAL);
 			__db_errx(env, DB_STR_A("0780",
-"blob directory '%s' is absolute path, not permitted unless backup is to a single directory",
+"external file directory '%s' is absolute path, not permitted unless backup is to a single directory",
 			"%s"), dbenv->db_blob_dir);
-			ret = EINVAL;
 			goto err;
 		}
 		if ((ret = backup_read_data_dir(dbenv,
@@ -821,10 +821,10 @@ __db_backup(dbenv, target, ip, remove_max, flags)
 			 */
 			if (!LF_ISSET(DB_BACKUP_SINGLE_DIR) &&
 			    __os_abspath(*dir)) {
+				ret = USR_ERR(env, EINVAL);
 				__db_errx(env, DB_STR_A("0725",
 "data directory '%s' is absolute path, not permitted unless backup is to a single directory",
 				    "%s"), *dir);
-				ret = EINVAL;
 				goto err;
 			}
 			if ((ret = backup_read_data_dir(
@@ -841,10 +841,10 @@ __db_backup(dbenv, target, ip, remove_max, flags)
 	 */
 	if (!LF_ISSET(DB_BACKUP_SINGLE_DIR) &&
 	    dbenv->db_log_dir != NULL && __os_abspath(dbenv->db_log_dir)) {
+		ret = USR_ERR(env, EINVAL);
 		__db_errx(env, DB_STR_A("0781",
 "log directory '%s' is absolute path, not permitted unless backup is to a single directory",
 		    "%s"), dbenv->db_log_dir);
-		ret = EINVAL;
 		goto err;
 	}
 	if ((ret = backup_read_log_dir(dbenv, target, &copy_min, flags)) != 0)
@@ -857,10 +857,10 @@ __db_backup(dbenv, target, ip, remove_max, flags)
 	 */
 	if (LF_ISSET(DB_BACKUP_UPDATE) && remove_max < copy_min &&
 	    remove_max != 0 && copy_min != 1) {
+		ret = USR_ERR(env, EINVAL);
 		__db_errx(env, DB_STR_A("0743",
 "the largest log file removed (%d) must be greater than or equal the smallest log file copied (%d)",
 		    "%d %d"), remove_max, copy_min);
-		ret = EINVAL;
 	}
 
 err:	F_CLR(dbenv, DB_ENV_HOTBACKUP);
@@ -881,11 +881,11 @@ backup_lgconf_chk(dbenv)
 	ret = 0;
 
 	if (LOGGING_ON(dbenv->env) && ((ret = __log_get_config(dbenv,
-	    DB_LOG_BLOB, &lgconf)) != 0 || lgconf == 0)) {
-		__db_errx(dbenv->env, DB_STR("0782",
-		    "Hot backup requires DB_LOG_BLOB"));
+	    DB_LOG_EXT_FILE, &lgconf)) != 0 || lgconf == 0)) {
 		if (ret == 0)
-			ret = EINVAL;
+			ret = USR_ERR(dbenv->env, EINVAL);
+		__db_errx(dbenv->env, DB_STR("0782",
+		    "Hot backup requires DB_LOG_EXT_FILE"));
 	}
 
 	return (ret);

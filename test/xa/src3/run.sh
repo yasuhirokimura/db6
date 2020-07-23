@@ -91,13 +91,20 @@ tmboot -y
 
 exitval=0
 if [ $1 == 1 ]; then 
-        kill_thread=-k
+        # Create 3 clients, one which kills the server
+        ./client -dk $DVERBOSE_FLAG >>2 client_err &
+	./client -d $DVERBOSE_FLAG >>2 client_err &
+	./client -d $DVERBOSE_FLAG >>2 client_err
+else
+        # Create 2 clients
+        ./client $DVERBOSE_FLAG >>2 client_err &
+	./client $DVERBOSE_FLAG >>2 client_err
 fi
-./client $kill_thread $DVERBOSE_FLAG 
-test "$?" -ne 0 && {
-	echo "FAIL: client failed"
+test -s client_err && {
+        echo "client_err:"
+	cat client_err
+	echo "FAIL: client_err file not empty"
 	exitval=1
-	break;
 }
 
 msg "SHUTTING DOWN THE TRANSACTION MANAGER."
@@ -107,7 +114,7 @@ echo 'y' | tmshutdown
 echo "STDOUT:"
 cat stdout  
 
-# Killing a thread can result in expected database "run recovery" errors
+# Killing a server can result in expected database "run recovery" errors
 if [ $1 == 1 ]; then 
         exit $exitval
 fi

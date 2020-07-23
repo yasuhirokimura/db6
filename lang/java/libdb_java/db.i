@@ -50,6 +50,9 @@ struct DbTxn;	typedef struct DbTxn DB_TXN;
 /* Methods that allocate new objects */
 %newobject Db::join(DBC **curslist, u_int32_t flags);
 %newobject Db::dup(u_int32_t flags);
+%newobject Db::get_slices();
+%newobject Db::slice_lookup(const Dbt *key, u_int32_t flags);
+%newobject DbEnv::get_slices();
 %newobject DbEnv::lock_get(u_int32_t locker,
 	u_int32_t flags, DBT *object, db_lockmode_t lock_mode);
 %newobject DbEnv::log_cursor(u_int32_t flags);
@@ -140,21 +143,9 @@ struct Db
 		return ret;
 	}
 
-	const char *get_blob_dir() {
-		const char *ret;
-		errno = self->get_blob_dir(self, &ret);
-		return ret;
-	}
-
 	const char *get_blob_sub_dir() {
 		const char *ret;
 		errno = self->get_blob_sub_dir(self, &ret);
-		return ret;
-	}
-
-	u_int32_t get_blob_threshold () {
-		u_int32_t ret = 0;
-		errno = self->get_blob_threshold(self, &ret);
 		return ret;
 	}
 
@@ -200,6 +191,18 @@ struct Db
 		return ret;
 	}
 
+	const char *get_ext_file_dir() {
+		const char *ret;
+		errno = self->get_ext_file_dir(self, &ret);
+		return ret;
+	}
+
+	u_int32_t get_ext_file_threshold () {
+	  	u_int32_t ret = 0;
+	  	errno = self->get_ext_file_threshold(self, &ret);
+	  	return ret;
+	}
+
 	/*
 	 * This method is implemented in Java to avoid wrapping the object on
 	 * every call.
@@ -215,6 +218,12 @@ struct Db
 		const char *ret = NULL;
 		errno = 0;
 		self->get_errpfx(self, &ret);
+		return ret;
+	}
+
+	const char *get_msgpfx() {
+		const char *ret = NULL;
+		self->get_msgpfx(self, &ret);
 		return ret;
 	}
 #endif
@@ -350,6 +359,20 @@ struct Db
 		return self->get_multiple(self);
 	}
 
+	JAVA_EXCEPT_ERRNO(DB_RETOK_STD, DB2JDBENV)
+	DB **get_slices() {
+		DB **dbps;
+		u_int32_t i, count = 0;
+		errno = self->get_slices(self, &dbps);
+		if (errno == 0) {
+		  	self->dbenv->get_slice_count(self->dbenv, &count);
+			dbps[count] = NULL;
+			for (i = 0; dbps[i] != NULL; i++)
+			  	dbps[i]->env->dbt_usercopy = __dbj_dbt_memcopy;
+		}
+		return dbps;
+	}
+
 	int_bool get_transactional() {
 		return self->get_transactional(self);
 	}
@@ -407,14 +430,6 @@ struct Db
 		return self->set_append_recno(self, db_append_recno_fcn);
 	}
 
-	db_ret_t set_blob_dir(const char *dir) {
-		return self->set_blob_dir(self, dir);
-	}
-
-	db_ret_t set_blob_threshold(u_int32_t bytes, u_int32_t flags) {
-		return self->set_blob_threshold(self, bytes, flags);
-	}
-
 	db_ret_t set_bt_compare(
 	    int (*bt_compare_fcn)(DB *, const DBT *, const DBT *, size_t *)) {
 		return self->set_bt_compare(self, bt_compare_fcn);
@@ -469,6 +484,14 @@ struct Db
 	}
 #endif /* SWIGJAVA */
 
+	db_ret_t set_ext_file_dir(const char *dir) {
+		return self->set_ext_file_dir(self, dir);
+	}
+
+	db_ret_t set_ext_file_threshold(u_int32_t bytes, u_int32_t flags) {
+		return self->set_ext_file_threshold(self, bytes, flags);
+	}
+
 	JAVA_EXCEPT(DB_RETOK_STD, DB2JDBENV)
 	db_ret_t set_feedback(void (*db_feedback_fcn)(DB *, int, int)) {
 		return self->set_feedback(self, db_feedback_fcn);
@@ -515,8 +538,13 @@ struct Db
 	}
 
 #ifndef SWIGJAVA
-	void set_msgcall(void (*db_msgcall_fcn)(const DB_ENV *, const char *)) {
+	void set_msgcall(
+	   void (*db_msgcall_fcn)(const DB_ENV *, const char *, const char *)) {
 		self->set_msgcall(self, db_msgcall_fcn);
+	}
+
+	void set_msgpfx(const char *msgpfx) {
+		self->set_msgpfx(self, msgpfx);
 	}
 #endif /* SWIGJAVA */
 
@@ -588,6 +616,21 @@ struct Db
 
 	db_ret_t set_q_extentsize(u_int32_t extentsize) {
 		return self->set_q_extentsize(self, extentsize);
+	}
+
+	JAVA_EXCEPT(DB_RETOK_STD, DB2JDBENV)
+	db_ret_t set_slice_callback(
+	    int (*slice_fcn)(const DB *, const DBT *, DBT *)) {
+		return self->set_slice_callback(self, slice_fcn);
+	}
+
+	JAVA_EXCEPT_ERRNO(DB_RETOK_STD, DB2JDBENV)
+	DB *slice_lookup(const DBT *key, u_int32_t flags) {
+		DB *slice = NULL;
+		errno = self->slice_lookup(self, key, &slice, flags);
+		if (slice != NULL)
+			slice->env->dbt_usercopy = __dbj_dbt_memcopy;
+		return slice;
 	}
 
 	db_ret_t sort_multiple(DBT *key, DBT *data) {
@@ -796,6 +839,18 @@ struct DbEnv
 	}
 #endif
 
+	JAVA_EXCEPT_ERRNO(DB_RETOK_STD, JDBENV)
+	DB_ENV **get_slices() {
+		DB_ENV **slices = NULL;
+		int i;
+		errno = self->get_slices(self, &slices);
+		if (slices != NULL) {
+		  	for (i = 0; slices[i] != NULL; i++)
+				slices[i]->env->dbt_usercopy = __dbj_dbt_memcopy;
+		}
+		return slices;
+	}
+
 	DB_TXN *cdsgroup_begin() {
 		DB_TXN *tid = NULL;
 		errno = self->cdsgroup_begin(self, &tid);
@@ -804,19 +859,6 @@ struct DbEnv
 
 	db_ret_t fileid_reset(const char *file, u_int32_t flags) {
 		return self->fileid_reset(self, file, flags);
-	}
-
-	JAVA_EXCEPT_ERRNO(DB_RETOK_STD, JDBENV)
-	const char *get_blob_dir() {
-		const char *ret;
-		errno = self->get_blob_dir(self, &ret);
-		return ret;
-	}
-
-	u_int32_t get_blob_threshold() {
-		u_int32_t ret;
-		errno = self->get_blob_threshold(self, &ret);
-		return ret;
 	}
 
 	const char **get_data_dirs() {
@@ -831,11 +873,30 @@ struct DbEnv
 		return ret;
 	}
 
+	JAVA_EXCEPT_ERRNO(DB_RETOK_STD, JDBENV)
+	const char *get_ext_file_dir() {
+		const char *ret;
+		errno = self->get_ext_file_dir(self, &ret);
+		return ret;
+	}
+
+	u_int32_t get_ext_file_threshold() {
+		u_int32_t ret;
+		errno = self->get_ext_file_threshold(self, &ret);
+		return ret;
+	}
+
 #ifndef SWIGJAVA
 	const char *get_errpfx() {
 		const char *ret;
 		errno = 0;
 		self->get_errpfx(self, &ret);
+		return ret;
+	}
+
+	const char *get_msgpfx() {
+		const char *ret;
+		self->get_msgpfx(self, &ret);
 		return ret;
 	}
 #endif /* SWIGJAVA */
@@ -876,6 +937,13 @@ struct DbEnv
 		return ret;
 	}
 
+	JAVA_EXCEPT_ERRNO(DB_RETOK_STD, JDBENV)
+	u_int32_t get_slice_count() {
+		u_int32_t ret;
+		errno = self->get_slice_count(self, &ret);
+		return ret;
+	}
+
 	const char *get_tmp_dir() {
 		const char *ret;
 		errno = self->get_tmp_dir(self, &ret);
@@ -905,15 +973,6 @@ struct DbEnv
 	JAVA_EXCEPT(DB_RETOK_STD, NULL)
 	db_ret_t remove(const char *db_home, u_int32_t flags) {
 		return self->remove(self, db_home, flags);
-	}
-
-	JAVA_EXCEPT(DB_RETOK_STD, JDBENV)
-	db_ret_t set_blob_dir(const char *dir) {
-		return self->set_blob_dir(self, dir);
-	}
-
-	db_ret_t set_blob_threshold(u_int32_t bytes, u_int32_t flags) {
-		return self->set_blob_threshold(self, bytes, flags);
 	}
 
 	db_ret_t set_cachesize(jlong bytes, int ncache) {
@@ -957,6 +1016,15 @@ struct DbEnv
 #endif
 
 	JAVA_EXCEPT(DB_RETOK_STD, JDBENV)
+	db_ret_t set_ext_file_dir(const char *dir) {
+		return self->set_ext_file_dir(self, dir);
+	}
+
+	db_ret_t set_ext_file_threshold(u_int32_t bytes, u_int32_t flags) {
+		return self->set_ext_file_threshold(self, bytes, flags);
+	}
+
+	JAVA_EXCEPT(DB_RETOK_STD, JDBENV)
 	db_ret_t set_flags(u_int32_t flags, int_bool onoff) {
 		return self->set_flags(self, flags, onoff);
 	}
@@ -990,9 +1058,16 @@ struct DbEnv
 	}
 
 	JAVA_EXCEPT_NONE
-	void set_msgcall(void (*db_msgcall_fcn)(const DB_ENV *, const char *)) {
+	void set_msgcall(void (*db_msgcall_fcn)(const DB_ENV *, const char *,
+	    const char *)) {
 		self->set_msgcall(self, db_msgcall_fcn);
 	}
+
+#ifndef SWIGJAVA
+	void set_msgpfx(const char *msgpfx) {
+		self->set_msgpfx(self, msgpfx);
+	}
+#endif
 
 	int set_msgfile(const char *msgfile) {
 		int ret;
@@ -1499,6 +1574,16 @@ struct DbEnv
 		return self->mutex_stat_print(self, flags);
 	}
 
+	const char *get_region_dir() {
+		const char *ret;
+		errno = self->get_region_dir(self, &ret);
+		return ret;
+	}
+
+	db_ret_t set_region_dir(const char *dir) {
+		return self->set_region_dir(self, dir);
+	}
+
 	/* Transaction functions */
 	u_int32_t get_tx_max() {
 		u_int32_t ret;
@@ -1859,6 +1944,26 @@ struct DbEnv
 
 	static const char *get_version_full_string() {
 		return DB_VERSION_FULL_STRING;
+	}
+
+	static int slices_enabled() {
+		DB_ENV *dbenv;
+		u_int32_t slices;
+		int enabled, ret;
+		enabled = 0;
+		if (db_env_create(&dbenv, 0) == 0) {
+			/* Hide any error messages. */
+			dbenv->set_errcall(dbenv, NULL);
+			dbenv->set_errfile(dbenv, NULL);
+			/* Will return DB_OPNOTSUP if not enabled.*/
+			ret = dbenv->get_slice_count(dbenv, &slices);
+			if (ret == DB_OPNOTSUP)
+				enabled = 0;
+			else
+				enabled = 1;
+			dbenv->close(dbenv, 0);
+		}
+		return enabled;
 	}
 }
 };

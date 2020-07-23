@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1999, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1999, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -399,7 +399,7 @@ tcl_TxnStat(interp, objc, objv, dbenv)
 	DB_TXN_ACTIVE *p;
 	DB_TXN_STAT *sp;
 	Tcl_Obj *myobjv[2], *res, *thislist, *lsnlist;
-	u_int32_t i, flag;
+	u_int32_t flag, i, j, num_slices;
 	char *arg;
 	int myobjc, result, ret;
 
@@ -428,6 +428,7 @@ tcl_TxnStat(interp, objc, objv, dbenv)
 	    "txn stat");
 	if (result == TCL_ERROR)
 		return (result);
+	num_slices = dbenv->slice_cnt;
 
 	/*
 	 * Have our stats, now construct the name value
@@ -465,6 +466,12 @@ tcl_TxnStat(interp, objc, objv, dbenv)
 					    ip->i_parent->i_name);
 				else
 					MAKE_STAT_LIST("Parent", 0);
+				for (j = 0; j < num_slices &&
+				    p->slice_txns != NULL; j++) {
+					MAKE_STAT_LIST(
+				    	    "Active slice txn ID",
+				    	    p->slice_txns[i].txnid);
+				}
 				break;
 			}
 		}

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2005, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2005, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -73,6 +73,7 @@ static int flatten __P((ENV *, struct sending_msg *));
 static int got_acks __P((ENV *, void *));
 static int __repmgr_finish_connect
     __P((ENV *, socket_t s, REPMGR_CONNECTION **));
+static void __repmgr_print_addrlist __P((ENV *, const char *, ADDRINFO *));
 static int __repmgr_propose_version __P((ENV *, REPMGR_CONNECTION *));
 static int __repmgr_start_connect __P((ENV*, socket_t *, ADDRINFO *, int *));
 static void setup_sending_msg __P((ENV *,
@@ -85,6 +86,18 @@ static REPMGR_SITE *connected_site __P((ENV *, int));
 static REPMGR_SITE *__repmgr_find_available_peer __P((ENV *));
 static int send_connection __P((ENV *, u_int,
     REPMGR_CONNECTION *, struct sending_msg *, int *));
+
+#ifdef DB_WIN32
+/*
+ * InetNtop is available for desktop apps on Windows Vista+ and Windows
+ * Server 2008+. InetNtop is NOT available for Windows mobile, Windows CE,
+ * Windows Store apps or Windows Phone Store apps. We leave the support for
+ * them in future when customers request them.
+ */
+#define	__os_inet_ntop InetNtop
+#else
+#define	__os_inet_ntop inet_ntop
+#endif
 
 /*
  * Connects to the given network address, using blocking operations.  Any thread
@@ -103,7 +116,7 @@ __repmgr_connect(env, netaddr, connp, errp)
 	REPMGR_CONNECTION *conn;
 	ADDRINFO *ai0, *ai;
 	socket_t sock;
-	int err, ret;
+	int err, ipversion, ret;
 	u_int port;
 
 	COMPQUIET(err, 0);
@@ -114,13 +127,25 @@ __repmgr_connect(env, netaddr, connp, errp)
 #endif
 	if ((ret = __repmgr_getaddr(env, netaddr->host, port, 0, &ai0)) != 0)
 		return (ret);
+	__repmgr_print_addrlist(env, "repmgr_connect", ai0);
 
 	/*
 	 * Try each address on the list, until success.  Note that if several
 	 * addresses on the list produce retryable error, we can only pass back
 	 * to our caller the last one.
+	 *
+	 * We make one or two passes through this loop.  The first pass
+	 * tries any IPv6 addresses in the list.  If there are no successful
+	 * IPv6 connections after the first pass, we make a second pass to
+	 * try any IPv4 addresses in the list.  This helps us avoid use of
+	 * IPv4 mapped addresses if IPv6 addresses are available on both
+	 * sides of a connection.
 	 */
+	ipversion = AF_INET6;
+retry:
 	for (ai = ai0; ai != NULL; ai = ai->ai_next) {
+		if (ai->ai_family != ipversion)
+			continue;
 		switch ((ret = __repmgr_start_connect(env, &sock, ai, &err))) {
 		case 0:
 			if ((ret = __repmgr_finish_connect(env,
@@ -134,6 +159,14 @@ __repmgr_connect(env, netaddr, connp, errp)
 		default:
 			goto out;
 		}
+	}
+	/*
+	 * If the first pass reaches here, it did not make a successful IPv6
+	 * connection.  Make the second pass to try IPv4.
+	 */
+	if (ipversion == AF_INET6) {
+		ipversion = AF_INET;
+		goto retry;
 	}
 
 out:
@@ -152,8 +185,11 @@ __repmgr_start_connect(env, socket_result, ai, err)
 	ADDRINFO *ai;
 	int *err;
 {
+	DB_REP *db_rep;
 	socket_t s;
-	int ret;
+	int ret, sock_approved;
+
+	db_rep = env->rep_handle;
 
 	if ((s = socket(ai->ai_family,
 		    ai->ai_socktype, ai->ai_protocol)) == SOCKET_ERROR) {
@@ -162,12 +198,31 @@ __repmgr_start_connect(env, socket_result, ai, err)
 		return (ret);
 	}
 
+	/*
+	 * Invoke any application-supplied socket approval function just
+	 * before actually making the connection.  If the function rejects
+	 * this socket, return DB_REP_UNAVAIL so that the caller will try
+	 * any additional addresses in its list.
+	 */
+	sock_approved = 1;
+	if (db_rep->approval != NULL &&
+	    (ret = db_rep->approval(env->dbenv, s, &sock_approved, 0)) != 0) {
+		VPRINT(env, (env, DB_VERB_REP_SYNC,
+		    "repmgr_start_connect: approval callback error %d for:",
+		    ret));
+		__repmgr_print_addr(env, ai->ai_addr, "", 1, 0);
+		return (ret);
+	}
+	if (!sock_approved)
+		return (DB_REP_UNAVAIL);
+
 	if (connect(s, ai->ai_addr, (socklen_t)ai->ai_addrlen) != 0) {
 		*err = net_errno;
 		(void)closesocket(s);
 		return (DB_REP_UNAVAIL);
 	}
-	RPRINT(env, (env, DB_VERB_REPMGR_MISC, "connection established"));
+	__repmgr_print_addr(env, ai->ai_addr,
+	    "connection established", 1, 0);
 
 	*socket_result = s;
 	return (0);
@@ -182,11 +237,12 @@ __repmgr_finish_connect(env, s, connp)
 	REPMGR_CONNECTION *conn;
 	int ret;
 
-	if ((ret = __repmgr_new_connection(env, &conn, s, CONN_CONNECTED)) != 0)
+	if ((ret = __repmgr_new_connection(env,
+	    &conn, s, CONN_CONNECTED)) != 0 ||
+	    (ret = __repmgr_set_keepalive(env, conn)) != 0)
 		return (ret);
 
-	if ((ret = __repmgr_set_keepalive(env, conn)) == 0 &&
-	    (ret = __repmgr_propose_version(env, conn)) == 0)
+	if ((ret = __repmgr_propose_version(env, conn)) == 0)
 		*connp = conn;
 	else
 		(void)__repmgr_destroy_conn(env, conn);
@@ -227,6 +283,10 @@ __repmgr_propose_version(env, conn)
 	 *  +-----------------+----+------------------+------+
 	 *
 	 * The "extra info" contains the version parameters, in marshaled form.
+	 *
+	 * While we no longer support 4.6/V1, the repmgr protocol still uses
+	 * the simpler V1 handshake as the initial message sent for version
+	 * negotiation on a new connection.
 	 */
 
 	hostname_len = strlen(my_addr->host);
@@ -1868,11 +1928,11 @@ int
 __repmgr_listen(env)
 	ENV *env;
 {
-	ADDRINFO *ai;
+	ADDRINFO *ai, *ai0;
 	DB_REP *db_rep;
 	repmgr_netaddr_t *addrp;
 	char *why;
-	int sockopt, ret;
+	int ipversion, sockopt, ret;
 	socket_t s;
 
 	db_rep = env->rep_handle;
@@ -1882,8 +1942,9 @@ __repmgr_listen(env)
 
 	addrp = &SITE_FROM_EID(db_rep->self_eid)->net_addr;
 	if ((ret = __repmgr_getaddr(env,
-	    addrp->host, addrp->port, AI_PASSIVE, &ai)) != 0)
+	    addrp->host, addrp->port, AI_PASSIVE, &ai0)) != 0)
 		return (ret);
+	__repmgr_print_addrlist(env, "repmgr_listen", ai0);
 
 	/*
 	 * Given the assert is correct, we execute the loop at least once, which
@@ -1891,8 +1952,21 @@ __repmgr_listen(env)
 	 * course lint doesn't know about DB_ASSERT.
 	 */
 	COMPQUIET(why, "");
-	DB_ASSERT(env, ai != NULL);
-	for (; ai != NULL; ai = ai->ai_next) {
+	DB_ASSERT(env, ai0 != NULL);
+
+	/*
+	 * We make one or two passes through this loop.  The first pass
+	 * tries any IPv6 addresses in the list.  If there are no successful
+	 * IPv6 connections after the first pass, we make a second pass to
+	 * try any IPv4 addresses in the list.  This helps us avoid use of
+	 * IPv4 mapped addresses if IPv6 addresses are available on both
+	 * sides of a connection.
+	 */
+	ipversion = AF_INET6;
+retry:
+	for (ai = ai0; ai != NULL; ai = ai->ai_next) {
+		if (ai->ai_family != ipversion)
+			continue;
 
 		if ((s = socket(ai->ai_family,
 		    ai->ai_socktype, ai->ai_protocol)) == INVALID_SOCKET) {
@@ -1910,7 +1984,7 @@ __repmgr_listen(env)
 		    sizeof(sockopt)) != 0) {
 			why = DB_STR("3585",
 			    "can't set REUSEADDR socket option");
-			break;
+			goto err;
 		}
 
 		if (bind(s, ai->ai_addr, (socklen_t)ai->ai_addrlen) != 0) {
@@ -1924,7 +1998,7 @@ __repmgr_listen(env)
 
 		if (listen(s, 5) != 0) {
 			why = DB_STR("3587", "listen()");
-			break;
+			goto err;
 		}
 
 		if ((ret = __repmgr_set_nonblocking(s)) != 0) {
@@ -1937,13 +2011,23 @@ __repmgr_listen(env)
 		goto out;
 	}
 
-	if (ret == 0)
+	/*
+	 * If the first pass reaches here, it did not make a successful IPv6
+	 * connection.  Make the second pass to try IPv4.
+	 */
+	if (ipversion == AF_INET6) {
+		ipversion = AF_INET;
+		goto retry;
+	}
+	goto out;
+
+err:	if (ret == 0)
 		ret = net_errno;
 	__db_err(env, ret, "%s", why);
 clean:	if (s != INVALID_SOCKET)
 		(void)closesocket(s);
 out:
-	__os_freeaddrinfo(env, ai);
+	__os_freeaddrinfo(env, ai0);
 	return (ret);
 }
 
@@ -2167,3 +2251,80 @@ err:
 	return (port);
 }
 #endif
+
+/*
+ * Print a single IP address in IPv6 or IPv4 format as needed.  Use
+ * idstring to supply information to help identify the caller.  Set
+ * single to 1 if only printing a single IP address.  Use index
+ * to supply an index value if printing out a list of IP addresses
+ * (in this case single should be 0).
+ *
+ * PUBLIC: void __repmgr_print_addr __P((ENV *,
+ * PUBLIC:    struct sockaddr *, const char *, int, int));
+ */
+void
+__repmgr_print_addr(env, addr, idstring, single, idx)
+	ENV *env;
+	struct sockaddr *addr;
+	const char *idstring;
+	int single;
+	int idx;
+{
+	struct sockaddr_in6 *saddr6;
+	struct sockaddr_in *saddr4;
+	char host[MAXHOSTNAMELEN];
+	char addrstr6[INET6_ADDRSTRLEN];
+	char addrstr4[INET_ADDRSTRLEN];
+	const char *p;
+
+	p = NULL;
+	if (addr->sa_family == AF_INET6) {
+		saddr6 = (struct sockaddr_in6 *)(addr);
+		if (getnameinfo((struct sockaddr *)saddr6,
+		    sizeof(struct sockaddr_in6), host, sizeof(host),
+		    0, 0, 0) != 0)
+			return;
+		p = __os_inet_ntop(saddr6->sin6_family, &saddr6->sin6_addr,
+		    addrstr6, sizeof(addrstr6));
+	} else if (addr->sa_family == AF_INET) {
+		saddr4 = (struct sockaddr_in *)(addr);
+		if (getnameinfo((struct sockaddr *)saddr4,
+		    sizeof(struct sockaddr_in), host, sizeof(host),
+		    0, 0, 0) != 0)
+			return;
+		p = __os_inet_ntop(saddr4->sin_family, &saddr4->sin_addr,
+		    addrstr4, sizeof(addrstr4));
+	} else {
+		VPRINT(env, (env, DB_VERB_REPMGR_MISC,
+		    "repmgr_print_addr: address family not recognized"));
+		return;
+	}
+
+	if (single)
+		VPRINT(env, (env, DB_VERB_REPMGR_MISC,
+		    "%s IPv%s host %s address %s", idstring,
+		    addr->sa_family == AF_INET6 ? "6" : "4", host, p));
+	else
+		VPRINT(env, (env, DB_VERB_REPMGR_MISC,
+		    "%s addrlist[%d] IPv%s host %s address %s",
+		    idstring, idx,
+		    addr->sa_family == AF_INET6 ? "6" : "4", host, p));
+}
+
+/*
+ * Print a list of IP addresses in IPv6 or IPv4 format as needed.
+ */
+static void
+__repmgr_print_addrlist(env, idstring, ai0)
+	ENV *env;
+	const char *idstring;
+	ADDRINFO *ai0;
+{
+	ADDRINFO *ai;
+	int i;
+
+	if (env->dbenv->verbose == 0)
+		return;
+	for (ai = ai0, i = 0; ai != NULL; ai = ai->ai_next, i++)
+		__repmgr_print_addr(env, ai->ai_addr, idstring, 0, i);
+}

@@ -101,6 +101,10 @@ fi
 # Configure JDBC if --enable-jdbc
 if test "$db_cv_jdbc" != "no"; then
 
+  # Get the absolute directory path to javac
+  AC_REQUIRE([AC_JNI_INCLUDE_DIR])
+  JAVA_BIN=`dirname $_ACJNI_JAVAC`
+
   # Deal with user-defined jdbc source path
   if test "$with_jdbc" != "no"; then
     jdbc_path="$with_jdbc"
@@ -123,15 +127,16 @@ if test "$db_cv_jdbc" != "no"; then
   jdbc_args=""
   jdbc_flags=""
 
-  test "$prefix" != "" && jdbc_args="--prefix=$prefix --with-jardir=$prefix/jar"
+  test "$prefix" != "" && jdbc_args="--prefix=$prefix --with-jardir=$prefix/lib"
   test "$enable_shared" != "" && jdbc_args="$jdbc_args --enable-shared=$enable_shared"
   test "$enable_static" != "" && jdbc_args="$jdbc_args --enable-static=$enable_static"
+  test "$cross_compiling" = "yes" && jdbc_args="$jdbc_args --build=$build --host=$host "
 
   # 1. The build directory is build_unix/jdbc, so the include paths are relative
   #    to that.
   # 2. The JDBC driver does not accept CPPFLAGS. So we move the CPPFLAGS options
   #    into CFLAGS for the JDBC driver.
-  jdbc_flags="$jdbc_flags CFLAGS=\"-I.. -I../../src/dbinc -I../sql \
+  jdbc_flags="$jdbc_flags CFLAGS=\"-I.. -I../../src/dbinc -I../../src -I../sql \
     -DHAVE_ERRNO_H -D_HAVE_SQLITE_CONFIG_H -DHAVE_SQLITE3_MALLOC \
     $CFLAGS $CPPFLAGS\""
   # Set LDFLAGS for JDBC driver
@@ -149,7 +154,7 @@ if test "$db_cv_jdbc" != "no"; then
   cd jdbc
   test ! -e Makefile.in.tmp && mv Makefile.in Makefile.in.tmp
   sed "s/@BDB_LIB@/$BDB_LIB/g" Makefile.in.tmp > Makefile.in
-  eval "\$SHELL ./configure --with-sqlite3=../../lang/sql/generated $jdbc_args $jdbc_flags"
+  eval "env JAVA_BIN=$JAVA_BIN \$SHELL ./configure --with-sqlite3=../../lang/sql/generated $jdbc_args $jdbc_flags"
 fi
 
 CPPFLAGS="$orig_CPPFLAGS"

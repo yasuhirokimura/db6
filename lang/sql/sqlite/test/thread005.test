@@ -175,7 +175,9 @@ set ThreadProgram {
   }
 
   set ::DB [sqlite3_open test.db]
-
+  if {[sqlite3 -has-codec]} {
+    sqlite3_key $DB xyzzy
+  }
   execsql { ATTACH 'test2.db' AS aux }
 
   set result "ok"

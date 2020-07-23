@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -41,7 +41,7 @@ typedef struct __db_globals {
 #endif
 	SECURITY_ATTRIBUTES *win_sec_attr;
 #endif
-	
+
 	/* TAILQ_HEAD(__envq, __dbenv) envq; */
 	struct __envq {
 		struct __env *tqh_first;
@@ -52,19 +52,18 @@ typedef struct __db_globals {
 
 	char error_buf[40];		/* Error string buffer. */
 
-	int uid_init;			/* srand set in UID generator */
+	int random_seeded;		/* Has __os_srandom been called? */
 
-	u_long rand_next;		/* rand/srand value */
+#if defined(HAVE_RANDOM_R)
+	struct random_data random_data;	/* srandom_r/random_r argument */
+	char random_state[64];		/* random number state */
+#elif !defined(HAVE_RAND) && !defined(HAVE_RANDOM)
+	u_long rand_next;		/* next rand value for clib/rand.c */
+#endif
 
 	u_int32_t fid_serial;		/* file id counter */
 
 	int db_errno;			/* Errno value if not available */
-
-	size_t num_active_pids;		/* number of entries in active_pids */
-
-	size_t size_active_pids;	/* allocated size of active_pids */
-
-	pid_t *active_pids;		/* array active pids */
 
 	char *saved_errstr;		/* saved error string from backup */
 
@@ -77,7 +76,7 @@ typedef struct __db_globals {
 
 	/* Underlying OS interface jump table.*/
 	void	(*j_assert) __P((const char *, const char *, int));
-	int	(*j_close) __P((int));	
+	int	(*j_close) __P((int));
 	void	(*j_dirfree) __P((char **, int));
 	int	(*j_dirlist) __P((const char *, char ***, int *));
 	int	(*j_exists) __P((const char *, int *));

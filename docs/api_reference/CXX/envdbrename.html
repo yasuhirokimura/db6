@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -57,6 +57,11 @@ DbEnv::dbrename(DbTxn *txnid, const char *file,
          open when the <code class="methodname">DbEnv::dbrename()</code> method is called.
     </p>
       <p>
+         The <code class="methodname">DbEnv::dbrename()</code> method is not atomic in a
+         sliced environment. If the operation fails, it is possible for the 
+         names of the various sliced databases to be in an inconsistent state.
+     </p>
+      <p>
          The <code class="methodname">DbEnv::dbrename()</code> <span>
             
             <span>
@@ -76,7 +81,7 @@ DbEnv::dbrename(DbTxn *txnid, const char *file,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp59836592"></a>Parameters</h3>
+              <h3 class="title"><a id="idp101538640"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -84,7 +89,7 @@ DbEnv::dbrename(DbTxn *txnid, const char *file,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp59836784"></a>txnid</h4>
+                <h4 class="title"><a id="idp101539024"></a>txnid</h4>
               </div>
             </div>
           </div>
@@ -105,7 +110,7 @@ DbEnv::dbrename(DbTxn *txnid, const char *file,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp59837840"></a>file</h4>
+                <h4 class="title"><a id="idp101541056"></a>file</h4>
               </div>
             </div>
           </div>
@@ -124,7 +129,7 @@ DbEnv::dbrename(DbTxn *txnid, const char *file,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp59804200"></a>database</h4>
+                <h4 class="title"><a id="idp101397520"></a>database</h4>
               </div>
             </div>
           </div>
@@ -137,7 +142,7 @@ DbEnv::dbrename(DbTxn *txnid, const char *file,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp59832392"></a>newname</h4>
+                <h4 class="title"><a id="idp101483344"></a>newname</h4>
               </div>
             </div>
           </div>
@@ -150,7 +155,7 @@ DbEnv::dbrename(DbTxn *txnid, const char *file,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp59833936"></a>flags</h4>
+                <h4 class="title"><a id="idp101534128"></a>flags</h4>
               </div>
             </div>
           </div>
@@ -179,7 +184,7 @@ DbEnv::dbrename(DbTxn *txnid, const char *file,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp59845640"></a>Environment Variables</h3>
+              <h3 class="title"><a id="idp101489312"></a>Environment Variables</h3>
             </div>
           </div>
         </div>
@@ -192,7 +197,7 @@ DbEnv::dbrename(DbTxn *txnid, const char *file,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp59834584"></a>Errors</h3>
+              <h3 class="title"><a id="idp101542864"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -210,7 +215,7 @@ DbEnv::dbrename(DbTxn *txnid, const char *file,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp59829672"></a><span>DbDeadlockException or </span>DB_LOCK_DEADLOCK</h4>
+                <h4 class="title"><a id="idp101572112"></a><span>DbDeadlockException or </span>DB_LOCK_DEADLOCK</h4>
               </div>
             </div>
           </div>
@@ -228,7 +233,7 @@ DbEnv::dbrename(DbTxn *txnid, const char *file,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp59838120"></a><span>DbLockNotGrantedException or </span>DB_LOCK_NOTGRANTED</h4>
+                <h4 class="title"><a id="idp101547088"></a><span>DbLockNotGrantedException or </span>DB_LOCK_NOTGRANTED</h4>
               </div>
             </div>
           </div>
@@ -253,7 +258,7 @@ DbEnv::dbrename(DbTxn *txnid, const char *file,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp59813576"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp101534960"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -266,7 +271,7 @@ DbEnv::dbrename(DbTxn *txnid, const char *file,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp59821560"></a>ENOENT</h4>
+                <h4 class="title"><a id="idp101496880"></a>ENOENT</h4>
               </div>
             </div>
           </div>
@@ -278,7 +283,7 @@ DbEnv::dbrename(DbTxn *txnid, const char *file,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp59843888"></a>DB_META_CHKSUM_FAIL</h4>
+                <h4 class="title"><a id="idp101501360"></a>DB_META_CHKSUM_FAIL</h4>
               </div>
             </div>
           </div>
@@ -293,7 +298,7 @@ DbEnv::dbrename(DbTxn *txnid, const char *file,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp59850240"></a>Class</h3>
+              <h3 class="title"><a id="idp101563952"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -305,7 +310,7 @@ DbEnv::dbrename(DbTxn *txnid, const char *file,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp59814496"></a>See Also</h3>
+              <h3 class="title"><a id="idp101450944"></a>See Also</h3>
             </div>
           </div>
         </div>

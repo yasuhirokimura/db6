@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2000, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2000, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -25,11 +25,13 @@ public interface RecordNumberAppender {
     <p>
     @param db
     The enclosing database handle.
-    <p>    @param data
+    <p>
+    @param data
     The data to be stored.
     <p>
     @param recno
     The generated record number.
+    @throws DatabaseException if a failure occurs.
     */
     void appendRecordNumber(Database db, DatabaseEntry data, int recno)
         throws DatabaseException;

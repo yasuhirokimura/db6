@@ -956,6 +956,19 @@
             to be adjusted for this architecture or not. 
             </summary>
         </member>
+        <member name="P:BerkeleyDB.BaseDatabase.MessagePrefix">
+            <summary>
+            The prefix string that appears before informational messages issued
+            by Berkeley DB.
+            </summary>
+            <remarks>
+            <para>
+            For databases opened inside of a DatabaseEnvironment, setting
+            MessagePrefix affects the entire environment and is equivalent to
+            setting <see cref="P:BerkeleyDB.DatabaseEnvironment.MessagePrefix"/>.
+            </para>
+            </remarks>
+        </member>
         <member name="P:BerkeleyDB.BaseDatabase.NoMMap">
             <summary>
             <para>
@@ -4164,6 +4177,19 @@
             </para>
             </remarks>
         </member>
+        <member name="P:BerkeleyDB.DatabaseEnvironment.MessagePrefix">
+            <summary>
+            The prefix string that appears before informational messages issued
+            by Berkeley DB.
+            </summary>
+            <remarks>
+            <para>
+            For databases opened inside of a DatabaseEnvironment, setting
+            MessagePrefix affects the entire environment and is equivalent to
+            setting <see cref="P:BerkeleyDB.DatabaseEnvironment.MessagePrefix"/>.
+            </para>
+            </remarks>
+        </member>
         <member name="P:BerkeleyDB.DatabaseEnvironment.MMapSize">
             <summary>
             The maximum file size, in bytes, for a file to be mapped into the
@@ -5316,6 +5342,12 @@
             <summary>
             The prefix string that appears before error messages issued by
             Berkeley DB.
+            </summary>
+        </member>
+        <member name="F:BerkeleyDB.DatabaseConfig.MessagePrefix">
+            <summary>
+            The prefix string that appears before informational messages issued
+            by Berkeley DB.
             </summary>
         </member>
         <member name="F:BerkeleyDB.DatabaseConfig.ErrorFeedback">
@@ -9586,7 +9618,7 @@
             Total cache size and number of regions
             </summary>
         </member>
-        <member name="P:BerkeleyDB.MPoolStats.CacheRegions">
+        <member name="P:BerkeleyDB.MPoolStats.MaxCacheRegions">
             <summary>
             Maximum number of regions. 
             </summary>
@@ -9849,6 +9881,11 @@
         <member name="P:BerkeleyDB.BTreeStats.MinKey">
             <summary>
             Minkey value. 
+            </summary>
+        </member>
+        <member name="P:BerkeleyDB.BTreeStats.nBlobRecords">
+            <summary>
+            Number of blobs. 
             </summary>
         </member>
         <member name="P:BerkeleyDB.BTreeStats.nData">
@@ -11441,6 +11478,11 @@
             Magic number. 
             </summary>
         </member>
+        <member name="P:BerkeleyDB.HashStats.nBlobRecords">
+            <summary>
+            Number of blobs. 
+            </summary>
+        </member>
         <member name="P:BerkeleyDB.HashStats.nData">
             <summary>
             Number of data items. 
@@ -12633,6 +12675,19 @@
             For databases opened inside of a DatabaseEnvironment, setting
             ErrorPrefix affects the entire environment and is equivalent to
             setting <see cref="P:BerkeleyDB.DatabaseEnvironment.ErrorPrefix"/>.
+            </para>
+            </remarks>
+        </member>
+        <member name="F:BerkeleyDB.DatabaseEnvironmentConfig.MessagePrefix">
+            <summary>
+            The prefix string that appears before informational messages issued
+            by Berkeley DB.
+            </summary>
+            <remarks>
+            <para>
+            For databases opened inside of a DatabaseEnvironment, setting
+            MessagePrefix affects the entire environment and is equivalent to
+            setting <see cref="P:BerkeleyDB.DatabaseEnvironment.MessagePrefix"/>.
             </para>
             </remarks>
         </member>
@@ -15869,6 +15924,11 @@
         <member name="P:BerkeleyDB.RecnoStats.MinKey">
             <summary>
             Minkey value. 
+            </summary>
+        </member>
+        <member name="P:BerkeleyDB.RecnoStats.nBlobRecords">
+            <summary>
+            Number of blobs. 
             </summary>
         </member>
         <member name="P:BerkeleyDB.RecnoStats.RecordLength">

@@ -216,6 +216,13 @@ AC_ARG_ENABLE(java,
 	[db_cv_java="$enable_java"], [db_cv_java="no"])
 AC_MSG_RESULT($db_cv_java)
 
+AC_MSG_CHECKING(if --enable-server option specified)
+AC_ARG_ENABLE(server,
+	[AC_HELP_STRING([--enable-server],
+			[Install Thrift Server and Client Driver API.])],
+	[db_cv_server="$enable_server"], [db_cv_server="no"])
+AC_MSG_RESULT($db_cv_server)
+
 AC_MSG_CHECKING(if --enable-mingw option specified)
 AC_ARG_ENABLE(mingw,
 	[AC_HELP_STRING([--enable-mingw],
@@ -248,6 +255,13 @@ AC_ARG_ENABLE(rpc,,
 	[AC_MSG_ERROR([RPC support has been removed from Berkeley DB.])]
 	 , [db_cv_rpc="no"])
 AC_MSG_RESULT($db_cv_rpc)
+
+AC_MSG_CHECKING(if --enable-slices option specified)
+AC_ARG_ENABLE(slices,
+	[AC_HELP_STRING([--enable-slices],
+			[Build in sliced environment support.])],
+	[db_cv_slices="$enable_slices"], [db_cv_slices="no"])
+AC_MSG_RESULT($db_cv_slices)
 
 AC_MSG_CHECKING(if --enable-sql option specified)
 AC_ARG_ENABLE(sql,
@@ -476,6 +490,11 @@ fi
 # --enable-jdbc implies --enable-sql
 if test "$db_cv_jdbc" = "yes" -a "$db_cv_sql" = "no"; then
 	db_cv_sql=$db_cv_jdbc
+fi
+
+# --enable-server implies --enable-java
+if test "$db_cv_server" = "yes" -a "$db_cv_java" = "no"; then
+	db_cv_java=$db_cv_server
 fi
 
 # Cryptography support.

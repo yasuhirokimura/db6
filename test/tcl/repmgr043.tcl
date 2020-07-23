@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2014, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -88,6 +88,7 @@ proc repmgr043_continuous { method niter tnum txnsite downopt largs } {
 	global rep_verbose
 	global verbose_type
 	global databases_in_memory
+	global ipversion
 	set nsites 2
 	set omethod [convert_method $method]
 
@@ -97,6 +98,7 @@ proc repmgr043_continuous { method niter tnum txnsite downopt largs } {
 	}
 
 	env_cleanup $testdir
+	set hoststr [get_hoststr $ipversion]
 	set ports [available_ports $nsites]
 
 	set masterdir $testdir/MASTERDIR
@@ -111,7 +113,7 @@ proc repmgr043_continuous { method niter tnum txnsite downopt largs } {
 	set masterenv [eval $ma_envcmd]
 	$masterenv rep_config {mgrprefmasmaster on}
 	$masterenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 0]] -start client
+	    -local [list $hoststr [lindex $ports 0]] -start client
 	await_expected_master $masterenv
 
 	puts "\tRepmgr$tnum.ct.b: Start client site."
@@ -120,8 +122,8 @@ proc repmgr043_continuous { method niter tnum txnsite downopt largs } {
 	set clientenv [eval $cl_envcmd]
 	$clientenv rep_config {mgrprefmasclient on}
 	$clientenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 1]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] -start client
+	    -local [list $hoststr [lindex $ports 1]] \
+	    -remote [list $hoststr [lindex $ports 0]] -start client
 	await_startup_done $clientenv
 
 	#
@@ -178,7 +180,7 @@ proc repmgr043_continuous { method niter tnum txnsite downopt largs } {
 		set masterenv [eval $ma_envcmd]
 		$masterenv rep_config {mgrprefmasmaster on}
 		$masterenv repmgr -ack all \
-		    -local [list 127.0.0.1 [lindex $ports 0]] -start client
+		    -local [list $hoststr [lindex $ports 0]] -start client
 		if { $downopt != "bothdown" } {
 			await_startup_done $masterenv
 		}
@@ -188,8 +190,8 @@ proc repmgr043_continuous { method niter tnum txnsite downopt largs } {
 		set clientenv [eval $cl_envcmd]
 		$clientenv rep_config {mgrprefmasclient on}
 		$clientenv repmgr -ack all \
-		    -local [list 127.0.0.1 [lindex $ports 1]] \
-		    -remote [list 127.0.0.1 [lindex $ports 0]] -start client
+		    -local [list $hoststr [lindex $ports 1]] \
+		    -remote [list $hoststr [lindex $ports 0]] -start client
 		await_startup_done $clientenv
 	}
 
@@ -239,6 +241,7 @@ proc repmgr043_conflicting { method niter tnum firstsite moredata largs } {
 	global rep_verbose
 	global verbose_type
 	global databases_in_memory
+	global ipversion
 	set nsites 2
 	set omethod [convert_method $method]
 
@@ -248,6 +251,7 @@ proc repmgr043_conflicting { method niter tnum firstsite moredata largs } {
 	}
 
 	env_cleanup $testdir
+	set hoststr [get_hoststr $ipversion]
 	set ports [available_ports $nsites]
 	set big_iter [expr $niter * 2]
 
@@ -263,7 +267,7 @@ proc repmgr043_conflicting { method niter tnum firstsite moredata largs } {
 	set masterenv [eval $ma_envcmd]
 	$masterenv rep_config {mgrprefmasmaster on}
 	$masterenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 0]] -start client
+	    -local [list $hoststr [lindex $ports 0]] -start client
 	await_expected_master $masterenv
 
 	puts "\tRepmgr$tnum.cf.b: Start client site."
@@ -272,8 +276,8 @@ proc repmgr043_conflicting { method niter tnum firstsite moredata largs } {
 	set clientenv [eval $cl_envcmd]
 	$clientenv rep_config {mgrprefmasclient on}
 	$clientenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 1]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] -start client
+	    -local [list $hoststr [lindex $ports 1]] \
+	    -remote [list $hoststr [lindex $ports 0]] -start client
 	await_startup_done $clientenv
 
 	#
@@ -336,15 +340,15 @@ proc repmgr043_conflicting { method niter tnum firstsite moredata largs } {
 		set clientenv [eval $cl_envcmd]
 		$clientenv rep_config {mgrprefmasclient on}
 		$clientenv repmgr -ack all \
-		    -local [list 127.0.0.1 [lindex $ports 1]] \
-		    -remote [list 127.0.0.1 [lindex $ports 0]] -start client
+		    -local [list $hoststr [lindex $ports 1]] \
+		    -remote [list $hoststr [lindex $ports 0]] -start client
 		await_expected_master $clientenv
 		set secondenv $clientenv
 	} else {
 		set masterenv [eval $ma_envcmd]
 		$masterenv rep_config {mgrprefmasmaster on}
 		$masterenv repmgr -ack all \
-		    -local [list 127.0.0.1 [lindex $ports 0]] -start client
+		    -local [list $hoststr [lindex $ports 0]] -start client
 		await_expected_master $masterenv
 		set secondenv $masterenv
 	}
@@ -369,15 +373,15 @@ proc repmgr043_conflicting { method niter tnum firstsite moredata largs } {
 		set masterenv [eval $ma_envcmd]
 		$masterenv rep_config {mgrprefmasmaster on}
 		$masterenv repmgr -ack all \
-		    -local [list 127.0.0.1 [lindex $ports 0]] -start client
+		    -local [list $hoststr [lindex $ports 0]] -start client
 		await_expected_master $masterenv
 		set firstenv $masterenv
 	} else {
 		set clientenv [eval $cl_envcmd]
 		$clientenv rep_config {mgrprefmasclient on}
 		$clientenv repmgr -ack all \
-		    -local [list 127.0.0.1 [lindex $ports 1]] \
-		    -remote [list 127.0.0.1 [lindex $ports 0]] -start client
+		    -local [list $hoststr [lindex $ports 1]] \
+		    -remote [list $hoststr [lindex $ports 0]] -start client
 		await_startup_done $clientenv
 		set firstenv $clientenv
 	}
@@ -424,6 +428,7 @@ proc repmgr043_parallelgen { method niter tnum largs } {
 	global rep_verbose
 	global verbose_type
 	global databases_in_memory
+	global ipversion
 	set nsites 2
 	set omethod [convert_method $method]
 	set small_iter [expr $niter / 2]
@@ -434,6 +439,7 @@ proc repmgr043_parallelgen { method niter tnum largs } {
 	}
 
 	env_cleanup $testdir
+	set hoststr [get_hoststr $ipversion]
 	set ports [available_ports $nsites]
 
 	set masterdir $testdir/MASTERDIR
@@ -448,7 +454,7 @@ proc repmgr043_parallelgen { method niter tnum largs } {
 	set masterenv [eval $ma_envcmd]
 	$masterenv rep_config {mgrprefmasmaster on}
 	$masterenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 0]] -start client
+	    -local [list $hoststr [lindex $ports 0]] -start client
 	await_expected_master $masterenv
 
 	puts "\tRepmgr$tnum.pg.b: Start client site."
@@ -457,8 +463,8 @@ proc repmgr043_parallelgen { method niter tnum largs } {
 	set clientenv [eval $cl_envcmd]
 	$clientenv rep_config {mgrprefmasclient on}
 	$clientenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 1]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] -start client
+	    -local [list $hoststr [lindex $ports 1]] \
+	    -remote [list $hoststr [lindex $ports 0]] -start client
 	await_startup_done $clientenv
 
 	#
@@ -492,7 +498,7 @@ proc repmgr043_parallelgen { method niter tnum largs } {
 	set masterenv [eval $ma_envcmd]
 	$masterenv rep_config {mgrprefmasmaster on}
 	$masterenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 0]] -start client
+	    -local [list $hoststr [lindex $ports 0]] -start client
 	await_expected_master $masterenv
 	eval rep_test $method $masterenv NULL $small_iter $start 0 0 $largs
 	incr start $small_iter
@@ -503,8 +509,8 @@ proc repmgr043_parallelgen { method niter tnum largs } {
 	set clientenv [eval $cl_envcmd]
 	$clientenv rep_config {mgrprefmasclient on}
 	$clientenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 1]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] -start client
+	    -local [list $hoststr [lindex $ports 1]] \
+	    -remote [list $hoststr [lindex $ports 0]] -start client
 	await_expected_master $clientenv
 	eval rep_test $method $clientenv NULL $niter $start 0 0 $largs
 	incr start $niter
@@ -526,8 +532,8 @@ proc repmgr043_parallelgen { method niter tnum largs } {
 	set clientenv [eval $cl_envcmd]
 	$clientenv rep_config {mgrprefmasclient on}
 	$clientenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 1]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] -start client
+	    -local [list $hoststr [lindex $ports 1]] \
+	    -remote [list $hoststr [lindex $ports 0]] -start client
 	await_expected_master $clientenv
 	eval rep_test $method $clientenv NULL $niter $start 0 0 $largs
 	incr start $niter
@@ -538,7 +544,7 @@ proc repmgr043_parallelgen { method niter tnum largs } {
 	set masterenv [eval $ma_envcmd]
 	$masterenv rep_config {mgrprefmasmaster on}
 	$masterenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 0]] -start client
+	    -local [list $hoststr [lindex $ports 0]] -start client
 	await_expected_master $masterenv
 	await_startup_done $clientenv
 
@@ -581,6 +587,7 @@ proc repmgr043_extralog { method niter tnum commitopt largs } {
 	global rep_verbose
 	global verbose_type
 	global databases_in_memory
+	global ipversion
 	set nsites 2
 	set omethod [convert_method $method]
 
@@ -590,6 +597,7 @@ proc repmgr043_extralog { method niter tnum commitopt largs } {
 	}
 
 	env_cleanup $testdir
+	set hoststr [get_hoststr $ipversion]
 	set ports [available_ports $nsites]
 	# Extra fast connection retry timeout for prompt connection on
 	# preferred master restart.
@@ -608,7 +616,7 @@ proc repmgr043_extralog { method niter tnum commitopt largs } {
 	$masterenv rep_config {mgrprefmasmaster on}
 	$masterenv repmgr -ack all \
 	    -timeout [list connection_retry $connretry] \
-	    -local [list 127.0.0.1 [lindex $ports 0]] -start client
+	    -local [list $hoststr [lindex $ports 0]] -start client
 	await_expected_master $masterenv
 
 	puts "\tRepmgr$tnum.el.b: Start client site."
@@ -618,8 +626,8 @@ proc repmgr043_extralog { method niter tnum commitopt largs } {
 	$clientenv rep_config {mgrprefmasclient on}
 	$clientenv repmgr -ack all \
 	    -timeout [list connection_retry $connretry] \
-	    -local [list 127.0.0.1 [lindex $ports 1]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] -start client
+	    -local [list $hoststr [lindex $ports 1]] \
+	    -remote [list $hoststr [lindex $ports 0]] -start client
 	await_startup_done $clientenv
 
 	#
@@ -674,7 +682,7 @@ proc repmgr043_extralog { method niter tnum commitopt largs } {
 	$masterenv rep_config {mgrprefmasmaster on}
 	$masterenv repmgr -ack all \
 	    -timeout [list connection_retry $connretry] \
-	    -local [list 127.0.0.1 [lindex $ports 0]] -start client
+	    -local [list $hoststr [lindex $ports 0]] -start client
 	await_expected_master $masterenv
 
 	puts "\tRepmgr$tnum.el.j: Run/verify transactions at preferred master."

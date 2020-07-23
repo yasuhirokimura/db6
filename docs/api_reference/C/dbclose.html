@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -77,6 +77,11 @@ DB-&gt;close(DB *db, u_int32_t flags);  </pre>
          indices referencing it have been closed.
     </p>
       <p>
+         When called on a database that has been opened with sliced
+         support, the <code class="methodname">DB-&gt;close()</code> method is
+         automatically called on each supporting slice database. 
+     </p>
+      <p>
              When multiple threads are using the <a class="link" href="db.html" title="Chapter 2.  The DB Handle">DB</a>
              concurrently, only a single thread may call the <code class="methodname">DB-&gt;close()</code> method.
     </p>
@@ -101,7 +106,7 @@ DB-&gt;close(DB *db, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h4 class="title"><a id="idm1770328"></a>DB_LOCK_DEADLOCK</h4>
+              <h4 class="title"><a id="idm9466720"></a>DB_LOCK_DEADLOCK</h4>
             </div>
           </div>
         </div>
@@ -114,7 +119,7 @@ DB-&gt;close(DB *db, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h4 class="title"><a id="idm1779984"></a>DB_LOCK_NOTGRANTED</h4>
+              <h4 class="title"><a id="idm9542304"></a>DB_LOCK_NOTGRANTED</h4>
             </div>
           </div>
         </div>
@@ -134,7 +139,7 @@ DB-&gt;close(DB *db, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h4 class="title"><a id="idm1857520"></a>EINVAL</h4>
+              <h4 class="title"><a id="idm9555408"></a>EINVAL</h4>
             </div>
           </div>
         </div>
@@ -147,7 +152,7 @@ DB-&gt;close(DB *db, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm1742624"></a>Parameters</h3>
+              <h3 class="title"><a id="idm9649104"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -155,7 +160,7 @@ DB-&gt;close(DB *db, u_int32_t flags);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm1517784"></a>flags</h4>
+                <h4 class="title"><a id="idm9654320"></a>flags</h4>
               </div>
             </div>
           </div>
@@ -202,7 +207,7 @@ DB-&gt;close(DB *db, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm1504024"></a>Errors</h3>
+              <h3 class="title"><a id="idm9667984"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -218,7 +223,7 @@ DB-&gt;close(DB *db, u_int32_t flags);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm2254296"></a>EINVAL</h4>
+                <h4 class="title"><a id="idm9956432"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -233,7 +238,7 @@ DB-&gt;close(DB *db, u_int32_t flags);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm1952672"></a>DB_LOCK_DEADLOCK</h4>
+                <h4 class="title"><a id="idm10083936"></a>DB_LOCK_DEADLOCK</h4>
               </div>
             </div>
           </div>
@@ -246,7 +251,7 @@ DB-&gt;close(DB *db, u_int32_t flags);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm1936120"></a>DB_LOCK_NOTGRANTED</h4>
+                <h4 class="title"><a id="idm10092768"></a>DB_LOCK_NOTGRANTED</h4>
               </div>
             </div>
           </div>
@@ -266,7 +271,7 @@ DB-&gt;close(DB *db, u_int32_t flags);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm1849736"></a>EINVAL</h4>
+                <h4 class="title"><a id="idm10104992"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -280,7 +285,7 @@ DB-&gt;close(DB *db, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm2087288"></a>Class</h3>
+              <h3 class="title"><a id="idm9865296"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -292,7 +297,7 @@ DB-&gt;close(DB *db, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm1767760"></a>See Also</h3>
+              <h3 class="title"><a id="idm10173104"></a>See Also</h3>
             </div>
           </div>
         </div>

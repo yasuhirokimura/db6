@@ -143,6 +143,10 @@ static jthrowable __dbj_get_except(JNIEnv *jenv,
 		return (jthrowable)(*jenv)->NewObject(jenv, lockex_class,
 		    lockex_construct, jmsg, ret, 0, NULL, NULL, 0, jdbenv);
 
+	case DB_SLICE_CORRUPT:
+		return (jthrowable)(*jenv)->NewObject(jenv, sliceex_class,
+		    sliceex_construct, jmsg, ret, jdbenv);
+
 	case DB_VERSION_MISMATCH:
 		return (jthrowable)(*jenv)->NewObject(jenv, versionex_class,
 		    versionex_construct, jmsg, ret, jdbenv);

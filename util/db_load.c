@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -14,10 +14,10 @@
 
 #ifndef lint
 static const char copyright[] =
-    "Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.\n";
+    "Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.\n";
 #endif
 
-typedef struct {			/* XXX: Globals. */
+typedef struct {			/* Collect global variables together. */
 	const char *progname;		/* Program name. */
 	char	*hdrbuf;		/* Input file header. */
 	u_long	lineno;			/* Input file line number. */
@@ -420,7 +420,7 @@ retry_db:
 			}
 			if (ldg->blob_threshold != 0) {
 				dbenv->errx(dbenv, DB_STR("5142",
-			    "Queue and recno databases cannot support blobs"));
+		"Queue and recno databases cannot support external files"));
 				goto err;
 			}
 		}
@@ -1506,7 +1506,7 @@ dbt_rdump(dbenv, dbtp, blob_threshold, streaming)
 			if (dbtp->ulen == UINT32_MAX) {
 				dbenv->errx(dbenv, DB_STR("5143",
 	    "Encountered a data item too large to store in the database. "
-			"Enable blob_threshold to store it."));
+			"Enable ext_file_threshold to store it."));
 				return (DB_BUFFER_SMALL);
 			}
 			if (dbtp->ulen > UINT32_MAX/2)

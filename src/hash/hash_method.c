@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1999, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1999, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -230,12 +230,13 @@ __ham_set_h_nelem(dbp, h_nelem)
 
 /*
  * __ham_copy_config
- *	Copy the configuration of one DB handle to another.
- * PUBLIC: void __ham_copy_config __P((DB *, DB*, u_int32_t));
+ *	Copy the hash-specific configuration of one DB handle to another.
+ * PUBLIC: void __ham_copy_config __P((const DB *, DB*, u_int32_t));
  */
 void
 __ham_copy_config(src, dst, nparts)
-	DB *src, *dst;
+	const DB *src;
+	DB *dst;
 	u_int32_t nparts;
 {
 	HASH *s, *d;

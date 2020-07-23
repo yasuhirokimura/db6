@@ -85,6 +85,7 @@ typedef int64_t off_t;
 	d
 }
 s/@db_off_t_decl@/typedef int64_t db_off_t;/
+s/@db_off_t_max_decl@/#define DB_OFF_T_MAX INT64_MAX/
 /@platform_header@/{
 	i\\
 /*\\
@@ -114,6 +115,12 @@ s/@db_off_t_decl@/typedef int64_t db_off_t;/
 #ifdef _MSC_VER\\
 #pragma warning(pop)\\
 #endif
+	d
+}
+/@socket_decl/{
+	i\\
+#include <winsock2.h>\\
+typedef SOCKET DB_REPMGR_SOCKET;
 	d
 }
 s/@DB_VERSION_FAMILY@/$DB_VERSION_FAMILY/

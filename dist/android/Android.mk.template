@@ -30,7 +30,9 @@ LOCAL_SRC_FILES := \
 	$(BDB_TOP)/lang/sql/generated/sqlite3.c
 
 ifneq ($(TARGET_ARCH),arm)
+ifneq ($(TARGET_ARCH),arm64)
 LOCAL_LDLIBS += -lpthread -ldl
+endif
 endif
 
 #
@@ -85,7 +87,9 @@ LOCAL_C_INCLUDES := $(BDB_PATH) $(LOCAL_PATH)/$(BDB_TOP)/build_android\
 	 $(LOCAL_PATH)/$(BDB_TOP)/lang/sql/generated $(LOCAL_PATH)/../android
 
 ifneq ($(TARGET_ARCH),arm)
+ifneq ($(TARGET_ARCH),arm64)
 LOCAL_LDLIBS += -lpthread -ldl
+endif
 endif
 
 LOCAL_CFLAGS += -DHAVE_USLEEP=1 -DTHREADSAFE=1 -DNDEBUG=1
@@ -110,7 +114,9 @@ LOCAL_C_INCLUDES := $(BDB_PATH) $(LOCAL_PATH)/$(BDB_TOP)/build_android\
 	 $(LOCAL_PATH)/$(BDB_TOP)/lang/sql/generated $(LOCAL_PATH)/../android
 
 ifneq ($(TARGET_ARCH),arm)
+ifneq ($(TARGET_ARCH),arm64)
 LOCAL_LDLIBS += -lpthread -ldl
+endif
 endif
 
 LOCAL_CFLAGS += -DHAVE_USLEEP=1 -DTHREADSAFE=1 -DNDEBUG=1
@@ -136,7 +142,9 @@ LOCAL_C_INCLUDES := $(BDB_PATH) $(LOCAL_PATH)/$(BDB_TOP)/build_android\
 	 $(LOCAL_PATH)/$(BDB_TOP)/lang/sql/generated $(LOCAL_PATH)/../android
 
 ifneq ($(TARGET_ARCH),arm)
+ifneq ($(TARGET_ARCH),arm64)
 LOCAL_LDLIBS += -lpthread -ldl
+endif
 endif
 
 LOCAL_CFLAGS += -DHAVE_USLEEP=1 -DTHREADSAFE=1 -DNDEBUG=1
@@ -162,7 +170,9 @@ LOCAL_C_INCLUDES := $(BDB_PATH) $(LOCAL_PATH)/$(BDB_TOP)/build_android\
 	 $(LOCAL_PATH)/$(BDB_TOP)/lang/sql/generated $(LOCAL_PATH)/../android
 
 ifneq ($(TARGET_ARCH),arm)
+ifneq ($(TARGET_ARCH),arm64)
 LOCAL_LDLIBS += -lpthread -ldl
+endif
 endif
 
 LOCAL_CFLAGS += -DHAVE_USLEEP=1 -DTHREADSAFE=1 -DNDEBUG=1
@@ -188,7 +198,9 @@ LOCAL_C_INCLUDES := $(BDB_PATH) $(LOCAL_PATH)/$(BDB_TOP)/build_android\
 	 $(LOCAL_PATH)/$(BDB_TOP)/lang/sql/generated $(LOCAL_PATH)/../android
 
 ifneq ($(TARGET_ARCH),arm)
+ifneq ($(TARGET_ARCH),arm64)
 LOCAL_LDLIBS += -lpthread -ldl
+endif
 endif
 
 LOCAL_CFLAGS += -DHAVE_USLEEP=1 -DTHREADSAFE=1 -DNDEBUG=1
@@ -213,7 +225,9 @@ LOCAL_C_INCLUDES := $(BDB_PATH) $(LOCAL_PATH)/$(BDB_TOP)/build_android\
 	 $(LOCAL_PATH)/$(BDB_TOP)/lang/sql/generated $(LOCAL_PATH)/../android
 
 ifneq ($(TARGET_ARCH),arm)
+ifneq ($(TARGET_ARCH),arm64)
 LOCAL_LDLIBS += -lpthread -ldl
+endif
 endif
 
 LOCAL_CFLAGS += -DHAVE_USLEEP=1 -DTHREADSAFE=1 -DNDEBUG=1
@@ -239,7 +253,9 @@ LOCAL_C_INCLUDES := $(BDB_PATH) $(LOCAL_PATH)/$(BDB_TOP)/build_android\
 	 $(LOCAL_PATH)/$(BDB_TOP)/lang/sql/generated $(LOCAL_PATH)/../android
 
 ifneq ($(TARGET_ARCH),arm)
+ifneq ($(TARGET_ARCH),arm64)
 LOCAL_LDLIBS += -lpthread -ldl
+endif
 endif
 
 LOCAL_CFLAGS += -DHAVE_USLEEP=1 -DTHREADSAFE=1 -DNDEBUG=1
@@ -275,7 +291,9 @@ LOCAL_C_INCLUDES := $(BDB_PATH) $(LOCAL_PATH)/$(BDB_TOP)/build_android\
 	 $(LOCAL_PATH)/$(BDB_TOP)/lang/sql/generated $(LOCAL_PATH)/../android
 
 ifneq ($(TARGET_ARCH),arm)
+ifneq ($(TARGET_ARCH),arm64)
 LOCAL_LDLIBS += -lpthread -ldl
+endif
 endif
 
 LOCAL_CFLAGS += -DHAVE_USLEEP=1 -DTHREADSAFE=1 -DNDEBUG=1
@@ -300,7 +318,9 @@ LOCAL_C_INCLUDES := $(BDB_PATH) $(LOCAL_PATH)/$(BDB_TOP)/build_android\
 	 $(LOCAL_PATH)/$(BDB_TOP)/lang/sql/generated $(LOCAL_PATH)/../android
 
 ifneq ($(TARGET_ARCH),arm)
+ifneq ($(TARGET_ARCH),arm64)
 LOCAL_LDLIBS += -lpthread -ldl
+endif
 endif
 
 LOCAL_CFLAGS += -DHAVE_USLEEP=1 -DTHREADSAFE=1 -DNDEBUG=1
@@ -325,7 +345,9 @@ LOCAL_C_INCLUDES := $(BDB_PATH) $(LOCAL_PATH)/$(BDB_TOP)/build_android\
 	 $(LOCAL_PATH)/$(BDB_TOP)/lang/sql/generated $(LOCAL_PATH)/../android
 
 ifneq ($(TARGET_ARCH),arm)
+ifneq ($(TARGET_ARCH),arm64)
 LOCAL_LDLIBS += -lpthread -ldl
+endif
 endif
 
 LOCAL_CFLAGS += -DHAVE_USLEEP=1 -DTHREADSAFE=1 -DNDEBUG=1
@@ -351,7 +373,9 @@ LOCAL_C_INCLUDES := $(BDB_PATH) $(LOCAL_PATH)/$(BDB_TOP)/build_android\
 	 $(LOCAL_PATH)/$(BDB_TOP)/lang/sql/generated $(LOCAL_PATH)/../android
 
 ifneq ($(TARGET_ARCH),arm)
+ifneq ($(TARGET_ARCH),arm64)
 LOCAL_LDLIBS += -lpthread -ldl
+endif
 endif
 
 LOCAL_CFLAGS += -DHAVE_USLEEP=1 -DTHREADSAFE=1 -DNDEBUG=1
@@ -376,7 +400,9 @@ LOCAL_C_INCLUDES := $(BDB_PATH) $(LOCAL_PATH)/$(BDB_TOP)/build_android\
 	 $(LOCAL_PATH)/$(BDB_TOP)/lang/sql/generated $(LOCAL_PATH)/../android
 
 ifneq ($(TARGET_ARCH),arm)
+ifneq ($(TARGET_ARCH),arm64)
 LOCAL_LDLIBS += -lpthread -ldl
+endif
 endif
 
 LOCAL_CFLAGS += -DHAVE_USLEEP=1 -DTHREADSAFE=1 -DNDEBUG=1
@@ -401,7 +427,9 @@ LOCAL_C_INCLUDES := $(BDB_PATH) $(LOCAL_PATH)/$(BDB_TOP)/build_android\
 	 $(LOCAL_PATH)/$(BDB_TOP)/lang/sql/generated $(LOCAL_PATH)/../android
 
 ifneq ($(TARGET_ARCH),arm)
+ifneq ($(TARGET_ARCH),arm64)
 LOCAL_LDLIBS += -lpthread -ldl
+endif
 endif
 
 LOCAL_CFLAGS += -DHAVE_USLEEP=1 -DTHREADSAFE=1 -DNDEBUG=1
@@ -427,7 +455,9 @@ LOCAL_C_INCLUDES := $(BDB_PATH) $(LOCAL_PATH)/$(BDB_TOP)/build_android\
 	 $(LOCAL_PATH)/$(BDB_TOP)/lang/sql/generated $(LOCAL_PATH)/../android
 
 ifneq ($(TARGET_ARCH),arm)
+ifneq ($(TARGET_ARCH),arm64)
 LOCAL_LDLIBS += -lpthread -ldl
+endif
 endif
 
 LOCAL_CFLAGS += -DHAVE_USLEEP=1 -DTHREADSAFE=1 -DNDEBUG=1
@@ -453,7 +483,9 @@ LOCAL_C_INCLUDES := $(BDB_PATH) $(LOCAL_PATH)/$(BDB_TOP)/build_android\
 	 $(LOCAL_PATH)/$(BDB_TOP)/lang/sql/generated $(LOCAL_PATH)/../android
 
 ifneq ($(TARGET_ARCH),arm)
+ifneq ($(TARGET_ARCH),arm64)
 LOCAL_LDLIBS += -lpthread -ldl
+endif
 endif
 
 LOCAL_CFLAGS += -DHAVE_USLEEP=1 -DTHREADSAFE=1 -DNDEBUG=1

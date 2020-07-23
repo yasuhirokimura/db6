@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2007, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2007, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -36,6 +36,7 @@ proc repmgr017_sub { method niter tnum largs } {
 	global rep_verbose 
 	global verbose_type 
 	global databases_in_memory
+	global ipversion
 
 	# Force databases in-memory for this test but preserve original
 	# value to restore later so that other tests aren't affected.
@@ -46,6 +47,7 @@ proc repmgr017_sub { method niter tnum largs } {
 
 	set nsites 2
 	set ports [available_ports $nsites]
+	set hoststr [get_hoststr $ipversion]
 	set omethod [convert_method $method]
 
 	set verbargs ""
@@ -64,7 +66,7 @@ proc repmgr017_sub { method niter tnum largs } {
 	   -errpfx MASTER -rep -thread -rep_inmem_files -private $cacheargs"
 	set masterenv [eval $ma_envcmd]
 	$masterenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 0]] \
+	    -local [list $hoststr [lindex $ports 0]] \
 	    -start master
 
 	# Open a client
@@ -73,8 +75,8 @@ proc repmgr017_sub { method niter tnum largs } {
 	    -errpfx CLIENT -rep -thread -rep_inmem_files -private"
 	set clientenv [eval $cl_envcmd]
 	$clientenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 1]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] \
+	    -local [list $hoststr [lindex $ports 1]] \
+	    -remote [list $hoststr [lindex $ports 0]] \
 	    -start client
 	await_startup_done $clientenv
 
@@ -101,14 +103,14 @@ proc repmgr017_sub { method niter tnum largs } {
 	set cacheargs ""
 	set masterenv [eval $ma_envcmd -recover]
 	$masterenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 0]] \
+	    -local [list $hoststr [lindex $ports 0]] \
 	    -start master
 
 	# Open -recover to clear env region, including startup_done value.
 	set clientenv [eval $cl_envcmd -recover]
 	$clientenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 1]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] \
+	    -local [list $hoststr [lindex $ports 1]] \
+	    -remote [list $hoststr [lindex $ports 0]] \
 	    -start client
 	await_startup_done $clientenv
 

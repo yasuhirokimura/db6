@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -12,11 +12,11 @@
 
 #ifndef lint
 static const char copyright[] =
-    "Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.\n";
+    "Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.\n";
 #endif
 
 int main __P((int, char *[]));
-int usage __P((void));
+void usage __P((void));
 int version_check __P((void));
 
 const char *progname;
@@ -31,7 +31,7 @@ main(argc, argv)
 	DB_ENV	*dbenv;
 	u_int32_t flags;
 	int ch, exitval, ret, verbose;
-	char **file, *home, **list, *passwd;
+	char **file, *home, **list, *msgpfx, *passwd;
 
 	if ((progname = __db_rpath(argv[0])) == NULL)
 		progname = argv[0];
@@ -43,10 +43,11 @@ main(argc, argv)
 
 	dbenv = NULL;
 	flags = 0;
-	exitval = verbose = 0;
-	home = passwd = NULL;
+	verbose = 0;
+	exitval = EXIT_SUCCESS;
+	home = msgpfx = passwd = NULL;
 	file = list = NULL;
-	while ((ch = getopt(argc, argv, "adh:lP:sVv")) != EOF)
+	while ((ch = getopt(argc, argv, "adh:lm:P:sVv")) != EOF)
 		switch (ch) {
 		case 'a':
 			LF_SET(DB_ARCH_ABS);
@@ -60,12 +61,14 @@ main(argc, argv)
 		case 'l':
 			LF_SET(DB_ARCH_LOG);
 			break;
+		case 'm':
+			msgpfx = optarg;
+			break;
 		case 'P':
 			if (passwd != NULL) {
 				fprintf(stderr, DB_STR("5135",
 					"Password may not be specified twice"));
-				free(passwd);
-				return (EXIT_FAILURE);
+				goto err;
 			}
 			passwd = strdup(optarg);
 			memset(optarg, 0, strlen(optarg));
@@ -73,7 +76,7 @@ main(argc, argv)
 				fprintf(stderr, DB_STR_A("5119",
 				    "%s: strdup: %s\n", "%s %s\n"),
 				    progname, strerror(errno));
-				return (EXIT_FAILURE);
+				goto err;
 			}
 			break;
 		case 's':
@@ -81,7 +84,7 @@ main(argc, argv)
 			break;
 		case 'V':
 			printf("%s\n", db_version(NULL, NULL, NULL));
-			return (EXIT_SUCCESS);
+			goto done;
 		case 'v':
 			/*
 			 * !!!
@@ -93,13 +96,13 @@ main(argc, argv)
 			break;
 		case '?':
 		default:
-			return (usage());
+			goto usage_err;
 		}
 	argc -= optind;
 	argv += optind;
 
 	if (argc != 0)
-		return (usage());
+		goto usage_err;
 
 	/* Handle possible interruptions. */
 	__db_util_siginit();
@@ -116,6 +119,8 @@ main(argc, argv)
 
 	dbenv->set_errfile(dbenv, stderr);
 	dbenv->set_errpfx(dbenv, progname);
+	if (msgpfx != NULL)
+		dbenv->set_msgpfx(dbenv, msgpfx);
 
 	if (passwd != NULL && (ret = dbenv->set_encrypt(dbenv,
 	    passwd, DB_ENCRYPT_AES)) != 0) {
@@ -148,10 +153,11 @@ main(argc, argv)
 	}
 
 	if (0) {
-err:		exitval = 1;
+usage_err:	usage();
+err:		exitval = EXIT_FAILURE;
 	}
-	if (dbenv != NULL && (ret = dbenv->close(dbenv, 0)) != 0) {
-		exitval = 1;
+done:	if (dbenv != NULL && (ret = dbenv->close(dbenv, 0)) != 0) {
+		exitval = EXIT_FAILURE;
 		fprintf(stderr,
 		    "%s: dbenv->close: %s\n", progname, db_strerror(ret));
 	}
@@ -162,15 +168,14 @@ err:		exitval = 1;
 	/* Resend any caught signal. */
 	__db_util_sigresend();
 
-	return (exitval == 0 ? EXIT_SUCCESS : EXIT_FAILURE);
+	return (exitval);
 }
 
-int
+void
 usage()
 {
-	(void)fprintf(stderr,
-	    "usage: %s [-adlsVv] [-h home] [-P password]\n", progname);
-	return (EXIT_FAILURE);
+	(void)fprintf(stderr, "usage: %s %s\n", progname,
+	    "[-adlsVv] [-h home] [-m msg_pfx] [-P password]");
 }
 
 int

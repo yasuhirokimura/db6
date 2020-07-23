@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -137,12 +137,18 @@ __env_open(dbenv, db_home, flags, mode)
 	ENV *env;
 	u_int32_t orig_flags, retry_flags;
 	int recovery_failed, register_recovery, ret, t_ret;
+	char *old_passwd;
+	size_t old_passwd_len;
+	u_int32_t old_encrypt_flags;
 
 	ip = NULL;
 	env = dbenv->env;
 	recovery_failed = 1;
 	register_recovery = 0;
 	retry_flags = 0;
+	old_passwd = NULL;
+	old_passwd_len = 0;
+	old_encrypt_flags = 0;
 
 	/* Initial configuration. */
 	if ((ret = __env_config(dbenv, db_home, &flags, mode)) != 0)
@@ -156,10 +162,25 @@ __env_open(dbenv, db_home, flags, mode)
 	 * we'll restore the DB_ENV flags to these values.
 	 */
 	orig_flags = dbenv->flags;
+#ifdef HAVE_SLICES
+	/*
+	 * Sliced environments are automatically TDS. Is automating this wrong?
+	 */
+	if (dbenv->slice_cnt > 0)
+		LF_SET(DB_INIT_LOCK | DB_INIT_LOG |
+		    DB_INIT_MPOOL | DB_INIT_TXN);
+#endif
 
 	/* Check open flags. */
 	if ((ret = __env_open_arg(dbenv, flags)) != 0)
 		return (ret);
+
+#ifdef HAVE_SLICES
+	/* Open & recover the slices first, before recovering the container. */
+	if (dbenv->slice_cnt > 0 &&
+	    (ret = __env_slice_open(dbenv, db_home, flags, mode)) != 0)
+		    return (ret);
+#endif
 
 	/*
 	 * If we're going to register with the environment, that's the first
@@ -177,6 +198,19 @@ __env_open(dbenv, db_home, flags, mode)
 		if (LF_ISSET(DB_FAILCHK_ISALIVE)) {
 			(void)__env_set_thread_count(dbenv, 50);
 			dbenv->is_alive = __envreg_isalive;
+		}
+
+		/*
+		 * Backup the current key, because it would be consumed by
+		 * __envreg_register below
+		 */
+		if (dbenv->passwd != NULL) {
+			if ((ret =
+			    __os_strdup(env, dbenv->passwd, &old_passwd)) != 0)
+				goto err;
+			old_passwd_len = dbenv->passwd_len;
+			(void)__env_get_encrypt_flags(dbenv,
+			    &old_encrypt_flags);
 		}
 
 		F_SET(dbenv, DB_ENV_NOPANIC);
@@ -217,6 +251,18 @@ retry:	if (LF_ISSET(DB_RECOVER | DB_RECOVER_FATAL))
 		    orig_flags | retry_flags, 0)) != 0)
 			goto err;
 
+	/* Restore the database key. */
+	if (LF_ISSET(DB_REGISTER) && old_passwd != NULL) {
+		ret = __env_set_encrypt(dbenv, old_passwd, old_encrypt_flags);
+
+#ifdef HAVE_CRYPTO
+		__crypto_erase_passwd(env, &old_passwd, &old_passwd_len);
+#endif
+
+		if (ret != 0)
+			goto err;
+	}
+
 	DB_ASSERT(env, ret == 0);
 	if ((ret = __env_attach_regions(dbenv,
 	    flags, orig_flags | retry_flags, 1)) != 0)
@@ -235,13 +281,13 @@ retry:	if (LF_ISSET(DB_RECOVER | DB_RECOVER_FATAL))
 		 */
 		FAILCHK_THREAD(env, ip);
 		ret = __env_failchk_int(dbenv);
-		ENV_LEAVE(env, ip);
 		if (ret != 0) {
 			__db_err(env, ret,
 			    DB_STR("1595",
 			    "failchk crash after clean registry"));
 			goto err;
 		}
+		ENV_LEAVE(env, ip);
 	}
 
 err:	if (ret != 0)
@@ -331,9 +377,15 @@ __env_open_arg(dbenv, flags)
 			    "replication requires transaction support"));
 			return (EINVAL);
 		}
-		if ((ret =
-		    __log_set_config_int(dbenv, DB_LOG_BLOB, 1, 1)) != 0)
+		if ((ret = __log_set_config_int(
+		    dbenv, DB_LOG_EXT_FILE, 1, 1)) != 0)
 			return (ret);
+		if (dbenv->slice_cnt != 0) {
+			__db_errx(env, DB_STR("1605",
+			    "replication is not compatible with slices"));
+			return (EINVAL);
+		}
+			
 	}
 	if (LF_ISSET(DB_RECOVER | DB_RECOVER_FATAL)) {
 		if ((ret = __db_fcchk(env,
@@ -365,6 +417,17 @@ __env_open_arg(dbenv, flags)
 			return (EINVAL);
 		}
 	}
+	if (dbenv->db_reg_dir != NULL &&
+	    LF_ISSET(DB_PRIVATE | DB_SYSTEM_MEM)) {
+		__db_errx(env, DB_STR("1604",
+"The region directory cannot be set with DB_PRIVATE or DB_SYSTEM_MEM."));
+		return (EINVAL);
+	}
+	if (LF_ISSET(DB_INIT_CDB) && dbenv->slice_cnt != 0) {
+		__db_errx(env, DB_STR("1606",
+		    "A sliced environment cannot use DB_INIT_CDB"));
+		return (EINVAL);
+	}
 
 #ifdef HAVE_MUTEX_THREAD_ONLY
 	/*
@@ -394,8 +457,9 @@ __env_remove(dbenv, db_home, flags)
 	const char *db_home;
 	u_int32_t flags;
 {
+	DB_ENV *slice;
 	ENV *env;
-	int ret, t_ret;
+	int i, ret, t_ret;
 
 	env = dbenv->env;
 
@@ -419,6 +483,13 @@ __env_remove(dbenv, db_home, flags)
 	if ((ret = __env_turn_off(env, flags)) == 0 || LF_ISSET(DB_FORCE))
 		ret = __env_remove_env(env);
 
+	/* Remove all slices, returning the first error seen, if any. */
+	if (ret == 0)
+		SLICE_FOREACH(dbenv, slice, i)
+			if ((t_ret = __env_remove(slice,
+			    slice->env->db_home, flags)) != 0 && ret == 0)
+				ret = t_ret;
+
 	if ((t_ret = __env_close(dbenv, 0)) != 0 && ret == 0)
 		ret = t_ret;
 
@@ -427,7 +498,8 @@ __env_remove(dbenv, db_home, flags)
 
 /*
  * __env_config --
- *	Argument-based initialization.
+ *	Find the configuration settings for db_home, including any
+ *	of its slices.
  *
  * PUBLIC: int __env_config __P((DB_ENV *, const char *, u_int32_t *, int));
  */
@@ -439,9 +511,9 @@ __env_config(dbenv, db_home, flagsp, mode)
 	int mode;
 {
 	ENV *env;
-	int ret;
 	u_int32_t flags;
 	char *home, home_buf[DB_MAXPATHLEN];
+	int ret;
 
 	env = dbenv->env;
 	flags = *flagsp;
@@ -465,7 +537,11 @@ __env_config(dbenv, db_home, flagsp, mode)
 		 * home set to NULL if __os_getenv failed to find DB_HOME.
 		 */
 	}
-	if (home != NULL) {
+	/*
+	 * "slice <n> home <dir>" sets db_home in the slice. Don't accidentally
+	 * free the 'home' argument passed in.
+	*/
+	if (home != NULL && home != env->db_home) {
 		if (env->db_home != NULL)
 			__os_free(env, env->db_home);
 		if ((ret = __os_strdup(env, home, &env->db_home)) != 0)
@@ -482,6 +558,10 @@ __env_config(dbenv, db_home, flagsp, mode)
 	if ((ret = __env_read_db_config(env)) != 0)
 		return (ret);
 
+#ifdef HAVE_SLICES
+	if (SLICES_ON(env))
+		ret = __env_slice_db_home(dbenv, env->db_home);
+#endif
 	/*
 	 * Update the DB_ENV->open method flags. The copy of the flags might
 	 * have been changed during reading DB_CONFIG file.
@@ -535,7 +615,7 @@ __env_close_pp(dbenv, flags)
 	if (LF_ISSET(DB_FORCESYNCENV))
 		F_SET(env, ENV_FORCESYNCENV);
 
-	/* 
+	/*
 	 * Call __env_close() to clean up resources even though the open
 	 * didn't fully succeed.
 	 * */
@@ -564,9 +644,10 @@ __env_close_pp(dbenv, flags)
 
 		/* Close all underlying file handles. */
 		(void)__file_handle_cleanup(env);
+		ENV_LEAVE(env, ip);
+
 		dbenv->flags = flags_orig;
 		(void)__env_region_cleanup(env);
-		ENV_LEAVE(env, ip);
 
 		return (__env_panic_msg(env));
 	}
@@ -600,7 +681,7 @@ do_close:
 
 /*
  * __env_close --
- *	DB_ENV->close.
+ *	Do the real work of DB_ENV->close.
  *
  * PUBLIC: int __env_close __P((DB_ENV *, u_int32_t));
  */
@@ -610,8 +691,9 @@ __env_close(dbenv, flags)
 	u_int32_t flags;
 {
 	DB *dbp;
+	DB_ENV *slice;
 	ENV *env;
-	int ret, rep_check, t_ret;
+	int i, rep_check, ret, t_ret;
 	char **p;
 	u_int32_t close_flags;
 
@@ -619,6 +701,23 @@ __env_close(dbenv, flags)
 	ret = 0;
 	close_flags = LF_ISSET(DBENV_FORCESYNC) ? 0 : DB_NOSYNC;
 	rep_check = LF_ISSET(DBENV_CLOSE_REPCHECK);
+
+#ifdef HAVE_SLICES
+	if (env->slice_container != NULL)
+		env->slice_container->slice_envs[env->slice_index] = NULL;
+	else if (SLICES_ON(env)) {
+		SLICE_FOREACH(dbenv, slice, i) {
+			if ((t_ret = __env_close_pp(slice, flags)) != 0 &&
+			    ret == 0)
+				ret = t_ret;
+		}
+		__os_free(env, env->slice_envs);
+		env->slice_envs = NULL;
+	}
+#else
+	COMPQUIET(slice, NULL);
+	COMPQUIET(i, 0);
+#endif
 
 	/*
 	 * Check to see if we were in the middle of restoring transactions and
@@ -655,8 +754,11 @@ __env_close(dbenv, flags)
 			t_ret = dbp->alt_close(dbp, close_flags);
 		else
 			t_ret = __db_close(dbp, NULL, close_flags);
-		if (t_ret != 0 && ret == 0)
-			ret = t_ret;
+		if (t_ret != 0) {
+			if (ret == 0)
+				ret = t_ret;
+			break;
+		}
 	}
 
 	/*
@@ -696,6 +798,9 @@ __env_close(dbenv, flags)
 	if (dbenv->db_blob_dir != NULL)
 		__os_free(env, dbenv->db_blob_dir);
 	dbenv->db_blob_dir = NULL;
+	if (dbenv->db_reg_dir != NULL)
+		__os_free(env, dbenv->db_reg_dir);
+	dbenv->db_reg_dir = NULL;
 	if (dbenv->db_data_dir != NULL) {
 		for (p = dbenv->db_data_dir; *p != NULL; ++p)
 			__os_free(env, *p);
@@ -800,7 +905,7 @@ __env_refresh(dbenv, orig_flags, rep_check)
 			    ldbp->dname == NULL ? "" : "/",
 			    ldbp->dname == NULL ? "" : ldbp->dname);
 		if (ret == 0)
-			ret = EINVAL;
+			ret = USR_ERR(env, EINVAL);
 	}
 	TAILQ_INIT(&env->dblist);
 	if ((t_ret = __mutex_free(env, &env->mtx_dblist)) != 0 && ret == 0)
@@ -961,7 +1066,8 @@ __file_handle_cleanup(env)
 	while ((fhp = TAILQ_FIRST(&env->fdlist)) != NULL) {
 		__db_errx(env,
 		    DB_STR_A("1582", "Open file handle: %s", "%s"), fhp->name);
-		(void)__os_closehandle(env, fhp);
+		if (__os_closehandle(env, fhp) != 0)
+			break;
 	}
 	if (env->lockfhp != NULL)
 		env->lockfhp = NULL;

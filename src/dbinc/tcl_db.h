@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1999, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1999, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -16,7 +16,8 @@ extern "C" {
 #define	MSG_SIZE 100		/* Message size */
 
 enum INFOTYPE {
-	I_AUX, I_DB, I_DBC, I_DBSTREAM, I_ENV, I_LOCK, I_LOGC, I_MP, I_NDBM, I_PG, I_SEQ, I_TXN};
+	I_AUX, I_DB, I_DBC, I_DBSTREAM, I_ENV,
+	I_LOCK, I_LOGC, I_MP, I_NDBM, I_PG, I_SEQ, I_TXN};
 
 #define	MAX_ID		8	/* Maximum number of sub-id's we need */
 #define	DBTCL_PREP	64	/* Size of txn_recover preplist */
@@ -27,7 +28,7 @@ enum INFOTYPE {
 #define	DBTCL_GETCLOCK			0
 #define	DBTCL_GETINQUEUE_MAX		1
 #define	DBTCL_GETINQUEUE_REDZONE	2
-#define	DBTCL_GETLIMIT			3	
+#define	DBTCL_GETLIMIT			3
 #define	DBTCL_GETREQ			4
 
 #define	DBTCL_MUT_ALIGN	0
@@ -125,6 +126,7 @@ typedef struct dbtcl_info {
 	FILE *i_err;
 	char *i_errpfx;
 	FILE *i_msg;
+	char *i_msgpfx;
 
 	/* Callbacks--Tcl_Objs containing proc names */
 	Tcl_Obj *i_compare;
@@ -136,6 +138,7 @@ typedef struct dbtcl_info {
 	Tcl_Obj *i_rep_send;
 	Tcl_Obj *i_rep_view;
 	Tcl_Obj *i_second_call;
+	Tcl_Obj *i_slice_callback;
 
 	/* Environment ID for the i_rep_send callback. */
 	Tcl_Obj *i_rep_eid;
@@ -173,10 +176,12 @@ typedef struct dbtcl_info {
 #define	i_envmpid i_otherid[1]
 #define	i_envlockid i_otherid[2]
 #define	i_envlogcid i_otherid[3]
+#define	i_envsliceid i_otherid[4]
 
 #define	i_mppgid  i_otherid[0]
 
 #define	i_dbdbcid i_otherid[0]
+#define	i_dbsliceid i_otherid[1]
 
 #define	i_dbcdbsid i_otherid[0]
 

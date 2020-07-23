@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2000, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2000, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -105,7 +105,7 @@ __env_fileid_reset(env, ip, name, encrypted)
 		goto err;
 
 	if (n != sizeof(mbuf)) {
-		ret = EINVAL;
+		ret = USR_ERR(env, EINVAL);
 		__db_errx(env, DB_STR_A("0675",
 		    "__env_fileid_reset: %s: unexpected file type or format",
 		    "%s"), real_name);
@@ -182,7 +182,6 @@ __env_fileid_reset(env, ip, name, encrypted)
 		goto err;
 	while ((ret = __dbc_get(dbcp, &key, &data, DB_NEXT)) == 0) {
 		/*
-		 * XXX
 		 * We're handling actual data, not on-page meta-data, so it
 		 * hasn't been converted to/from opposite endian architectures.
 		 * Do it explicitly, now.

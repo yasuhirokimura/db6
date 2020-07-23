@@ -7,14 +7,14 @@
     <link rel="stylesheet" href="gettingStarted.css" type="text/css" />
     <meta name="generator" content="DocBook XSL Stylesheets V1.73.2" />
     <link rel="start" href="index.html" title="Berkeley DB Programmer's Reference Guide" />
-    <link rel="up" href="env.html" title="Chapter 9.  The Berkeley DB Environment" />
+    <link rel="up" href="env.html" title="Chapter 10.  The Berkeley DB Environment" />
     <link rel="prev" href="env_region.html" title="Shared memory regions" />
     <link rel="next" href="env_encrypt.html" title="Encryption" />
   </head>
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -22,7 +22,7 @@
         </tr>
         <tr>
           <td width="20%" align="left"><a accesskey="p" href="env_region.html">Prev</a> </td>
-          <th width="60%" align="center">Chapter 9.  The Berkeley DB Environment </th>
+          <th width="60%" align="center">Chapter 10.  The Berkeley DB Environment </th>
           <td width="20%" align="right"> <a accesskey="n" href="env_encrypt.html">Next</a></td>
         </tr>
       </table>
@@ -115,6 +115,16 @@
                 routine resets process' effective user and group IDs
                 to the real user and group IDs, to minimize the
                 effectiveness of a Tcl injection attack.
+            </dd>
+          <dt>
+            <span class="term">Private Environments</span>
+          </dt>
+          <dd>
+                When using the environment flag DB_PRIVATE, it is
+                possible for old data in the heap to leak onto unused
+                parts of the database page.  This can be avoided by
+                not using that flag, or by compiling Berkeley DB with
+                the UMWR flag.
             </dd>
         </dl>
       </div>

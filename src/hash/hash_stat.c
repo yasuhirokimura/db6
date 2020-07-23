@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -133,12 +133,6 @@ __ham_stat_print(dbc, flags)
 	DBC *dbc;
 	u_int32_t flags;
 {
-	static const FN fn[] = {
-		{ DB_HASH_DUP,		"duplicates" },
-		{ DB_HASH_SUBDB,	"multiple-databases" },
-		{ DB_HASH_DUPSORT,	"sorted duplicates" },
-		{ 0,			NULL }
-	};
 	DB *dbp;
 	ENV *env;
 	DB_HASH_STAT *sp;
@@ -171,7 +165,8 @@ __ham_stat_print(dbc, flags)
 		break;
 	}
 	__db_msg(env, "%s\tByte order", s);
-	__db_prflags(env, NULL, sp->hash_metaflags, fn, NULL, "\tFlags");
+	__db_prflags(env,
+	    NULL, sp->hash_metaflags, __db_get_hmeta_fn(), NULL, "\tFlags");
 	__db_dl(env,
 	    "Number of pages in the database", (u_long)sp->hash_pagecnt);
 	__db_dl(env,
@@ -188,7 +183,7 @@ __ham_stat_print(dbc, flags)
 	    sp->hash_bfree, sp->hash_buckets, sp->hash_pagesize), "ff");
 
 	__db_dl(env,
-	    "Number of blobs", (u_long)sp->hash_nblobs);
+	    "Number of external files", (u_long)sp->hash_ext_files);
 	__db_dl(env,
 	    "Number of hash overflow (big item) pages",
 	    (u_long)sp->hash_bigpages);
@@ -264,6 +259,7 @@ __ham_stat_callback(dbc, pagep, cookie, putp)
 				break;
 			case H_BLOB:
 				sp->hash_nblobs++;
+				sp->hash_ext_files++;
 				/* fall through */
 			case H_OFFPAGE:
 			case H_KEYDATA:

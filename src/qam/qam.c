@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1999, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1999, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -126,7 +126,7 @@ __qam_pitem(dbc, pagep, indx, recno, data)
 		if (data->doff + data->dlen > t->re_len) {
 			__db_errx(env, DB_STR_A("1142",
 "Record length error: data offset plus length larger than record size of %lu",
-			    "%s %lu"), (u_long)t->re_len);
+			    "%lu"), (u_long)t->re_len);
 			return (EINVAL);
 		}
 
@@ -652,7 +652,7 @@ __qamc_get(dbc, key, data, flags, pgnop)
 	meta = NULL;
 	*pgnop = 0;
 	pg = NULL;
-	retrying =  t_ret = wait = with_delete = 0;
+	retrying = t_ret = wait = with_delete = 0;
 	stay = 1;
 	old_first = RECNO_OOB;
 
@@ -711,6 +711,7 @@ retry:
 			 * Check to see if we are out of data.
 			 */
 			if (QAM_AFTER_CURRENT(meta, cp->recno)) {
+aftercurrent:
 				pg = NULL;
 				if (!wait) {
 					ret = DBC_ERR(dbc, DB_NOTFOUND);
@@ -797,7 +798,8 @@ retry:
 		cp->recno = first = meta->first_recno;
 		if (old_first == RECNO_OOB)
 			old_first = first;
-
+		if (QAM_AFTER_CURRENT(meta, cp->recno))
+			goto aftercurrent;
 		break;
 	case DB_PREV:
 	case DB_PREV_NODUP:
@@ -957,9 +959,11 @@ release_retry:	/* Release locks and retry, if possible. */
 			if (!with_delete)
 				is_first = 0;
 			else if (first == cp->recno) {
+				if (QAM_AFTER_CURRENT(meta, cp->recno))
+					goto aftercurrent;
 				/* we have verified that this record is gone. */
 				QAM_INC_RECNO(first);
-				/* 
+				/*
 				 * If we are reading in order and the first
 				 * record was not there, we need to reflect
 				 * this in the meta page, so that we can
@@ -971,9 +975,9 @@ release_retry:	/* Release locks and retry, if possible. */
 						(void)__log_printf(
 						    dbp->env, dbc->txn,
 						    "Queue O: %x %u %u %u",
-						    dbc->locker ? 
+						    dbc->locker ?
 						    dbc->locker->id : 0,
-						    cp->recno, first, 
+						    cp->recno, first,
 						    meta->cur_recno);
 #endif
 						if ((ret = __qam_incfirst_log(
@@ -983,7 +987,8 @@ release_retry:	/* Release locks and retry, if possible. */
 						    PGNO_BASE_MD)) != 0)
 							goto err;
 					} else
-						LSN_NOT_LOGGED(meta->dbmeta.lsn);
+						LSN_NOT_LOGGED(
+						    meta->dbmeta.lsn);
 					meta->first_recno = first;
 				}
 			}
@@ -1064,7 +1069,7 @@ release_retry:	/* Release locks and retry, if possible. */
 		 */
 		tmp.data = qp->data;
 		tmp.size = t->re_len;
-		if ((ret = __bam_defcmp(dbp, data, &tmp, NULL)) != 0) {
+		if ((ret = __dbt_defcmp(dbp, data, &tmp, NULL)) != 0) {
 			if (flags == DB_GET_BOTH_RANGE)
 				goto release_retry;
 			ret = DBC_ERR(dbc, DB_NOTFOUND);

@@ -10,7 +10,9 @@ backup
 	transactional bulk loading optimization; and with
 	and without BLOB. Make sure that -c and -d (data_dir)
 	are not allowed together; and backing up with BLOB
-	but without -log_blob is not allowed.
+	but without -log_blob is not allowed.  If slices are
+	enabled, run some of the tests with the -sliced
+	database flag.
 
 	(1) Test that plain and simple hotbackup works. 
 	(2) Test with -data_dir (-d). 
@@ -55,16 +57,16 @@ bigfile003
 	64-bit integers.
 
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+db_reptest
+	Wrapper to configure and run the db_reptest program.
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 dbm
 	Historic DBM interface test.  Use the first 1000 entries from the
 	dictionary.  Insert each with self as key and data; retrieve each.
 	After all are entered, retrieve all; compare output to original.
 	Then reopen the file, re-retrieve everything.  Finally, delete
 	everything.
-
-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-db_reptest
-	Wrapper to configure and run the db_reptest program.
 
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 dead001
@@ -366,6 +368,38 @@ env026
 	and should not be added to the automated Tcl test suite.
 
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+env027
+	Test recovery of the truncate of a hash db. 
+
+	This is a one-off test of the fix for #23772 --
+	the conditions for reproducing it are so specific 
+	that the test does not generalize well to other 
+	access methods.
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+env028
+	Test of SET_REGION_DIR.
+	With an environment path specified using -home, and then again
+	with it specified by the environment variable DB_HOME:
+	1) Make sure that the set_region_dir option is respected
+	a) as a relative pathname.
+	b) as an absolute pathname.
+	2) Make sure that the SET_REGION_DIR db_config argument is respected,
+	again as relative and absolute pathnames.
+	3) Make sure that if -both- db_config and a file are present,
+	only the file is respected (see doc/env/naming.html).
+	4) Check that setting the region dir is incompatible with
+	DB_PRIVATE and DB_SYSTEM_MEM
+	5) Check that MVCC freezer files go into the region dir.        
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+env029
+	Test the behavior of the slice specific functions and flags.
+	There are two versions of this test, one that tests the
+	functions when BDB was built with slices enabled, and one
+	that tests them when they are not enabled.
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 fail001
 	Test database compaction errors.
 
@@ -549,6 +583,15 @@ log009
 	Each time we cross a log file boundary verify we can
 	get the version via the log cursorlag.
 	Do this both forward and backward.
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+log010
+	Test of DB_LOG_NOSYNC
+
+	Configure a database with txn_nosync and log_nosync. 
+	Set a very small log size so we'll easily create more 
+	than one.  Verify that we have a small number of writes,
+	and no log syncs at all.
 
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 memp001
@@ -1017,6 +1060,11 @@ rep025
 	processing of messages, the client should get JOIN_FAILURE.
 	Recover with a hot failover.
 
+	Test error handling when a client without encryption tries to
+	join an encrypted repgroup, or vice versa.  Make sure the client
+	gets the expected JOIN_FAILURE error and that the master
+	continues to operate after the error.
+
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 rep026
 	Replication elections - simulate a crash after sending
@@ -1414,7 +1462,7 @@ rep065
 	This capability is introduced with 4.5.
 
 	Start a replication group of 1 master and N sites, all
-	running some historical version greater than or equal to 4.4.
+	running some historical version greater than or equal to 4.7.
 	Take down a client and bring it up again running current.
 	Run some upgrades, make sure everything works.
 
@@ -2142,9 +2190,10 @@ repmgr036
 
 	Start an appointed master site and one view.  Ensure replication
 	is occurring to the view.  Shut down master, ensure view does not
-	take over as master.  Restart master and make sure further master
-	changes are replicated to view.  Test view-related stats and
-	flag indicator in repmgr_site_list output.
+	take over as master.  Restart master, add an empty view to the
+	replication group, and make sure further master changes are
+	replicated to the view and the empty view is empty.  Test
+	view-related stats and flag indicator in repmgr_site_list output.
 
 	Run for btree only because access method shouldn't matter.
 
@@ -2247,6 +2296,35 @@ repmgr044
 	to the replication group.  Also test permanent transfer of preferred
 	mastership to the client site.
 
+	Run for btree only because access method shouldn't matter.
+
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+repmgr045
+	IPv6/IPv4 interoperability test.
+
+	This test ensures that a single IPv4 site can function as an
+	appointed master, an elected master or a client in a replication
+	group where the other sites use IPv6.
+
+	Run for btree only because access method shouldn't matter.
+
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+repmgr046
+	repmgr singleton write forwarding test.
+
+	The initial basic test has several purposes: test general use
+	of repmgr write forwarding API options (config, timeout, stats),
+	test basic forwarded put and del operations, test that expected
+	errors are returned from most simple error scenarios.
+
+	The 3-site test makes sure that write forwarding continues to
+	operate as expected during replication group changes such as
+	a change of master and a former master rejoining as a client.
+
+	The other tests include cases for blobs, subdatabases,
+	various duplicate options, and additional error cases.
 	Run for btree only because access method shouldn't matter.
 
 
@@ -2679,8 +2757,44 @@ si008
 	one native, one swapped.
 
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+si009
+	Secondary index put/delete with lorder test
+
+	This test is the same as si001 except we use 
+	partial put to update entries.
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 sijointest: Secondary index and join test.
 	This used to be si005.tcl.
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+slice001
+	Test of the various environment set_*_dir settings in DB_CONFIG
+	for sliced environments.  The following configs are tested for both
+	relative and absolute paths.
+	1. home
+	2. set_create_dir
+	3. add_data_dir
+	4. set_metadata_dir
+	5. set_blob_dir
+	6. set_tmp_dir
+	7. set_region_dir
+	8. set_lg_dir
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+slice002
+	Test transactional operations on sliced databases.
+	Test that transactions behave as expected when:
+	1. Auto commit is used.
+	2. Transactions cover only a single operation each.
+	3. Transactions cover multiple operations on the same key.
+	4. Transactions cover multiple operations on different keys.
+	5. Transactions cover multiple operations on different slices.
+	Do this when both committing and aborting the transaction.
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+slice003
+	Test associate and secondary index handling in a sliced environment.
 
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 sql001
@@ -3951,13 +4065,15 @@ test149
 	Database stream test.
 	1. Append data to empty / non-empty blobs.
 	2. Update the existing data in the blobs.
-	3. Re-create blob of the same key by deleting the record and
+	3. Check that the blob meta database has the same page size
+	as the database that owns it.
+	4. Re-create blob of the same key by deleting the record and
 	and writing new data to blob by database stream.
-	4. Verify the error is returned when opening a database stream
+	5. Verify the error is returned when opening a database stream
 	on a record that is not a blob.
-	5. Verify database stream can not write in blobs when it is
+	6. Verify database stream can not write in blobs when it is
 	configured to read-only.
-	6. Verify database stream can not write in read-only databases.
+	7. Verify database stream can not write in read-only databases.
 
 	In each test case, verify database stream read/size/write/close
 	operations work as expected with transaction commit/abort.
@@ -3969,6 +4085,40 @@ test150
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 test151
 	Test db_dump and db_load with all allowed options.
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+test152
+	Test database compaction with blobs.  
+	This is basically test111 with blobs. 
+
+	Populate a database with a mixture of blob and non-blob
+	items. Remove a high proportion of entries.
+	Dump and save contents.  Compact the database, dump again,
+	and make sure we still have the same contents.
+	Add back some entries, delete more entries (this time by
+	cursor), dump, compact, and do the before/after check again.
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+test153
+	Test queue consuming on a database having holes.
+
+	Create a database and then do some put operations. We will commit
+	most of the operations and abort some to create holes(A queue
+	database that is missing some consecutive elements). Then we will
+	consume all records in the database to verify it still works, and
+	we will also verify there are no zombie(see below) extents left.
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+test154
+	Test of multi-version concurrency control.
+
+	Test basic snapshot functionality, adding volume and
+	multiple iterations to generate freeze/thaw behavior.
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+test155
+	Make sure DB_AFTER works properly after DBcursor->next(DB_MULTIPLE_KEY)
+	has returned the last item.
 
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 txn001

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2011, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2011, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 using System;
@@ -27,12 +27,15 @@ namespace BerkeleyDB {
              * specific flags.  No harm in calling it again.
              */
             db.set_flags(cfg.flags);
+	    
+	    if (cfg.BlobDir != null && cfg.Env == null)
+                db.set_ext_file_dir(cfg.BlobDir);
 
-            if (cfg.BlobDir != null && cfg.Env == null)
-                db.set_blob_dir(cfg.BlobDir);
+            if (cfg.ExternalFileDir != null && cfg.Env == null)
+                db.set_ext_file_dir(cfg.ExternalFileDir);
 
             if (cfg.blobThresholdIsSet)
-                db.set_blob_threshold(cfg.BlobThreshold, 0);
+                db.set_ext_file_threshold(cfg.BlobThreshold, 0);
 
             if (cfg.maxSizeIsSet)
                 db.set_heapsize(cfg.MaxSizeGBytes, cfg.MaxSizeBytes);
@@ -118,12 +121,22 @@ namespace BerkeleyDB {
 
         #region Properties
         /// <summary>
-        /// The path of the directory where blobs are stored.
+        /// Deprecated.  Replaced by ExternalFileDir.
         /// </summary>
         public string BlobDir {
             get {
                 string dir;
-                db.get_blob_dir(out dir);
+                db.get_ext_file_dir(out dir);
+                return dir;
+            }
+        }
+        /// <summary>
+        /// The path of the directory where external files are stored.
+        /// </summary>
+        public string ExternalFileDir {
+            get {
+                string dir;
+                db.get_ext_file_dir(out dir);
                 return dir;
             }
         }
@@ -137,20 +150,31 @@ namespace BerkeleyDB {
         }
 
         /// <summary>
-        /// The threshold value in bytes beyond which data items are stored as
-        /// blobs.
-        /// <para>
-        /// Any data item that is equal to or larger in size than the
-        /// threshold value is automatically stored as a blob.
-        /// </para>
-        /// <para>
-        /// A value of 0 indicates that blobs are not used by the database.
-        /// </para>
+        /// Deprecated.  Replaced by ExternalFileThreshold. 
         /// </summary>
         public uint BlobThreshold {
             get {
                 uint ret = 0;
-                db.get_blob_threshold(ref ret);
+                db.get_ext_file_threshold(ref ret);
+                return ret;
+            }
+        }
+	/// <summary>
+        /// The threshold value in bytes beyond which data items are stored as
+        /// external files.
+        /// <para>
+        /// Any data item that is equal to or larger in size than the
+        /// threshold value is automatically stored as an external file.
+        /// </para>
+        /// <para>
+        /// A value of 0 indicates that external files are not used by the
+	/// database.
+        /// </para>
+        /// </summary>
+        public uint ExternalFileThreshold {
+            get {
+                uint ret = 0;
+                db.get_ext_file_threshold(ref ret);
                 return ret;
             }
         }

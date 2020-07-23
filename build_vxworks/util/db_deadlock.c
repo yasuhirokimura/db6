@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -12,11 +12,11 @@
 
 #ifndef lint
 static const char copyright[] =
-    "Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.\n";
+    "Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.\n";
 #endif
 
 int db_deadlock_main __P((int, char *[]));
-int db_deadlock_usage __P((void));
+void db_deadlock_usage __P((void));
 int db_deadlock_version_check __P((void));
 
 const char *progname;
@@ -61,7 +61,8 @@ db_deadlock_main(argc, argv)
 	atype = DB_LOCK_DEFAULT;
 	home = logfile = passwd = NULL;
 	secs = usecs = 0;
-	exitval = verbose = 0;
+	verbose = 0;
+	exitval = EXIT_SUCCESS;
 	__db_getopt_reset = 1;
 	while ((ch = getopt(argc, argv, "a:h:L:P:t:Vv")) != EOF)
 		switch (ch) {
@@ -89,11 +90,11 @@ db_deadlock_main(argc, argv)
 				atype = DB_LOCK_YOUNGEST;
 				break;
 			default:
-				return (db_deadlock_usage());
+				goto usage_err;
 				/* NOTREACHED */
 			}
 			if (optarg[1] != '\0')
-				return (db_deadlock_usage());
+				goto usage_err;
 			break;
 		case 'h':
 			home = optarg;
@@ -105,8 +106,7 @@ db_deadlock_main(argc, argv)
 			if (passwd != NULL) {
 				fprintf(stderr, DB_STR("5136",
 					"Password may not be specified twice"));
-				free(passwd);
-				return (EXIT_FAILURE);
+				goto err;
 			}
 			passwd = strdup(optarg);
 			memset(optarg, 0, strlen(optarg));
@@ -114,7 +114,7 @@ db_deadlock_main(argc, argv)
 				fprintf(stderr, DB_STR_A("5100",
 				    "%s: strdup: %s\n", "%s %s\n"),
 				    progname, strerror(errno));
-				return (EXIT_FAILURE);
+				goto err;
 			}
 			break;
 		case 't':
@@ -122,30 +122,29 @@ db_deadlock_main(argc, argv)
 				*str++ = '\0';
 				if (*str != '\0' && __db_getulong(
 				    NULL, progname, str, 0, LONG_MAX, &usecs))
-					return (EXIT_FAILURE);
+					goto err;
 			}
 			if (*optarg != '\0' && __db_getulong(
 			    NULL, progname, optarg, 0, LONG_MAX, &secs))
-				return (EXIT_FAILURE);
+				goto err;
 			if (secs == 0 && usecs == 0)
-				return (db_deadlock_usage());
-
+				goto usage_err;
 			break;
 		case 'V':
 			printf("%s\n", db_version(NULL, NULL, NULL));
-			return (EXIT_SUCCESS);
+			goto done;
 		case 'v':
 			verbose = 1;
 			break;
 		case '?':
 		default:
-			return (db_deadlock_usage());
+			goto usage_err;
 		}
 	argc -= optind;
 	argv += optind;
 
 	if (argc != 0)
-		return (db_deadlock_usage());
+		goto usage_err;
 
 	/* Handle possible interruptions. */
 	__db_util_siginit();
@@ -187,7 +186,7 @@ db_deadlock_main(argc, argv)
 	while (!__db_util_interrupted()) {
 		if (verbose) {
 			(void)time(&now);
-			dbenv->errx(dbenv, DB_STR_A("5102",
+			dbenv->msg(dbenv, DB_STR_A("5102",
 			    "running at %.24s", "%.24s"),
 			     __os_ctime(&now, time_buf));
 		}
@@ -198,7 +197,7 @@ db_deadlock_main(argc, argv)
 			goto err;
 		}
 		if (verbose)
-			dbenv->errx(dbenv, DB_STR_A("5103",
+			dbenv->msg(dbenv, DB_STR_A("5103",
 			    "rejected %d locks", "%d"), rejected);
 
 		/* Make a pass every "secs" secs and "usecs" usecs. */
@@ -208,16 +207,17 @@ db_deadlock_main(argc, argv)
 	}
 
 	if (0) {
-err:		exitval = 1;
+usage_err:	db_deadlock_usage();
+err:		exitval = EXIT_FAILURE;
 	}
-
+done:
 	/* Clean up the logfile. */
 	if (logfile != NULL)
 		(void)remove(logfile);
 
 	/* Clean up the environment. */
 	if (dbenv != NULL && (ret = dbenv->close(dbenv, 0)) != 0) {
-		exitval = 1;
+		exitval = EXIT_FAILURE;
 		fprintf(stderr,
 		    "%s: dbenv->close: %s\n", progname, db_strerror(ret));
 	}
@@ -228,16 +228,15 @@ err:		exitval = 1;
 	/* Resend any caught signal. */
 	__db_util_sigresend();
 
-	return (exitval == 0 ? EXIT_SUCCESS : EXIT_FAILURE);
+	return (exitval);
 }
 
-int
+void
 db_deadlock_usage()
 {
 	(void)fprintf(stderr,
 	    "usage: %s [-Vv] [-a e | m | n | o | W | w | y]\n\t%s\n", progname,
 	    "[-h home] [-L file] [-P password] [-t sec.usec]");
-	return (EXIT_FAILURE);
 }
 
 int

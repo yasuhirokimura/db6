@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2005, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2005, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -180,6 +180,12 @@ __repmgr_start_int(env, nthreads, flags)
 		return (ret);
 	if (!REPMGR_INITED(db_rep) && (ret = __repmgr_init(env)) != 0)
 		return (ret);
+
+	/* Set up write forwarding callback if needed. */
+	if (IS_USING_WRITE_FORWARDING(env) &&
+	    (ret = __repmgr_set_write_forwarding(env, 1)) != 0)
+		return (ret);
+
 	/*
 	 * As a prerequisite to starting replication, get our list of remote
 	 * sites properly set up.  Mainly this involves reading the group
@@ -819,6 +825,11 @@ __repmgr_autostart(env)
 	    db_rep->self_eid, __repmgr_send)) != 0)
 		goto out;
 
+	/* Set up write forwarding callback if needed. */
+	if (IS_USING_WRITE_FORWARDING(env) &&
+	    (ret = __repmgr_set_write_forwarding(env, 1)) != 0)
+		return (ret);
+
 	if (db_rep->selector == NULL && db_rep->repmgr_status != running)
 		ret = __repmgr_start_selector(env);
 
@@ -1241,6 +1252,7 @@ __repmgr_env_create(env, db_rep)
 	db_rep->ack_timeout = DB_REPMGR_DEFAULT_ACK_TIMEOUT;
 	db_rep->connection_retry_wait = DB_REPMGR_DEFAULT_CONNECTION_RETRY;
 	db_rep->election_retry_wait = DB_REPMGR_DEFAULT_ELECTION_RETRY;
+	db_rep->write_forward_timeout = DB_REPMGR_DEFAULT_CHANNEL_TIMEOUT;
 	db_rep->config_nsites = 0;
 	ADJUST_AUTOTAKEOVER_WAITS(db_rep, DB_REPMGR_DEFAULT_ACK_TIMEOUT);
 	db_rep->perm_policy = DB_REPMGR_ACKS_QUORUM;
@@ -1367,14 +1379,18 @@ __repmgr_await_threads(env)
 
 	/* Message processing threads. */
 	for (i = 0;
-	    i < db_rep->nthreads && db_rep->messengers[i] != NULL; i++) {
+	    i < db_rep->nthreads && db_rep->messengers != NULL &&
+	    db_rep->messengers[i] != NULL; i++) {
 		th = db_rep->messengers[i];
 		if ((t_ret = __repmgr_thread_join(th)) != 0 && ret == 0)
 			ret = t_ret;
 		__os_free(env, th);
+		db_rep->messengers[i] = NULL;
 	}
-	__os_free(env, db_rep->messengers);
-	db_rep->messengers = NULL;
+	if (db_rep->messengers != NULL) {
+		__os_free(env, db_rep->messengers);
+		db_rep->messengers = NULL;
+	}
 
 	/* The select() loop thread. */
 	if (db_rep->selector != NULL) {
@@ -1386,15 +1402,20 @@ __repmgr_await_threads(env)
 	}
 
 	/* Election threads. */
-	for (i = 0; i < db_rep->aelect_threads; i++) {
+	for (i = 0; i < db_rep->aelect_threads &&
+	    db_rep->elect_threads != NULL; i++) {
 		th = db_rep->elect_threads[i];
 		if (th != NULL) {
 			if ((t_ret = __repmgr_thread_join(th)) != 0 && ret == 0)
 				ret = t_ret;
 			__os_free(env, th);
+			db_rep->elect_threads[i] = NULL;
 		}
 	}
-	__os_free(env, db_rep->elect_threads);
+	if (db_rep->elect_threads != NULL) {
+		__os_free(env, db_rep->elect_threads);
+		db_rep->elect_threads = NULL;
+	}
 	db_rep->aelect_threads = 0;
 
 	/* Threads opening outgoing socket connections. */
@@ -3547,4 +3568,38 @@ err:
 	/* Must reset demotion_pending before leaving this routine. */
 	db_rep->demotion_pending = FALSE;
 	return (ret);
+}
+
+/*
+ * __repmgr_set_socket --
+ *	Set the repmgr socket approval function.  If set, the socket
+ *	approval function is invoked just before a connection attempt
+ *	is made.  The socket approval function can test socket options
+ *	and accept or reject the socket.  If necessary, it can also
+ *	modify the IPV6_V6ONLY socket option to provide finer control
+ *	over use of V4 mapped addresses.
+ *
+ * PUBLIC: int __repmgr_set_socket __P((DB_ENV *,
+ * PUBLIC:     int (*)(DB_ENV *, DB_REPMGR_SOCKET, int *, u_int32_t)));
+ */
+int
+__repmgr_set_socket(dbenv, f_approval)
+	DB_ENV *dbenv;
+	int (*f_approval) __P((DB_ENV *, DB_REPMGR_SOCKET, int *, u_int32_t));
+{
+	DB_REP *db_rep;
+	ENV *env;
+
+	env = dbenv->env;
+	db_rep = env->rep_handle;
+
+	ENV_NOT_CONFIGURED(
+	    env, db_rep->region, "DB_ENV->repmgr_set_socket", DB_INIT_REP);
+
+	if (APP_IS_BASEAPI(env))
+		return (repmgr_only(env, "repmgr_set_socket"));
+
+	db_rep->approval = f_approval;
+
+	return (0);
 }

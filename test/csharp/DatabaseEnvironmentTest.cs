@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2009, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2009, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 using System;
@@ -9,6 +9,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Xml;
@@ -531,31 +532,32 @@ namespace CsharpAPITest
 			envConfig.UseLogging = true;
 			envConfig.UseTxns = true;
 
-			// Not set the blob file directory when enabling blob.
-			envConfig.BlobThreshold = 10485760;
+			// Not set the external file directory when enabling
+			// external file.
+			envConfig.ExternalFileThreshold = 10485760;
 			DatabaseEnvironment env = DatabaseEnvironment.Open(
 			    testHome, envConfig);
-			Assert.AreEqual(null, env.BlobDir);
-			Assert.AreEqual(10485760, env.BlobThreshold);
+			Assert.AreEqual(null, env.ExternalFileDir);
+			Assert.AreEqual(10485760, env.ExternalFileThreshold);
 			env.Close();
 
 			Configuration.ClearDir(testHome);
 
-			// Set the blob file directory with an empty string.
-			envConfig.BlobDir = "";
+			// Set the external file directory with an empty string.
+			envConfig.ExternalFileDir = "";
 			env = DatabaseEnvironment.Open(testHome, envConfig);
-			Assert.AreEqual("", env.BlobDir);
-			Assert.AreEqual(10485760, env.BlobThreshold);
+			Assert.AreEqual("", env.ExternalFileDir);
+			Assert.AreEqual(10485760, env.ExternalFileThreshold);
 			env.Close();
 
 			Configuration.ClearDir(testHome);
 
-			// Set the blob file directory with a non-emptry
+			// Set the external file directory with a non-emptry
 			// string.
-			envConfig.BlobDir = "BLOBDIR";
+			envConfig.ExternalFileDir = "BLOBDIR";
 			env = DatabaseEnvironment.Open(testHome, envConfig);
-			Assert.AreEqual("BLOBDIR", env.BlobDir);
-			Assert.AreEqual(10485760, env.BlobThreshold);
+			Assert.AreEqual("BLOBDIR", env.ExternalFileDir);
+			Assert.AreEqual(10485760, env.ExternalFileThreshold);
 			env.Close();
 		}
 
@@ -664,7 +666,7 @@ namespace CsharpAPITest
 
 			// Configure with methods.
 			ReplicationHostAddress address =
-			    new ReplicationHostAddress("127.0.0.0", 11111);
+			    new ReplicationHostAddress("::1:11111");
 			envConig.RepSystemCfg.Clockskew(102, 100);
 			envConig.RepSystemCfg.RetransmissionRequest(10, 100);
 			envConig.RepSystemCfg.TransmitLimit(1, 1024);
@@ -966,12 +968,14 @@ namespace CsharpAPITest
 			return false;
 		}
 
+		[DllImport("kernel32.dll")]
+		static extern uint GetCurrentThreadId();
 		public DbThreadID SetThrdID()
 		{
 			DbThreadID threadID;
 
 			int pid = Process.GetCurrentProcess().Id;
-			uint tid = (uint)AppDomain.GetCurrentThreadId();
+			uint tid = GetCurrentThreadId();
 			threadID = new DbThreadID(pid, tid);
 			return threadID;
 		}
@@ -1029,7 +1033,7 @@ namespace CsharpAPITest
 
 			// Call set_msgcall() of env.
 			env.messageFeedback = new MessageFeedbackDelegate(Msgcall_fcn);
-			env.messageFeedback(messageInfo);
+			env.messageFeedback(null, messageInfo);
 
 			// Unconfigures the callback interface.
 			env.messageFeedback = null;
@@ -1049,11 +1053,13 @@ namespace CsharpAPITest
 			env.Close();
 		}
 
-		public void Msgcall_fcn(string message)
+		public void Msgcall_fcn(string msgpfx, string message)
 		{
 			string msgfile = testHome + "/" + "MessageCallFile";
 			FileStream fs = new FileStream(msgfile, FileMode.OpenOrCreate);
 			StreamWriter sw = new StreamWriter(fs);
+			if (msgpfx != null)
+				sw.Write(msgpfx + ": ");
 			sw.Write(message);
 			sw.Flush();
 			sw.Close();
@@ -1313,7 +1319,7 @@ namespace CsharpAPITest
 			cfg.LogSystemCfg.FileMode = 755;
 			cfg.LogSystemCfg.ForceSync = true;
 			cfg.LogSystemCfg.InMemory = false;
-			cfg.LogSystemCfg.LogBlobContent = false;
+			cfg.LogSystemCfg.LogExternalFileContent = false;
 			cfg.LogSystemCfg.MaxFileSize = 1048576;
 			cfg.LogSystemCfg.NoBuffer = false;
 			cfg.LogSystemCfg.NoSync = true;
@@ -1500,8 +1506,6 @@ namespace CsharpAPITest
 			logVerifyCfg.EnvHome = tempHome;
 			logVerifyCfg.Verbose = true;
 			Assert.AreEqual(0, env.LogVerify(logVerifyCfg));
-			db.Close();
-			env.Close();
 
 			// Verify specific database.
 			logVerifyCfg.DbFile = testName + ".db";
@@ -1533,6 +1537,8 @@ namespace CsharpAPITest
 			Assert.AreEqual(logVerifyCfg.StartLsn.Offset, 3);
 			Assert.AreEqual(logVerifyCfg.StartTime, startTime);
 			Assert.AreEqual(logVerifyCfg.Verbose, true);
+			db.Close();
+			env.Close();
 		}
 
 		[Test]
@@ -1909,7 +1915,7 @@ namespace CsharpAPITest
 
 			Assert.AreEqual(0, stats.BlockedOperations);
 			Assert.AreEqual(0, stats.BucketsCheckedDuringAlloc);
-			Assert.AreEqual(3, stats.CacheRegions);
+			Assert.AreEqual(3, stats.MaxCacheRegions);
 			Assert.LessOrEqual(1048576, stats.CacheSettings.Bytes);
 			Assert.AreEqual(0, stats.CacheSettings.Gigabytes);
 			Assert.AreEqual(3, stats.CacheSettings.NCaches);
@@ -2870,7 +2876,8 @@ namespace CsharpAPITest
 				Configuration.ConfirmBool(childElem,
 				    "InMemory", env.LogInMemory, compulsory);
 				Configuration.ConfirmBool(childElem,
-				    "LogBlobContent", env.LogBlobContent,
+				    "LogExternalFileContent",
+				    env.LogExternalFileContent,
 				    compulsory);
 				Configuration.ConfirmBool(childElem,
 				    "NoBuffer", env.LogNoBuffer, compulsory);

@@ -26,8 +26,8 @@ SQLITE_EXTENSION_INIT1
 # define NEVER(X)   0
   typedef unsigned char u8;
   typedef unsigned short u16;
-# include <ctype.h>
 #endif
+#include <ctype.h>
 
 #ifndef SQLITE_OMIT_VIRTUALTABLE
 
@@ -356,7 +356,7 @@ static int substituteCost(char cPrev, char cFrom, char cTo){
 static int editdist1(const char *zA, const char *zB, int *pnMatch){
   int nA, nB;            /* Number of characters in zA[] and zB[] */
   int xA, xB;            /* Loop counters for zA[] and zB[] */
-  char cA, cB;           /* Current character of zA and zB */
+  char cA = 0, cB;       /* Current character of zA and zB */
   char cAprev, cBprev;   /* Previous character of zA and zB */
   char cAnext, cBnext;   /* Next character in zA and zB */
   int d;                 /* North-west cost value */
@@ -1893,7 +1893,7 @@ static int spellfix1Init(
   char **pzErr
 ){
   spellfix1_vtab *pNew = 0;
-  const char *zModule = argv[0];
+  /* const char *zModule = argv[0]; // not used */
   const char *zDbName = argv[1];
   const char *zTableName = argv[2];
   int nDbName;
@@ -1933,7 +1933,6 @@ static int spellfix1Init(
 #define SPELLFIX_COL_COMMAND        11
     }
     if( rc==SQLITE_OK && isCreate ){
-      sqlite3_uint64 r;
       spellfix1DbExec(&rc, db,
          "CREATE TABLE IF NOT EXISTS \"%w\".\"%w_vocab\"(\n"
          "  id INTEGER PRIMARY KEY,\n"
@@ -1945,11 +1944,10 @@ static int spellfix1Init(
          ");\n",
          zDbName, zTableName
       );
-      sqlite3_randomness(sizeof(r), &r);
       spellfix1DbExec(&rc, db,
-         "CREATE INDEX IF NOT EXISTS \"%w\".\"%w_index_%llx\" "
+         "CREATE INDEX IF NOT EXISTS \"%w\".\"%w_vocab_index_langid_k2\" "
             "ON \"%w_vocab\"(langid,k2);",
-         zDbName, zModule, r, zTableName
+         zDbName, zTableName, zTableName
       );
     }
     for(i=3; rc==SQLITE_OK && i<argc; i++){
@@ -2738,12 +2736,22 @@ static int spellfix1Update(
       return SQLITE_NOMEM;
     }
     if( sqlite3_value_type(argv[0])==SQLITE_NULL ){
-      spellfix1DbExec(&rc, db,
-             "INSERT INTO \"%w\".\"%w_vocab\"(rank,langid,word,k1,k2) "
-             "VALUES(%d,%d,%Q,%Q,%Q)",
-             p->zDbName, p->zTableName,
-             iRank, iLang, zWord, zK1, zK2
-      );
+      if( sqlite3_value_type(argv[1])==SQLITE_NULL ){
+        spellfix1DbExec(&rc, db,
+               "INSERT INTO \"%w\".\"%w_vocab\"(rank,langid,word,k1,k2) "
+               "VALUES(%d,%d,%Q,%Q,%Q)",
+               p->zDbName, p->zTableName,
+               iRank, iLang, zWord, zK1, zK2
+        );
+      }else{
+        newRowid = sqlite3_value_int64(argv[1]);
+        spellfix1DbExec(&rc, db,
+               "INSERT INTO \"%w\".\"%w_vocab\"(id,rank,langid,word,k1,k2) "
+               "VALUES(%lld,%d,%d,%Q,%Q,%Q)",
+               p->zDbName, p->zTableName,
+               newRowid, iRank, iLang, zWord, zK1, zK2
+        );
+      }
       *pRowid = sqlite3_last_insert_rowid(db);
     }else{
       rowid = sqlite3_value_int64(argv[0]);

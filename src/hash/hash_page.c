@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  */
 /*
  * Copyright (c) 1990, 1993, 1994
@@ -1176,7 +1176,7 @@ __ham_del_pair(dbc, flags, ppg)
 	 * If we are locking, we will not maintain this, because it is
 	 * a hot spot.
 	 *
-	 * XXX
+	 * Note:
 	 * Perhaps we can retain incremental numbers and apply them later.
 	 */
 	if (!STD_LOCKING(dbc)) {

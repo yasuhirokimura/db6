@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2005, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2005, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -19,23 +19,13 @@
  */
 #ifndef HAVE_PRINTF
 int
-#ifdef STDC_HEADERS
 printf(const char *fmt, ...)
-#else
-printf(fmt, va_alist)
-	const char *fmt;
-	va_dcl
-#endif
 {
 	va_list ap;
 	size_t len;
 	char buf[2048];    /* !!!: END OF THE STACK DON'T TRUST SPRINTF. */
 
-#ifdef STDC_HEADERS
 	va_start(ap, fmt);
-#else
-	va_start(ap);
-#endif
 	len = (size_t)vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
 
@@ -57,24 +47,13 @@ printf(fmt, va_alist)
  */
 #ifndef HAVE_PRINTF
 int
-#ifdef STDC_HEADERS
 fprintf(FILE *fp, const char *fmt, ...)
-#else
-fprintf(fp, fmt, va_alist)
-	FILE *fp;
-	const char *fmt;
-	va_dcl
-#endif
 {
 	va_list ap;
 	size_t len;
 	char buf[2048];    /* !!!: END OF THE STACK DON'T TRUST SPRINTF. */
 
-#ifdef STDC_HEADERS
 	va_start(ap, fmt);
-#else
-	va_start(ap);
-#endif
 	len = vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
 

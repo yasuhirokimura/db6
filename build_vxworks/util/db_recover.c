@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -12,13 +12,13 @@
 
 #ifndef lint
 static const char copyright[] =
-    "Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.\n";
+    "Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.\n";
 #endif
 
 void db_recover_feedback __P((DB_ENV *, int, int));
 int  db_recover_main __P((int, char *[]));
 int  db_recover_read_timestamp __P((char *, time_t *));
-int  db_recover_usage __P((void));
+void db_recover_usage __P((void));
 int  db_recover_version_check __P((void));
 
 const char *progname;
@@ -49,7 +49,7 @@ db_recover_main(argc, argv)
 	time_t timestamp;
 	u_int32_t flags;
 	int ch, exitval, fatal_recover, ret, retain_env, set_feedback, verbose;
-	char *blob_dir, *home, *passwd;
+	char *blob_dir, *home, *passwd, *region_dir;
 
 	if ((progname = __db_rpath(argv[0])) == NULL)
 		progname = argv[0];
@@ -59,11 +59,13 @@ db_recover_main(argc, argv)
 	if ((ret = db_recover_version_check()) != 0)
 		return (ret);
 
-	blob_dir = home = passwd = NULL;
+	dbenv = NULL;
+	blob_dir = home = passwd = region_dir = NULL;
 	timestamp = 0;
-	exitval = fatal_recover = retain_env = set_feedback = verbose = 0;
+	fatal_recover = retain_env = set_feedback = verbose = 0;
+	exitval = EXIT_SUCCESS;
 	__db_getopt_reset = 1;
-	while ((ch = getopt(argc, argv, "b:cefh:P:t:Vv")) != EOF)
+	while ((ch = getopt(argc, argv, "b:cefh:P:r:t:Vv")) != EOF)
 		switch (ch) {
 		case 'b':
 			blob_dir = optarg;
@@ -84,8 +86,7 @@ db_recover_main(argc, argv)
 			if (passwd != NULL) {
 				fprintf(stderr, DB_STR("5137",
 					"Password may not be specified twice"));
-				free(passwd);
-				return (EXIT_FAILURE);
+				goto err;
 			}
 			passwd = strdup(optarg);
 			memset(optarg, 0, strlen(optarg));
@@ -93,28 +94,31 @@ db_recover_main(argc, argv)
 				fprintf(stderr, DB_STR_A("5021",
 				    "%s: strdup: %s\n", "%s %s\n"),
 				    progname, strerror(errno));
-				return (EXIT_FAILURE);
+				goto err;
 			}
+			break;
+		case 'r':
+			region_dir = optarg;
 			break;
 		case 't':
 			if ((ret = db_recover_read_timestamp(optarg, &timestamp)) != 0)
-				return (ret);
+				goto err;
 			break;
 		case 'V':
 			printf("%s\n", db_version(NULL, NULL, NULL));
-			return (EXIT_SUCCESS);
+			goto done;
 		case 'v':
 			verbose = 1;
 			break;
 		case '?':
 		default:
-			return (db_recover_usage());
+			goto usage_err;
 		}
 	argc -= optind;
 	argv += optind;
 
 	if (argc != 0)
-		return (db_recover_usage());
+		goto usage_err;
 
 	/* Handle possible interruptions. */
 	__db_util_siginit();
@@ -143,6 +147,12 @@ db_recover_main(argc, argv)
 	if (blob_dir != NULL &&
 	    (ret = dbenv->set_blob_dir(dbenv, blob_dir)) != 0) {
 		dbenv->err(dbenv, ret, "set_blob_dir");
+		goto err;
+	}
+
+	if (region_dir != NULL &&
+	    (ret = dbenv->set_region_dir(dbenv, region_dir)) != 0) {
+		dbenv->err(dbenv, ret, "set_region_dir");
 		goto err;
 	}
 
@@ -175,16 +185,17 @@ db_recover_main(argc, argv)
 	}
 
 	if (0) {
-err:		exitval = 1;
+usage_err:	db_recover_usage();
+err:		exitval = EXIT_FAILURE;
 	}
-
+done:
 	/* Flush to the next line of the output device. */
 	if (newline_needed)
 		printf("\n");
 
 	/* Clean up the environment. */
-	if ((ret = dbenv->close(dbenv, 0)) != 0) {
-		exitval = 1;
+	if (dbenv != NULL && (ret = dbenv->close(dbenv, 0)) != 0) {
+		exitval = EXIT_FAILURE;
 		fprintf(stderr,
 		    "%s: dbenv->close: %s\n", progname, db_strerror(ret));
 	}
@@ -194,7 +205,7 @@ err:		exitval = 1;
 	/* Resend any caught signal. */
 	__db_util_sigresend();
 
-	return (exitval == 0 ? EXIT_SUCCESS : EXIT_FAILURE);
+	return (exitval);
 }
 
 /*
@@ -319,12 +330,11 @@ terr:		fprintf(stderr, DB_STR_A("5024",
 	return (0);
 }
 
-int
+void
 db_recover_usage()
 {
 	(void)fprintf(stderr, "usage: %s %s\n", progname,
-"[-cefVv] [-h home] [-b blob_dir] [-P password] [-t [[CC]YY]MMDDhhmm[.SS]]");
-	return (EXIT_FAILURE);
+"[-cefVv] [-h home] [-b blob_dir] [-P password]  [-r region_dir] [-t [[CC]YY]MMDDhhmm[.SS]]");
 }
 
 int

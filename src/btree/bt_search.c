@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  */
 /*
  * Copyright (c) 1990, 1993, 1994, 1995, 1996
@@ -51,8 +51,9 @@
 
 /*
  * __bam_get_root --
- *	Fetch the root of a tree and see if we want to keep
- * it in the stack.
+ *  Try to appropriately lock and fetch the root page of a tree;
+ *  if successful enter it into the cursor's stack; on error, leave the stack
+ *  unchanged.
  *
  * PUBLIC: int __bam_get_root __P((DBC *, db_pgno_t, int, u_int32_t, int *));
  */
@@ -232,9 +233,11 @@ retry:	if (lock_mode == DB_LOCK_WRITE)
 		} else if (atomic_read(&mpf->mfp->multiversion) != 0 &&
 		    lock_mode == DB_LOCK_WRITE && (ret = __memp_dirty(mpf, &h,
 		    dbc->thread_info, dbc->txn, dbc->priority, 0)) != 0) {
-			(void)__memp_fput(mpf,
-			    dbc->thread_info, h, dbc->priority);
+			if (h != NULL)
+				(void)__memp_fput(mpf,
+					dbc->thread_info, h, dbc->priority);
 			(void)__LPUT(dbc, lock);
+			return (ret);
 		}
 	}
 
@@ -347,7 +350,7 @@ retry:	if ((ret = __bam_get_root(dbc, start_pgno, slevel, flags, &stack)) != 0)
 	 * is no user-specific comparsion function set.
 	 */
 	func = F_ISSET(dbc, DBC_OPD) ?
-	    (dbp->dup_compare == NULL ? __bam_defcmp : dbp->dup_compare) :
+	    (dbp->dup_compare == NULL ? __dbt_defcmp : dbp->dup_compare) :
 	    t->bt_compare;
 
 	pos_h = 0;

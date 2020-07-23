@@ -690,6 +690,15 @@ proc do_test {name cmd expected} {
   flush stdout
 }
 
+proc dumpbytes {s} {
+  set r ""
+  for {set i 0} {$i < [string length $s]} {incr i} {
+    if {$i > 0} {append r " "}
+    append r [format %02X [scan [string index $s $i] %c]]
+  }
+  return $r
+}
+
 proc catchcmd {db {cmd ""}} {
   global CLI
   set out [open cmds.txt w]
@@ -697,6 +706,30 @@ proc catchcmd {db {cmd ""}} {
   close $out
   set line "exec $CLI $db < cmds.txt"
   set rc [catch { eval $line } msg]
+  list $rc $msg
+}
+
+proc catchcmdex {db {cmd ""}} {
+  global CLI
+  set out [open cmds.txt w]
+  fconfigure $out -encoding binary -translation binary
+  puts -nonewline $out $cmd
+  close $out
+  set line "exec -keepnewline -- $CLI $db < cmds.txt"
+  set chans [list stdin stdout stderr]
+  foreach chan $chans {
+    catch {
+      set modes($chan) [fconfigure $chan]
+      fconfigure $chan -encoding binary -translation binary -buffering none
+    }
+  }
+  set rc [catch { eval $line } msg]
+  foreach chan $chans {
+    catch {
+      eval fconfigure [list $chan] $modes($chan)
+    }
+  }
+  # puts [dumpbytes $msg]
   list $rc $msg
 }
 
@@ -887,6 +920,7 @@ proc speed_trial_summary {name} {
 #
 proc finish_test {} {
   catch {db close}
+  catch {db1 close}
   catch {db2 close}
   catch {db3 close}
   if {0==[info exists ::SLAVE]} { finalize_testing }
@@ -907,7 +941,7 @@ proc finalize_testing {} {
   sqlite3_reset_auto_extension
 
   sqlite3_soft_heap_limit 0
-  set nTest [incr_ntest]
+  set nTest [set_test_counter count]
   set nErr [set_test_counter errors]
 
   set nKnown 0
@@ -1086,13 +1120,21 @@ proc explain_i {sql {db db}} {
   #   Blue:  Opcodes that reposition or seek a cursor. 
   #   Green: The ResultRow opcode.
   #
-  set R "\033\[31;1m"        ;# Red fg
-  set G "\033\[32;1m"        ;# Green fg
-  set B "\033\[34;1m"        ;# Red fg
-  set D "\033\[39;0m"        ;# Default fg
+  if { [catch {fconfigure stdout -mode}]==0 } {
+    set R "\033\[31;1m"        ;# Red fg
+    set G "\033\[32;1m"        ;# Green fg
+    set B "\033\[34;1m"        ;# Red fg
+    set D "\033\[39;0m"        ;# Default fg
+  } else {
+    set R ""
+    set G ""
+    set B ""
+    set D ""
+  }
   foreach opcode {
       Seek SeekGe SeekGt SeekLe SeekLt NotFound Last Rewind
       NoConflict Next Prev VNext VPrev VFilter
+      SorterSort SorterNext
   } {
     set color($opcode) $B
   }
@@ -1115,6 +1157,7 @@ proc explain_i {sql {db db}} {
 
     if {$opcode=="Next"  || $opcode=="Prev" 
      || $opcode=="VNext" || $opcode=="VPrev"
+     || $opcode=="SorterNext"
     } {
       for {set i $p2} {$i<$addr} {incr i} {
         incr x($i) 2
@@ -1748,7 +1791,7 @@ proc wal_check_journal_mode {testname {db db}} {
     $db eval { SELECT * FROM sqlite_master }
     do_test $testname [list $db eval "PRAGMA main.journal_mode"] {wal}
   }
-  forcedelete test.db-journal/__db.register
+  catch { forcedelete test.db-journal/__db.register }
 }
 
 proc permutation {} {

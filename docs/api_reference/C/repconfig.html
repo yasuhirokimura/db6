@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -89,7 +89,7 @@ DB_ENV-&gt;rep_set_config(DB_ENV *env, u_int32_t which, int onoff);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp3960992"></a>Parameters</h3>
+              <h3 class="title"><a id="idp6878400"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -97,7 +97,7 @@ DB_ENV-&gt;rep_set_config(DB_ENV *env, u_int32_t which, int onoff);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp3876608"></a>which</h4>
+                <h4 class="title"><a id="idp6769504"></a>which</h4>
               </div>
             </div>
           </div>
@@ -273,6 +273,30 @@ DB_ENV-&gt;rep_set_config(DB_ENV *env, u_int32_t which, int onoff);  </pre>
                     </p>
               </li>
               <li>
+                <p><a id="config_DB_REPMGR_CONF_FORWARD_WRITES"></a>
+                        <code class="literal">DB_REPMGR_CONF_FORWARD_WRITES</code>
+                    </p>
+                <p>
+                       By default, write operations cannot be performed on a
+                       replication client site. This option enables forwarding of
+                       simple client put and delete operations to the master site 
+                       for processing. These operations must use an implicit NULL 
+                       transaction ID to be forwarded.  Any other write
+                       operation that specifies a non-NULL transaction or uses a cursor  
+                       <span>returns an error.</span> 
+                        
+                       This option is turned off by default. 
+                    </p>
+                <p>
+                       The master must have an open database handle for the database
+                       on which a forwarded write operation is being performed.
+                       All sites in the replication group should have the same value 
+                       for this configuration option. 
+                       (See the <a href="../../programmer_reference/comm_repsites.html#conf_writeforw" class="olink">Configuring for Write Forwarding</a> 
+                       section in the <em class="citetitle">Berkeley DB Programmer's Reference Guide</em> for more information.) 
+                    </p>
+              </li>
+              <li>
                 <p><a id="config_DB_REPMGR_CONF_PREFMAS_CLIENT"></a>
                         <code class="literal">DB_REPMGR_CONF_PREFMAS_CLIENT</code>
                     </p>
@@ -356,7 +380,7 @@ DB_ENV-&gt;rep_set_config(DB_ENV *env, u_int32_t which, int onoff);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp3994192"></a>onoff</h4>
+                <h4 class="title"><a id="idp6904880"></a>onoff</h4>
               </div>
             </div>
           </div>
@@ -372,7 +396,7 @@ DB_ENV-&gt;rep_set_config(DB_ENV *env, u_int32_t which, int onoff);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp3968824"></a>Errors</h3>
+              <h3 class="title"><a id="idp6866624"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -388,7 +412,7 @@ DB_ENV-&gt;rep_set_config(DB_ENV *env, u_int32_t which, int onoff);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp3986120"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp6932160"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -405,7 +429,7 @@ DB_ENV-&gt;rep_set_config(DB_ENV *env, u_int32_t which, int onoff);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp3984576"></a>Class</h3>
+              <h3 class="title"><a id="idp6926848"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -417,7 +441,7 @@ DB_ENV-&gt;rep_set_config(DB_ENV *env, u_int32_t which, int onoff);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp3987744"></a>See Also</h3>
+              <h3 class="title"><a id="idp6912704"></a>See Also</h3>
             </div>
           </div>
         </div>

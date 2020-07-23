@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2012, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2012, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -14,6 +14,7 @@
 # TEST     the db with a different threshold value.
 proc test146 { method {tnum "146"} args } {
 	global default_pagesize
+	global passwd
 	source ./include.tcl
 
 	# Blobs are supported for btree, hash and heap only.
@@ -32,19 +33,27 @@ proc test146 { method {tnum "146"} args } {
 		return
 	}
 
-	if { [lsearch -exact $args "-chksum"] != -1 } {
-		set indx [lsearch -exact $args "-chksum"]
-		set args [lreplace $args $indx $indx]
-		puts "Test$tnum ignoring -chksum for blob"
-	} 
-
 	# Look for incompatible configurations of blob.
-	foreach conf { "-encryptaes" "-encrypt" "-compress" "-dup" "-dupsort" \
+	foreach conf { "-compress" "-dup" "-dupsort" \
 	    "-read_uncommitted" "-multiversion" } {
 		if { [lsearch -exact $args $conf] != -1 } {
 			puts "Test146 skipping $conf, incompatible with blobs."
 			return
 		}
+	}
+	
+	# Move any encryption arguments from the database arguments
+	# to the environment arguments.
+	set earg ""
+	set pos [lsearch -exact $args "-encryptaes"]
+	if { $pos != -1 } {
+		set earg " -encryptaes $passwd "
+		set args [lreplace $args $pos [expr $pos + 1] ]
+	}
+	set pos [lsearch -exact $args "-encrypt"]
+	if { $pos != -1 } {
+		set earg " -encrypt $passwd "
+		set args [lreplace $args $pos [expr $pos + 1] ]
 	}
 
 	set pgindex [lsearch -exact $args "-pagesize"]
@@ -76,7 +85,7 @@ proc test146 { method {tnum "146"} args } {
 	    open db."
 	# Open the env with a blob threshold value.
 	set env [eval {berkdb env} \
-	    -create -home $testdir -blob_threshold $threshold1]
+	    -create -home $testdir $earg -blob_threshold $threshold1]
 	error_check_good is_valid_env [is_valid_env $env] TRUE
 	error_check_good env_get_blobthreshold \
 	    [$env get_blob_threshold] $threshold1
@@ -111,7 +120,7 @@ proc test146 { method {tnum "146"} args } {
 	# We're going to get a warning message out this -- 
 	# redirect to a file so it won't be tagged as unexpected
 	# output. 
-	set env1 [eval {berkdb env} -create -home $testdir\
+	set env1 [eval {berkdb env} -create -home $testdir $earg \
 	    -blob_threshold $threshold3 -msgfile $testdir/msgfile]
 	error_check_good is_valid_env [is_valid_env $env1] TRUE
 	error_check_good env_get_blobthreshold \
@@ -174,4 +183,30 @@ proc test146 { method {tnum "146"} args } {
 
 	error_check_good db_close [$db close] 0
 	error_check_good env_close [$env close] 0
-}
+	error_check_good env_remove [berkdb envremove -home $testdir] 0
+
+	# Verify the creation of the blob meta database is rolled 
+	# back as well as the actual database when the creating 
+	# txn is aborted. We run this only for a single case, btree,
+	# because other cases do not exercise different code paths.
+	if { $pgindex == -1 && [is_partitioned $args] == 0 && $omethod == "btree" } {
+		puts "\tTest$tnum.d: Verify that the blob meta database is\
+		    removed when txn is aborted."
+		set env [eval {berkdb_env} -txn -create -home $testdir]
+		error_check_good is_valid_env [is_valid_env $env] TRUE
+		set txn [$env txn]
+		error_check_good is_valid_txn [is_valid_txn $txn $env] TRUE
+		set db [eval {berkdb_open} -env $env -txn $txn\
+		    $omethod -create -blob_threshold 1 blob.db] 
+		error_check_good db_put [$db put -txn $txn 1 2345] 0
+		error_check_good blob_meta_exists\
+		    [file exists $testdir/__db_bl/__db2/__db_blob_meta.db] 1
+		error_check_good txn_abort [$txn abort] 0
+		error_check_bad blob_meta_removed\
+		    [file exists $testdir/__db_bl/__db2/__db_blob_meta.db] 1
+		error_check_good db_close [$db close] 0
+		error_check_good env_close [$env close] 0
+	}
+
+
+}	

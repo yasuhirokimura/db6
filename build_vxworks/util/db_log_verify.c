@@ -1,9 +1,9 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
- * $Id: db_log_verify.c,v 0f73af5ae3da 2010/05/10 05:38:40 alexander $
+ * $Id$
  */
 #include "db_config.h"
 
@@ -317,7 +317,7 @@ db_log_verify_app_record(dbenv, dbt, lsnp, op)
 	len2 = (u_int32_t)strlen(buf);
 	p = buf + len2;
 	snprintf(p, len - len2 - 1, "\n\n");
-	__db_msg(dbenv->env, "%s", buf);
+	dbenv->msg(dbenv, "%s", buf);
 
 err:	if (buf != NULL)
 		__os_free(dbenv->env, buf);

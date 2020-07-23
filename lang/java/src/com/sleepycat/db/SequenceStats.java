@@ -4,7 +4,7 @@
  *
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
  */
 
 package com.sleepycat.db;
@@ -20,6 +20,8 @@ public class SequenceStats {
     /**
     The number of times a thread of control was forced to wait on the
     handle mutex.
+    @return the number of times a thread of control was forced to wait on the
+    handle mutex
     */
     public long getWait() {
         return st_wait;
@@ -29,6 +31,8 @@ public class SequenceStats {
     /**
     The number of times that a thread of control was able to obtain handle
     mutex without waiting.
+    @return the number of times that a thread of control was able to obtain handle
+    mutex without waiting
     */
     public long getNowait() {
         return st_nowait;
@@ -37,6 +41,7 @@ public class SequenceStats {
     private long st_current;
     /**
     The current value of the sequence in the database.
+    @return the current value of the sequence in the database
     */
     public long getCurrent() {
         return st_current;
@@ -45,6 +50,7 @@ public class SequenceStats {
     private long st_value;
     /**
     The current cached value of the sequence.
+    @return the current cached value of the sequence
     */
     public long getValue() {
         return st_value;
@@ -53,6 +59,7 @@ public class SequenceStats {
     private long st_last_value;
     /**
     The last cached value of the sequence.
+    @return the last cached value of the sequence
     */
     public long getLastValue() {
         return st_last_value;
@@ -61,6 +68,7 @@ public class SequenceStats {
     private long st_min;
     /**
     The minimum permitted value of the sequence.
+    @return the minimum permitted value of the sequence
     */
     public long getMin() {
         return st_min;
@@ -69,6 +77,7 @@ public class SequenceStats {
     private long st_max;
     /**
     The maximum permitted value of the sequence.
+    @return the maximum permitted value of the sequence
     */
     public long getMax() {
         return st_max;
@@ -77,6 +86,7 @@ public class SequenceStats {
     private int st_cache_size;
     /**
     The number of values that will be cached in this handle.
+    @return the number of values that will be cached in this handle
     */
     public int getCacheSize() {
         return st_cache_size;
@@ -85,6 +95,7 @@ public class SequenceStats {
     private int st_flags;
     /**
     The flags value for the sequence.
+    @return the flags value
     */
     public int getFlags() {
         return st_flags;

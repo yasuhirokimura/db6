@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1997, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1997, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -390,7 +390,7 @@ __dbreg_id_to_db(env, txn, dbpp, ndx, tryopen)
 	if (ndx >= dblp->dbentry_cnt ||
 	    (!dblp->dbentry[ndx].deleted && dblp->dbentry[ndx].dbp == NULL)) {
 		if (!tryopen || F_ISSET(dblp, DBLOG_RECOVER)) {
-			ret = ENOENT;
+			ret = USR_ERR(env, ENOENT);
 			goto err;
 		}
 
@@ -409,7 +409,7 @@ __dbreg_id_to_db(env, txn, dbpp, ndx, tryopen)
 			 * case this will fail too.  Then it's up to the
 			 * caller to reopen the file.
 			 */
-			return (ENOENT);
+			return (USR_ERR(env, ENOENT));
 
 		/*
 		 * Note that we're relying on fname not to change, even though
@@ -449,7 +449,7 @@ __dbreg_id_to_db(env, txn, dbpp, ndx, tryopen)
 
 	/* It's an error if we don't have a corresponding writable DB. */
 	if ((*dbpp = dblp->dbentry[ndx].dbp) == NULL)
-		ret = ENOENT;
+		ret = USR_ERR(env, ENOENT);
 	else
 		/*
 		 * If we are in recovery, then set that the file has
@@ -810,7 +810,7 @@ __dbreg_check_master(env, uid, name)
 	    name, NULL, DB_BTREE, 0, DB_MODE_600, PGNO_BASE_MD);
 
 	if (ret == 0 && memcmp(uid, dbp->fileid, DB_FILE_ID_LEN) != 0)
-		ret = EINVAL;
+		ret = USR_ERR(env, EINVAL);
 
 	(void)__db_close(dbp, NULL, 0);
 	return (ret);

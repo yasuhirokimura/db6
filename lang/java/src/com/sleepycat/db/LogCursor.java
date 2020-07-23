@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2001, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2001, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -34,6 +34,7 @@ public class LogCursor {
     /**
     Discard the log cursor. After close() has been called, regardless of its
     return, the cursor handle may not be used again.
+    @throws DatabaseException if a failure occurs.
     */
     public synchronized void close()
         throws DatabaseException {
@@ -55,7 +56,6 @@ public class LogCursor {
     <p>
     @return
     The status of the operation.
-    <p>
     <p>
 @throws DatabaseException if a failure occurs.
     */
@@ -85,7 +85,6 @@ public class LogCursor {
     The status of the operation; a return of NOTFOUND indicates the last
     log record has already been returned or the log is empty.
     <p>
-    <p>
 @throws DatabaseException if a failure occurs.
     */
     public OperationStatus getNext(final LogSequenceNumber lsn,
@@ -112,7 +111,6 @@ public class LogCursor {
     The status of the operation; a return of NOTFOUND indicates the log
     is empty.
     <p>
-    <p>
 @throws DatabaseException if a failure occurs.
     */
     public OperationStatus getFirst(final LogSequenceNumber lsn,
@@ -138,7 +136,6 @@ public class LogCursor {
     @return
     The status of the operation; a return of NOTFOUND indicates the log
     is empty.
-    <p>
     <p>
 @throws DatabaseException if a failure occurs.
     */
@@ -168,7 +165,6 @@ public class LogCursor {
     The status of the operation; a return of NOTFOUND indicates the first
     log record has already been returned or the log is empty.
     <p>
-    <p>
 @throws DatabaseException if a failure occurs.
     */
     public OperationStatus getPrev(final LogSequenceNumber lsn,
@@ -194,7 +190,6 @@ public class LogCursor {
     @return
     The status of the operation.
     <p>
-    <p>
 @throws DatabaseException if a failure occurs.
     */
     public OperationStatus set(final LogSequenceNumber lsn,
@@ -210,7 +205,6 @@ public class LogCursor {
     <p>
     @return
     The log file version.
-    <p>
     <p>
 @throws DatabaseException if a failure occurs.
     */

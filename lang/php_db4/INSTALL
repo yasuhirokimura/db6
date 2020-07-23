@@ -1,6 +1,6 @@
 Build and installation instructions for Berkeley DB PHP support
 on Linux or *nix machines.  Note that while it is still called "db4" these
-instructions apply to Berkeley DB 5.x as well.
+instructions apply to Berkeley DB 5.x and 6.x as well.
 
 Prerequisites
 -------------

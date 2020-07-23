@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2001, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2001, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -85,6 +85,10 @@ __rep_open(env)
 
 		if ((ret = __mutex_alloc(
 		    env, MTX_REP_START, 0, &rep->mtx_repstart)) != 0)
+			return (ret);
+
+		if ((ret = __mutex_alloc(
+		    env, MTX_LSN_HISTORY, 0, &db_rep->mtx_lsnhist)) != 0)
 			return (ret);
 
 		rep->diag_off = 0;
@@ -329,6 +333,9 @@ __rep_env_refresh(env)
 			if ((t_ret = __mutex_free(env,
 			    &rep->mtx_repstart)) != 0 && ret == 0)
 				ret = t_ret;
+			if ((t_ret = __mutex_free(env,
+			    &db_rep->mtx_lsnhist)) != 0 && ret == 0)
+				ret = t_ret;
 
 			/* Discard commit queue elements. */
 			DB_ASSERT(env, SH_TAILQ_EMPTY(&rep->waiters));
@@ -415,10 +422,12 @@ __rep_preclose(env)
 	if (db_rep == NULL || db_rep->region == NULL)
 		return (ret);
 
+	MUTEX_LOCK(env, db_rep->mtx_lsnhist);
 	if ((dbp = db_rep->lsn_db) != NULL) {
 		ret = __db_close(dbp, NULL, DB_NOSYNC);
 		db_rep->lsn_db = NULL;
 	}
+	MUTEX_UNLOCK(env, db_rep->mtx_lsnhist);
 
 	MUTEX_LOCK(env, db_rep->region->mtx_clientdb);
 	if (db_rep->rep_db != NULL) {

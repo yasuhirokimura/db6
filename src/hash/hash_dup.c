@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  */
 /*
  * Copyright (c) 1990, 1993, 1994
@@ -679,7 +679,6 @@ err:	if (new_pagep != NULL)
  *	Replace an onpage set of duplicates with the OFFDUP structure
  *	that references the duplicate page.
  *
- * XXX
  * This is really just a special case of __onpage_replace; we should
  * probably combine them.
  *
@@ -778,7 +777,7 @@ __ham_dsearch(dbc, dbt, offp, cmpp, flags)
 
 	dbp = dbc->dbp;
 	hcp = (HASH_CURSOR *)dbc->internal;
-	func = dbp->dup_compare == NULL ? __bam_defcmp : dbp->dup_compare;
+	func = dbp->dup_compare == NULL ? __dbt_defcmp : dbp->dup_compare;
 
 	i = F_ISSET(hcp, H_CONTINUE) ? hcp->dup_off: 0;
 	data = HKEYDATA_DATA(H_PAIRDATA(dbp, hcp->page, hcp->indx)) + i;

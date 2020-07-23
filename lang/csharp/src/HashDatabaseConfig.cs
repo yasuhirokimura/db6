@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2009, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2009, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 using System;
@@ -70,14 +70,18 @@ namespace BerkeleyDB {
         }
 
         /// <summary>
-        /// The path of the directory where blobs are stored.
+        /// The path of the directory where external files are stored.
         /// <para>
         /// If the database is opened within <see cref="DatabaseEnvironment"/>,
         /// this path setting is ignored during
         /// <see cref="HashDatabase.Open"/>. Use
-        /// <see cref="HashDatabase.BlobDir"/> to identify the current storage
-        /// location of blobs after opening the database.
+        /// <see cref="HashDatabase.ExternalFileDir"/> to identify the current
+        /// storage location of external files after opening the database.
         /// </para>
+        /// </summary>
+        public string ExternalFileDir;
+	/// <summary>
+        /// Deprecated.  Replaced by ExternalFileDir.
         /// </summary>
         public string BlobDir;
 
@@ -85,21 +89,31 @@ namespace BerkeleyDB {
         private uint blobThreshold;
         /// <summary>
         /// The size in bytes which is used to determine when a data item 
-        /// is stored as a blob.
+        /// is stored as an external file.
         /// <para>
         /// Any data item that is equal to or larger in size than the
-        /// threshold value is automatically stored as a blob.
+        /// threshold value is automatically stored as an external file.
         /// </para>
         /// <para>
-        /// If the threshold value is 0, blobs are never be used by the
+        /// If the threshold value is 0, external files are never be used by the
         /// database.
         /// </para>
         /// <para>
-        /// It is illegal to enable blob support in the database which is configured
-        /// as in-memory database or with chksum, encryption, duplicates,
+        /// It is illegal to enable external file support in the database
+        /// which is configured as in-memory database or with duplicates,
         /// sorted duplicates, compression, multiversion concurrency control
         /// and transactional read operations with degree 1 isolation.
         /// </para>
+        /// </summary>
+        public uint ExternalFileThreshold {
+            get { return blobThreshold; }
+            set {
+                blobThresholdIsSet = true;
+                blobThreshold = value;
+            }
+        }
+	/// <summary>
+        /// Deprecated.  Replaced by ExternalFileThreshold.
         /// </summary>
         public uint BlobThreshold {
             get { return blobThreshold; }

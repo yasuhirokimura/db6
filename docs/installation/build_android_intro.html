@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -140,7 +140,7 @@
               <p> 
                 The compiling process takes time but is a one time
                 activity. For information on downloading and compiling
-                the Android source code, see <a class="ulink" href="http://source.android.com/source/download.html" target="_top">http://source.android.com/source/download.html</a>.
+                the Android source code, see <a class="ulink" href="https://source.android.com/source/downloading.html" target="_top">https://source.android.com/source/downloading.html</a>.
             </p>
             </li>
             <li>
@@ -173,6 +173,27 @@ $ cp ${DB_INSTALL}/build_android/Android.mk ./ </pre>
               <p> 
                 where ${DB_INSTALL} is the directory into which you
                 installed the Berkeley DB library.
+            </p>
+              <p>
+                If you are targeting a 64-bit arm platform, 
+		you need to change the 
+		<code class="literal">build_android/db_config.h</code> 
+		file to undefine 
+		<code class="literal">HAVE_MUTEX_ARM_GCC_ASSEMBLY</code>
+                and define 
+		<code class="literal">HAVE_MUTEX_ARM64_GCC_ASSEMBLY</code>
+                like the following:
+                </p>
+              <pre class="programlisting">
+/* Define to 1 to use the GCC compiler and ARM64 assembly
+   language mutexes. */
+#define HAVE_MUTEX_ARM64_GCC_ASSEMBLY 1
+
+/* Define to 1 to use the GCC compiler and ARM assembly 
+   language mutexes. */
+/* #undef HAVE_MUTEX_ARM_GCC_ASSEMBLY */
+                </pre>
+              <p>
             </p>
             </li>
             <li>

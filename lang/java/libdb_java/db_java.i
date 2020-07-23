@@ -75,6 +75,7 @@ import java.util.Comparator;
 	private ErrorHandler error_handler;
 	private String errpfx;
 	private MessageHandler message_handler;
+	private String msgpfx;
 	private PanicHandler panic_handler;
 	private ReplicationViewHandler rep_view_handler;
 	private ReplicationManagerMessageDispatch repmgr_msg_dispatch_handler;
@@ -95,14 +96,20 @@ import java.util.Comparator;
 
 	/*
 	 * Called by the public DbEnv constructor and for private environments
-	 * by the Db constructor.
+	 * by the Db constructor and by sub-slice environments.
 	 */
-	void initialize() {
+        void initialize() {
 		dbenv_ref = db_java.initDbEnvRef0(this, this);
 		errBuf = new ThreadLocal();
 		/* Start with System.err as the default error stream. */
 		set_error_stream(System.err);
 		set_message_stream(System.out);
+	}
+
+	
+	/* Initialize a sub-slice environment. */
+	public void slice_init() {
+		initialize();
 	}
 
 	void cleanup() {
@@ -266,8 +273,16 @@ import java.util.Comparator;
 		return error_handler;
 	}
 
+	public void set_msgpfx(String msgpfx) {
+		this.msgpfx = msgpfx;
+	}
+
+	public String get_msgpfx() {
+		return msgpfx;
+	}
+
 	private final void handle_message(String msg) {
-		message_handler.message(wrapper, msg);
+		message_handler.message(wrapper, this.msgpfx, msg);
 	}
 
 	private final void handle_repmgr_message_dispatch(ReplicationChannel chan, DatabaseEntry[] msgs, int flags) 
@@ -345,9 +360,11 @@ import java.util.Comparator;
 		message_stream = stream;
 		final java.io.PrintWriter pw = new java.io.PrintWriter(stream);
 		set_msgcall(new MessageHandler() {
-			public void message(Environment env, String msg)
-			    /* no exception */ {
-				pw.println(msg);
+			public void message(Environment env,
+			    String prefix, String buf) /* no exception */ {
+				if (prefix != null)
+					pw.print(prefix + ": ");
+				pw.println(buf);
 				pw.flush();
 			}
 		});
@@ -413,9 +430,10 @@ import java.util.Comparator;
 	private SecondaryMultiKeyCreator secmultikey_create_handler;
 	private ForeignKeyNullifier foreignkey_nullify_handler;
 	private ForeignMultiKeyNullifier foreignmultikey_nullify_handler;
+	private Slice slice_handler;
 
-	/* Called by the Db constructor */
-	private void initialize(DbEnv dbenv) {
+	/* Called by the Db constructor and sub-slice databases */
+	void initialize(DbEnv dbenv) {
 		if (dbenv == null) {
 			private_dbenv = true;
 			dbenv = db_java.getDbEnv0(this);
@@ -423,6 +441,11 @@ import java.util.Comparator;
 		}
 		this.dbenv = dbenv;
 		db_ref = db_java.initDbRef0(this, this);
+	}
+
+	/* Initialize a sub-slice database. */
+	public void slice_init() {
+		initialize(null);
 	}
 
 	private void cleanup() {
@@ -615,6 +638,17 @@ import java.util.Comparator;
 		}
 	}
 
+	private final int handle_slice(
+	    DatabaseEntry dbt1, DatabaseEntry dbt2) 
+	    throws DatabaseException {
+		return slice_handler.slice(wrapper, dbt1, dbt2) ? 0 : 1;
+	}
+
+
+	public Slice get_slice() {
+		return slice_handler;
+	}
+
 	public synchronized boolean verify(String file, String database,
 	    java.io.OutputStream outfile, int flags)
 	    throws DatabaseException, java.io.FileNotFoundException {
@@ -655,6 +689,14 @@ import java.util.Comparator;
 
 	public void set_message_stream(java.io.OutputStream stream) {
 		dbenv.set_message_stream(stream);
+	}
+
+	public void set_msgpfx(String msgpfx) {
+		dbenv.set_msgpfx(msgpfx);
+	}
+
+	public String get_msgpfx() {
+		return dbenv.get_msgpfx();
 	}
 
 	public MessageHandler get_msgcall() {

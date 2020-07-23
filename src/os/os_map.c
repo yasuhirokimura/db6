@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -347,7 +347,8 @@ __os_detach(env, infop, destroy)
 			ret = t_ret;
 	}
 
-	if (destroy && (t_ret = __os_unlink(env, infop->name, 1)) != 0 && ret == 0)
+	if (destroy &&
+	    (t_ret = __os_unlink(env, infop->name, 1)) != 0 && ret == 0)
 		ret = t_ret;
 
 	return (ret);
@@ -442,10 +443,10 @@ __os_unmapfile(env, addr, len)
 	COMPQUIET(env, NULL);
 #endif
 	RETRY_CHK((munmap(addr, len)), ret);
-	ret = __os_posix_err(ret);
+	ret = USR_ERR(env, __os_posix_err(ret));
 #else
+	ret = USR_ERR(env, EINVAL);
 	COMPQUIET(env, NULL);
-	ret = EINVAL;
 #endif
 	return (ret);
 }
@@ -526,7 +527,7 @@ __os_map(env, path, fhp, len, is_region, is_rdonly, addrp)
 	prot = PROT_READ | (is_rdonly ? 0 : PROT_WRITE);
 
 	/*
-	 * XXX
+	 * !!!
 	 * Work around a bug in the VMS V7.1 mmap() implementation.  To map
 	 * a file into memory on VMS it needs to be opened in a certain way,
 	 * originally.  To get the file opened in that certain way, the VMS

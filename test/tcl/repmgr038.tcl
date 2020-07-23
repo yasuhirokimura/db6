@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2012, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2012, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -33,6 +33,7 @@ proc repmgr038_sub { method niter tnum largs } {
 	global testdir
 	global rep_verbose
 	global verbose_type
+	global ipversion
 	set nsites 3
 
 	set verbargs ""
@@ -41,6 +42,7 @@ proc repmgr038_sub { method niter tnum largs } {
 	}
 
 	env_cleanup $testdir
+	set hoststr [get_hoststr $ipversion]
 	set ports [available_ports $nsites]
 	set omethod [convert_method $method]
 
@@ -63,7 +65,7 @@ proc repmgr038_sub { method niter tnum largs } {
 	set masterenv [eval $ma_envcmd]
 	$masterenv rep_config {mgr2sitestrict off}
 	$masterenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 0]] \
+	    -local [list $hoststr [lindex $ports 0]] \
 	    -start master
 
 	puts "\tRepmgr$tnum.b: Start two clients."
@@ -72,8 +74,8 @@ proc repmgr038_sub { method niter tnum largs } {
 	set clientenv [eval $cl_envcmd]
 	$clientenv rep_config {mgr2sitestrict off}
 	$clientenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 1]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] \
+	    -local [list $hoststr [lindex $ports 1]] \
+	    -remote [list $hoststr [lindex $ports 0]] \
 	    -start client
 	await_startup_done $clientenv
 	#
@@ -91,8 +93,8 @@ proc repmgr038_sub { method niter tnum largs } {
 	set clientenv2 [eval $cl2_envcmd]
 	$clientenv2 rep_config {mgr2sitestrict off}
 	$clientenv2 repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 2]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] \
+	    -local [list $hoststr [lindex $ports 2]] \
+	    -remote [list $hoststr [lindex $ports 0]] \
 	    -start client
 	await_startup_done $clientenv2
 
@@ -131,8 +133,8 @@ proc repmgr038_sub { method niter tnum largs } {
 	set clientenv2 [eval $view_envcmd -recover]
 	$clientenv2 rep_config {mgr2sitestrict off}
 	catch {$clientenv2 repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 2]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] \
+	    -local [list $hoststr [lindex $ports 2]] \
+	    -remote [list $hoststr [lindex $ports 0]] \
 	    -start client} res
 	error_check_good unavail [is_substr $res "DB_REP_UNAVAIL"] 1
 	error_check_good clientenv2_close [$clientenv2 close] 0
@@ -140,14 +142,14 @@ proc repmgr038_sub { method niter tnum largs } {
 	puts "\tRepmgr$tnum.e: Restart master, restart client2 as view."
 	set masterenv [eval $ma_envcmd]
 	$masterenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 0]] \
+	    -local [list $hoststr [lindex $ports 0]] \
 	    -start master
 
 	set clientenv2 [eval $view_envcmd -recover]
 	$clientenv2 rep_config {mgr2sitestrict off}
 	$clientenv2 repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 2]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] \
+	    -local [list $hoststr [lindex $ports 2]] \
+	    -remote [list $hoststr [lindex $ports 0]] \
 	    -start client
 	await_startup_done $clientenv2
 
@@ -188,8 +190,8 @@ proc repmgr038_sub { method niter tnum largs } {
 	set clientenv2 [eval $cl2_envcmd -recover -errfile $testdir/rm38c2.err]
 	error_check_bad disallow_reopen_part \
 	    [catch {$clientenv2 repmgr -ack all -pri 70 \
-	    -local [list 127.0.0.1 [lindex $ports 2]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] \
+	    -local [list $hoststr [lindex $ports 2]] \
+	    -remote [list $hoststr [lindex $ports 0]] \
 	    -start client}] 0
 	error_check_good clientenv2_close [$clientenv2 close] 0
 	# Check file after env close to make sure output is flushed to disk.
@@ -204,8 +206,8 @@ proc repmgr038_sub { method niter tnum largs } {
 	set clientenv2 [eval $view_envcmd -recover]
 	$clientenv2 rep_config {mgr2sitestrict off}
 	$clientenv2 repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 2]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] \
+	    -local [list $hoststr [lindex $ports 2]] \
+	    -remote [list $hoststr [lindex $ports 0]] \
 	    -start client
 	await_startup_done $clientenv2
 	$clientenv repmgr -pri 0

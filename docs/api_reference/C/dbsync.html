@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -64,7 +64,12 @@ DB-&gt;sync(DB *db, u_int32_t flags);  </pre>
          once all applications using the database have successfully called
          <a class="xref" href="dbclose.html" title="DB-&gt;close()">DB-&gt;close()</a>, atomically
          replace the original database with the updated copy.
-    </p>
+   </p>
+      <p>
+         When called on a database that has been opened with sliced
+         support, the <code class="methodname">DB-&gt;sync()</code> method is
+         automatically called on each supporting slice database. 
+     </p>
       <p>
          The <code class="methodname">DB-&gt;sync()</code> <span>
             <span>
@@ -77,7 +82,7 @@ DB-&gt;sync(DB *db, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp525096"></a>Parameters</h3>
+              <h3 class="title"><a id="idp632816"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -85,7 +90,7 @@ DB-&gt;sync(DB *db, u_int32_t flags);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp524944"></a>flags</h4>
+                <h4 class="title"><a id="idp632528"></a>flags</h4>
               </div>
             </div>
           </div>
@@ -99,7 +104,7 @@ DB-&gt;sync(DB *db, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp518112"></a>Errors</h3>
+              <h3 class="title"><a id="idp531632"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -115,7 +120,7 @@ DB-&gt;sync(DB *db, u_int32_t flags);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp483216"></a>  DB_REP_HANDLE_DEAD</h4>
+                <h4 class="title"><a id="idp570880"></a>  DB_REP_HANDLE_DEAD</h4>
               </div>
             </div>
           </div>
@@ -134,7 +139,7 @@ DB-&gt;sync(DB *db, u_int32_t flags);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp524232"></a>DB_REP_LOCKOUT</h4>
+                <h4 class="title"><a id="idp631152"></a>DB_REP_LOCKOUT</h4>
               </div>
             </div>
           </div>
@@ -146,7 +151,7 @@ DB-&gt;sync(DB *db, u_int32_t flags);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp448448"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp632112"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -159,7 +164,7 @@ DB-&gt;sync(DB *db, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp510528"></a>Class</h3>
+              <h3 class="title"><a id="idp507088"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -171,7 +176,7 @@ DB-&gt;sync(DB *db, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp529056"></a>See Also</h3>
+              <h3 class="title"><a id="idp638512"></a>See Also</h3>
             </div>
           </div>
         </div>

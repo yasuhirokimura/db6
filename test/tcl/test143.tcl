@@ -1,8 +1,8 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2012, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2012, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
-# $Id$
+# $Id: test143.tcl,v fe390f089fce 2014/01/10 21:03:56 carol $
 #
 # TEST	test143
 # TEST
@@ -59,12 +59,27 @@ proc test143 { method {tnum "143"} args } {
 	if { $is_qnx_test } {
 		puts "\tTest$tnum: Skipping system_mem\
 		    testing for QNX."
+	} elseif { $is_osx_test } {
+		set default_pagesize [exec pagesize]
+		set shmall_needed [expr 40 * 1024 * 1024 / $default_pagesize]
+		set shmall_output [exec sysctl kern.sysv.shmall]
+		set shmall_default [string range $shmall_output \
+		    [expr [string last ":" $shmall_output] + 2] end]
+		if { $shmall_default >= $shmall_needed } {
+			set shm_key 20
+			test143_body $method $tnum \
+			    "-system_mem -shm_key $shm_key $mutexargs" \
+			    $multipliers $nentries $args
+		} else {
+			puts "\tTest$tnum: Skipping system_mem\
+			    testing for OS resource limitation."
+		}
 	} else {
 		set shm_key 20
 		test143_body $method $tnum \
 		    "-system_mem -shm_key $shm_key $mutexargs" \
 		    $multipliers $nentries $args
-    	}
+	}
 
 	# Test that cache-related mutex configation options which exercise
 	# certain code paths not executed by the cases above.

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  */
 /*
  * Copyright (c) 1990, 1993, 1994, 1995, 1996
@@ -346,7 +346,7 @@ __db_master_update(mdbp, sdbp, ip, txn, subdb, type, action, newname, flags)
 			 * No db_err, it is reasonable to remove a
 			 * nonexistent db.
 			 */
-			ret = ENOENT;
+			ret = USR_ERR(env, ENOENT);
 			goto err;
 		default:
 			goto err;
@@ -363,7 +363,7 @@ __db_master_update(mdbp, sdbp, ip, txn, subdb, type, action, newname, flags)
 		sdbp->meta_pgno = PGNO(p);
 
 		/*
-		 * XXX
+		 * !!!
 		 * We're handling actual data, not on-page meta-data, so it
 		 * hasn't been converted to/from opposite endian architectures.
 		 * Do it explicitly, now.
@@ -602,8 +602,8 @@ __env_mpool(dbp, fname, flags)
 	/* The LSN is the first entry on a DB page, byte offset 0. */
 	lsn_off = F_ISSET(dbp, DB_AM_NOT_DURABLE) ? DB_LSN_OFF_NOTSET : 0;
 
-	/* It's possible that this database is already open. */
-	if (F_ISSET(dbp, DB_AM_OPEN_CALLED))
+	/* It's possible that this database's memory pool is already open. */
+	if (F2_ISSET(dbp, DB2_AM_MPOOL_OPENED))
 		return (0);
 
 	/*
@@ -723,12 +723,9 @@ __env_mpool(dbp, fname, flags)
 
 	/*
 	 * Set the open flag.  We use it to mean that the dbp has gone
-	 * through mpf setup, including dbreg_register.  Also, below,
-	 * the underlying access method open functions may want to do
-	 * things like acquire cursors, so the open flag has to be set
-	 * before calling them.
+	 * through mpf setup, including dbreg_register.
 	 */
-	F_SET(dbp, DB_AM_OPEN_CALLED);
+	F2_SET(dbp, DB2_AM_MPOOL_OPENED);
 	if (!fidset && fname != NULL) {
 		(void)__memp_get_fileid(dbp->mpf, dbp->fileid);
 		dbp->preserve_fid = 1;
@@ -760,6 +757,15 @@ __db_close(dbp, txn, flags)
 
 	/* Refresh the structure and close any underlying resources. */
 	ret = __db_refresh(dbp, txn, flags, &deferred_close, 0);
+
+#ifdef HAVE_SLICES
+	/* If sliced, remove this db from the containing db's slice array. */
+	if (dbp->db_container != NULL && dbp->db_container->db_slices != NULL) {
+		DB_ASSERT(env,
+		    dbp->db_container->db_slices[env->slice_index] == dbp);
+		dbp->db_container->db_slices[env->slice_index] = NULL;
+	}
+#endif
 
 	/*
 	 * If we've deferred the close because the logging of the close failed,
@@ -1060,6 +1066,7 @@ never_opened:
 		    ret == 0)
 			ret = t_ret;
 		dbp->mpf = NULL;
+		F2_CLR(dbp, DB2_AM_MPOOL_OPENED);
 		if (reuse &&
 		    (t_ret = __memp_fcreate(env, &dbp->mpf)) != 0 &&
 		    ret == 0)
@@ -1114,8 +1121,7 @@ never_opened:
 		if (txn == NULL)
 			txn = dbp->cur_txn;
 		if (IS_REAL_TXN(txn))
-			__txn_remlock(env,
-			     txn, &dbp->handle_lock, dbp->locker);
+			__txn_remlock(env, txn, NULL, dbp->locker);
 
 		/* We may be holding the handle lock; release it. */
 		lreq.op = DB_LOCK_PUT_ALL;
@@ -1267,13 +1273,16 @@ __db_disassociate(sdbp)
 	    TAILQ_FIRST(&sdbp->join_queue) != NULL) {
 		__db_errx(sdbp->env, DB_STR("0674",
 "Closing a primary DB while a secondary DB has active cursors is unsafe"));
-		ret = EINVAL;
+		ret = USR_ERR(sdbp->env, EINVAL);
 	}
 	sdbp->s_refcnt = 0;
 
 	while ((dbc = TAILQ_FIRST(&sdbp->free_queue)) != NULL)
-		if ((t_ret = __dbc_destroy(dbc)) != 0 && ret == 0)
-			ret = t_ret;
+		if ((t_ret = __dbc_destroy(dbc)) != 0) {
+			if (ret == 0)
+				ret = t_ret;
+			break;
+		}
 
 	F_CLR(sdbp, DB_AM_SECONDARY);
 	return (ret);
@@ -1394,6 +1403,39 @@ loop:		MUTEX_LOCK(env, ldbp->mutex);
 	}
 	MUTEX_UNLOCK(env, env->mtx_dblist);
 	return (ret);
+}
+
+/*
+ * __db_copy_config -
+ *	Copy many of the customizable fields of a DB, as part of 'cloning' it.
+ *	If the clone is a partitioned db, then 'nparts' divides up certain
+ *	type-specific configuration values; that is only used for DB_HASH.
+ *	Sliced databases are not 'partitioned' in that manner.
+ *
+ * PUBLIC: void __db_copy_config __P((const DB *, DB *, u_int32_t));
+ */
+void
+__db_copy_config(source, dest, nparts)
+	const DB *source;
+	DB *dest;
+	u_int32_t nparts;
+{
+	dest->pgsize = source->pgsize;
+	dest->priority = source->priority;
+	dest->db_append_recno = source->db_append_recno;
+	dest->db_feedback = source->db_feedback;
+	dest->dup_compare = source->dup_compare;
+	dest->api_internal = source->api_internal;
+	dest->blob_threshold = source->blob_threshold;
+	dest->blob_file_id = source->blob_file_id;
+	dest->blob_sdb_id = source->blob_sdb_id;
+
+	if (source->type == DB_BTREE)
+		__bam_copy_config(source, dest, nparts);
+#ifdef HAVE_HASH
+	if (source->type == DB_HASH)
+		__ham_copy_config(source, dest, nparts);
+#endif
 }
 
 /*

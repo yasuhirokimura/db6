@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2013, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2013, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -55,10 +55,10 @@ public class DatabaseStreamConfig implements Cloneable {
     }
 
     /**
-    Configure the database stream to sync the blob on each write.
+    Configure the database stream to sync the external file on each write.
     <p>
     @param syncPerWrite
-    If true, configure the database stream to sync the blob on
+    If true, configure the database stream to sync the external file on
     each write.
     */
     public void setSyncPerWrite(final boolean syncPerWrite) {
@@ -66,11 +66,11 @@ public class DatabaseStreamConfig implements Cloneable {
     }
 
     /**
-    Return if the database stream is configured to sync the blob
+    Return if the database stream is configured to sync the external file
     on each write.
     <p>
     @return
-    true if the database stream is configured to sync the blob
+    true if the database stream is configured to sync the external file
     on each write, and false otherwise.
     */
     public boolean getSyncPerWrite() {

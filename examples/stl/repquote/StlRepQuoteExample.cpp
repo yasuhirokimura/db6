@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2001, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2001, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -590,7 +590,7 @@ static void usage() {
 
 int main(int argc, char **argv) {
 	RepConfigInfo config;
-	char ch, *portstr, *tmphost;
+	char ch, *last_colon, *portstr, *tmphost;
 	int tmpport;
 	bool tmppeer;
 
@@ -616,11 +616,18 @@ int main(int argc, char **argv) {
 		case 'L':
 			config.this_host.creator = true;
 		case 'l':
-			config.this_host.host = strtok(optarg, ":");
-			if ((portstr = strtok(NULL, ":")) == NULL) {
-				cerr << "\nBad host specification." << endl;
+			config.this_host.host = optarg;
+			// The final colon in host:port string is the
+			// boundary between the host and the port portions
+			// of the string.
+			if ((last_colon = strrchr(optarg, ':')) == NULL) {
+				cerr << "Bad local host specification." << endl;
 				usage();
 			}
+			// Separate the host and port portions of the 
+			// string for further processing.
+			portstr = last_colon + 1;
+			*last_colon = '\0';
 			config.this_host.port = (unsigned short)atoi(portstr);
 			config.got_listen_address = true;
 			break;
@@ -633,11 +640,18 @@ int main(int argc, char **argv) {
 		case 'R':
 			tmppeer = true; // FALLTHROUGH
 		case 'r':
-			tmphost = strtok(optarg, ":");
-			if ((portstr = strtok(NULL, ":")) == NULL) {
-				cerr << "Bad host specification." << endl;
+			tmphost = optarg;
+			// The final colon in host:port string is the 
+			// boundary between the host and the port portions
+			// of the string.
+			if ((last_colon = strrchr(tmphost, ':')) == NULL) {
+				cerr << "Bad remote host specification." << endl;
 				usage();
 			}
+			// Separate the host and port portions of the 
+			// string for further processing.
+			portstr = last_colon + 1;
+			*last_colon = '\0';
 			tmpport = (unsigned short)atoi(portstr);
 
 			config.addOtherHost(tmphost, tmpport, tmppeer);

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2004, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2004, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -206,9 +206,9 @@ __seq_open(seq, txn, keyp, flags)
 	txn_local = 0;
 
 	if (keyp->size == 0) {
+		ret = USR_ERR(env, EINVAL);
 		__db_errx(env, DB_STR("4001",
 		    "Zero length sequence key specified"));
-		ret = EINVAL;
 		goto err;
 	}
 
@@ -224,9 +224,9 @@ __seq_open(seq, txn, keyp, flags)
 		goto err;
 	}
 	if (FLD_ISSET(tflags, DB_DUP)) {
+		ret = USR_ERR(env, EINVAL);
 		__db_errx(env, DB_STR("4002",
 	"Sequences not supported in databases configured for duplicate data"));
-		ret = EINVAL;
 		goto err;
 	}
 
@@ -261,6 +261,15 @@ __seq_open(seq, txn, keyp, flags)
 	seq->seq_key.flags = DB_DBT_USERMEM;
 
 	ENV_GET_THREAD_INFO(env, ip);
+	/* Create local transaction as necessary. */
+	if (IS_DB_AUTO_COMMIT(dbp, txn)) {
+		if ((ret = __txn_begin(env, ip, NULL, &txn, 0)) != 0)
+			goto err;
+		txn_local = 1;
+	}
+	/* Check for consistent transaction usage. */
+	if ((ret = __db_check_txn(dbp, txn, DB_LOCK_INVALIDID, 0)) != 0)
+		goto err;
 retry:	if ((ret = __db_get(dbp, ip,
 	    txn, &seq->seq_key, &seq->seq_data, 0)) != 0) {
 		if (ret == DB_BUFFER_SMALL &&
@@ -292,19 +301,12 @@ retry:	if ((ret = __db_get(dbp, ip,
 
 		if (rp->seq_value > rp->seq_max ||
 		    rp->seq_value < rp->seq_min) {
+			ret = USR_ERR(env, EINVAL);
 			__db_errx(env, DB_STR("4003",
 			    "Sequence value out of range"));
-			ret = EINVAL;
 			goto err;
 		} else {
 			SEQ_SWAP_OUT(env, seq);
-			/* Create local transaction as necessary. */
-			if (IS_DB_AUTO_COMMIT(dbp, txn)) {
-				if ((ret =
-				    __txn_begin(env, ip, NULL, &txn, 0)) != 0)
-					goto err;
-				txn_local = 1;
-			}
 
 			if ((ret = __db_put(dbp, ip, txn, &seq->seq_key,
 			     &seq->seq_data, DB_NOOVERWRITE)) != 0) {
@@ -317,9 +319,9 @@ retry:	if ((ret = __db_get(dbp, ip,
 		ret = EEXIST;
 		goto err;
 	} else if (seq->seq_data.size < sizeof(seq->seq_record)) {
+		ret = USR_ERR(env, EINVAL);
 		__db_errx(env, DB_STR("4005",
 		    "Bad sequence record format"));
-		ret = EINVAL;
 		goto err;
 	}
 
@@ -619,9 +621,9 @@ retry:	if ((ret = __db_get(dbp, ip,
 	}
 
 	if (data->size < sizeof(seq->seq_record)) {
+		ret = USR_ERR(env, EINVAL);
 		__db_errx(env, DB_STR("4010",
 		    "Bad sequence record format"));
-		ret = EINVAL;
 		goto err;
 	}
 
@@ -673,9 +675,9 @@ again:	if (F_ISSET(rp, DB_SEQ_INC)) {
 			if (F_ISSET(rp, DB_SEQ_WRAP))
 				rp->seq_value = rp->seq_min;
 			else {
-overflow:			__db_errx(env, DB_STR("4011",
+overflow:			ret = USR_ERR(env, EINVAL);
+				__db_errx(env, DB_STR("4011",
 				    "Sequence overflow"));
-				ret = EINVAL;
 				goto err;
 			}
 		}
@@ -777,8 +779,8 @@ __seq_get(seq, txn, delta, retp, flags)
 	}
 
 	if (rp->seq_min + delta > rp->seq_max) {
+		ret = USR_ERR(env, EINVAL);
 		__db_errx(env, DB_STR("4013", "Sequence overflow"));
-		ret = EINVAL;
 		goto err;
 	}
 

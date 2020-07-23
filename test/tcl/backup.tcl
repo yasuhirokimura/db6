@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information. 
 #
-# Copyright (c) 2007, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2007, 2016 Oracle and/or its affiliates.  All rights reserved.
 # 
 # $Id: backup.tcl,v 4b37b36844da 2012/10/18 15:03:32 sue $
 #
@@ -12,7 +12,9 @@
 # TEST  transactional bulk loading optimization; and with
 # TEST  and without BLOB. Make sure that -c and -d (data_dir)
 # TEST  are not allowed together; and backing up with BLOB
-# TEST  but without -log_blob is not allowed.
+# TEST  but without -log_blob is not allowed.  If slices are
+# TEST  enabled, run some of the tests with the -sliced
+# TEST  database flag.
 # TEST
 # TEST	(1) Test that plain and simple hotbackup works. 
 # TEST	(2) Test with -data_dir (-d). 
@@ -39,13 +41,23 @@ proc backup { method {nentries 1000} } {
 		foreach ckpoption { nocheckpoint checkpoint } {
 			foreach bloption { noblob blob } {
 				backup_sub $method $nentries \
-				    $txnmode $ckpoption $bloption
+				    $txnmode $ckpoption $bloption 0
 			}
+		}
+	}
+
+	# If slices are enabled and the method is not heap, run
+	# on a sliced database.
+	if { [berkdb slice_enabled] && [is_heap $method] != 1 } {
+		set num_slices 2
+		foreach ckpoption { checkpoint nocheckpoint } {
+			backup_sub $method $nentries \
+			    normal $ckpoption noblob $num_slices
 		}
 	}
 }
 
-proc backup_sub { method nentries txnmode ckpoption bloption } {
+proc backup_sub { method nentries txnmode ckpoption bloption num_slices } {
 	source ./include.tcl
 
 	set omethod [convert_method $method]
@@ -58,7 +70,6 @@ proc backup_sub { method nentries txnmode ckpoption bloption } {
 	set log_size 20000
 	set env_flags " -create -txn -home $testdir -log_max $log_size"
 	set db_flags " -create $omethod -auto_commit $testfile "
-
 	set bu_flags " -create -clean -files -verbose "
 
 	if { $txnmode == "bulk" } {
@@ -88,25 +99,37 @@ proc backup_sub { method nentries txnmode ckpoption bloption } {
 	} else {
 		set blmsg "without blob"
 	}
+	set slicemsg ""
+	if { $num_slices > 0 } {
+		set db_flags " -sliced $db_flags "
+		set slicemsg " with slices"
+	}
 
-	puts "Backuptest ($omethod) $bmsg $msg $blmsg."
+	puts "Backuptest ($omethod) $bmsg $msg $blmsg$slicemsg."
 
 	env_cleanup $testdir
 	env_cleanup $backupdir
 	env_cleanup $backupapidir 
 
+	if { $num_slices > 0 } {
+		slice_db_config $num_slices
+	}
 	set env [eval {berkdb_env} $env_flags]
 	set db [eval {berkdb_open} -env $env $db_flags]
 	error_check_good envopen [is_valid_env $env] TRUE
 	error_check_good dbopen [is_valid_db $db] TRUE
 
-	if { $txnmode == "bulk" } {
+	if { $num_slices > 0 } {
+		set txn ""
+	} elseif { $txnmode == "bulk" } {
 		set txn [$env txn -txn_bulk]
 	} else {
 		set txn [$env txn]
 	}
 	populate $db $omethod $txn $nentries 0 0 
-	error_check_good txn_commit [$txn commit] 0
+	if { $txn != "" } {
+		error_check_good txn_commit [$txn commit] 0
+	}
 	error_check_good db_sync [$db sync] 0
 
 	# Verify that blobs are created.
@@ -125,6 +148,14 @@ proc backup_sub { method nentries txnmode ckpoption bloption } {
 	error_check_good no_files [llength $files] 0
 
 	puts "\tBackuptest.a.0: Hot backup to directory $backupdir."
+	for {set i 0} {$i < $num_slices} {incr i} {
+		file mkdir $backupdir/__db.slice00$i
+		if {[catch { eval exec $util_path/db_hotbackup\
+		    -${c}vh $testdir/__db.slice00$i \
+		    -b $backupdir/__db.slice00$i } res] } {
+			error "FAIL: $res"
+		}	
+	}
 	if {[catch { eval exec $util_path/db_hotbackup\
 	    -${c}vh $testdir -b $backupdir } res] } {
 		error "FAIL: $res"
@@ -138,11 +169,30 @@ proc backup_sub { method nentries txnmode ckpoption bloption } {
 		    $backupdir/__db_bl/$blob_subdir/*]
 		error_check_bad found_blobs [llength $blfiles] 0
 	}
+	# Verify slices are backed up
+	for {set i 0} {$i < $num_slices} {incr i} {
+	    error_check_good created_slices_db$i \
+		[file exists $backupdir/__db.slice00$i/$testfile] 1
+	    set logfiles [glob $backupdir/__db.slice00$i/log*]
+	    error_check_bad slices_found_logs [llength $logfiles] 0
+	}
 
 	puts "\tBackuptest.a.1: API hot backup to directory $backupapidir."
 	if { [catch {eval $env backup $bu_flags \
 	    -single_dir $backupapidir} res] } {
 		error "FAIL: $res"
+	}
+	if { $num_slices > 0 } {
+		set slices [$env get_slices]
+		set i 0
+		foreach slice $slices {
+			file mkdir $backupapidir/__db.slice00$i
+			if { [catch {eval $slice backup $bu_flags \
+			    -single_dir $backupapidir/__db.slice00$i} res] } {
+				error "FAIL: $res"
+			}
+			incr i
+		}	
 	}
 	set logfiles [glob $backupapidir/log*]
 	error_check_bad found_logs [llength $logfiles] 0
@@ -153,8 +203,14 @@ proc backup_sub { method nentries txnmode ckpoption bloption } {
 		    $backupapidir/__db_bl/$blob_subdir/*]
 		error_check_bad found_blobs [llength $blfiles] 0
 	}
+	# Verify slices are backed up
+	for {set i 0} {$i < $num_slices} {incr i} {
+	    error_check_good created_slices_db$i \
+		[file exists $backupapidir/__db.slice00$i/$testfile] 1
+	    set logfiles [glob $backupapidir/__db.slice00$i/log*]
+	    error_check_bad slices_found_logs [llength $logfiles] 0
+	}
 	set stmsg "a.2"
-
 	# If either checkpoint or bulk is in effect, the copy
 	# will exactly match the original database.
 	if { $ckpoption == "checkpoint" || $txnmode == "bulk"} {
@@ -174,7 +230,6 @@ proc backup_sub { method nentries txnmode ckpoption bloption } {
 			dump_compare $testdir/$testfile $backupapidir/$testfile
 		}
 	}
-
 	# Hot backup requires -log_blob. Testing for the error once is enough.
 	if { $bloption == "blob" && \
 	    $txnmode == "normal" && $ckpoption == "nocheckpoint" } {
@@ -184,7 +239,7 @@ proc backup_sub { method nentries txnmode ckpoption bloption } {
 		set ret [catch {eval $env1 backup $bu_flags $backupapidir} res]
 		error_check_bad backup_no_logblob $ret 0
 		error_check_good backup_failmsg \
-		    [is_substr $res "requires DB_LOG_BLOB"] 1
+		    [is_substr $res "requires DB_LOG_EXT_FILE"] 1
 		error_check_good env_close [$env1 close] 0
 	}
 	error_check_good db_close [$db close] 0
@@ -192,7 +247,7 @@ proc backup_sub { method nentries txnmode ckpoption bloption } {
 	env_cleanup $testdir
 	env_cleanup $backupdir
 	env_cleanup $backupapidir
-
+	
 	set dir_flags "-data_dir data1"
 	set bk_dirflags "-d $testdir/data1"
 	set dirmsg "with data_dir"
@@ -204,6 +259,14 @@ proc backup_sub { method nentries txnmode ckpoption bloption } {
 	puts "\tBackuptest.b: Hot backup $dirmsg."
 	file mkdir $testdir/data1
 	error_check_good db_data_dir [file exists $testdir/data1/$testfile] 0
+	for {set i 0} {$i < $num_slices} {incr i} {
+	    file mkdir $testdir/__db.slice00$i
+	    file mkdir $testdir/__db.slice00$i/data1
+	}
+	if { $num_slices > 0 } {
+		slice_db_config $num_slices \
+		    { "set_data_dir data1" } { "set_data_dir data1" }
+	}
 
 	# Create a new env with data_dir.
 	set env [eval {berkdb_env_noerr} $env_flags $dir_flags]
@@ -211,18 +274,26 @@ proc backup_sub { method nentries txnmode ckpoption bloption } {
 	error_check_good envopen [is_valid_env $env] TRUE
 	error_check_good dbopen [is_valid_db $db] TRUE
 
-	if { $txnmode == "bulk" } {
+	if { $num_slices > 0 } {
+		set txn ""
+	} elseif { $txnmode == "bulk" } {
 		set txn [$env txn -txn_bulk]
 	} else {
 		set txn [$env txn]
 	}
 
 	populate $db $omethod $txn $nentries 0 0 
-	error_check_good txn_commit [$txn commit] 0
+	if { $txn != "" } {
+		error_check_good txn_commit [$txn commit] 0
+	}
 	error_check_good db_sync [$db sync] 0
 
 	# Check that data went into data_dir.
 	error_check_good db_data_dir [file exists $testdir/data1/$testfile] 1
+	for {set i 0} {$i < $num_slices} {incr i} {
+	    error_check_good slice_db_data_dir$i \
+		[file exists $testdir/__db.slice00$i/data1/$testfile] 1
+	}
 
 	# Check that blobs went into blob_dir.
 	if { $bloption == "blob" } {
@@ -243,6 +314,13 @@ proc backup_sub { method nentries txnmode ckpoption bloption } {
 		    -${c}vh $testdir -b $backupdir $bk_dirflags} res] } {
 			error "FAIL: $res"
 		}
+		for {set i 0} {$i < $num_slices} {incr i} {
+			if {[catch {eval exec $util_path/db_hotbackup\
+			    -${c}vh $testdir/__db.slice00$i \
+			    -b $backupdir/__db.slice00$i "-d data1"} res] } {
+				error "FAIL: $res"
+			}
+		}
 		# Check that logs and db are in backupdir.
 		error_check_good db_backup [file exists $backupdir/$testfile] 1
 		set logfiles [glob $backupdir/log*]
@@ -252,6 +330,12 @@ proc backup_sub { method nentries txnmode ckpoption bloption } {
 			set bl_files [glob -nocomplain \
 			    $backupdir/__db_bl/$blob_subdir/*]
 			error_check_bad blobs_backed_up [llength $bl_files] 0
+		}
+		for {set i 0} {$i < $num_slices} {incr i} {
+			set logfiles [glob $backupdir/__db.slice00$i/log*]
+			error_check_bad logs_backedup$i [llength $logfiles] 0
+			error_check_good slice_backedup$i [file exists \
+			    $backupdir/__db.slice00$i/$testfile] 1
 		}
 
 		#
@@ -263,6 +347,19 @@ proc backup_sub { method nentries txnmode ckpoption bloption } {
 		    -single_dir $backupapidir} res] } {
 			error "FAIL: $res"
 		}
+		if { $num_slices > 0 } {
+			set slices [$env get_slices]
+			set i 0
+			foreach slice $slices {
+				file mkdir $backupapidir/__db.slice00$i
+				if { [catch {eval $env backup $bu_flags\
+				    -single_dir $backupapidir/__db.slice00$i}\
+				    res] } {
+					error "FAIL: $res"
+				}
+				incr i
+			}	
+		}
 		error_check_good db_backup\
 		    [file exists $backupapidir/$testfile] 1
 		set logfiles [glob $backupapidir/log*]
@@ -272,19 +369,29 @@ proc backup_sub { method nentries txnmode ckpoption bloption } {
 			    $backupapidir/__db_bl/$blob_subdir/*]
 			error_check_bad blobs_backed_up [llength $bl_files] 0
 		}
+		for {set i 0} {$i < $num_slices} {incr i} {
+			set slogfiles [glob $backupapidir/__db.slice00$i/log*]
+			error_check_bad logs_backedup$i [llength $slogfiles] 0
+			error_check_good slice_backedup$i [file exists \
+			    $backupapidir/__db.slice00$i/$testfile] 1
+		}
 	}
 
 	# Add more data and try the "update" flag. 
 	puts "\tBackuptest.c: Update existing hot backup."
 
-	if { $txnmode == "bulk" } {
+	if { $num_slices > 0 } {
+		set txn ""
+	} elseif { $txnmode == "bulk" } {
 		set txn [$env txn -txn_bulk]
 	} else {
 		set txn [$env txn]
 	}
 
 	populate $db $omethod $txn [expr $nentries * 2] 0 0
-	error_check_good txn_commit [$txn commit] 0
+	if { $txn != "" } {
+		error_check_good txn_commit [$txn commit] 0
+	}
 	error_check_good db_sync [$db sync] 0
 
 	if { $ckpoption == "checkpoint" } {
@@ -296,9 +403,19 @@ proc backup_sub { method nentries txnmode ckpoption bloption } {
 		    -${c}vuh $testdir -b backup $bk_dirflags} res] } {
 			error "FAIL: $res"
 		}
-		# There should be more log files now.
-		set newlogfiles [glob $backupdir/log*]
-		error_check_bad more_logs $newlogfiles $logfiles
+		for {set i 0} {$i < $num_slices} {incr i} {
+			file mkdir $backupdir/__db.slice00$i
+			if {[catch { eval exec $util_path/db_hotbackup\
+			    -${c}vuh $testdir/__db.slice00$i \
+			    -b $backupdir/__db.slice00$i } res] } {
+				error "FAIL: $res"
+			}	
+		}
+		# There should be more log files now, unless using slices.
+		if { $num_slices == 0 } {
+			set newlogfiles [glob $backupdir/log*]
+			error_check_bad more_logs $newlogfiles $logfiles
+		}
 		# The hotbackup utility runs recovery on the backup,
 		# so we will find the same files in backup and source.
 		if { $bloption == "blob" } {
@@ -315,10 +432,28 @@ proc backup_sub { method nentries txnmode ckpoption bloption } {
 		    -single_dir -update $backupapidir} res] } {
 			error "FAIL: $res"
 		}
+		if { $num_slices > 0 } {
+			set i 0
+			foreach slice $slices {
+				file mkdir $backupapidir/__db.slice00$i
+				if { [catch {eval $env backup $bu_flags\
+				    -single_dir -update \
+				    $backupapidir/__db.slice00$i} res] } {
+					error "FAIL: $res"
+				}
+				incr i
+			}	
+		}
 		error_check_good db_backup\
 		    [file exists $backupapidir/$testfile] 1
-		set newlogfiles [glob $backupapidir/log*]
-		error_check_bad more_logs $newlogfiles $logfiles
+		for {set i 0} {$i < $num_slices} {incr i} {
+			error_check_good slice_backedup$i [file exists \
+			    $backupapidir/__db.slice00$i/$testfile] 1
+		}
+		if { $num_slices == 0 } {
+			set newlogfiles [glob $backupapidir/log*]
+			error_check_bad more_logs $newlogfiles $logfiles
+		}
 		# API hot backup does not run recovery on the backup.
 		# So the number of blob files in the backup and
 		# source are different.
@@ -346,14 +481,23 @@ proc backup_sub { method nentries txnmode ckpoption bloption } {
 		    -${c}vh $testdir -b backup $bk_dirflags} res] } {
 			error "FAIL: $res"
 		}
+		for {set i 0} {$i < $num_slices} {incr i} {
+			set slice_flags \
+			    "-d $fullpath/$testdir/__db.slice00$i/data1"
+			if {[catch {eval exec $util_path/db_hotbackup \
+			    -${c}vh $testdir/__db.slice00$i -b backup \
+			    $slice_flags} \
+			    res] } {
+				error "FAIL: $res"
+			}
+		}
+		
 	}
-
 	error_check_good db_close [$db close] 0
 	error_check_good env_close [$env close] 0
 	env_cleanup $testdir
 	env_cleanup $backupdir
 	env_cleanup $backupapidir
-
 	# Back up with absolute data/log/blob path but
 	# without -single_dir will fail.
 	# Testing for this error once is enough.
@@ -374,8 +518,13 @@ proc backup_sub { method nentries txnmode ckpoption bloption } {
 			error_check_bad backup_fullpath $ret 0
 			error_check_good backup_failmsg1 \
 			    [is_substr $res "absolute path"] 1
-			error_check_good backup_failmsg2 \
-			    [is_substr $res "$dir directory"] 1
+			if { $dir == "blob" } {
+				error_check_good backup_failmsg2 \
+				    [is_substr $res "external file directory"] 1
+			} else {
+				error_check_good backup_failmsg2 \
+				    [is_substr $res "$dir directory"] 1
+			}
 			error_check_good env_close [$env close] 0
 		}
 
@@ -384,7 +533,7 @@ proc backup_sub { method nentries txnmode ckpoption bloption } {
 	}
 
 	puts "\tBackuptest.e: Hot backup with DB_CONFIG."
-	backuptest_makeconfig $bloption
+	backuptest_makeconfig $bloption $num_slices
 	set msg3 "use of -l with DB_CONFIG file is deprecated"
 
 	set env [eval {berkdb_env_noerr} $env_flags]
@@ -392,14 +541,18 @@ proc backup_sub { method nentries txnmode ckpoption bloption } {
 	error_check_good envopen [is_valid_env $env] TRUE
 	error_check_good dbopen [is_valid_db $db] TRUE
 
-	if { $txnmode == "bulk" } {
+	if { $num_slices > 0 } {
+		set txn ""
+	} elseif { $txnmode == "bulk" } {
 		set txn [$env txn -txn_bulk]
 	} else {
 		set txn [$env txn]
 	}
 
 	populate $db $omethod $txn $nentries 0 0 
-	error_check_good txn_commit [$txn commit] 0
+	if { $txn != "" } {
+		error_check_good txn_commit [$txn commit] 0
+	}
 	error_check_good db_sync [$db sync] 0
 
 	set bk_dirflags "-l logs -d $testdir/data1"
@@ -416,6 +569,14 @@ proc backup_sub { method nentries txnmode ckpoption bloption } {
 		catch {eval exec $util_path/db_hotbackup\
 		    -${c}vh $testdir -b $backupdir $bk_dirflags} res
 		error_check_good l_and_config [is_substr $res $msg3] 1
+		for {set i 0} {$i < $num_slices} {incr i} {
+			if {[catch {eval exec $util_path/db_hotbackup\
+			    -${c}vh $testdir/__db.slice00$i -b \
+			    $backupdir/__db.slice00$i \
+			    "-l logs -d data1"} res]} {
+				error "FAIL: $res"
+			}
+		}
 
 		# Check that logs and db are in backupdir.
 		error_check_good db_backup [file exists $backupdir/$testfile] 1
@@ -430,10 +591,30 @@ proc backup_sub { method nentries txnmode ckpoption bloption } {
 			error_check_bad blobdir_backed_up \
 			    [file exists $backupdir/blobs] 1
 		}
+		for {set i 0} {$i < $num_slices} {incr i} {
+			set logfiles [glob $backupdir/__db.slice00$i/log*]
+			error_check_bad logs_backedup$i [llength $logfiles] 0
+			error_check_good slice_backedup$i [file exists \
+			    $backupdir/__db.slice00$i/$testfile] 1
+		}
 		puts "\tBackuptest.e.1: API hot backup with DB_CONFIG."
 		if { [catch {eval $env backup $bu_flags\
 		    -single_dir $backupapidir} res] } {
 			error "FAIL: $res"
+		}
+
+		if { $num_slices > 0 } {
+			set slices [$env get_slices]
+			set i 0
+			foreach slice $slices {
+				file mkdir $backupapidir/__db.slice00$i
+				if { [catch {eval $env backup $bu_flags\
+				    -single_dir $backupapidir/__db.slice00$i}\
+				    res] } {
+					error "FAIL: $res"
+				}
+				incr i
+			}	
 		}
 		error_check_good db_backup\
 		    [file exists $backupapidir/$testfile] 1
@@ -446,16 +627,26 @@ proc backup_sub { method nentries txnmode ckpoption bloption } {
 			error_check_bad blobdir_backed_up \
 			    [file exists $backupapidir/blobs] 1
 		}
+		for {set i 0} {$i < $num_slices} {incr i} {
+			set slogfiles [glob $backupapidir/__db.slice00$i/log*]
+			error_check_bad logs_backedup$i [llength $slogfiles] 0
+			error_check_good slice_backedup$i [file exists \
+			    $backupapidir/__db.slice00$i/$testfile] 1
+		}
 	}
 
-	if { $txnmode == "bulk" } {
+	if { $num_slices > 0 } {
+		set txn ""
+	} elseif { $txnmode == "bulk" } {
 		set txn [$env txn -txn_bulk]
 	} else {
 		set txn [$env txn]
 	}
 
 	populate $db $omethod $txn [expr $nentries * 2] 0 0 
-	error_check_good txn_commit [$txn commit] 0
+	if { $txn != "" } {
+		error_check_good txn_commit [$txn commit] 0
+	}
 	error_check_good db_sync [$db sync] 0
 
 	puts "\tBackuptest.f: Hot backup update with DB_CONFIG."
@@ -467,10 +658,20 @@ proc backup_sub { method nentries txnmode ckpoption bloption } {
 		catch {eval exec $util_path/db_hotbackup\
 		    -${c}vuh $testdir -b backup $bk_dirflags} res
 		error_check_good l_and_config [is_substr $res $msg3] 1
+		for {set i 0} {$i < $num_slices} {incr i} {
+			if {[catch {eval exec $util_path/db_hotbackup\
+			    -${c}vuh $testdir/__db.slice00$i -b \
+			    $backupdir/__db.slice00$i \
+			    "-l logs -d data1"} res]} {
+				error "FAIL: $res"
+			}
+		}
 
-		# There should be more log files now.
-		set newlogfiles [glob $backupdir/log*]
-		error_check_bad more_logs $newlogfiles $logfiles
+		# There should be more log files now if not using slices.
+		if { $num_slices == 0 } {
+			set newlogfiles [glob $backupdir/log*]
+			error_check_bad more_logs $newlogfiles $logfiles
+		}
 		if { $bloption == "blob" } {
 			set files [glob -nocomplain \
 			    $testdir/blobs/$blob_subdir/*]
@@ -485,16 +686,47 @@ proc backup_sub { method nentries txnmode ckpoption bloption } {
 		    -single_dir -update $backupapidir} res] } {
 			error "FAIL: $res"
 		}
+		if { $num_slices > 0 } {
+			set i 0
+			foreach slice $slices {
+				file mkdir $backupapidir/__db.slice00$i
+				if { [catch {eval $slice backup $bu_flags \
+				    -single_dir -update \
+				    $backupapidir/__db.slice00$i} res] } {
+					error "FAIL: $res"
+				}
+				incr i
+			}	
+		}
 		error_check_good db_backup\
 		    [file exists $backupapidir/$testfile] 1
-		set newlogfiles [glob $backupapidir/log*]
-		error_check_bad more_logs $newlogfiles $logfiles
+		for {set i 0} {$i < $num_slices} {incr i} {
+			error_check_good db_backup_slice$i \
+			    [file exists \
+			    $backupapidir/__db.slice00$i/$testfile] 1
+		}
+		if { $num_slices == 0 } {
+			set newlogfiles [glob $backupapidir/log*]
+			error_check_bad more_logs $newlogfiles $logfiles
+		}
 		if { $bloption == "blob" } {
 			set bl_files [glob -nocomplain \
 			    $backupapidir/__db_bl/$blob_subdir/*]
 			error_check_bad no_more_blobs \
 			    [llength $files] [llength $bl_files]
 		}
+	}
+
+	# Skip the next test if slices enabled, they depend on either
+	# the slice directory containing a DB_CONFIG, or a transaction
+	# covering multiple operations before being aborted.
+	if { $num_slices > 0 } {
+		error_check_good db_close [$db close] 0
+		error_check_good env_close [$env close] 0
+		env_cleanup $testdir
+		env_cleanup $backupdir
+		env_cleanup $backupapidir
+		return
 	}
 
 	# Repeat with directories already there to test 
@@ -531,7 +763,7 @@ proc backup_sub { method nentries txnmode ckpoption bloption } {
 	# Check that DB_CONFIG file is in backupapidir.
 	error_check_good found_db_config\
 	    [file exists $backupapidir/DB_CONFIG] 1
-	# Check that db is in backupapidir/data1 and notin backupapidir.
+	# Check that db is in backupapidir/data1 and not in backupapidir.
 	error_check_good found_db\
 	    [file exists $backupapidir/data1/$testfile] 1
 	error_check_bad found_db\
@@ -833,17 +1065,28 @@ proc backup_sub { method nentries txnmode ckpoption bloption } {
 	}
 }
 
-proc backuptest_makeconfig { bloption } {
+proc backuptest_makeconfig { bloption { num_slices 0 } } {
 	source ./include.tcl
 
 	file mkdir $testdir/logs
 	file mkdir $testdir/data1
+	for {set i 0} {$i < $num_slices} {incr i} {
+		file mkdir $testdir/__db.slice00$i/logs
+		file mkdir $testdir/__db.slice00$i/data1
+	}
 
 	set cid [open $testdir/DB_CONFIG w]
+	if { $num_slices > 0 } {
+		puts $cid "set_slice_count $num_slices"
+	}
 	puts $cid "set_lg_dir logs"
 	puts $cid "set_data_dir data1"
 	if { $bloption == "blob" } {
 		puts $cid "set_blob_dir blobs"
+	}
+	if { $num_slices > 0 } {
+		puts $cid "slice all set_data_dir data1"
+		puts $cid "slice all set_lg_dir logs"
 	}
 	close $cid
 }

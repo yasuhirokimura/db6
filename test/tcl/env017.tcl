@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2009, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2009, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -241,6 +241,13 @@ proc env017_rep_stat { } {
 		{ "Next LSN expected"	    st_next_lsn }
 		{ "First missed LSN"	    st_waiting_lsn }
 		{ "Maximum permanent LSN"	    st_max_perm_lsn }
+		{ "External files found deleted"    st_ext_deleted }
+		{ "External files duplicated"	    st_ext_duplicated }
+		{ "External file data messages recieved"	    \
+		      st_ext_records }
+		{ "External file data messages re-requested"     st_ext_rereq }
+		{ "External files found truncated"  st_ext_truncated }
+		{ "External file updates re-requested"	    st_ext_update_rereq }
 		{ "Bulk buffer fills"	    st_bulk_fills }
 		{ "Bulk buffer overflows"	    st_bulk_overflows }
 		{ "Bulk records stored"	    st_bulk_records }
@@ -303,7 +310,9 @@ proc env017_rep_stat { } {
 		{ "Is view"		st_view }
 		{ "Future duplicated log records" 	st_log_futuredup }
 	}
-	set doc_list [list st_bulk_fills st_bulk_overflows st_bulk_records \
+	set doc_list [list st_ext_deleted st_ext_duplicated \
+	    st_ext_records st_ext_rereq st_ext_truncated st_ext_update_rereq \
+	    st_bulk_fills st_bulk_overflows st_bulk_records \
 	    st_bulk_transfers st_client_rerequests st_client_svc_miss \
 	    st_client_svc_req st_dupmasters st_egen st_election_cur_winner \
 	    st_election_gen st_election_datagen st_election_lsn st_election_nsites \
@@ -346,12 +355,15 @@ proc env017_repmgr_stat { } {
 		{ "Incoming messages size (gbytes)"	st_incoming_queue_gbytes }
 		{ "Incoming messages size (bytes)"	st_incoming_queue_bytes }
 		{ "Incoming messages discarded"		st_incoming_msgs_dropped }
+		{ "Forwarded write operations received"	st_write_ops_received }
+		{ "Write operations forwarded"		st_write_ops_forwarded }
 	}
 	set doc_list [list st_perm_failed st_msgs_queued st_msgs_dropped \
 	    st_connection_drop st_connect_fail st_elect_threads \
 	    st_max_elect_threads st_site_total st_site_views \
 	    st_site_participants st_takeovers st_incoming_queue_gbytes \
-	    st_incoming_queue_bytes st_incoming_msgs_dropped ]
+	    st_incoming_queue_bytes st_incoming_msgs_dropped \
+	    st_write_ops_received st_write_ops_forwarded]
 	env017_stat_check \
 	    $map_list $doc_list $check_type $stat_method $envargs
 }
@@ -457,7 +469,7 @@ proc env017_db_stat { } {
 		{ "Page count"	    hash_pagecnt }
 		{ "Number of keys"	    hash_nkeys }
 		{ "Number of records"	    hash_ndata }
-		{ "Number of blobs" hash_nblobs }
+		{ "Number of external files" hash_nblobs }
 		{ "Fill factor"	    hash_ffactor }
 		{ "Buckets"	    hash_buckets }
 		{ "Free pages"	    hash_free }
@@ -473,7 +485,7 @@ proc env017_db_stat { } {
 	set heap_map_list {
 		{ "Magic"	    heap_magic }
 		{ "Version"	    heap_version }
-		{ "Number of blobs"         heap_nblobs }
+		{ "Number of external files"         heap_nblobs }
 		{ "Number of records"	    heap_nrecs }
 		{ "Page size"	    heap_pagesize }
 		{ "Page count"	    heap_pagecnt }
@@ -501,7 +513,7 @@ proc env017_db_stat { } {
 		{ "Version"	    bt_version }
 		{ "Number of keys"	    bt_nkeys }
 		{ "Number of records"	    bt_ndata }
-		{ "Number of blobs"         bt_nblobs }
+		{ "Number of external files"         bt_nblobs }
 		{ "Minimum keys per page"	    bt_minkey }
 		{ "Fixed record length"	    bt_re_len }
 		{ "Record pad"	    bt_re_pad }

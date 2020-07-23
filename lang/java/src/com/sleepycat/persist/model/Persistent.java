@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 
@@ -16,7 +16,7 @@ import java.lang.annotation.Target;
 
 /**
  * Identifies a persistent class that is not an {@link Entity} class or a
- * {@link <a href="{@docRoot}/com/sleepycat/persist/model/Entity.html#simpleTypes">simple type</a>}.
+ * <a href="{@docRoot}/com/sleepycat/persist/model/Entity.html#simpleTypes">simple type</a>.
  *
  * @author Mark Hayes
  */
@@ -27,6 +27,8 @@ public @interface Persistent {
      * Identifies a new version of a class when an incompatible class change
      * has been made.
      *
+     * @return the version.
+     *
      * @see Entity#version
      */
     int version() default 0;
@@ -34,6 +36,8 @@ public @interface Persistent {
     /**
      * Specifies the class that is proxied by this {@link PersistentProxy}
      * instance.
+     *
+     * @return the Class.
      *
      * @see PersistentProxy
      */

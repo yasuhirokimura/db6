@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -96,7 +96,7 @@ struct __log_persist;	typedef struct __log_persist LOGP;
 #define	LFPREFIX	"log."		/* Log file name prefix. */
 #define	LFNAME		"log.%010d"	/* Log file name template. */
 #define	LFNAME_V1	"log.%05d"	/* Log file name template, rev 1. */
-#define IS_LOG_FILE(name)  (strncmp(name, LFPREFIX, sizeof(LFPREFIX) - 1) == 0)
+#define	IS_LOG_FILE(name)  (strncmp(name, LFPREFIX, sizeof(LFPREFIX) - 1) == 0)
 
 #define	LG_MAX_DEFAULT		(10 * MEGABYTE)	/* 10 MB. */
 #define	LG_MAX_INMEM		(256 * 1024)	/* 256 KB. */

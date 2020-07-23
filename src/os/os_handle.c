@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1998, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1998, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -94,7 +94,7 @@ __os_openhandle(env, name, flags, mode, fhpp)
 					goto err;
 				}
 				/*
-				 * XXX
+				 * !!!
 				 * Assume any error means non-existence.
 				 * Unfortunately return values (even for
 				 * non-existence) are driver specific so
@@ -127,9 +127,7 @@ __os_openhandle(env, name, flags, mode, fhpp)
 			break;
 		}
 
-		ret = __os_posix_err(__os_get_syserr());
-		if (ret != ENOENT)
-			(void)USR_ERR(env, ret);
+		ret = USR_ERR(env, __os_posix_err(__os_get_syserr()));
 		switch (ret) {
 		case EMFILE:
 		case ENFILE:
@@ -228,9 +226,9 @@ __os_closehandle(env, fhp)
 		else
 			RETRY_CHK((close(fhp->fd)), ret);
 		if (ret != 0) {
-			ret = USR_ERR(env, ret);
+			ret = USR_ERR(env, __os_posix_err(ret));
 			__db_syserr(env, ret, DB_STR("0164", "close"));
-			ret = __os_posix_err(ret);
+
 		}
 	}
 

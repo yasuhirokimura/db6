@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2014, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -37,6 +37,7 @@ proc repmgr041_sub { method niter tnum largs } {
 	global rep_verbose
 	global verbose_type
 	global databases_in_memory
+	global ipversion
 	set nsites 2
 	set omethod [convert_method $method]
 
@@ -46,6 +47,7 @@ proc repmgr041_sub { method niter tnum largs } {
 	}
 
 	env_cleanup $testdir
+	set hoststr [get_hoststr $ipversion]
 	set ports [available_ports $nsites]
 
 	set masterdir $testdir/MASTERDIR
@@ -66,7 +68,7 @@ proc repmgr041_sub { method niter tnum largs } {
 	set masterenv [eval $ma_envcmd]
 	$masterenv rep_config {mgrprefmasmaster on}
 	$masterenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 0]] -start client
+	    -local [list $hoststr [lindex $ports 0]] -start client
 	await_expected_master $masterenv
 
 	puts "\tRepmgr$tnum.b: Client site primordial startup."
@@ -75,8 +77,8 @@ proc repmgr041_sub { method niter tnum largs } {
 	set clientenv [eval $cl_envcmd]
 	$clientenv rep_config {mgrprefmasclient on}
 	$clientenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 1]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] -start client
+	    -local [list $hoststr [lindex $ports 1]] \
+	    -remote [list $hoststr [lindex $ports 0]] -start client
 	await_startup_done $clientenv
 
 	#
@@ -116,7 +118,7 @@ proc repmgr041_sub { method niter tnum largs } {
 	set masterenv [eval $ma_envcmd]
 	$masterenv rep_config {mgrprefmasmaster on}
 	$masterenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 0]] -start client
+	    -local [list $hoststr [lindex $ports 0]] -start client
 	await_startup_done $masterenv
 	await_expected_master $masterenv
 
@@ -140,13 +142,13 @@ proc repmgr041_sub { method niter tnum largs } {
 	set masterenv [eval $ma_envcmd]
 	$masterenv rep_config {mgrprefmasmaster on}
 	$masterenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 0]] -start client
+	    -local [list $hoststr [lindex $ports 0]] -start client
 
 	set clientenv [eval $cl_envcmd]
 	$clientenv rep_config {mgrprefmasclient on}
 	$clientenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 1]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] -start client
+	    -local [list $hoststr [lindex $ports 1]] \
+	    -remote [list $hoststr [lindex $ports 0]] -start client
 	await_expected_master $masterenv
 	await_startup_done $clientenv
 

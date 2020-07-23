@@ -1,7 +1,7 @@
 /*
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -56,33 +56,34 @@ extern "C" {
 #define	MTX_LOG_FLUSH		11
 #define	MTX_LOG_HANDLE		12
 #define	MTX_LOG_REGION		13
-#define	MTX_MPOOLFILE_HANDLE	14
-#define	MTX_MPOOL_BH		15
-#define	MTX_MPOOL_FH		16
-#define	MTX_MPOOL_FILE_BUCKET	17
-#define	MTX_MPOOL_HANDLE	18
-#define	MTX_MPOOL_HASH_BUCKET	19
-#define	MTX_MPOOL_REGION	20
-#define	MTX_MUTEX_REGION	21
-#define	MTX_MUTEX_TEST		22
-#define	MTX_REP_CHKPT		23
-#define	MTX_REP_DATABASE	24
-#define	MTX_REP_DIAG		25
-#define	MTX_REP_EVENT		26
-#define	MTX_REP_REGION		27
-#define	MTX_REP_START		28
-#define	MTX_REP_WAITER		29
-#define	MTX_REPMGR		30
-#define	MTX_SEQUENCE		31
-#define	MTX_TWISTER		32
-#define	MTX_TCL_EVENTS		33
-#define	MTX_TXN_ACTIVE		34
-#define	MTX_TXN_CHKPT		35
-#define	MTX_TXN_COMMIT		36
-#define	MTX_TXN_MVCC		37
-#define	MTX_TXN_REGION		38
+#define	MTX_LSN_HISTORY		14
+#define	MTX_MPOOLFILE_HANDLE	15
+#define	MTX_MPOOL_BH		16
+#define	MTX_MPOOL_FH		17
+#define	MTX_MPOOL_FILE_BUCKET	18
+#define	MTX_MPOOL_HANDLE	19
+#define	MTX_MPOOL_HASH_BUCKET	20
+#define	MTX_MPOOL_REGION	21
+#define	MTX_MUTEX_REGION	22
+#define	MTX_MUTEX_TEST		23
+#define	MTX_REP_CHKPT		24
+#define	MTX_REP_DATABASE	25
+#define	MTX_REP_DIAG		26
+#define	MTX_REP_EVENT		27
+#define	MTX_REP_REGION		28
+#define	MTX_REP_START		29
+#define	MTX_REP_WAITER		30
+#define	MTX_REPMGR		31
+#define	MTX_SEQUENCE		32
+#define	MTX_TWISTER		33
+#define	MTX_TCL_EVENTS		34
+#define	MTX_TXN_ACTIVE		35
+#define	MTX_TXN_CHKPT		36
+#define	MTX_TXN_COMMIT		37
+#define	MTX_TXN_MVCC		38
+#define	MTX_TXN_REGION		39
 
-#define	MTX_MAX_ENTRY		38
+#define	MTX_MAX_ENTRY		39
 
 /* The following macros are defined on some platforms, e.g. QNX. */
 #undef __mutex_init
@@ -123,7 +124,7 @@ static inline int __db_pthread_mutex_trylock(ENV *env, db_mutex_t mutex)
 #endif
 		ret = pthread_mutex_trylock(&mutexp->u.m.mutex);
 	if (ret == EBUSY)
-		ret = DB_LOCK_NOTGRANTED;
+		ret = USR_ERR(env, DB_LOCK_NOTGRANTED);
 	else if (ret == 0) {
 		F_SET(mutexp, DB_MUTEX_LOCKED);
 		env->dbenv->thread_id(env->dbenv, &mutexp->pid, &mutexp->tid);
@@ -135,26 +136,6 @@ static inline int __db_pthread_mutex_trylock(ENV *env, db_mutex_t mutex)
 #ifdef HAVE_SHARED_LATCHES
 #define	__mutex_rdlock(a, b)		__db_pthread_mutex_readlock(a, b)
 #define	__mutex_tryrdlock(a, b)		__db_pthread_mutex_tryreadlock(a, b)
-static inline int __db_pthread_mutex_tryreadlock(ENV *env, db_mutex_t mutex)
-{
-	int ret;
-	DB_MUTEX *mutexp;
-	if (!MUTEX_ON(env) || F_ISSET(env->dbenv, DB_ENV_NOLOCKING))
-		return (0);
-	mutexp = MUTEXP_SET(env, mutex);
-	if (F_ISSET(mutexp, DB_MUTEX_SHARED))
-		ret = pthread_rwlock_tryrdlock(&mutexp->u.rwlock);
-	else
-		return (EINVAL);
-	if (ret == EBUSY)
-		ret = DB_LOCK_NOTGRANTED;
-#ifdef HAVE_STATISTICS
-	if (ret == 0)
-		STAT_INC(env,
-		    mutex, set_rd_nowait, mutexp->mutex_set_nowait, mutex);
-#endif
-	return (ret);
-}
 #endif
 #elif defined(HAVE_MUTEX_WIN32) || defined(HAVE_MUTEX_WIN32_GCC)
 #define	__mutex_init(a, b, c)		__db_win32_mutex_init(a, b, c)
@@ -197,8 +178,9 @@ static inline int __db_pthread_mutex_tryreadlock(ENV *env, db_mutex_t mutex)
  *
  * We rarely fail to acquire or release a mutex without panicing.  Simplify
  * the macros to always return a panic value rather than saving the actual
- * return value of the mutex routine. Use MUTEX_LOCK_RET() when the caller has
- * a code path for a mutex failure, e.g., when cleaning up after a panic.
+ * return value of the mutex routine.  Use MUTEX_LOCK_RET() and
+ * MUTEX_UNLOCK_RET() when the caller has a code path for a mutex failure,
+ * e.g., when cleaning up after a panic.
  */
 #ifdef HAVE_MUTEX_SUPPORT
 #define	MUTEX_LOCK(env, mutex) do {					\
@@ -206,8 +188,17 @@ static inline int __db_pthread_mutex_tryreadlock(ENV *env, db_mutex_t mutex)
 		return (DB_RUNRECOVERY);				\
 } while (0)
 
-#define MUTEX_LOCK_RET(env, mutex) 					\
+#define	MUTEX_UNLOCK(env, mutex) do {					\
+	if ((mutex) != MUTEX_INVALID &&					\
+	    __mutex_unlock(env, mutex) != 0)				\
+		return (DB_RUNRECOVERY);				\
+} while (0)
+
+#define	MUTEX_LOCK_RET(env, mutex)					\
 	((mutex) == MUTEX_INVALID ? 0 : __mutex_lock(env, mutex))
+
+#define	MUTEX_UNLOCK_RET(env, mutex)					\
+	((mutex) == MUTEX_INVALID ? 0 : __mutex_unlock(env, mutex))
 
 /*
  * Always check the return value of MUTEX_TRYLOCK()!  Expect 0 on success,
@@ -229,12 +220,6 @@ static inline int __db_pthread_mutex_tryreadlock(ENV *env, db_mutex_t mutex)
 } while (0)
 #define	MUTEX_TRY_READLOCK(env, mutex)					\
 	((mutex) != MUTEX_INVALID ? __mutex_tryrdlock(env, mutex) : 0)
-
-#define	MUTEX_UNLOCK(env, mutex) do {					\
-	if ((mutex) != MUTEX_INVALID &&					\
-	    __mutex_unlock(env, mutex) != 0)				\
-		return (DB_RUNRECOVERY);				\
-} while (0)
 
 #define	MUTEX_WAIT(env, mutex, duration) do {				\
 	int __ret;							\
@@ -259,11 +244,12 @@ static inline int __db_pthread_mutex_tryreadlock(ENV *env, db_mutex_t mutex)
  * if-then-else blocks work correctly, and suppress unused variable messages.
  */
 #define	MUTEX_LOCK(env, mutex)		{ env = (env); mutex = (mutex); }
+#define	MUTEX_UNLOCK(env, mutex)	{ env = (env); mutex = (mutex); }
 #define	MUTEX_LOCK_RET(env, mutex)	( env = (env), mutex = (mutex), 0)
+#define	MUTEX_UNLOCK_RET(env, mutex)	( env = (env), mutex = (mutex), 0)
 #define	MUTEX_TRYLOCK(env, mutex)	( env = (env), mutex = (mutex), 0)
 #define	MUTEX_READLOCK(env, mutex)	{ env = (env); mutex = (mutex); }
 #define	MUTEX_TRY_READLOCK(env, mutex)	( env = (env), mutex = (mutex), 0 )
-#define	MUTEX_UNLOCK(env, mutex)	{ env = (env); mutex = (mutex); }
 #define	MUTEX_REQUIRED(env, mutex)	{ env = (env); mutex = (mutex); }
 #define	MUTEX_REQUIRED_READ(env, mutex)	{ env = (env); mutex = (mutex); }
 #define	MUTEX_WAIT(env, mutex, duration)	{			\
@@ -281,7 +267,7 @@ static inline int __db_pthread_mutex_tryreadlock(ENV *env, db_mutex_t mutex)
  * Bulk initialization of mutexes in regions.
  */
 
-#define MUTEX_BULK_INIT(env, region, start, howmany) do {		\
+#define	MUTEX_BULK_INIT(env, region, start, howmany) do {		\
 	DB_MUTEX *__mutexp;						\
 	db_mutex_t __i = start;						\
 	u_int32_t __n = howmany;					\

@@ -1,7 +1,7 @@
 /*-
 * See the file LICENSE for redistribution information.
 *
-* Copyright (c) 2010, 2014 Oracle and/or its affiliates.  All rights reserved.
+* Copyright (c) 2010, 2016 Oracle and/or its affiliates.  All rights reserved.
 */
 /*
 ** This file contains the implementation of the sqlite3_backup_XXX()
@@ -11,16 +11,6 @@
 #include "sqliteInt.h"
 #include "btreeInt.h"
 #include <db.h>
-
-/*
- * We use the following internal DB functions.
- */
-extern int __os_dirlist(ENV *env,
-    const char *dir, int returndir, char ***namesp, int *cntp);
-extern void __os_dirfree(ENV *env, char **namesp, int cnt);
-extern int __os_unlink (ENV *, const char *, int);
-extern int __os_exists (ENV *, const char *, int *);
-extern int __os_rename(ENV *, const char *, const char *, u_int32_t);
 
 /* Forward declarations. */
 static int btreeCopyPages(sqlite3_backup *p, int *pages);
@@ -102,12 +92,13 @@ static Btree *findBtree(sqlite3 *pErrorDb, sqlite3 *pDb, const char *zDb)
 	if (i == 1) {
 		pParse = sqlite3StackAllocZero(pErrorDb, sizeof(*pParse));
 		if (pParse == 0) {
-			sqlite3Error(pErrorDb, SQLITE_NOMEM, "out of memory");
+			sqlite3ErrorWithMsg(pErrorDb, SQLITE_NOMEM, 
+			    "out of memory");
 			rc = SQLITE_NOMEM;
 		} else {
 			pParse->db = pDb;
 			if (sqlite3OpenTempDatabase(pParse)) {
-				sqlite3Error(pErrorDb, pParse->rc, "%s",
+				sqlite3ErrorWithMsg(pErrorDb, pParse->rc, "%s",
 				    pParse->zErrMsg);
 				rc = SQLITE_ERROR;
 				sqlite3DbFree(pDb, pParse->zErrMsg);
@@ -119,7 +110,7 @@ static Btree *findBtree(sqlite3 *pErrorDb, sqlite3 *pDb, const char *zDb)
 	}
 
 	if (i < 0) {
-		sqlite3Error(pErrorDb,
+		sqlite3ErrorWithMsg(pErrorDb,
 		    SQLITE_ERROR, "unknown database %s", zDb);
 		return 0;
 	}
@@ -156,7 +147,7 @@ sqlite3_backup *sqlite3_backup_init(sqlite3* pDestDb, const char *zDestDb,
 	sqlite3_mutex_enter(pSrcDb->mutex);
 	sqlite3_mutex_enter(pDestDb->mutex);
 	if (pSrcDb == pDestDb) {
-		sqlite3Error(pDestDb, SQLITE_ERROR,
+		sqlite3ErrorWithMsg(pDestDb, SQLITE_ERROR,
 		    "source and destination must be distinct");
 		goto err;
 	}
@@ -164,7 +155,7 @@ sqlite3_backup *sqlite3_backup_init(sqlite3* pDestDb, const char *zDestDb,
 	/* Allocate space for a new sqlite3_backup object */
 	p = (sqlite3_backup *)sqlite3_malloc(sizeof(sqlite3_backup));
 	if (!p) {
-		sqlite3Error(pDestDb, SQLITE_NOMEM, 0);
+		sqlite3Error(pDestDb, SQLITE_NOMEM);
 		goto err;
 	}
 
@@ -226,7 +217,7 @@ sqlite3_backup *sqlite3_backup_init(sqlite3* pDestDb, const char *zDestDb,
 	p->rc = dberr2sqlite(dbenv->txn_begin(dbenv, p->pSrc->family_txn,
 	    &p->srcTxn, 0), NULL);
 	if (p->rc != SQLITE_OK) {
-		sqlite3Error(pSrcDb, p->rc, 0);
+		sqlite3Error(pSrcDb, p->rc);
 		goto err;
 	}
 
@@ -237,7 +228,7 @@ sqlite3_backup *sqlite3_backup_init(sqlite3* pDestDb, const char *zDestDb,
 	 */
 	if ((p->rc = btreeGetPageCount(p->pSrc,
 	    &p->tables, &p->nPagecount, p->srcTxn)) != SQLITE_OK) {
-		sqlite3Error(pSrcDb, p->rc, 0);
+		sqlite3Error(pSrcDb, p->rc);
 		goto err;
 	}
 
@@ -250,7 +241,7 @@ sqlite3_backup *sqlite3_backup_init(sqlite3* pDestDb, const char *zDestDb,
 
 err:	if (p != 0) {
 		if (pDestDb->errCode == SQLITE_OK)
-			sqlite3Error(pDestDb, p->rc, 0);
+			sqlite3Error(pDestDb, p->rc);
 		if (p->srcTxn)
 			p->srcTxn->abort(p->srcTxn);
 		if (p->srcName != 0)
@@ -472,7 +463,7 @@ static int backupCleanup(sqlite3_backup *p)
 		if (p->rc == SQLITE_DONE)
 			rc2 = sqlite3BtreeCommit(p->pDest);
 		else
-			rc2 = sqlite3BtreeRollback(p->pDest, SQLITE_OK);
+			rc2 = sqlite3BtreeRollback(p->pDest, SQLITE_OK, 0);
 		if (rc2 != SQLITE_OK)
 			rc = rc2;
 	}
@@ -719,8 +710,8 @@ int sqlite3_backup_step(sqlite3_backup *p, int nPage) {
 	if (!p->tables) {
 		if ((p->rc = btreeGetPageCount(p->pSrc,
 		    &p->tables, &p->nPagecount, p->srcTxn)) != SQLITE_OK) {
-				sqlite3Error(p->pSrcDb, p->rc, 0);
-				goto err;
+			sqlite3Error(p->pSrcDb, p->rc);
+			goto err;
 		}
 		p->nRemaining = p->nPagecount;
 	}
@@ -778,7 +769,7 @@ err:	/*
 	if ( returnCode == SQLITE_LOCKED || returnCode == SQLITE_BUSY )
 		backupReset(p);
 	else if ( returnCode != SQLITE_OK && returnCode != SQLITE_DONE ) {
-		sqlite3Error(p->pDestDb, p->rc, 0);
+		sqlite3Error(p->pDestDb, p->rc);
 	}
 	sqlite3_mutex_leave(p->pDestDb->mutex);
 	sqlite3_mutex_leave(p->pSrcDb->mutex);

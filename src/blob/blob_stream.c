@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2013, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2013, 2016 Oracle and/or its affiliates.  All rights reserved.
  */
 
 #include "db_config.h"
@@ -58,7 +58,7 @@ __db_stream_init(dbc, dbsp, flags)
 	if ((ret = __dbc_get_blob_id(dbs->dbc, &dbs->blob_id)) != 0) {
 		if (ret == EINVAL)
 			__db_errx(env, DB_STR("0211",
-			    "Error, cursor does not point to a blob."));
+		    "Error, cursor does not point to an external file."));
 		goto err;
 	}
 
@@ -168,7 +168,7 @@ __db_stream_read(dbs, data, offset, size, flags)
 		return (ret);
 
 	if (F_ISSET(data, DB_DBT_PARTIAL)) {
-		ret = EINVAL;
+		ret = USR_ERR(env, EINVAL);
 		__db_errx(env, DB_STR("0212",
 		    "Error, do not use DB_DBT_PARTIAL with DB_STREAM."));
 		goto err;
@@ -238,28 +238,37 @@ __db_stream_write(dbs, data, offset, flags)
 		return (ret);
 
 	if (F_ISSET(dbs, DB_FOP_READONLY)) {
-		ret = EINVAL;
-		__db_errx(env, DB_STR("0213", "Error, blob is read only."));
+		ret = USR_ERR(env, EINVAL);
+		__db_errx(env, DB_STR("0213",
+		    "Error, external file is read only."));
 		return (ret);
 	}
 	if (F_ISSET(data, DB_DBT_PARTIAL)) {
-		ret = EINVAL;
+		ret = USR_ERR(env, EINVAL);
 		__db_errx(env, DB_STR("0214",
 		    "Error, do not use DB_DBT_PARTIAL with DB_STREAM."));
 		return (ret);
 	}
 	if (offset < 0 ) {
-		ret = EINVAL;
+		ret = USR_ERR(env, EINVAL);
 		__db_errx(env, DB_STR_A("0215",
 		    "Error, invalid offset value: %lld", "%lld"),
 		    (long long)offset);
 		return (ret);
 	}
-	/* Catch overflow. */
-	if (offset + (db_off_t)data->size < offset) {
-		ret = EINVAL;
+	/*
+	 * Catch offset overflow. After the above test, offset >= 0 is true, and
+	 * DB_OFF_T_MAX is defined to be the maximum signed integer of the same
+	 * size as (db_off_t), therefore (DB_OFF_T_MAX - offset) >= 0 must also
+	 * be true and it cannot cause an overflow. data->size is an unsigned
+	 * 32-bit integer, while offset is a signed 32-bit or 64-bit integer, so
+	 * the only safe way to compare the two is to promote both to
+	 * unsigned 64-bit integers.
+	 */
+	if ((u_int64_t)data->size > (u_int64_t)(DB_OFF_T_MAX - offset)) {
+		ret = USR_ERR(env, EINVAL);
 		__db_errx(env, DB_STR_A("0216",
-	"Error, this write will exceed the maximum blob size: %lu %lld",
+    "Error, this write would exceed the maximum external file size: %lu %lld",
 		"%lu %lld"), (u_long)data->size, (long long)offset);
 		return (ret);
 	}

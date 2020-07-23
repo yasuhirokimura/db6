@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2009, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2009, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 using System;
@@ -73,6 +73,13 @@ namespace BerkeleyDB {
         /// Number of replication group view sites.
         /// </summary>
         public uint ViewSites { get { return st.st_site_views; } }
-
+        /// <summary>
+        /// Total number of outgoing write operations forwarded by this client.
+        /// </summary>
+        public ulong WriteOpsForwarded { get { return st.st_write_ops_forwarded; } }
+        /// <summary>
+        /// Total number of incoming forwarded write operations received by this master.
+        /// </summary>
+        public ulong WriteOpsReceived { get { return st.st_write_ops_received; } }
     }
 }

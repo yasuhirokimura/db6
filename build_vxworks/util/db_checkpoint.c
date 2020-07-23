@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -12,11 +12,11 @@
 
 #ifndef lint
 static const char copyright[] =
-    "Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.\n";
+    "Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.\n";
 #endif
 
 int	 db_checkpoint_main __P((int, char *[]));
-int	 db_checkpoint_usage __P((void));
+void	 db_checkpoint_usage __P((void));
 int	 db_checkpoint_version_check __P((void));
 
 const char *progname;
@@ -47,7 +47,7 @@ db_checkpoint_main(argc, argv)
 	long argval;
 	u_int32_t flags, kbytes, minutes, seconds;
 	int ch, exitval, once, ret, verbose;
-	char *home, *logfile, *passwd, time_buf[CTIME_BUFLEN];
+	char *home, *logfile, *msgpfx, *passwd, time_buf[CTIME_BUFLEN];
 
 	if ((progname = __db_rpath(argv[0])) == NULL)
 		progname = argv[0];
@@ -66,11 +66,12 @@ db_checkpoint_main(argc, argv)
 
 	dbenv = NULL;
 	kbytes = minutes = 0;
-	exitval = once = verbose = 0;
+	once = verbose = 0;
 	flags = 0;
-	home = logfile = passwd = NULL;
+	exitval = EXIT_SUCCESS;
+	home = logfile = msgpfx = passwd = NULL;
 	__db_getopt_reset = 1;
-	while ((ch = getopt(argc, argv, "1h:k:L:P:p:Vv")) != EOF)
+	while ((ch = getopt(argc, argv, "1h:k:L:m:P:p:Vv")) != EOF)
 		switch (ch) {
 		case '1':
 			once = 1;
@@ -82,18 +83,20 @@ db_checkpoint_main(argc, argv)
 		case 'k':
 			if (__db_getlong(NULL, progname,
 			    optarg, 1, (long)MAX_UINT32_T, &argval))
-				return (EXIT_FAILURE);
+				goto err;
 			kbytes = (u_int32_t)argval;
 			break;
 		case 'L':
 			logfile = optarg;
 			break;
+		case 'm':
+			msgpfx = optarg;
+			break;
 		case 'P':
 			if (passwd != NULL) {
 				fprintf(stderr, DB_STR("5134",
 					"Password may not be specified twice"));
-				free(passwd);
-				return (EXIT_FAILURE);
+				goto err;
 			}
 			passwd = strdup(optarg);
 			memset(optarg, 0, strlen(optarg));
@@ -101,36 +104,36 @@ db_checkpoint_main(argc, argv)
 				fprintf(stderr, DB_STR_A("5121",
 				    "%s: strdup: %s\n", "%s %s"),
 				    progname, strerror(errno));
-				return (EXIT_FAILURE);
+				goto err;
 			}
 			break;
 		case 'p':
 			if (__db_getlong(NULL, progname,
 			    optarg, 1, (long)MAX_UINT32_T, &argval))
-				return (EXIT_FAILURE);
+				goto err;
 			minutes = (u_int32_t)argval;
 			break;
 		case 'V':
 			printf("%s\n", db_version(NULL, NULL, NULL));
-			return (EXIT_SUCCESS);
+			goto done;
 		case 'v':
 			verbose = 1;
 			break;
 		case '?':
 		default:
-			return (db_checkpoint_usage());
+			goto usage_err;
 		}
 	argc -= optind;
 	argv += optind;
 
 	if (argc != 0)
-		return (db_checkpoint_usage());
+		goto usage_err;
 
 	if (once == 0 && kbytes == 0 && minutes == 0) {
 		(void)fprintf(stderr, DB_STR_A("5122",
 		    "%s: at least one of -1, -k and -p must be specified\n",
 		    "%s\n"), progname);
-		return (db_checkpoint_usage());
+		goto usage_err;
 	}
 
 	/* Handle possible interruptions. */
@@ -152,6 +155,8 @@ db_checkpoint_main(argc, argv)
 
 	dbenv->set_errfile(dbenv, stderr);
 	dbenv->set_errpfx(dbenv, progname);
+	if (msgpfx != NULL)
+		dbenv->set_msgpfx(dbenv, msgpfx);
 
 	if (passwd != NULL && (ret = dbenv->set_encrypt(dbenv,
 	    passwd, DB_ENCRYPT_AES)) != 0) {
@@ -187,7 +192,7 @@ db_checkpoint_main(argc, argv)
 	while (!__db_util_interrupted()) {
 		if (verbose) {
 			(void)time(&now);
-			dbenv->errx(dbenv, DB_STR_A("5123",
+			dbenv->msg(dbenv, DB_STR_A("5123",
 			    "checkpoint begin: %s", "%s"),
 			    __os_ctime(&now, time_buf));
 		}
@@ -200,7 +205,7 @@ db_checkpoint_main(argc, argv)
 
 		if (verbose) {
 			(void)time(&now);
-			dbenv->errx(dbenv, DB_STR_A("5124",
+			dbenv->msg(dbenv, DB_STR_A("5124",
 			    "checkpoint complete: %s", "%s"),
 			    __os_ctime(&now, time_buf));
 		}
@@ -212,16 +217,17 @@ db_checkpoint_main(argc, argv)
 	}
 
 	if (0) {
-err:		exitval = 1;
+usage_err:	db_checkpoint_usage();
+err:		exitval = EXIT_FAILURE;
 	}
-
+done:
 	/* Clean up the logfile. */
 	if (logfile != NULL)
 		(void)remove(logfile);
 
 	/* Clean up the environment. */
 	if (dbenv != NULL && (ret = dbenv->close(dbenv, 0)) != 0) {
-		exitval = 1;
+		exitval = EXIT_FAILURE;
 		fprintf(stderr,
 		    "%s: dbenv->close: %s\n", progname, db_strerror(ret));
 	}
@@ -232,15 +238,15 @@ err:		exitval = 1;
 	/* Resend any caught signal. */
 	__db_util_sigresend();
 
-	return (exitval == 0 ? EXIT_SUCCESS : EXIT_FAILURE);
+	return (exitval);
 }
 
-int
+void
 db_checkpoint_usage()
 {
-	(void)fprintf(stderr, "usage: %s [-1Vv]\n\t%s\n", progname,
-	    "[-h home] [-k kbytes] [-L file] [-P password] [-p min]");
-	return (EXIT_FAILURE);
+	(void)fprintf(stderr, "usage: %s [-1Vv]\n\t%s %s\n", progname,
+	    "[-h home] [-k kbytes] [-L file] [-m msg_pfx]",
+	    "[-P password] [-p min]");
 }
 
 int

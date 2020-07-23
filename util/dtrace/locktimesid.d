@@ -1,6 +1,6 @@
 #!/usr/sbin/dtrace -qs
 /*
- * Copyright (c) 2012, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2012, 2016 Oracle and/or its affiliates.  All rights reserved.
  * 
  * lockstimesi.d - Display lock wait times grouped by fileid.
  *

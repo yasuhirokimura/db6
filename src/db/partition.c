@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -346,6 +346,14 @@ __partition_open(dbp, ip, txn, fname, type, flags, mode, do_open)
 	if ((ret = __partition_chk_meta(dbp, ip, txn, flags)) != 0 && do_open)
 		goto err;
 
+	if (part->nparts > PART_MAXIMUM) {
+		__db_errx(env, DB_STR_A("0789",
+	    "The number of partitions %u exceeds the maximum %u.", "%u %u"),
+		    part->nparts, (unsigned int)PART_MAXIMUM);
+		ret = USR_ERR(env, EINVAL);
+		goto err;
+	}
+
 	if ((ret = __os_calloc(env,
 	     part->nparts, sizeof(*part->handles), &part->handles)) != 0) {
 		__db_errx(env, ALLOC_ERR,
@@ -383,24 +391,11 @@ __partition_open(dbp, ip, txn, fname, type, flags, mode, do_open)
 		part_db->flags = F_ISSET(dbp,
 		    ~(DB_AM_CREATED | DB_AM_CREATED_MSTR | DB_AM_OPEN_CALLED));
 		F_SET(part_db, DB_AM_PARTDB);
-		part_db->adj_fileid = dbp->adj_fileid;
-		part_db->pgsize = dbp->pgsize;
-		part_db->priority = dbp->priority;
-		part_db->db_append_recno = dbp->db_append_recno;
-		part_db->db_feedback = dbp->db_feedback;
-		part_db->dup_compare = dbp->dup_compare;
-		part_db->app_private = dbp->app_private;
-		part_db->api_internal = dbp->api_internal;
-		part_db->blob_threshold = dbp->blob_threshold;
-		part_db->blob_file_id = dbp->blob_file_id;
-		part_db->blob_sdb_id = dbp->blob_sdb_id;
+		__db_copy_config(dbp, part_db, part->nparts);
 
-		if (dbp->type == DB_BTREE)
-			__bam_copy_config(dbp, part_db, part->nparts);
-#ifdef HAVE_HASH
-		if (dbp->type == DB_HASH)
-			__ham_copy_config(dbp, part_db, part->nparts);
-#endif
+		/* These need to be copied for partitions, but not slices. */
+		part_db->app_private = dbp->app_private;
+		part_db->adj_fileid = dbp->adj_fileid;
 
 		(void)sprintf(sp, PART_NAME, np, part_id);
 		if (do_open) {
@@ -420,7 +415,7 @@ __partition_open(dbp, ip, txn, fname, type, flags, mode, do_open)
 			goto err;
 	}
 
-	/* Get rid of the cursor used to open the database its the wrong type */
+	/* Get rid of the cursor used to open the db; it is the wrong type. */
 done:	while ((dbc = TAILQ_FIRST(&dbp->free_queue)) != NULL)
 		if ((ret = __dbc_destroy(dbc)) != 0)
 			break;
@@ -486,16 +481,16 @@ __partition_chk_meta(dbp, ip, txn, flags)
 
 	if (meta->magic != DB_HASHMAGIC &&
 	    (meta->magic != DB_BTREEMAGIC || F_ISSET(meta, BTM_RECNO))) {
+		ret = USR_ERR(env, EINVAL);
 		__db_errx(env, DB_STR("0650",
 	    "Partitioning may only specified on BTREE and HASH databases."));
-		ret = EINVAL;
 		goto err;
 	}
 	if (!FLD_ISSET(meta->metaflags,
 	    DBMETA_PART_RANGE | DBMETA_PART_CALLBACK)) {
+		ret = USR_ERR(env, EINVAL);
 		__db_errx(env, DB_STR("0651",
 		    "Partitioning specified on a non-partitioned database."));
-		ret = EINVAL;
 		goto err;
 	}
 
@@ -503,53 +498,53 @@ __partition_chk_meta(dbp, ip, txn, flags)
 	    FLD_ISSET(meta->metaflags, DBMETA_PART_CALLBACK)) ||
 	    (F_ISSET(part, PART_CALLBACK) &&
 	    FLD_ISSET(meta->metaflags, DBMETA_PART_RANGE))) {
+		ret = USR_ERR(env, EINVAL);
 		__db_errx(env, DB_STR("0652",
 		    "Incompatible partitioning specified."));
-		ret = EINVAL;
 		goto err;
 	}
 
 	if (FLD_ISSET(meta->metaflags, DBMETA_PART_CALLBACK) &&
 	     part->callback == NULL && !IS_RECOVERING(env) &&
 	     !F_ISSET(dbp, DB_AM_RECOVER) && !LF_ISSET(DB_RDWRMASTER)) {
+		ret = USR_ERR(env, EINVAL);
 		__db_errx(env, DB_STR("0653",
 		    "Partition callback not specified."));
-		ret = EINVAL;
 		goto err;
 	}
 
 	if (F_ISSET(dbp, DB_AM_RECNUM)) {
+		ret = USR_ERR(env, EINVAL);
 		__db_errx(env, DB_STR("0654",
 	    "Record numbers are not supported in partitioned databases."));
-		ret = EINVAL;
 		goto err;
 	}
 
 	if (part->nparts == 0) {
-		if (LF_ISSET(DB_CREATE) && meta->nparts == 0) {
+		if (meta->nparts == 0) {
+			ret = USR_ERR(env, EINVAL);
 			__db_errx(env, DB_STR("0655",
 			    "Zero paritions specified."));
-			ret = EINVAL;
 			goto err;
 		} else
 			part->nparts = meta->nparts;
 	} else if (meta->nparts != 0 && part->nparts != meta->nparts) {
+		ret = USR_ERR(env, EINVAL);
 		__db_errx(env, DB_STR("0656",
 		    "Number of partitions does not match."));
-		ret = EINVAL;
 		goto err;
 	}
 
 	if (meta->magic == DB_HASHMAGIC) {
 		if (!F_ISSET(part, PART_CALLBACK)) {
+			ret = USR_ERR(env, EINVAL);
 			__db_errx(env, DB_STR("0657",
 		    "Hash database must specify a partition callback."));
-			ret = EINVAL;
 		}
 	} else if (meta->magic != DB_BTREEMAGIC) {
+		ret = USR_ERR(env, EINVAL);
 		__db_errx(env, DB_STR("0658",
 		    "Partitioning only supported on BTREE and HASH."));
-		ret = EINVAL;
 	} else {
 		set_keys = 1;
 		pgsize = meta->pagesize;
@@ -644,21 +639,21 @@ __partition_setup_keys(dbc, part, pgsize, flags)
 		}
 		if (!LF_ISSET(DB_CREATE) && !F_ISSET(dbp, DB_AM_RECOVER) &&
 		    !LF_ISSET(DB_RDWRMASTER)) {
+			ret = USR_ERR(env, EINVAL);
 			__db_errx(env, DB_STR("0659", "No range keys found."));
-			ret = EINVAL;
 			goto err;
 		}
 	} else {
 		if (F_ISSET(part, PART_CALLBACK)) {
+			ret = USR_ERR(env, EINVAL);
 			__db_errx(env, DB_STR("0660",
 			    "Keys found and callback set."));
-			ret = EINVAL;
 			goto err;
 		}
 		if (key.size != 0) {
+			ret = USR_ERR(env, EINVAL);
 			__db_errx(env, DB_STR("0661",
 			    "Partition key 0 is not empty."));
-			ret = EINVAL;
 			goto err;
 		}
 		have_keys = 1;
@@ -683,7 +678,7 @@ __partition_setup_keys(dbc, part, pgsize, flags)
 		 */
 		t = dbc->dbp->bt_internal;
 		compare = t->bt_compare;
-		t->bt_compare = __bam_defcmp;
+		t->bt_compare = __dbt_defcmp;
 		memset(&key, 0, sizeof(key));
 		ret = __db_put(dbp, dbc->thread_info, dbc->txn, &key, &data, 0);
 		t->bt_compare = compare;
@@ -728,14 +723,14 @@ done:	if (F_ISSET(part, PART_RANGE)) {
 		while ((ret = __dbc_get(dbc, &key, &data, cgetflags)) == 0) {
 			 /* It is an error if we get more keys than expect. */
 			if ((u_int32_t)(kp - okp) > part->nparts) {
-				ret = EINVAL;
+				ret = USR_ERR(env, EINVAL);
 				goto err;
 			}
 			kp->size = key.size;
 			kp->data = (u_int8_t *)part->data + j;
 			/* It is an error if the keys overflow the space. */
 			if (j + kp->size > dsize) {
-				ret = EINVAL;
+				ret = USR_ERR(env, EINVAL);
 				goto err;
 			}
 			memcpy(kp->data, key.data, kp->size);
@@ -783,10 +778,10 @@ done:	if (F_ISSET(part, PART_RANGE)) {
 					if (kp->data == NULL &&
 					    F_ISSET(dbp, DB_AM_RECOVER))
 						goto err;
+					ret = USR_ERR(env, EINVAL);
 					__db_errx(env, DB_STR_A("0662",
 					    "Partition key %d does not match",
 					    "%d"), j);
-					ret = EINVAL;
 					goto err;
 				}
 			}
@@ -997,7 +992,7 @@ __partc_get_pp(dbc, key, data, flags)
 }
 /*
  * __partition_get --
- *	cursor get opeartion on a partitioned database.
+ *	cursor get operation on a partitioned database.
  *
  * PUBLIC: int __partc_get __P((DBC*, DBT *, DBT *, u_int32_t));
  */
@@ -1917,16 +1912,16 @@ __part_rr(dbp, ip, txn, name, subdb, newname, flags)
 		__os_free(env, np);
 
 	if (!F_ISSET(dbp, DB_AM_OPEN_CALLED)) {
-err:		/*
+err:		
+		/* We need to remove the lock event we associated with this. */
+		if (txn != NULL)
+			__txn_remlock(env, txn, NULL, tmpdbp->locker);
+
+		/*
 		 * Since we copied the locker ID from the dbp, we'd better not
 		 * free it here.
 		 */
 		tmpdbp->locker = NULL;
-
-		/* We need to remove the lock event we associated with this. */
-		if (txn != NULL)
-			__txn_remlock(env,
-			    txn, &tmpdbp->handle_lock, DB_LOCK_INVALIDID);
 
 		if ((t_ret = __db_close(tmpdbp,
 		    txn, DB_NOSYNC)) != 0 && ret == 0)

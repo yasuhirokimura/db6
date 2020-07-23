@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -191,16 +191,17 @@
                     </p>
             <span>
     <div class="itemizedlist"><ul type="circle"><li><p><a id="dbt_DB_DBT_BLOB"></a>
-                            <code class="literal">DB_DBT_BLOB</code>
+                            <code class="literal">DB_DBT_EXT_FILE</code>
                     </p><p>
                         Set this flag on a DBT used for the data
                         portion of a record to indicate that the
                         DBT stores 
-                        <a class="link" href="blob.html" title="Chapter 13.  Binary Large Objects">BLOB data</a>. 
+                        <a class="link" href="blob.html" title="Chapter 13.  External Files">external file data</a>. 
                         If this flag is set, and if the database otherwise
-                        supports BLOBs, then the data contained by this
-                        DBT will be stored as a BLOB, regardless of
-                        whether it exceeds the BLOB threshold in size.
+                        supports external files, then the data contained by
+                        this DBT will be stored as an external file,
+                        regardless of whether it exceeds the external file
+                        threshold in size.
                     </p></li><li><p><a id="dbt_DB_DBT_MALLOC"></a>
                             <code class="literal">DB_DBT_MALLOC</code>
                     </p><p>

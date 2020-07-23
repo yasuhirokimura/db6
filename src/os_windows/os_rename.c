@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1997, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1997, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -22,7 +22,7 @@ __os_rename(env, oldname, newname, silent)
 {
 	DB_ENV *dbenv;
 	_TCHAR *toldname, *tnewname;
-	int ret;
+	int ret, retryCount;
 
 	dbenv = env == NULL ? NULL : env->dbenv;
 
@@ -40,13 +40,18 @@ __os_rename(env, oldname, newname, silent)
 		return (ret);
 	}
 
+	if (lstrcmp(toldname, tnewname) == 0) {
+		FREE_STRING(env, tnewname);
+		FREE_STRING(env, toldname);
+		return (0);
+	}
+
 	LAST_PANIC_CHECK_BEFORE_IO(env);
 
-	if (!MoveFile(toldname, tnewname))
-		ret = __os_get_syserr();
-
-	if (__os_posix_err(ret) == EEXIST) {
+	retryCount = 0;
+	do {
 		ret = 0;
+
 #ifndef DB_WINCE
 		if (__os_is_winnt()) {
 			if (!MoveFileEx(
@@ -57,25 +62,34 @@ __os_rename(env, oldname, newname, silent)
 		{
 			/*
 			 * There is no MoveFileEx for Win9x/Me/CE, so we have to
-			 * do the best we can.  Note that the MoveFile call
-			 * above would have succeeded if oldname and newname
-			 * refer to the same file, so we don't need to check
-			 * that here.
+			 * do the best we can.
 			 */
-			(void)DeleteFile(tnewname);
 			if (!MoveFile(toldname, tnewname))
 				ret = __os_get_syserr();
+
+			if (__os_posix_err(ret) == EEXIST) {
+				(void)DeleteFile(tnewname);
+				if (!MoveFile(toldname, tnewname))
+					ret = __os_get_syserr();
+			}
 		}
-	}
+		/*
+		 * MoveFile and MoveFileEx may return ERROR_ACCESS_DENIED
+		 * sporadically with no apparent reason.  A workaround is
+		 * to wait for a few milliseconds and retry.
+		 */
+		if ((ret = __os_posix_err(ret)) == EPERM)
+			__os_yield(env, 0, 50);
+	} while (ret == EPERM && ++retryCount < 2);
 
 	FREE_STRING(env, tnewname);
 	FREE_STRING(env, toldname);
 
 	if (ret != 0) {
+		(void)USR_ERR(env, ret);
 		if (silent == 0)
-			__db_syserr(env, ret, DB_STR_A("0037",
+			__db_syserr(env, __os_get_syserr(), DB_STR_A("0037",
 			    "MoveFileEx %s %s", "%s %s"), oldname, newname);
-		ret = __os_posix_err(ret);
 	}
 
 	return (ret);

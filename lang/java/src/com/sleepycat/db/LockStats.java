@@ -4,7 +4,7 @@
  *
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
  */
 
 package com.sleepycat.db;
@@ -19,6 +19,7 @@ public class LockStats {
     private int st_id;
     /**
     The last allocated locker ID.
+    @return the last allocated locker ID
     */
     public int getId() {
         return st_id;
@@ -27,43 +28,62 @@ public class LockStats {
     private int st_cur_maxid;
     /**
     The current maximum unused locker ID.
+    @return the current maximum unused locker ID
     */
     public int getCurMaxId() {
         return st_cur_maxid;
     }
 
     private int st_initlocks;
-    /** The initial number of locks allocated in the lock table. */
+    /**
+    The initial number of locks allocated in the lock table.
+    @return the initial number of locks allocated in the lock table
+    */
     public int getInitlocks() {
         return st_initlocks;
     }
 
     private int st_initlockers;
-    /** The initial number of lockers allocated in lock table. */
+    /**
+    The initial number of lockers allocated in lock table.
+    @return the initial number of lockers allocated in lock table
+    */
     public int getInitlockers() {
         return st_initlockers;
     }
 
     private int st_initobjects;
-    /** The initial number of lock objects allocated in lock table. */
+    /**
+    The initial number of lock objects allocated in lock table.
+    @return the initial number of lock objects allocated in lock table
+    */
     public int getInitobjects() {
         return st_initobjects;
     }
 
     private int st_locks;
-    /** The current number of locks allocated in lock table. */
+    /**
+    The current number of locks allocated in lock table.
+    @return the current number of locks allocated in lock table
+    */
     public int getLocks() {
         return st_locks;
     }
 
     private int st_lockers;
-    /** The current number of lockers allocated in lock table. */
+    /**
+    The current number of lockers allocated in lock table.
+    @return the current number of lockers allocated in lock table
+    */
     public int getLockers() {
         return st_lockers;
     }
 
     private int st_objects;
-    /** The current number of lock objects allocated in lock table. */
+    /**
+    The current number of lock objects allocated in lock table.
+    @return the current number of lock objects allocated in lock table
+    */
     public int getObjects() {
         return st_objects;
     }
@@ -71,6 +91,7 @@ public class LockStats {
     private int st_maxlocks;
     /**
     The maximum number of locks possible.
+    @return the maximum number of locks possible
     */
     public int getMaxLocks() {
         return st_maxlocks;
@@ -79,6 +100,7 @@ public class LockStats {
     private int st_maxlockers;
     /**
     The maximum number of lockers possible.
+    @return the maximum number of lockers possible
     */
     public int getMaxLockers() {
         return st_maxlockers;
@@ -87,6 +109,7 @@ public class LockStats {
     private int st_maxobjects;
     /**
     The maximum number of lock objects possible.
+    @return the maximum number of lock objects possible
     */
     public int getMaxObjects() {
         return st_maxobjects;
@@ -95,13 +118,17 @@ public class LockStats {
     private int st_partitions;
     /** 
     The number of lock table partitions.
+    @return the number of lock table partitions
     */
     public int getPartitions() {
         return st_partitions;
     }
 
     private int st_tablesize;
-    /** The size of object hash table. */
+    /**
+    The size of object hash table.
+    @return the size of object hash table
+    */
     public int getTableSize() {
         return st_tablesize;
     }
@@ -109,6 +136,7 @@ public class LockStats {
     private int st_nmodes;
     /**
     The number of lock modes.
+    @return the number of lock modes
     */
     public int getNumModes() {
         return st_nmodes;
@@ -117,6 +145,7 @@ public class LockStats {
     private int st_nlockers;
     /**
     The number of current lockers.
+    @return the number of current lockers
     */
     public int getNumLockers() {
         return st_nlockers;
@@ -125,6 +154,7 @@ public class LockStats {
     private int st_nlocks;
     /**
     The number of current locks.
+    @return the number of current locks
     */
     public int getNumLocks() {
         return st_nlocks;
@@ -133,6 +163,7 @@ public class LockStats {
     private int st_maxnlocks;
     /**
     The maximum number of locks at any one time.  Note that if there is more than one partition, this is the sum of the maximum across all partitions.
+    @return the maximum number of locks at any one time
     */
     public int getMaxNlocks() {
         return st_maxnlocks;
@@ -141,6 +172,7 @@ public class LockStats {
     private int st_maxhlocks;
     /** 
     The maximum number of locks in any hash bucket at any one time.
+    @return the maximum number of locks in any hash bucket at any one time
     */
     public int getMaxHlocks() {
         return st_maxhlocks;
@@ -148,7 +180,8 @@ public class LockStats {
 
     private long st_locksteals;
     /** 
-    The maximum number of locks stolen by an empty partition. 
+    The maximum number of locks stolen by an empty partition.
+    @return the maximum number of locks stolen by an empty partition
     */
     public long getLocksteals() {
         return st_locksteals;
@@ -156,7 +189,8 @@ public class LockStats {
 
     private long st_maxlsteals;
     /**
-    The maximum number of lock steals for any one partition. 
+    The maximum number of lock steals for any one partition.
+    @return the maximum number of locks steals for any one partition
     */
     public long getMaxLsteals() {
         return st_maxlsteals;
@@ -165,6 +199,7 @@ public class LockStats {
     private int st_maxnlockers;
     /**
     The maximum number of lockers at any one time.
+    @return the maximum number of lockers at any one time
     */
     public int getMaxNlockers() {
         return st_maxnlockers;
@@ -173,6 +208,7 @@ public class LockStats {
     private int st_nobjects;
     /**
     The number of current lock objects.
+    @return the number of current lock objects
     */
     public int getNobjects() {
         return st_nobjects;
@@ -181,6 +217,7 @@ public class LockStats {
     private int st_maxnobjects;
     /**
     The maximum number of lock objects at any one time.  Note that if there is more than one partition this is the sum of the maximum across all partitions.
+    @return the maximum number of lock objects at any one time
     */
     public int getMaxNobjects() {
         return st_maxnobjects;
@@ -189,6 +226,7 @@ public class LockStats {
     private int st_maxhobjects;
     /**
     The maximum number of objects in any hash bucket at any one time.
+    @return the maximum number of objects in any hash bucket at any one time
     */
     public int getMaxHobjects() {
         return st_maxhobjects;
@@ -197,6 +235,7 @@ public class LockStats {
     private long st_objectsteals;
     /**
     The maximum number of objects stolen by an empty partition.
+    @return the maximum number of objects stolen by an empty partition
     */
     public long getObjectsteals() {
         return st_objectsteals;
@@ -205,6 +244,7 @@ public class LockStats {
     private long st_maxosteals;
     /**
     The maximum number of object steals for any one partition.
+    @return the maximum number of object steals for any one partition
     */
     public long getMaxOsteals() {
         return st_maxosteals;
@@ -213,6 +253,7 @@ public class LockStats {
     private long st_nrequests;
     /**
     The total number of locks requested.
+    @return the total number of locks requested
     */
     public long getNumRequests() {
         return st_nrequests;
@@ -221,19 +262,26 @@ public class LockStats {
     private long st_nreleases;
     /**
     The total number of locks released.
+    @return the total number of locks released
     */
     public long getNumReleases() {
         return st_nreleases;
     }
 
     private long st_nupgrade;
-    /** The total number of locks upgraded. **/
+    /**
+    The total number of locks upgraded.
+    @return the total number of locks upgraded
+    */
     public long getNumUpgrade() {
         return st_nupgrade;
     }
 
     private long st_ndowngrade;
-    /** The total number of locks downgraded. **/
+    /**
+    The total number of locks downgraded.
+    @return the total number of locks downgraded
+    */
     public long getNumDowngrade() {
         return st_ndowngrade;
     }
@@ -242,6 +290,8 @@ public class LockStats {
     /**
     The number of lock requests not immediately available due to conflicts,
     for which the thread of control waited.
+    @return the number of locks requests not immediately available due to conflicts
+    for which the thread of control waited
     */
     public long getLockWait() {
         return st_lock_wait;
@@ -251,6 +301,8 @@ public class LockStats {
     /**
     The number of lock requests not immediately available due to conflicts,
     for which the thread of control did not wait.
+    @return the number of lock requests not immediately available due to conflicts,
+    for which the thread of control did not wait.
     */
     public long getLockNowait() {
         return st_lock_nowait;
@@ -259,6 +311,7 @@ public class LockStats {
     private long st_ndeadlocks;
     /**
     The number of deadlocks.
+    @return the number of deadlocks
     */
     public long getNumDeadlocks() {
         return st_ndeadlocks;
@@ -267,6 +320,7 @@ public class LockStats {
     private int st_locktimeout;
     /**
     Lock timeout value.
+    @return lock timeout value
     */
     public int getLockTimeout() {
         return st_locktimeout;
@@ -275,6 +329,7 @@ public class LockStats {
     private long st_nlocktimeouts;
     /**
     The number of lock requests that have timed out.
+    @return the number of lock requests that have timed out
     */
     public long getNumLockTimeouts() {
         return st_nlocktimeouts;
@@ -283,6 +338,7 @@ public class LockStats {
     private int st_txntimeout;
     /**
     Transaction timeout value.
+    @return transaction timeout value
     */
     public int getTxnTimeout() {
         return st_txntimeout;
@@ -292,6 +348,7 @@ public class LockStats {
     /**
     The number of transactions that have timed out.  This value is also
     a component of st_ndeadlocks, the total number of deadlocks detected.
+    @return the number of transactions that have timed out
     */
     public long getNumTxnTimeouts() {
         return st_ntxntimeouts;
@@ -300,6 +357,8 @@ public class LockStats {
     private long st_part_wait;
     /** 
     The number of times that a thread of control was forced to wait before
+    obtaining a lock partition mutex.
+    @return the number of times that a thread of control was forced to wait before
     obtaining a lock partition mutex.
     */
     public long getPartWait() {
@@ -310,6 +369,8 @@ public class LockStats {
     /** 
     The number of times that a thread of control was able to obtain a lock
     partition mutex without waiting.
+    @return the number of times that a thread of control was able to obtain a lock
+    partition mutex without waiting.
     */
     public long getPartNowait() {
         return st_part_nowait;
@@ -318,6 +379,8 @@ public class LockStats {
     private long st_part_max_wait;
     /** 
     The maximum number of times that a thread of control was forced to wait 
+    before obtaining any one lock partition mutex.
+    @return the maximum number of times that a thread of control was forced to wait
     before obtaining any one lock partition mutex.
     */
     public long getPartMaxWait() {
@@ -328,6 +391,8 @@ public class LockStats {
     /** 
     The number of times that a thread of control was able to obtain any one 
     lock partition mutex without waiting.
+    @return the number of times that a thread of control was able to obtain any one
+    lock partition mutex without waiting.
     */
     public long getPartMaxNowait() {
         return st_part_max_nowait;
@@ -336,6 +401,8 @@ public class LockStats {
     private long st_objs_wait;
     /**
     The number of requests to allocate or deallocate an object for which the
+    thread of control waited.
+    @return the number of requests to allocate or deallocate an object for which the
     thread of control waited.
     */
     public long getObjsWait() {
@@ -346,6 +413,8 @@ public class LockStats {
     /**
     The number of requests to allocate or deallocate an object for which the
     thread of control did not wait.
+    @return the number of requests to allocate or deallocate an object for which the
+    thread of control did not wait.
     */
     public long getObjsNowait() {
         return st_objs_nowait;
@@ -354,6 +423,8 @@ public class LockStats {
     private long st_lockers_wait;
     /**
     The number of requests to allocate or deallocate a locker for which the
+    thread of control waited.
+    @return the number of requests to allocate or deallocate a locker for which the
     thread of control waited.
     */
     public long getLockersWait() {
@@ -364,6 +435,8 @@ public class LockStats {
     /**
     The number of requests to allocate or deallocate a locker for which the
     thread of control did not wait.
+    @return the number of requests to allocate or deallocate a locker for which the
+    thread of control did not wait.
     */
     public long getLockersNowait() {
         return st_lockers_nowait;
@@ -372,6 +445,8 @@ public class LockStats {
     private long st_region_wait;
     /**
     The number of times that a thread of control was forced to wait before
+    obtaining the lock region mutex.
+    @return the number of times that a thread of control was forced to wait before
     obtaining the lock region mutex.
     */
     public long getRegionWait() {
@@ -382,6 +457,8 @@ public class LockStats {
     /**
     The number of times that a thread of control was able to obtain the lock
     region mutex without waiting.
+    @return the number of times that a thread of control was able to obtain the lock
+    region mutex without waiting.
     */
     public long getRegionNowait() {
         return st_region_nowait;
@@ -390,6 +467,7 @@ public class LockStats {
     private long st_nlockers_hit;
     /**
     The number of hits in the thread locker cache.
+    @return the number of hits in the thread locker cache.
     */
     public long getNumLockersHit() {
         return st_nlockers_hit;
@@ -398,6 +476,7 @@ public class LockStats {
     private long st_nlockers_reused;
     /**
     Total number of lockers reused.
+    @return total number of lockers reused
     */
     public long getNumLockersReused() {
         return st_nlockers_reused;
@@ -406,6 +485,7 @@ public class LockStats {
     private int st_hash_len;
     /**
     Maximum length of a lock hash bucket.
+    @return maximum length of a lock hash bucket
     */
     public int getHashLen() {
         return st_hash_len;
@@ -414,6 +494,7 @@ public class LockStats {
     private long st_regsize;
     /**
     The size of the lock region.
+    @return the size of the lock region
     */
     public long getRegSize() {
         return st_regsize;
@@ -422,6 +503,7 @@ public class LockStats {
     /**
     For convenience, the LockStats class has a toString method
     that lists all the data fields.
+    @return a String that lists all the data fields
     */
     public String toString() {
         return "LockStats:"

@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -68,6 +68,10 @@ DbTxn::prepare(u_int8_t gid[DB_GID_SIZE]);</pre>
      	first cursor close error will be returned.
     </p>
       <p>
+         The <code class="methodname">DbTxn::prepare()</code> method can not be used
+         with sliced environments.
+    </p>
+      <p>
          The <code class="methodname">DbTxn::prepare()</code> <span>
             
             <span>
@@ -84,7 +88,7 @@ DbTxn::prepare(u_int8_t gid[DB_GID_SIZE]);</pre>
         <div class="titlepage">
           <div>
             <div>
-              <h4 class="title"><a id="idp63730456"></a><span>DbDeadlockException or </span>DB_LOCK_DEADLOCK</h4>
+              <h4 class="title"><a id="idp108672976"></a><span>DbDeadlockException or </span>DB_LOCK_DEADLOCK</h4>
             </div>
           </div>
         </div>
@@ -102,7 +106,7 @@ DbTxn::prepare(u_int8_t gid[DB_GID_SIZE]);</pre>
         <div class="titlepage">
           <div>
             <div>
-              <h4 class="title"><a id="idp63732656"></a><span>DbLockNotGrantedException or </span>DB_LOCK_NOTGRANTED</h4>
+              <h4 class="title"><a id="idp108666016"></a><span>DbLockNotGrantedException or </span>DB_LOCK_NOTGRANTED</h4>
             </div>
           </div>
         </div>
@@ -127,7 +131,7 @@ DbTxn::prepare(u_int8_t gid[DB_GID_SIZE]);</pre>
         <div class="titlepage">
           <div>
             <div>
-              <h4 class="title"><a id="idp63727912"></a>EINVAL</h4>
+              <h4 class="title"><a id="idp108641744"></a>EINVAL</h4>
             </div>
           </div>
         </div>
@@ -140,7 +144,7 @@ DbTxn::prepare(u_int8_t gid[DB_GID_SIZE]);</pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp63734448"></a>Parameters</h3>
+              <h3 class="title"><a id="idp108647984"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -148,7 +152,7 @@ DbTxn::prepare(u_int8_t gid[DB_GID_SIZE]);</pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp63761032"></a>gid</h4>
+                <h4 class="title"><a id="idp108712640"></a>gid</h4>
               </div>
             </div>
           </div>
@@ -165,7 +169,7 @@ DbTxn::prepare(u_int8_t gid[DB_GID_SIZE]);</pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp63752584"></a>Class</h3>
+              <h3 class="title"><a id="idp108697904"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -177,7 +181,7 @@ DbTxn::prepare(u_int8_t gid[DB_GID_SIZE]);</pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp63753184"></a>See Also</h3>
+              <h3 class="title"><a id="idp108698976"></a>See Also</h3>
             </div>
           </div>
         </div>

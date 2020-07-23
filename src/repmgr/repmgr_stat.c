@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2005, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2005, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -185,6 +185,10 @@ __repmgr_print_stats(env, flags)
 	    (u_long)sp->st_site_views);
 	__db_dl(env, "Number of automatic replication process takeovers",
 	    (u_long)sp->st_takeovers);
+	__db_dl(env, "Number of write operations forwarded by this client",
+	    (u_long)sp->st_write_ops_forwarded);
+	__db_dl(env, "Number of write operations received by this master",
+	    (u_long)sp->st_write_ops_received);
 
 	__os_ufree(env, sp);
 

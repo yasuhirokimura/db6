@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2001, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2001, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -52,7 +52,7 @@ END
  * NOTE:  The order of the DBTs is important and relevant in the
  * GET_CURINFO macro.
  */
-BEGIN_MSG fileinfo	alloc check_length version
+BEGIN_MSG fileinfo	alloc check_length
 ARG	pgsize		u_int32_t
 ARG	pgno		db_pgno_t
 ARG	max_pgno	db_pgno_t
@@ -67,7 +67,7 @@ ARG	blob_fid_lo	u_int32_t
 ARG	blob_fid_hi	u_int32_t
 END
 
-BEGIN_MSG fileinfo_v7	alloc check_length version
+BEGIN_MSG fileinfo_v7	alloc check_length
 ARG	pgsize		u_int32_t
 ARG	pgno		db_pgno_t
 ARG	max_pgno	db_pgno_t
@@ -80,7 +80,7 @@ ARG	info		DBT
 ARG	dir		DBT
 END
 
-BEGIN_MSG fileinfo_v6	alloc check_length version
+BEGIN_MSG fileinfo_v6	alloc check_length
 ARG	pgsize		u_int32_t
 ARG	pgno		db_pgno_t
 ARG	max_pgno	db_pgno_t
@@ -127,7 +127,7 @@ END
 /*
  * update - send update information
  */
-BEGIN_MSG update	alloc check_length version
+BEGIN_MSG update	alloc check_length
 ARG	first_lsn	DB_LSN
 ARG	first_vers	u_int32_t
 ARG	num_files	u_int32_t
@@ -178,6 +178,17 @@ END
  * Request for blob files.
  */
 BEGIN_MSG blob_update_req
+ARG	blob_fid	u_int64_t
+ARG	blob_sid	u_int64_t
+ARG	blob_id		u_int64_t
+ARG	highest_id	u_int64_t
+ARG	flags		u_int32_t
+END
+
+/*
+ * Request for blob files for REPVERSION 8
+ */
+BEGIN_MSG blob_update_req_v8
 ARG	blob_fid	u_int64_t
 ARG	blob_sid	u_int64_t
 ARG	blob_id		u_int64_t

@@ -2,9 +2,9 @@
  * @file sqlite3odbc.c
  * SQLite3 ODBC Driver main module.
  *
- * $Id: sqlite3odbc.c,v 1.162 2013/12/08 07:18:56 chw Exp chw $
+ * $Id: sqlite3odbc.c,v 1.169 2015/04/13 06:31:52 chw Exp chw $
  *
- * Copyright (c) 2004-2013 Christian Werner <chw@ch-werner.de>
+ * Copyright (c) 2004-2015 Christian Werner <chw@ch-werner.de>
  *
  * See the file "license.terms" for information on usage
  * and redistribution of this file and for a
@@ -403,6 +403,11 @@ xstrdup_(const char *str, char *file, int line)
 #define strncasecmp _strnicmp
 #define strtoll     _strtoi64
 
+#ifdef _MSC_VER
+#define strtoll     _strtoi64
+#define strtoull    _strtoui64
+#endif
+
 static HINSTANCE NEAR hModule;	/* Saved module handle for resources */
 
 #endif
@@ -433,7 +438,8 @@ static int strcasecmp_(const char *a, const char *b)
 
 /*
  * SQLHENV, SQLHDBC, and SQLHSTMT synchronization
- * is done using a critical section in ENV structure.
+ * is done using a critical section in ENV and DBC
+ * structures.
  */
 
 #define HDBC_LOCK(hdbc)				\
@@ -444,14 +450,11 @@ static int strcasecmp_(const char *a, const char *b)
 	return SQL_INVALID_HANDLE;		\
     }						\
     d = (DBC *) (hdbc);				\
-    if (d->magic != DBC_MAGIC || !d->env) {	\
+    if (d->magic != DBC_MAGIC) {		\
 	return SQL_INVALID_HANDLE;		\
     }						\
-    if (d->env->magic != ENV_MAGIC) {		\
-	return SQL_INVALID_HANDLE;		\
-    }						\
-    EnterCriticalSection(&d->env->cs);		\
-    d->env->owner = GetCurrentThreadId();	\
+    EnterCriticalSection(&d->cs);		\
+    d->owner = GetCurrentThreadId();		\
 }
 
 #define HDBC_UNLOCK(hdbc)			\
@@ -459,10 +462,9 @@ static int strcasecmp_(const char *a, const char *b)
 	DBC *d;					\
 						\
 	d = (DBC *) (hdbc);			\
-	if (d->magic == DBC_MAGIC && d->env &&	\
-	    d->env->magic == ENV_MAGIC) {	\
-	    d->env->owner = 0;			\
-	    LeaveCriticalSection(&d->env->cs);	\
+	if (d->magic == DBC_MAGIC) {		\
+	    d->owner = 0;			\
+	    LeaveCriticalSection(&d->cs);	\
 	}					\
     }
 
@@ -474,14 +476,11 @@ static int strcasecmp_(const char *a, const char *b)
 	return SQL_INVALID_HANDLE;		\
     }						\
     d = (DBC *) ((STMT *) (hstmt))->dbc;	\
-    if (d->magic != DBC_MAGIC || !d->env) {	\
+    if (d->magic != DBC_MAGIC) {		\
 	return SQL_INVALID_HANDLE;		\
     }						\
-    if (d->env->magic != ENV_MAGIC) {		\
-	return SQL_INVALID_HANDLE;		\
-    }						\
-    EnterCriticalSection(&d->env->cs);		\
-    d->env->owner = GetCurrentThreadId();	\
+    EnterCriticalSection(&d->cs);		\
+    d->owner = GetCurrentThreadId();		\
 }
 
 #define HSTMT_UNLOCK(hstmt)			\
@@ -489,10 +488,9 @@ static int strcasecmp_(const char *a, const char *b)
 	DBC *d;					\
 						\
 	d = (DBC *) ((STMT *) (hstmt))->dbc;	\
-	if (d->magic == DBC_MAGIC && d->env &&	\
-	    d->env->magic == ENV_MAGIC) {	\
-	    d->env->owner = 0;			\
-	    LeaveCriticalSection(&d->env->cs);	\
+	if (d->magic == DBC_MAGIC) {		\
+	    d->owner = 0;			\
+	    LeaveCriticalSection(&d->cs);	\
 	}					\
     }
 
@@ -2354,6 +2352,7 @@ getmd(const char *typename, int sqltype, int *mp, int *dp)
     case SQL_WLONGVARCHAR:  m = 65536; d = 0; break;
 #endif
 #endif
+    case SQL_BINARY:
     case SQL_VARBINARY:     m = 255; d = 0; break;
     case SQL_LONGVARBINARY: m = 65536; d = 0; break;
 #ifdef SQL_BIGINT
@@ -2365,8 +2364,12 @@ getmd(const char *typename, int sqltype, int *mp, int *dp)
     }
     if (m && typename) {
 	int mm, dd;
+	char clbr[4];
 
-	if (sscanf(typename, "%*[^(](%d)", &mm) == 1) {
+	if (sscanf(typename, "%*[^(](%d,%d %1[)]", &mm, &dd, clbr) == 3) {
+	    m = mm;
+	    d = dd;
+	} else if (sscanf(typename, "%*[^(](%d %1[)]", &mm, clbr) == 2) {
 	    if (sqltype == SQL_TIMESTAMP) {
 		d = mm;
 	    }
@@ -2378,9 +2381,6 @@ getmd(const char *typename, int sqltype, int *mp, int *dp)
 	    else {
 		m = d = mm;
 	    }
-	} else if (sscanf(typename, "%*[^(](%d,%d)", &mm, &dd) == 2) {
-	    m = mm;
-	    d = dd;
 	}
     }
     if (mp) {
@@ -2484,6 +2484,7 @@ mapdeftype(int type, int stype, int nosign, int nowchar)
  * Fixup query string with optional parameter markers.
  * @param sql original query string
  * @param sqlLen length of query string or SQL_NTS
+ * @param cte when true, WITH is treated as SELECT
  * @param nparam output number of parameters
  * @param isselect output indicator for SELECT (1) or DDL statement (2)
  * @param errmsg output error message
@@ -2491,7 +2492,8 @@ mapdeftype(int type, int stype, int nosign, int nowchar)
  */
 
 static char *
-fixupsql(char *sql, int sqlLen, int *nparam, int *isselect, char **errmsg)
+fixupsql(char *sql, int sqlLen, int cte, int *nparam, int *isselect,
+	 char **errmsg)
 {
     char *q = sql, *qz = NULL, *p, *inq = NULL, *out;
     int np = 0, isddl = -1, size;
@@ -2633,7 +2635,7 @@ errout:
 		    } else if (inq2 == NULL && *end == '{') {
 			char *nerr = 0, *nsql;
 
-			nsql = fixupsql(end, SQL_NTS, 0, 0, &nerr);
+			nsql = fixupsql(end, SQL_NTS, cte, 0, 0, &nerr);
 			if (nsql && !nerr) {
 			    strcpy(end, nsql);
 			} else {
@@ -2735,8 +2737,9 @@ errout:
 		(strncasecmp(p, "select", 6) == 0 ||
 		 strncasecmp(p, "pragma", 6) == 0)) {
 		*isselect = 1;
-	    } else if (size >= 7 &&
-		       strncasecmp(p, "explain", 7) == 0) {
+	    } else if (cte && size >= 4 && strncasecmp(p, "with", 4) == 0) {
+		*isselect = 1;
+	    } else if (size >= 7 && strncasecmp(p, "explain", 7) == 0) {
 		*isselect = 1;
 	    } else {
 		*isselect = 0;
@@ -4092,6 +4095,7 @@ connfail:
 	d->xcelqrx = strncasecmp(pname, "EXCEL", 5) == 0 ||
 		     strncasecmp(pname, "MSQRY", 5) == 0;
 	if (d->trace && d->xcelqrx) {
+
 	    fprintf(d->trace, "-- enabled EXCEL quirks\n");
 	    fflush(d->trace);
 	}
@@ -4239,9 +4243,11 @@ s3stmt_addmeta(sqlite3_stmt *s3stmt, int col, DBC *d, COL *ci)
     tn = sqlite3_column_table_name(s3stmt, col);
     cn = sqlite3_column_origin_name(s3stmt, col);
     dummy[0] = dummy[1] = 0;
-    sqlite3_table_column_metadata(d->sqlite, dn, tn, cn,
-				  dummy, dummy + 1,
-				  &nn, &pk, &ai);
+    if (tn && cn) {
+	sqlite3_table_column_metadata(d->sqlite, dn, tn, cn,
+				      dummy, dummy + 1,
+				      &nn, &pk, &ai);
+    }
     ci->autoinc = ai ? SQL_TRUE: SQL_FALSE;
     ci->notnull = nn ? SQL_NO_NULLS : SQL_NULLABLE;
     ci->ispk = pk ? 1 : 0;
@@ -4254,7 +4260,7 @@ s3stmt_addmeta(sqlite3_stmt *s3stmt, int col, DBC *d, COL *ci)
 	fflush(d->trace);
     }
     ci->isrowid = 0;
-    if (ci->ispk) {
+    if (ci->ispk && tn) {
 	nn = pk = ai = 0;
 	dummy[2] = dummy[3] = 0;
   
@@ -6057,20 +6063,20 @@ doit:
 			  "from sqlite_master where "
 			  "(type = 'table' or type = 'view') "
 			  "and tbl_name %s %Q",
-			  d->xcelqrx ? "''" : "NULL",
 			  d->xcelqrx ? "'main'" : "NULL",
+			  d->xcelqrx ? "''" : "NULL",
 			  npatt ? "like" : "=", tname,
-			  d->xcelqrx ? "''" : "NULL",
 			  d->xcelqrx ? "'main'" : "NULL",
+			  d->xcelqrx ? "''" : "NULL",
 			  npatt ? "like" : "=", tname,
-			  d->xcelqrx ? "''" : "NULL",
 			  d->xcelqrx ? "'main'" : "NULL",
+			  d->xcelqrx ? "''" : "NULL",
 			  npatt ? "like" : "=", tname,
-			  d->xcelqrx ? "''" : "NULL",
 			  d->xcelqrx ? "'main'" : "NULL",
+			  d->xcelqrx ? "''" : "NULL",
 			  npatt ? "like" : "=", tname,
-			  d->xcelqrx ? "''" : "NULL",
 			  d->xcelqrx ? "'main'" : "NULL",
+			  d->xcelqrx ? "''" : "NULL",
 			  npatt ? "like" : "=", tname);
 #else
     sql = sqlite3_mprintf("select NULL as 'TABLE_QUALIFIER', "
@@ -6576,10 +6582,11 @@ drvprimarykeys(SQLHSTMT stmt,
 	    if (*rowp[i * ncols + uniquec] != '0') {
 		char buf[32];
 
-		s->rows[offs + 0] = xstrdup("");
 #if defined(_WIN32) || defined(_WIN64)
-		s->rows[offs + 1] = xstrdup(d->xcelqrx ? "main" : "");
+		s->rows[offs + 0] = xstrdup(d->xcelqrx ? "main" : "");
+		s->rows[offs + 1] = xstrdup("");
 #else
+		s->rows[offs + 0] = xstrdup("");
 		s->rows[offs + 1] = xstrdup("");
 #endif
 		s->rows[offs + 2] = xstrdup(tname);
@@ -6624,11 +6631,12 @@ drvprimarykeys(SQLHSTMT stmt,
 			for (m = 1; m <= nnrows; m++) {
 			    int roffs = offs + (m - 1) * s->ncols;
 
-			    s->rows[roffs + 0] = xstrdup("");
 #if defined(_WIN32) || defined(_WIN64)
-			    s->rows[roffs + 1] = 
+			    s->rows[roffs + 0] = 
 				xstrdup(d->xcelqrx ? "main" : "");
+			    s->rows[roffs + 1] = xstrdup("");
 #else
+			    s->rows[roffs + 0] = xstrdup("");
 			    s->rows[roffs + 1] = xstrdup("");
 #endif
 			    s->rows[roffs + 2] = xstrdup(tname);
@@ -7416,10 +7424,11 @@ nodata:
 		    continue;
 		}
 	    }
-	    s->rows[roffs + 0] = xstrdup("");
 #if defined(_WIN32) || defined(_WIN64)
-	    s->rows[roffs + 1] = xstrdup(d->xcelqrx ? "main" : "");
+	    s->rows[roffs + 0] = xstrdup(d->xcelqrx ? "main" : "");
+	    s->rows[roffs + 1] = xstrdup("");
 #else
+	    s->rows[roffs + 0] = xstrdup("");
 	    s->rows[roffs + 1] = xstrdup("");
 #endif
 	    s->rows[roffs + 2] = xstrdup(ptab);
@@ -7588,10 +7597,11 @@ nodata:
 			continue;
 		    }
 		}
-		s->rows[roffs + 0] = xstrdup("");
 #if defined(_WIN32) || defined(_WIN64)
-		s->rows[roffs + 1] = xstrdup(d->xcelqrx ? "main" : "");
+		s->rows[roffs + 0] = xstrdup(d->xcelqrx ? "main" : "");
+		s->rows[roffs + 1] = xstrdup("");
 #else
+		s->rows[roffs + 0] = xstrdup("");
 		s->rows[roffs + 1] = xstrdup("");
 #endif
 		s->rows[roffs + 2] = xstrdup(ptab);
@@ -7941,7 +7951,6 @@ endtran(DBC *d, SQLSMALLINT comptype, int force)
 		goto doit;
 	    }
 	}
-	d->intrans = 0;
 	if (ret != SQLITE_OK) {
 	    setstatd(d, ret, "%s", (*d->ov3) ? "HY000" : "S1000",
 		     errp ? errp : "transaction failed");
@@ -7955,6 +7964,7 @@ endtran(DBC *d, SQLSMALLINT comptype, int force)
 	    sqlite3_free(errp);
 	    errp = NULL;
 	}
+	d->intrans = 0;
 	return SQL_SUCCESS;
     }
     setstatd(d, -1, "invalid completion type", (*d->ov3) ? "HY000" : "S1000");
@@ -7999,18 +8009,18 @@ drvendtran(SQLSMALLINT type, SQLHANDLE handle, SQLSMALLINT comptype)
 	    return SQL_INVALID_HANDLE;
 	}
 	EnterCriticalSection(&e->cs);
-	e->owner = GetCurrentThreadId();
 #endif
 	d = ((ENV *) handle)->dbcs;
 	while (d) {
+	    HDBC_LOCK((SQLHDBC) d);
 	    ret = endtran(d, comptype, 0);
+	    HDBC_UNLOCK((SQLHDBC) d);
 	    if (ret != SQL_SUCCESS) {
 		fail++;
 	    }
 	    d = d->next;
 	}
 #if defined(_WIN32) || defined(_WIN64)
-	e->owner = 0;
 	LeaveCriticalSection(&e->cs);
 #endif
 	return fail ? SQL_ERROR : SQL_SUCCESS;
@@ -8043,10 +8053,10 @@ SQLEndTran(SQLSMALLINT type, SQLHANDLE handle, SQLSMALLINT comptype)
 SQLRETURN SQL_API
 SQLTransact(SQLHENV env, SQLHDBC dbc, SQLUSMALLINT type)
 {
-    if (env != SQL_NULL_HENV) {
-	return drvendtran(SQL_HANDLE_ENV, (SQLHANDLE) env, type);
+    if (dbc != SQL_NULL_HDBC) {
+	return drvendtran(SQL_HANDLE_DBC, (SQLHANDLE) dbc, type);
     }
-    return drvendtran(SQL_HANDLE_DBC, (SQLHANDLE) dbc, type);
+    return drvendtran(SQL_HANDLE_ENV, (SQLHANDLE) env, type);
 }
 
 /**
@@ -8370,7 +8380,6 @@ SQLGetEnvAttr(SQLHENV env, SQLINTEGER attr, SQLPOINTER val,
     }
 #if defined(_WIN32) || defined(_WIN64)
     EnterCriticalSection(&e->cs);
-    e->owner = GetCurrentThreadId();
 #endif
     switch (attr) {
     case SQL_ATTR_CONNECTION_POOLING:
@@ -8399,7 +8408,6 @@ SQLGetEnvAttr(SQLHENV env, SQLINTEGER attr, SQLPOINTER val,
 	break;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    e->owner = 0;
     LeaveCriticalSection(&e->cs);
 #endif
     return ret;
@@ -8429,7 +8437,6 @@ SQLSetEnvAttr(SQLHENV env, SQLINTEGER attr, SQLPOINTER val, SQLINTEGER len)
     }
 #if defined(_WIN32) || defined(_WIN64)
     EnterCriticalSection(&e->cs);
-    e->owner = GetCurrentThreadId();
 #endif
     switch (attr) {
     case SQL_ATTR_CONNECTION_POOLING:
@@ -8458,7 +8465,6 @@ SQLSetEnvAttr(SQLHENV env, SQLINTEGER attr, SQLPOINTER val, SQLINTEGER len)
 	break;
     }
 #if defined(_WIN32) || defined(_WIN64)
-    e->owner = 0;
     LeaveCriticalSection(&e->cs);
 #endif
     return ret;
@@ -8967,21 +8973,33 @@ drvgetstmtattr(SQLHSTMT stmt, SQLINTEGER attr, SQLPOINTER val,
 {
     STMT *s = (STMT *) stmt;
     SQLULEN *uval = (SQLULEN *) val;
+    SQLINTEGER dummy;
+    char dummybuf[16];
 
+    if (!buflen) {
+	buflen = &dummy;
+    }
+    if (!uval) {
+	uval = (SQLPOINTER) dummybuf;
+    }
     switch (attr) {
     case SQL_QUERY_TIMEOUT:
 	*uval = 0;
+	*buflen = sizeof (SQLULEN);
 	return SQL_SUCCESS;
     case SQL_ATTR_CURSOR_TYPE:
 	*uval = s->curtype;
+	*buflen = sizeof (SQLULEN);
 	return SQL_SUCCESS;
     case SQL_ATTR_CURSOR_SCROLLABLE:
 	*uval = (s->curtype != SQL_CURSOR_FORWARD_ONLY) ?
 	    SQL_SCROLLABLE : SQL_NONSCROLLABLE;
+	*buflen = sizeof (SQLULEN);
 	return SQL_SUCCESS;
 #ifdef SQL_ATTR_CURSOR_SENSITIVITY
     case SQL_ATTR_CURSOR_SENSITIVITY:
 	*uval = SQL_UNSPECIFIED;
+	*buflen = sizeof (SQLULEN);
 	return SQL_SUCCESS;
 #endif
     case SQL_ATTR_ROW_NUMBER:
@@ -8991,74 +9009,96 @@ drvgetstmtattr(SQLHSTMT stmt, SQLINTEGER attr, SQLPOINTER val,
 	} else {
 	    *uval = (s->rowp < 0) ? SQL_ROW_NUMBER_UNKNOWN : (s->rowp + 1);
 	}
+	*buflen = sizeof (SQLULEN);
 	return SQL_SUCCESS;
     case SQL_ATTR_ASYNC_ENABLE:
 	*uval = SQL_ASYNC_ENABLE_OFF;
+	*buflen = sizeof (SQLULEN);
 	return SQL_SUCCESS;
     case SQL_CONCURRENCY:
 	*uval = SQL_CONCUR_LOCK;
+	*buflen = sizeof (SQLULEN);
 	return SQL_SUCCESS;
     case SQL_ATTR_RETRIEVE_DATA:
 	*uval = s->retr_data;
+	*buflen = sizeof (SQLULEN);
 	return SQL_SUCCESS;
     case SQL_ROWSET_SIZE:
     case SQL_ATTR_ROW_ARRAY_SIZE:
 	*uval = s->rowset_size;
+	*buflen = sizeof (SQLULEN);
 	return SQL_SUCCESS;
     /* Needed for some driver managers, but dummies for now */
     case SQL_ATTR_IMP_ROW_DESC:
     case SQL_ATTR_APP_ROW_DESC:
     case SQL_ATTR_IMP_PARAM_DESC:
     case SQL_ATTR_APP_PARAM_DESC:
-	*((SQLHDESC *) val) = (SQLHDESC) DEAD_MAGIC;
+	*((SQLHDESC *) uval) = (SQLHDESC) DEAD_MAGIC;
+	*buflen = sizeof (SQLHDESC);
 	return SQL_SUCCESS;
     case SQL_ATTR_ROW_STATUS_PTR:
-	*((SQLUSMALLINT **) val) = s->row_status;
+	*((SQLUSMALLINT **) uval) = s->row_status;
+	*buflen = sizeof (SQLUSMALLINT *);
 	return SQL_SUCCESS;
     case SQL_ATTR_ROWS_FETCHED_PTR:
-	*((SQLULEN **) val) = s->row_count;
+	*((SQLULEN **) uval) = s->row_count;
+	*buflen = sizeof (SQLULEN *);
 	return SQL_SUCCESS;
     case SQL_ATTR_USE_BOOKMARKS: {
 	STMT *s = (STMT *) stmt;
 
-	*(SQLUINTEGER *) val = s->bkmrk;
+	*(SQLUINTEGER *) uval = s->bkmrk;
+	*buflen = sizeof (SQLUINTEGER);
 	return SQL_SUCCESS;
     }
     case SQL_ATTR_FETCH_BOOKMARK_PTR:
-	*(SQLPOINTER *) val = s->bkmrkptr;
+	*(SQLPOINTER *) uval = s->bkmrkptr;
+	*buflen = sizeof (SQLPOINTER);
 	return SQL_SUCCESS;
     case SQL_ATTR_PARAM_BIND_OFFSET_PTR:
-	*((SQLULEN **) val) = s->parm_bind_offs;
+	*((SQLULEN **) uval) = s->parm_bind_offs;
+	*buflen = sizeof (SQLULEN *);
 	return SQL_SUCCESS;
     case SQL_ATTR_PARAM_BIND_TYPE:
-	*((SQLULEN *) val) = s->parm_bind_type;
+	*((SQLULEN *) uval) = s->parm_bind_type;
+	*buflen = sizeof (SQLULEN);
 	return SQL_SUCCESS;
     case SQL_ATTR_PARAM_OPERATION_PTR:
-	*((SQLUSMALLINT **) val) = s->parm_oper;
+	*((SQLUSMALLINT **) uval) = s->parm_oper;
+	*buflen = sizeof (SQLUSMALLINT *);
 	return SQL_SUCCESS;
     case SQL_ATTR_PARAM_STATUS_PTR:
-	*((SQLUSMALLINT **) val) = s->parm_status;
+	*((SQLUSMALLINT **) uval) = s->parm_status;
+	*buflen = sizeof (SQLUSMALLINT *);
 	return SQL_SUCCESS;
     case SQL_ATTR_PARAMS_PROCESSED_PTR:
-	*((SQLULEN **) val) = s->parm_proc;
+	*((SQLULEN **) uval) = s->parm_proc;
+	*buflen = sizeof (SQLULEN *);
 	return SQL_SUCCESS;
     case SQL_ATTR_PARAMSET_SIZE:
-	*((SQLULEN *) val) = s->paramset_size;
+	*((SQLULEN *) uval) = s->paramset_size;
+	*buflen = sizeof (SQLULEN);
 	return SQL_SUCCESS;
     case SQL_ATTR_ROW_BIND_TYPE:
-	*(SQLULEN *) val = s->bind_type;
+	*(SQLULEN *) uval = s->bind_type;
+	*buflen = sizeof (SQLULEN);
 	return SQL_SUCCESS;
     case SQL_ATTR_ROW_BIND_OFFSET_PTR:
-	*((SQLULEN **) val) = s->bind_offs;
+	*((SQLULEN **) uval) = s->bind_offs;
+	*buflen = sizeof (SQLULEN *);
 	return SQL_SUCCESS;
     case SQL_ATTR_MAX_ROWS:
-	*((SQLULEN *) val) = s->max_rows;
+	*((SQLULEN *) uval) = s->max_rows;
+	*buflen = sizeof (SQLULEN);
+	return SQL_SUCCESS;
     case SQL_ATTR_MAX_LENGTH:
-	*((SQLINTEGER *) val) = 1000000000;
+	*((SQLULEN *) uval) = 1000000000;
+	*buflen = sizeof (SQLULEN);
 	return SQL_SUCCESS;
 #ifdef SQL_ATTR_METADATA_ID
     case SQL_ATTR_METADATA_ID:
-	*((SQLULEN *) val) = SQL_FALSE;
+	*((SQLULEN *) uval) = SQL_FALSE;
+	*buflen = sizeof (SQLULEN);
 	return SQL_SUCCESS;
 #endif
     }
@@ -10982,6 +11022,10 @@ drvgetinfo(SQLHDBC dbc, SQLUSMALLINT type, SQLPOINTER val, SQLSMALLINT valMax,
 	*((SQLUINTEGER *) val) = SQL_SCC_XOPEN_CLI_VERSION1;
 	*valLen = sizeof (SQLUINTEGER);
 	break;
+    case SQL_SQL_CONFORMANCE:
+	*((SQLUINTEGER *) val) = SQL_SC_SQL92_ENTRY;
+	*valLen = sizeof (SQLUINTEGER);
+	break;
     case SQL_SERVER_NAME:
     case SQL_DATABASE_NAME:
 	strmak(val, d->dbname ? d->dbname : "", valMax, valLen);
@@ -11281,7 +11325,7 @@ drvgetinfo(SQLHDBC dbc, SQLUSMALLINT type, SQLPOINTER val, SQLSMALLINT valMax,
 	*valLen = sizeof (SQLSMALLINT);
 	break;
     case SQL_GROUP_BY:
-	*((SQLSMALLINT *) val) = 0;
+	*((SQLSMALLINT *) val) = SQL_GB_GROUP_BY_EQUALS_SELECT;
 	*valLen = sizeof (SQLSMALLINT);
 	break;
     case SQL_KEYWORDS:
@@ -11437,8 +11481,12 @@ SQLGetInfoW(SQLHDBC dbc, SQLUSMALLINT type, SQLPOINTER val, SQLSMALLINT valMax,
 			int vmax = valMax / sizeof (SQLWCHAR);
 
 			uc_strncpy(val, v, vmax);
-			v[len] = 0;
-			len = min(vmax, uc_strlen(v));
+			if (len < vmax) {
+			    len = min(vmax, uc_strlen(v));
+			    v[len] = 0;
+			} else {
+			    len = vmax;
+			}
 			uc_free(v);
 			len *= sizeof (SQLWCHAR);
 		    } else {
@@ -11638,7 +11686,6 @@ drvallocenv(SQLHENV *env)
     e->ov3 = 0;
 #if defined(_WIN32) || defined(_WIN64)
     InitializeCriticalSection(&e->cs);
-    e->owner = 0;
 #else
 #if defined(ENABLE_NVFS) && (ENABLE_NVFS)
     nvfs_init();
@@ -11681,18 +11728,15 @@ drvfreeenv(SQLHENV env)
     }
 #if defined(_WIN32) || defined(_WIN64)
     EnterCriticalSection(&e->cs);
-    e->owner = GetCurrentThreadId();
 #endif
     if (e->dbcs) {
 #if defined(_WIN32) || defined(_WIN64)
 	LeaveCriticalSection(&e->cs);
-	e->owner = 0;
 #endif
 	return SQL_ERROR;
     }
     e->magic = DEAD_MAGIC;
 #if defined(_WIN32) || defined(_WIN64)
-    e->owner = 0;
     LeaveCriticalSection(&e->cs);
     DeleteCriticalSection(&e->cs);
 #endif
@@ -11745,7 +11789,6 @@ drvallocconnect(SQLHENV env, SQLHDBC *dbc)
 #if defined(_WIN32) || defined(_WIN64)
     if (e->magic == ENV_MAGIC) {
 	EnterCriticalSection(&e->cs);
-	e->owner = GetCurrentThreadId();
     }
 #endif
     if (e->magic == ENV_MAGIC) {
@@ -11766,8 +11809,9 @@ drvallocconnect(SQLHENV env, SQLHDBC *dbc)
 	}
     }
 #if defined(_WIN32) || defined(_WIN64)
+    InitializeCriticalSection(&d->cs);
+    d->owner = 0;
     if (e->magic == ENV_MAGIC) {
-	e->owner = 0;
 	LeaveCriticalSection(&e->cs);
     }
     d->oemcp = 1;
@@ -11816,13 +11860,14 @@ drvfreeconnect(SQLHDBC dbc)
     if (e && e->magic == ENV_MAGIC) {
 #if defined(_WIN32) || defined(_WIN64)
 	EnterCriticalSection(&e->cs);
-	e->owner = GetCurrentThreadId();
 #endif
     } else {
 	e = NULL;
     }
+    HDBC_LOCK(dbc);
     if (d->sqlite) {
 	setstatd(d, -1, "not disconnected", (*d->ov3) ? "HY000" : "S1000");
+	HDBC_UNLOCK(dbc);
 	goto done;
     }
     while (d->stmt) {
@@ -11853,12 +11898,16 @@ drvfreeconnect(SQLHDBC dbc)
     if (d->trace) {
 	fclose(d->trace);
     }
+#if defined(_WIN32) || defined(_WIN64)
+    d->owner = 0;
+    LeaveCriticalSection(&d->cs);
+    DeleteCriticalSection(&d->cs);
+#endif
     xfree(d);
     ret = SQL_SUCCESS;
 done:
 #if defined(_WIN32) || defined(_WIN64)
     if (e) {
-	e->owner = 0;
 	LeaveCriticalSection(&e->cs);
     }
 #endif
@@ -11936,7 +11985,19 @@ drvgetconnectattr(SQLHDBC dbc, SQLINTEGER attr, SQLPOINTER val,
 	break;
     case SQL_ATTR_TRACEFILE:
     case SQL_ATTR_TRANSLATE_LIB:
+	*((SQLCHAR *) val) = 0;
+	*buflen = 0;
+	break;
     case SQL_ATTR_CURRENT_CATALOG:
+#if defined(_WIN32) || defined(_WIN64)
+	if (d->xcelqrx) {
+	    if ((bufmax > 4) && (val != (SQLPOINTER) &dummy)) {
+		strcpy((char *) val, "main");
+		*buflen = 4;
+		break;
+	    }
+	}
+#endif
 	*((SQLCHAR *) val) = 0;
 	*buflen = 0;
 	break;
@@ -12052,18 +12113,49 @@ SQLGetConnectAttrW(SQLHDBC dbc, SQLINTEGER attr, SQLPOINTER val,
 		   SQLINTEGER bufmax, SQLINTEGER *buflen)
 {
     SQLRETURN ret;
+    SQLINTEGER len = 0;
 
     HDBC_LOCK(dbc);
-    ret = drvgetconnectattr(dbc, attr, val, bufmax, buflen);
-    if (SQL_SUCCEEDED(ret)) {
+    ret = drvgetconnectattr(dbc, attr, val, bufmax, &len);
+    if (ret == SQL_SUCCESS) {
+	SQLWCHAR *v = NULL;
+
 	switch (attr) {
 	case SQL_ATTR_TRACEFILE:
 	case SQL_ATTR_CURRENT_CATALOG:
 	case SQL_ATTR_TRANSLATE_LIB:
-	    if (val && bufmax >= sizeof (SQLWCHAR)) {
-		*(SQLWCHAR *) val = 0;
+	    if (val) {
+		if (len > 0) {
+		    v = uc_from_utf((SQLCHAR *) val, len);
+		    if (v) {
+			int vmax = bufmax / sizeof (SQLWCHAR);
+
+			uc_strncpy(val, v, vmax);
+			if (len < vmax) {
+			    len = min(vmax, uc_strlen(v));
+			    v[len] = 0;
+			} else {
+			    len = vmax;
+			}
+			uc_free(v);
+			len *= sizeof (SQLWCHAR);
+		    } else {
+			len = 0;
+		    }
+		}
+		if (len <= 0) {
+		    len = 0;
+		    if (bufmax >= sizeof (SQLWCHAR)) {
+			*((SQLWCHAR *)val) = 0;
+		    }
+		}
+	    } else {
+		len *= sizeof (SQLWCHAR);
 	    }
 	    break;
+	}
+	if (buflen) {
+	    *buflen = len;
 	}
     }
     HDBC_UNLOCK(dbc);
@@ -12098,11 +12190,12 @@ drvsetconnectattr(SQLHDBC dbc, SQLINTEGER attr, SQLPOINTER val,
 	} else if (!d->autocommit) {
 	    s3stmt_end(d->cur_s3stmt);
 	}
+	break;
 	return SQL_SUCCESS;
 #ifdef SQL_ATTR_METADATA_ID
     case SQL_ATTR_METADATA_ID:
 	if (val == (SQLPOINTER) SQL_FALSE) {
-	    return SQL_SUCCESS;
+	    break;
 	}
 	/* fall through */
 #endif
@@ -13197,19 +13290,12 @@ SQLCancel(SQLHSTMT stmt)
 	DBC *d = (DBC *) ((STMT *) stmt)->dbc;
 #if defined(_WIN32) || defined(_WIN64)
 	/* interrupt when other thread owns critical section */
-	int i;
-
-	for (i = 0; i < 2; i++) {
-	    if (d->magic == DBC_MAGIC && d->env &&
-		d->env->magic == ENV_MAGIC &&
-		d->env->owner != GetCurrentThreadId() &&
-		d->env->owner != 0) {
-		d->busyint = 1;
-		sqlite3_interrupt(d->sqlite);
-	    }
-	    Sleep(1);
+	if (d->magic == DBC_MAGIC && d->owner != GetCurrentThreadId() &&
+	    d->owner != 0) {
+	    d->busyint = 1;
+	    sqlite3_interrupt(d->sqlite);
+	    return SQL_SUCCESS;
 	}
-
 #else
 	if (d->magic == DBC_MAGIC) {
 	    d->busyint = 1;
@@ -13754,11 +13840,15 @@ getrowdata(STMT *s, SQLUSMALLINT col, SQLSMALLINT otype,
 	    break;
 	case SQL_C_BINARY:
 	case SQL_C_CHAR:
-	    *((SQLCHAR *) val) = '\0';
+	    if (len > 0) {
+		*((SQLCHAR *) val) = '\0';
+	    }
 	    break;
 #ifdef WCHARSUPPORT
 	case SQL_C_WCHAR:
-	    *((SQLWCHAR *) val) = '\0';
+	    if (len > 0) {
+		*((SQLWCHAR *) val) = '\0';
+	    }
 	    break;
 #endif
 #ifdef SQL_C_TYPE_DATE
@@ -13917,12 +14007,13 @@ getrowdata(STMT *s, SQLUSMALLINT col, SQLSMALLINT otype,
 		dlen -= 2;
 		dp += 2;
 		dlen = dlen / 2;
-		s->bincache = bin = xmalloc(dlen);
+		s->bincache = bin = xmalloc(dlen + 1);
 		if (!bin) {
 		    return nomem(s);
 		}
 		s->binlen = dlen;
-		memset(s->bincache, 0, dlen);
+		memset(bin, 0, dlen);
+		bin[dlen] = '\0';	/* terminator, just in case */
 		for (i = 0; i < dlen; i++) {
 		    char *x;
 		    int v;
@@ -14527,15 +14618,15 @@ doit:
     tname[size] = '\0';
     npatt = unescpat(tname);
 #if defined(_WIN32) || defined(_WIN64)
-    sql = sqlite3_mprintf("select %s as 'TABLE_QUALIFIER', "
-			  "%s as 'TABLE_OWNER', "
+    sql = sqlite3_mprintf("select %s as 'TABLE_CAT', "
+			  "%s as 'TABLE_SCHEM', "
 			  "tbl_name as 'TABLE_NAME', "
 			  "upper(type) as 'TABLE_TYPE', "
 			  "NULL as 'REMARKS' "
 			  "from sqlite_master where %s "
 			  "and tbl_name %s %Q",
-			  d->xcelqrx ? "''" : "NULL",
 			  d->xcelqrx ? "'main'" : "NULL",
+			  d->xcelqrx ? "''" : "NULL",
 			  where,
 			  npatt ? "like" : "=", tname);
 #else
@@ -14976,10 +15067,11 @@ drvcolumns(SQLHSTMT stmt,
 	    }
 	    for (k = 0; k < nr; k++) {
 		m = asize * (roffs + k);
-		s->rows[m + 0] = xstrdup("");
 #if defined(_WIN32) || defined(_WIN64)
-		s->rows[m + 1] = xstrdup(d->xcelqrx ? "main" : "");
+		s->rows[m + 0] = xstrdup(d->xcelqrx ? "main" : "");
+		s->rows[m + 1] = xstrdup("");
 #else
+		s->rows[m + 0] = xstrdup("");
 		s->rows[m + 1] = xstrdup("");
 #endif
 		s->rows[m + 2] = xstrdup(trows[i]);
@@ -15916,10 +16008,11 @@ nodata:
 		goto nodata2;
 	    }
 	    roffs = s->ncols;
-	    s->rows[roffs + 0] = xstrdup("");
 #if defined(_WIN32) || defined(_WIN64)
-	    s->rows[roffs + 1] = xstrdup(d->xcelqrx ? "main" : "");
+	    s->rows[roffs + 0] = xstrdup(d->xcelqrx ? "main" : "");
+	    s->rows[roffs + 1] = xstrdup("");
 #else
+	    s->rows[roffs + 0] = xstrdup("");
 	    s->rows[roffs + 1] = xstrdup("");
 #endif
 	    s->rows[roffs + 2] = xstrdup(tname);
@@ -16980,8 +17073,11 @@ checkLen:
 	}
 	return SQL_SUCCESS;
 #ifdef SQL_DESC_BASE_COLUMN_NAME
+     case SQL_DESC_BASE_COLUMN_NAME:
 	if (strchr(c->column, '(') || strchr(c->column, ')')) {
-	    valc[0] = '\0';
+	    if (valc && valMax > 0) {
+		valc[0] = '\0';
+	    }
 	    *valLen = 0;
 	} else if (valc && valMax > 0) {
 	    strncpy(valc, c->column, valMax);
@@ -18088,7 +18184,7 @@ SQLMoreResults(SQLHSTMT stmt)
  * Internal function to setup column name/type information
  * @param s statement poiner
  * @param s3stmt SQLite3 statement pointer
- * @param ncolsp pointer to preinitialized number of colums
+ * @param ncolsp pointer to preinitialized number of columns
  * @result ODBC error code
  */
 
@@ -18252,6 +18348,7 @@ noconn:
     }
     freep(&s->query);
     s->query = (SQLCHAR *) fixupsql((char *) query, queryLen,
+				    (d->version >= 0x030805),
 				    &s->nparams, &s->isselect, &errp);
     if (!s->query) {
 	if (errp) {
@@ -19955,7 +20052,7 @@ InUn(int remove, char *cmdline)
 			       MB_SETFOREGROUND);
 		}
 	    }
-	    sprintf(attr, "DSN=%s;Database=sqlite.db;", dsname);
+	    sprintf(attr, "DSN=%s;Database=;", dsname);
 	    p = attr;
 	    while (*p) {
 		if (*p == ';') {
@@ -19982,7 +20079,7 @@ InUn(int remove, char *cmdline)
 	    InUnError("SQLInstallDriverEx");
 	    return FALSE;
 	}
-	sprintf(attr, "DSN=%s;Database=sqlite.db;", dsname);
+	sprintf(attr, "DSN=%s;Database=;", dsname);
 	p = attr;
 	while (*p) {
 	    if (*p == ';') {
@@ -20536,3 +20633,12 @@ dls_fini(void)
 #endif
 
 #endif
+
+/*
+ * Local Variables:
+ * mode: c
+ * c-basic-offset: 4
+ * fill-column: 78
+ * tab-width: 8
+ * End:
+ */

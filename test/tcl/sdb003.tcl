@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 1999, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 1999, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -28,11 +28,12 @@ proc sdb003 { method {nentries 1000} args } {
 
 	set txnenv 0
 	set eindex [lsearch -exact $args "-env"]
+	set localdir $testdir
 	#
 	# If we are using an env, then testfile should just be the db name.
 	# Otherwise it is the test directory and the name.
 	if { $eindex == -1 } {
-		set testfile $testdir/subdb003.db
+		set testfile $localdir/subdb003.db
 		set env NULL
 	} else {
 		set testfile subdb003.db
@@ -45,12 +46,12 @@ proc sdb003 { method {nentries 1000} args } {
 				set nentries 100
 			}
 		}
-		set testdir [get_home $env]
+		set localdir [get_home $env]
 	}
 
-	set t1 $testdir/t1
-	set t2 $testdir/t2
-	set t3 $testdir/t3
+	set t1 $localdir/t1
+	set t2 $localdir/t2
+	set t3 $localdir/t3
 
 	#
 	# Set blob threshold as 5 since most words in the wordlist to put into
@@ -75,9 +76,8 @@ proc sdb003 { method {nentries 1000} args } {
 				return
 			}
 			# Look for incompatible configurations of blob.
-			foreach conf { "-encryptaes" "-encrypt" "-compress" \
-			    "-dup" "-dupsort" "-read_uncommitted" \
-			    "-multiversion" } {
+			foreach conf { "-compress" "-dup" "-dupsort" \
+			    "-read_uncommitted" "-multiversion" } {
 				if { [lsearch -exact $args $conf] != -1 } {
 					puts "Subdb003 skipping $conf for blob"
 					return
@@ -90,34 +90,16 @@ proc sdb003 { method {nentries 1000} args } {
 					    skipping -snapshot for blob"
 					return
 				}
-				if { [is_repenv $env] == 1 } {
-					puts "Subdb003 skipping\
-					    replication env for blob"
-					return
-				}
-				if { $has_crypto == 1 } {
-					if { [$env get_encrypt_flags] != "" } {
-						puts "Subdb003 skipping\
-						    encrypted env for blob"
-						return
-					}
-				}
 			}
-			if { [lsearch -exact $args "-chksum"] != -1 } {
-				set indx [lsearch -exact $args "-chksum"]
-				set args [lreplace $args $indx $indx]
-				puts "Subdb003 ignoring -chksum for blob"
-			}
-
 			# Set up the blob arguments.
 			append args $blob
 			if { $env == "NULL" } {
-				append args " -blob_dir $testdir/__db_bl"
+				append args " -blob_dir $localdir/__db_bl"
 			}
 		}
 
 		# Create the database and open the dictionary
-		cleanup $testdir $env
+		cleanup $localdir $env
 
 		set pflags ""
 		set gflags ""

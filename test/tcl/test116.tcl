@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2005, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2005, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -14,6 +14,7 @@ proc test116 { method {tnum "116"} args } {
 	global util_path
 	global passwd
 	global has_crypto
+	global number_of_slices
 
 	set orig_tdir $testdir
 	puts "Test$tnum ($method): Test lsn_reset."
@@ -103,19 +104,25 @@ proc test116 { method {tnum "116"} args } {
 		set testdir [get_home $env]
 		set newdir $testdir/NEWDIR
 		file mkdir $newdir
+		if { $number_of_slices > 0 } {
+			file copy -force $testdir/DB_CONFIG $newdir
+		}
+		
 		set newenv [eval {berkdb_env} \
 		    -create $encargs $envargs -home $newdir -txn]
 		error_check_good newenv [is_valid_env $newenv] TRUE
 
+		set db_sliced 0
 		# We test with subdatabases except with the queue access
 		# method and heap access method, where they are not allowed.
-		if { [is_queue $method] == 1 || \
+		if { [is_queue $method] == 1 || $number_of_slices > 0 || \
 		     [is_partitioned $args] == 1 || [is_heap $method] == 1} {
 			set db [eval {berkdb_open} -env $env -lorder $lorder \
 			    $omethod $args -create -mode 0644 $testfile]
+			set db_sliced [$db is_sliced]
 			error_check_good dbopen [is_valid_db $db] TRUE
 			set pgsize [stat_field $db stat "Page size"]
-			if { $txnenv == 1 } {
+			if { $txnenv == 1 && $number_of_slices == 0 } {
 				set t [$env txn]
 				error_check_good txn [is_valid_txn $t $env] TRUE
 				set txn "-txn $t"
@@ -126,7 +133,7 @@ proc test116 { method {tnum "116"} args } {
 				error_check_good db_put [eval {$db put} \
 				    $txn $key [chop_data $method $data]] 0
 			}
-			if { $txnenv == 1 } {
+			if { $txnenv == 1 && $number_of_slices == 0 } {
 				error_check_good t_commit [$t commit] 0
 			}
 			error_check_good db_close [$db close] 0
@@ -176,6 +183,13 @@ proc test116 { method {tnum "116"} args } {
 			file copy -force $testdir/$testfile1 $testdir/$newfile1
 			file copy -force $testdir/$testfile2 $testdir/$newfile2
 		}
+		if { $db_sliced } {
+			for { set i 0 } { $i < $number_of_slices } { incr i } {
+				file copy -force \
+				    $testdir/__db.slice00$i/$testfile \
+				    $testdir/__db.slice00$i/$newfile
+			}
+		}
 
 		# If we're using queue extents or partitions , we must 
 		# copy the extents/partitions to the new file name as well.
@@ -199,7 +213,14 @@ proc test116 { method {tnum "116"} args } {
 		if { [is_heap $method] == 1 } {
 			file copy -force $testdir/$newfile1 $newdir/$testfile1
         		file copy -force $testdir/$newfile2 $newdir/$testfile2
-		}      
+		}
+		if { $db_sliced } {
+			for { set i 0 } { $i < $number_of_slices } { incr i } {
+				file copy -force \
+				    $testdir/__db.slice00$i/$newfile \
+				    $newdir/__db.slice00$i/$testfile
+			}
+		}
 	
 		# If we're using queue extents, we must copy the extents
 		# to the new directory  as well.
@@ -229,7 +250,7 @@ proc test116 { method {tnum "116"} args } {
 			        [binary format $pattern 0 1] $newdir_lsns($i)
 		}
 
-		if { [ is_partitioned $args] } {
+		if { [ is_partitioned $args] || $db_sliced } {
 			set nodump 1
 		} else {
 			set nodump 0
@@ -241,13 +262,13 @@ proc test116 { method {tnum "116"} args } {
 		    verify [verify_dir $newdir "\tTest$tnum.e: " 0 0 $nodump] 0
 
 		puts "\tTest$tnum.f: Open new db, check data, close db."
-		if { [is_queue $method] == 1 || \
+		if { [is_queue $method] == 1 || $number_of_slices > 0 || \
 		     [is_partitioned $args] == 1 || [is_heap $method] == 1} {
 			set db [eval {berkdb_open} -env $newenv \
 			    -lorder $lorder \
 			    $omethod $args -create -mode 0644 $testfile]
 			error_check_good dbopen [is_valid_db $db] TRUE
-			if { $txnenv == 1 } {
+			if { $txnenv == 1 && $number_of_slices == 0 } {
 				set t [$newenv txn]
 				error_check_good txn [is_valid_txn $t $newenv] TRUE
 				set txn "-txn $t"
@@ -259,7 +280,7 @@ proc test116 { method {tnum "116"} args } {
 				    [lindex [lindex $ret 0] 1] \
 				    [pad_data $method DATA.$i]
 			}
-			if { $txnenv == 1 } {
+			if { $txnenv == 1 && $number_of_slices == 0 } {
 				error_check_good txn_commit [$t commit] 0
 			}
 			error_check_good db_close [$db close] 0
@@ -292,7 +313,7 @@ proc test116 { method {tnum "116"} args } {
 		if { [is_heap $method] == 1 } {
 			error_check_good newfile1_rm [$env dbremove $newfile1] 0
 			error_check_good newfile2_rm [$env dbremove $newfile2] 0
-		}      
+		}
 		error_check_good newenv_close [$newenv close] 0
 		fileremove -f $newdir
 	}

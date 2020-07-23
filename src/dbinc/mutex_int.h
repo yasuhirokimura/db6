@@ -1,7 +1,7 @@
 /*
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -79,7 +79,7 @@ extern "C" {
 		    (timespec)), ret);					\
 	else								\
 		RET_SET(pthread_mutex_timedlock(&(mutexp)->u.m.mutex,	\
-		    (timespec)), ret); 					\
+		    (timespec)), ret);					\
 } while (0)
 #define	RET_SET_PTHREAD_TRYLOCK(mutexp, ret) do {			\
 	if (F_ISSET(mutexp, DB_MUTEX_SHARED))				\
@@ -123,7 +123,7 @@ extern "C" {
  *********************************************************************/
 #ifdef HAVE_MUTEX_SOLARIS_LWP
 /*
- * XXX
+ * !!!
  * Don't change <synch.h> to <sys/lwp.h> -- although lwp.h is listed in the
  * Solaris manual page as the correct include to use, it causes the Solaris
  * compiler on SunOS 2.6 to fail.
@@ -278,10 +278,10 @@ typedef abilock_t tsl_t;
 #include <sys/machlock.h>
 typedef lock_t tsl_t;
 
-/* 
+/*
  * Solaris requires 8 byte alignment for pthread_mutex_t values.
  */
-#define MUTEX_ALIGN 8
+#define	MUTEX_ALIGN 8
 
 /*
  * The functions are declared in <sys/machlock.h>, but under #ifdef KERNEL.
@@ -486,15 +486,17 @@ typedef volatile u_int32_t tsl_t;
  * ARM/gcc assembly.
  *********************************************************************/
 #ifdef HAVE_MUTEX_ARM_GCC_ASSEMBLY
-typedef unsigned char tsl_t;
+typedef unsigned int tsl_t;
 
 #ifdef LOAD_ACTUAL_MUTEX_CODE
 /* gcc/arm: 0 is clear, 1 is set. */
 #define	MUTEX_SET(tsl) ({						\
-	int __r;							\
+	register tsl_t __r;						\
 	__asm__ volatile(						\
-		"swpb	%0, %1, [%2]\n\t"				\
-		"eor	%0, %0, #1\n\t"					\
+		"ldrex		%0, [%2]\n\t"				\
+		"cmp		%0, %1\n\t"				\
+		"strexne	%0, %1, [%2]\n\t"			\
+		"eor		%0, %0, #1\n\t"				\
 	    : "=&r" (__r)						\
 	    : "r" (1), "r" (tsl)					\
 	    );								\
@@ -503,6 +505,44 @@ typedef unsigned char tsl_t;
 
 #define	MUTEX_UNSET(tsl)	(*(volatile tsl_t *)(tsl) = 0)
 #define	MUTEX_INIT(tsl)         (MUTEX_UNSET(tsl), 0)
+#define	MUTEX_MEMBAR(x) \
+	({ __asm__ volatile ("dsb"); })
+#define	MEMBAR_ENTER() \
+	({ __asm__ volatile ("dsb"); })
+#define	MEMBAR_EXIT() \
+	({ __asm__ volatile ("dsb"); })
+#endif
+#endif
+
+/*********************************************************************
+ * ARM64/gcc assembly.
+ *********************************************************************/
+#ifdef HAVE_MUTEX_ARM64_GCC_ASSEMBLY
+typedef unsigned int tsl_t;
+
+#ifdef LOAD_ACTUAL_MUTEX_CODE
+/* gcc/arm: 0 is clear, 1 is set. */
+#define	MUTEX_SET(tsl) ({						\
+	register tsl_t __r, __old;					\
+	__asm__ volatile(						\
+		"ldxr	%w1, [%3]\n\t"					\
+		"stxr	%w0, %w2, [%3]\n\t"				\
+		"orr	%w0, %w0, %w1\n\t"				\
+		"neg	%w0, %w0\n\t"					\
+	    : "=&r" (__r), "=r" (__old)					\
+	    : "r" (1), "r" (tsl)					\
+	    );								\
+	__r & 1;							\
+})
+
+#define	MUTEX_UNSET(tsl)	(*(volatile tsl_t *)(tsl) = 0)
+#define	MUTEX_INIT(tsl)		(MUTEX_UNSET(tsl), 0)
+#define	MUTEX_MEMBAR(x) \
+	({ __asm__ volatile ("dsb sy"); })
+#define	MEMBAR_ENTER() \
+	({ __asm__ volatile ("dsb sy"); })
+#define	MEMBAR_EXIT() \
+	({ __asm__ volatile ("dsb sy"); })
 #endif
 #endif
 
@@ -955,7 +995,7 @@ typedef struct __db_mutexregion { /* SHARED */
  * MTX_DIAG turns on the recording of when and where a mutex was locked. It has
  * a large impact, and should only be turned on when debugging mutexes.
  */
-#define MUTEX_STACK_TEXT_SIZE	600
+#define	MUTEX_STACK_TEXT_SIZE	600
 typedef struct __mutex_history { /* SHARED */
 	db_timespec when;
 	char	stacktext[MUTEX_STACK_TEXT_SIZE];

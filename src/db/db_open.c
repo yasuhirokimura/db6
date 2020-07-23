@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -75,7 +75,7 @@ __db_open(dbp, ip, txn, fname, dname, type, flags, mode, meta_pgno)
 		if ((ret = __db_create_internal(&tdbp, dbp->env, 0)) != 0)
 			goto err;
 		ret = __db_open(tdbp, ip, txn, fname, dname, DB_UNKNOWN,
-		     DB_NOERROR | (flags &  ~(DB_TRUNCATE|DB_CREATE)),
+		     DB_NOERROR | (flags & ~(DB_TRUNCATE|DB_CREATE)),
 		     mode, meta_pgno);
 		if (ret == 0)
 			ret = __memp_ftruncate(tdbp->mpf, txn, ip, 0, 0);
@@ -139,13 +139,13 @@ __db_open(dbp, ip, txn, fname, dname, type, flags, mode, meta_pgno)
 		if (dbp->p_internal != NULL) {
 			__db_errx(env, DB_STR("0634",
 			    "Partitioned databases may not be in memory."));
-			return (ENOENT);
+			return (USR_ERR(env, ENOENT));
 		}
 		if (dname == NULL) {
 			if (!LF_ISSET(DB_CREATE)) {
 				__db_errx(env, DB_STR("0635",
 		    "DB_CREATE must be specified to create databases."));
-				return (ENOENT);
+				return (USR_ERR(env, ENOENT));
 			}
 
 			F_SET(dbp, DB_AM_INMEM);
@@ -208,7 +208,7 @@ __db_open(dbp, ip, txn, fname, dname, type, flags, mode, meta_pgno)
 		if (dbp->p_internal != NULL) {
 			__db_errx(env, DB_STR("0637",
     "Partitioned databases may not be included with multiple databases."));
-			return (ENOENT);
+			return (USR_ERR(env, ENOENT));
 		}
 		if ((ret = __fop_subdb_setup(dbp, ip,
 		    txn, fname, dname, mode, flags)) != 0)
@@ -232,6 +232,13 @@ __db_open(dbp, ip, txn, fname, dname, type, flags, mode, meta_pgno)
 		if (ret != 0)
 			goto err;
 	}
+
+	/*
+	 * Set the open flag here. Below, the underlying access method
+	 * open functions may want to do things like acquire cursors,
+	 * so the open flag has to be set before calling them.
+	 */
+	F_SET(dbp, DB_AM_OPEN_CALLED);
 
 	/*
 	 * Internal exclusive databases need to use the shared
@@ -362,10 +369,10 @@ __db_new_file(dbp, ip, txn, fhp, name)
 		break;
 	case DB_UNKNOWN:
 	default:
+		ret = USR_ERR(dbp->env, EINVAL);
 		__db_errx(dbp->env, DB_STR_A("0638",
 		    "%s: Invalid type %d specified", "%s %d"),
 		    name, dbp->type);
-		ret = EINVAL;
 		break;
 	}
 
@@ -431,7 +438,7 @@ __db_init_subdb(mdbp, dbp, name, ip, txn)
 		ret = __ham_new_subdb(mdbp, dbp, ip, txn);
 		break;
 	case DB_QUEUE:
-		ret = EINVAL;
+		ret = USR_ERR(dbp->env, EINVAL);
 		break;
 	case DB_UNKNOWN:
 	default:
@@ -488,7 +495,7 @@ magic_retry:
 	default:
 		if (needs_swap)
 			/* It's already been swapped, so it isn't a BDB file. */
-			return (EINVAL);
+			return (USR_ERR(env, EINVAL));
 		M_32_SWAP(magic);
 		needs_swap = 1;
 		goto magic_retry;
@@ -520,15 +527,22 @@ magic_retry:
 			if ((ret =
 			    __db_check_chksum(env, NULL, env->crypto_handle,
 			    chksum, meta, DBMETASIZE, is_hmac)) != 0)
-				return (DB_CHKSUM_FAIL);
+				return (USR_ERR(env, DB_META_CHKSUM_FAIL));
 		}
 	} else if (dbp != NULL)
 		F_CLR(dbp, DB_AM_CHKSUM);
 
+#ifdef HAVE_SLICES
+	/* Automatically open pre-existing sliced databases as sliced. */
+	if (FLD_ISSET(meta->metaflags, DBMETA_SLICED) &&
+	    dbp != NULL && SLICES_ON(env))
+		FLD_SET(dbp->open_flags, DB_SLICED);
+#endif
+
 #ifdef HAVE_CRYPTO
 	if (__crypto_decrypt_meta(env,
 	     dbp, (u_int8_t *)meta, LF_ISSET(DB_CHK_META)) != 0)
-		ret = DB_CHKSUM_FAIL;
+		ret = USR_ERR(env, DB_META_CHKSUM_FAIL);
 #endif
 	return (ret);
 }
@@ -585,7 +599,7 @@ swap_retry:
 		if (F_ISSET(dbp, DB_AM_SUBDB) && ((IS_RECOVERING(env) &&
 		    F_ISSET(env->lg_handle, DBLOG_FORCE_OPEN)) ||
 		    meta->pgno != PGNO_INVALID))
-			return (ENOENT);
+			return (USR_ERR(env, ENOENT));
 
 		goto bad_format;
 	default:
@@ -607,7 +621,7 @@ swap_retry:
 	 */
 	if (!LF_ISSET(DB_SKIP_CHK) &&
 	    (ret = __db_chk_meta(env, dbp, meta, flags)) != 0) {
-		if (ret == DB_CHKSUM_FAIL)
+		if (ret == DB_META_CHKSUM_FAIL)
 			__db_errx(env, DB_STR_A("0640",
 			    "%s: metadata page checksum error", "%s"), name);
 		goto bad_format;
@@ -671,16 +685,78 @@ swap_retry:
 	    DBMETA_PART_RANGE | DBMETA_PART_CALLBACK) &&
 	    (ret = __partition_init(dbp, meta->metaflags)) != 0)
 		return (ret);
+	if (FLD_ISSET(meta->metaflags, DBMETA_SLICED))
+		FLD_SET(dbp->open_flags, DB_SLICED);
 	return (0);
 
 bad_format:
 	if (F_ISSET(dbp, DB_AM_RECOVER))
-		ret = ENOENT;
+		ret = USR_ERR(env, ENOENT);
 	else
 		__db_errx(env, DB_STR_A("0641",
 		    "__db_meta_setup: %s: unexpected file type or format",
 		    "%s"), name);
-	return (ret == 0 ? EINVAL : ret);
+	return (ret == 0 ? USR_ERR(env, EINVAL) : ret);
+}
+
+/*
+ * __db_get_metaflags --
+ *	Get the DBMETA.metaflags directly from a file.
+ *
+ * Note that it is safe to read the file directly from disk *only* because:
+ * 1 -	__fop_file_setup()'s call to __db_new_file() flushes the metadata page
+ *	to disk, even before the creating transaction (if any) commits.
+ * 2 -	the metaflags do not change after the database has been created.
+ *
+ * If not for that we'd need more setup in order to read it through mpool.
+ *
+ * PUBLIC: int __db_get_metaflags __P((ENV *, const char *, u_int32_t *));
+ */
+int
+__db_get_metaflags(env, name, metaflagsp)
+	ENV *env;
+	const char *name;
+	u_int32_t *metaflagsp;
+{
+	DB_FH *fhp;
+	DBMETA *meta;
+	int ret;
+	char *real_name;
+	u_int8_t mbuf[DBMETASIZE];
+
+	*metaflagsp = 0;
+	/* This catches any in-memory databases, which are never sliced. */
+	if (name == NULL)
+		return (0);
+
+	real_name = NULL;
+	meta = (DBMETA *)mbuf;
+	if ((ret = __db_appname(env, DB_APP_DATA, name, NULL, &real_name)) != 0)
+		return (ret);
+
+	if ((ret = __os_open(env, real_name, 0, 0, 0, &fhp)) == 0) {
+		if ((ret = __fop_read_meta(env,
+		    name, mbuf, DBMETASIZE, fhp, 1, NULL)) == 0 &&
+		    (ret = __db_chk_meta(env, NULL, meta, DB_CHK_META)) == 0)
+			*metaflagsp = meta->metaflags;
+		(void)__os_closehandle(env, fhp);
+	}
+	__os_free(env, real_name);
+
+	/*
+	 * Prevent BDB build made without partitions or slices from accessing
+	 * those unsupported features.
+	 */
+#ifndef HAVE_PARTITION
+	if (FLD_ISSET(*metaflagsp, DBMETA_PART_RANGE | DBMETA_PART_CALLBACK))
+		ret = __db_no_partition(env);
+#endif
+#ifndef HAVE_SLICES
+	if (FLD_ISSET(*metaflagsp, DBMETA_SLICED))
+		ret = __env_no_slices(env);
+#endif
+		
+	return (ret);
 }
 
 /*

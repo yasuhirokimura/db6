@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2004, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2004, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -411,6 +411,10 @@ proc test_sequence_args_combine { tnum method env txnenv sargs filetype\
 	if { $err_txn_id != "" } {
 		error_check_good err_txn_commit [$err_txn_id commit] 0
 		error_check_good err_env_close [$err_env close] 0
+	}
+
+	if { $is_qnx_test } {
+		fileremove -f $err_env_home
 	}
 }
 

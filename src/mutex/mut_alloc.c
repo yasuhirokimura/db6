@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1999, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1999, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -337,7 +337,8 @@ __mutex_refresh(env, mutex)
  *	mutex, or free it if the mutex is not acquired (e.g. it times out).
  *	Mutexes which can be unlocked by other threads are not placed in this
  *	list, because it would be too costly for that other thread to to find
- *	the right slot to clear.
+ *	the right slot to clear. The caller has already checked that thread
+ *	tracking is enabled.
  *
  * PUBLIC: int __mutex_record_lock
  * PUBLIC:     __P((ENV *, db_mutex_t, MUTEX_ACTION, MUTEX_STATE **));
@@ -354,8 +355,6 @@ __mutex_record_lock(env, mutex, action, retp)
 	int i, ret;
 
 	*retp = NULL;
-	if (env->thr_hashtab == NULL)
-		return (0);
 	mutexp = MUTEXP_SET(env, mutex);
 	if (!F_ISSET(mutexp, DB_MUTEX_SHARED))
 		return (0);

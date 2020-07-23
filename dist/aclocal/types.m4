@@ -187,6 +187,13 @@ AC_CHECK_SIZEOF(off_t,, $db_includes)
 AC_SUBST(db_off_t_decl)
 AC_CHECK_TYPE(db_off_t,,
     [AM_SEARCH_SSIZES(db_off_t_decl, db_off_t, $ac_cv_sizeof_off_t)])
+AC_SUBST(db_off_t_max_decl)
+if test "$ac_cv_sizeof_off_t" == "4"; then
+	db_off_t_max_decl="#define DB_OFF_T_MAX INT32_MAX"
+else
+	db_off_t_max_decl="#define DB_OFF_T_MAX INT64_MAX"
+fi
+
 AC_SUBST(pid_t_decl)
 AC_CHECK_TYPE(pid_t,, AC_MSG_ERROR([No pid_t type.]), $db_includes)
 AC_SUBST(size_t_decl)
@@ -214,6 +221,9 @@ AC_CHECK_TYPE(uintmax_t,, [AC_CHECK_TYPE(unsigned long long,
 AC_SUBST(uintptr_t_decl)
 AC_CHECK_TYPE(uintptr_t,,
     [AM_SEARCH_USIZES(uintptr_t_decl, uintptr_t, $ac_cv_sizeof_char_p)])
+
+AC_SUBST(socket_decl)
+socket_decl="typedef int DB_REPMGR_SOCKET;"
 
 AM_SOCKLEN_T
 ])

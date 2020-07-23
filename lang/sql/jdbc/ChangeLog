@@ -1,3 +1,18 @@
+2015-04-19
+
+	* fixed javadoc comments
+
+2015-04-17
+
+	* proper detect Java 1.8 in configure
+	* cleaned up unnecessary code thanks Ville Skytta"
+
+2014-06-24
+
+	* fixed crashes when keys given as null strings in
+	  interfaces to sqlite3_(re)key as suggested by Ghui Liao
+	* some code reordering due to Ville Skytta"'s CLANG analysis
+
 2013-11-24
 
 	* fixed memory leak in SQLite.Database.vm_compile as

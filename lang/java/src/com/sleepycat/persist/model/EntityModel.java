@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 
@@ -75,6 +75,8 @@ public abstract class EntityModel {
      * <li>{@link #getRawType}</li>
      * <li>{@link #getRawTypeVersion}</li>
      * </ul>
+     *
+     * @return whether the model is associated with an open store.
      */
     public final boolean isOpen() {
         return catalog != null;
@@ -118,6 +120,8 @@ public abstract class EntityModel {
      * <p>This method must be called before opening a store based on this
      * model.</p>
      *
+     * @param persistentClass the class to register.
+     *
      * @throws IllegalStateException if this method is called for a model that
      * is associated with an open store.
      *
@@ -146,6 +150,8 @@ public abstract class EntityModel {
      * This method is used to initialize the model when catalog creation is
      * complete, and reinitialize it when a Replica refresh occurs.  See
      * Store.refresh.
+     *
+     * @param newCatalog the catalog.
      */
     protected void setCatalog(final PersistCatalog newCatalog) {
         this.catalog = newCatalog;
@@ -172,6 +178,8 @@ public abstract class EntityModel {
      * Returns the metadata for a given persistent class name, including proxy
      * classes and entity classes.
      *
+     * @param className the class name.
+     *
      * @return the metadata or null if the class is not persistent or does not
      * exist.
      */
@@ -179,6 +187,8 @@ public abstract class EntityModel {
 
     /**
      * Returns the metadata for a given entity class name.
+     *
+     * @param className the class name.
      *
      * @return the metadata or null if the class is not an entity class or does
      * not exist.
@@ -218,6 +228,8 @@ public abstract class EntityModel {
      *
      * @param className the name of the current version of the class.
      *
+     * @return the RawType.
+     *
      * @throws IllegalStateException if this method is called for a model that
      * is not associated with an open store.
      */
@@ -236,6 +248,8 @@ public abstract class EntityModel {
      * @param className the name of the latest version of the class.
      *
      * @param version the desired version of the class.
+     *
+     * @return the RawType.
      *
      * @throws IllegalStateException if this method is called for a model that
      * is not associated with an open store.
@@ -309,6 +323,10 @@ public abstract class EntityModel {
      * a different store, as long as the class names and the value types match.
      * This allows converting raw objects that are read from one store to live
      * objects in another store, for example, in a conversion program.</p>
+     *
+     * @param raw the RawObject.
+     *
+     * @return the live object.
      */
     public final Object convertRawObject(RawObject raw) {
         try {
@@ -328,6 +346,12 @@ public abstract class EntityModel {
      * Class.forName whenever loading an application class.  This method honors
      * the BDB JE environment's ClassLoader property and uses {@link
      * ClassResolver} to implement the class loading policy.
+     *
+     * @param className the class name.
+     *
+     * @return the Class.
+     *
+     * @throws ClassNotFoundException if the class is not found.
      */
     public Class resolveClass(String className)
         throws ClassNotFoundException {
@@ -336,6 +360,12 @@ public abstract class EntityModel {
     }
 
     /**
+     * @param className the class name.
+     *
+     * @return the Class.
+     *
+     * @throws ClassNotFoundException if the class is not found.
+     *
      * @deprecated use {@link #resolveClass} instead.  This method does not
      * use the environment's ClassLoader property.
      */

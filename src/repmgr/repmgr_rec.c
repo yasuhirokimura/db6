@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2014, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -31,9 +31,6 @@ __repmgr_member_recover(env, dbtp, lsnp, op, info)
 	__repmgr_member_args *argp;
 	int ret;
 
-	COMPQUIET(info, NULL);
-	COMPQUIET(op, DB_TXN_APPLY);
-
 	REC_PRINT(__repmgr_member_print);
 	REC_NOOP_INTRO(__repmgr_member_read);
 
@@ -49,5 +46,7 @@ __repmgr_member_recover(env, dbtp, lsnp, op, info)
 	*lsnp = argp->prev_lsn;
 	ret = 0;
 
+	COMPQUIET(info, NULL);
+	COMPQUIET(op, DB_TXN_APPLY);
 	REC_NOOP_CLOSE;
 }

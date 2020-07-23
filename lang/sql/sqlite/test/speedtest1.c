@@ -12,7 +12,7 @@ static const char zHelp[] =
   "  --explain           Like --sqlonly but with added EXPLAIN keywords\n"
   "  --heap SZ MIN       Memory allocator uses SZ bytes & min allocation MIN\n"
   "  --incrvacuum        Enable incremenatal vacuum mode\n"
-  "  --journalmode M     Set the journal_mode to MODE\n"
+  "  --journal M         Set the journal_mode to M\n"
   "  --key KEY           Set the encryption key to KEY\n"
   "  --lookaside N SZ    Configure lookaside for N slots of SZ bytes each\n"
   "  --nosync            Set PRAGMA synchronous=OFF\n"
@@ -27,8 +27,10 @@ static const char zHelp[] =
   "  --stats             Show statistics at the end\n"
   "  --testset T         Run test-set T\n"
   "  --trace             Turn on SQL tracing\n"
+  "  --threads N         Use up to N threads for sorting\n"
   "  --utf16be           Set text encoding to UTF-16BE\n"
   "  --utf16le           Set text encoding to UTF-16LE\n"
+  "  --verify            Run additional verification steps.\n"
   "  --without-rowid     Use WITHOUT ROWID where appropriate\n"
 ;
 
@@ -51,6 +53,7 @@ static struct Global {
   int bReprepare;            /* True to reprepare the SQL on each rerun */
   int bSqlOnly;              /* True to print the SQL once only */
   int bExplain;              /* Print SQL with EXPLAIN prefix */
+  int bVerify;               /* Try to verify that results are correct */
   int szTest;                /* Scale factor for test iterations */
   const char *zWR;           /* Might be WITHOUT ROWID */
   const char *zNN;           /* Might be NOT NULL */
@@ -474,7 +477,7 @@ void testset_main(void){
   speedtest1_end_test();
 
 
-  n = g.szTest/2;
+  n = 25;
   speedtest1_begin_test(130, "%d SELECTS, numeric BETWEEN, unindexed", n);
   speedtest1_exec("BEGIN");
   speedtest1_prepare(
@@ -492,12 +495,51 @@ void testset_main(void){
   speedtest1_end_test();
 
 
-  n = g.szTest/5;
+  n = 10;
   speedtest1_begin_test(140, "%d SELECTS, LIKE, unindexed", n);
   speedtest1_exec("BEGIN");
   speedtest1_prepare(
     "SELECT count(*), avg(b), sum(length(c)) FROM t1\n"
     " WHERE c LIKE ?1; -- %d times", n
+  );
+  for(i=1; i<=n; i++){
+    x1 = speedtest1_random()%maxb;
+    zNum[0] = '%';
+    len = speedtest1_numbername(i, zNum+1, sizeof(zNum)-2);
+    zNum[len] = '%';
+    zNum[len+1] = 0;
+    sqlite3_bind_text(g.pStmt, 1, zNum, len, SQLITE_STATIC);
+    speedtest1_run();
+  }
+  speedtest1_exec("COMMIT");
+  speedtest1_end_test();
+
+
+  n = 10;
+  speedtest1_begin_test(142, "%d SELECTS w/ORDER BY, unindexed", n);
+  speedtest1_exec("BEGIN");
+  speedtest1_prepare(
+    "SELECT a, b, c FROM t1 WHERE c LIKE ?1\n"
+    " ORDER BY a; -- %d times", n
+  );
+  for(i=1; i<=n; i++){
+    x1 = speedtest1_random()%maxb;
+    zNum[0] = '%';
+    len = speedtest1_numbername(i, zNum+1, sizeof(zNum)-2);
+    zNum[len] = '%';
+    zNum[len+1] = 0;
+    sqlite3_bind_text(g.pStmt, 1, zNum, len, SQLITE_STATIC);
+    speedtest1_run();
+  }
+  speedtest1_exec("COMMIT");
+  speedtest1_end_test();
+
+  n = 10; //g.szTest/5;
+  speedtest1_begin_test(145, "%d SELECTS w/ORDER BY and LIMIT, unindexed", n);
+  speedtest1_exec("BEGIN");
+  speedtest1_prepare(
+    "SELECT a, b, c FROM t1 WHERE c LIKE ?1\n"
+    " ORDER BY a LIMIT 10; -- %d times", n
   );
   for(i=1; i<=n; i++){
     x1 = speedtest1_random()%maxb;
@@ -738,6 +780,344 @@ void testset_main(void){
 }
 
 /*
+** A testset for common table expressions.  This exercises code
+** for views, subqueries, co-routines, etc.
+*/
+void testset_cte(void){
+  static const char *azPuzzle[] = {
+    /* Easy */
+    "534...9.."
+    "67.195..."
+    ".98....6."
+    "8...6...3"
+    "4..8.3..1"
+    "....2...6"
+    ".6....28."
+    "...419..5"
+    "...28..79",
+
+    /* Medium */
+    "53....9.."
+    "6..195..."
+    ".98....6."
+    "8...6...3"
+    "4..8.3..1"
+    "....2...6"
+    ".6....28."
+    "...419..5"
+    "....8..79",
+
+    /* Hard */
+    "53......."
+    "6..195..."
+    ".98....6."
+    "8...6...3"
+    "4..8.3..1"
+    "....2...6"
+    ".6....28."
+    "...419..5"
+    "....8..79",
+  };
+  const char *zPuz;
+  double rSpacing;
+  int nElem;
+
+  if( g.szTest<25 ){
+    zPuz = azPuzzle[0];
+  }else if( g.szTest<70 ){
+    zPuz = azPuzzle[1];
+  }else{
+    zPuz = azPuzzle[2];
+  }
+  speedtest1_begin_test(100, "Sudoku with recursive 'digits'");
+  speedtest1_prepare(
+    "WITH RECURSIVE\n"
+    "  input(sud) AS (VALUES(?1)),\n"
+    "  digits(z,lp) AS (\n"
+    "    VALUES('1', 1)\n"
+    "    UNION ALL\n"
+    "    SELECT CAST(lp+1 AS TEXT), lp+1 FROM digits WHERE lp<9\n"
+    "  ),\n"
+    "  x(s, ind) AS (\n"
+    "    SELECT sud, instr(sud, '.') FROM input\n"
+    "    UNION ALL\n"
+    "    SELECT\n"
+    "      substr(s, 1, ind-1) || z || substr(s, ind+1),\n"
+    "      instr( substr(s, 1, ind-1) || z || substr(s, ind+1), '.' )\n"
+    "     FROM x, digits AS z\n"
+    "    WHERE ind>0\n"
+    "      AND NOT EXISTS (\n"
+    "            SELECT 1\n"
+    "              FROM digits AS lp\n"
+    "             WHERE z.z = substr(s, ((ind-1)/9)*9 + lp, 1)\n"
+    "                OR z.z = substr(s, ((ind-1)%%9) + (lp-1)*9 + 1, 1)\n"
+    "                OR z.z = substr(s, (((ind-1)/3) %% 3) * 3\n"
+    "                        + ((ind-1)/27) * 27 + lp\n"
+    "                        + ((lp-1) / 3) * 6, 1)\n"
+    "         )\n"
+    "  )\n"
+    "SELECT s FROM x WHERE ind=0;"
+  );
+  sqlite3_bind_text(g.pStmt, 1, zPuz, -1, SQLITE_STATIC);
+  speedtest1_run();
+  speedtest1_end_test();
+
+  speedtest1_begin_test(200, "Sudoku with VALUES 'digits'");
+  speedtest1_prepare(
+    "WITH RECURSIVE\n"
+    "  input(sud) AS (VALUES(?1)),\n"
+    "  digits(z,lp) AS (VALUES('1',1),('2',2),('3',3),('4',4),('5',5),\n"
+    "                         ('6',6),('7',7),('8',8),('9',9)),\n"
+    "  x(s, ind) AS (\n"
+    "    SELECT sud, instr(sud, '.') FROM input\n"
+    "    UNION ALL\n"
+    "    SELECT\n"
+    "      substr(s, 1, ind-1) || z || substr(s, ind+1),\n"
+    "      instr( substr(s, 1, ind-1) || z || substr(s, ind+1), '.' )\n"
+    "     FROM x, digits AS z\n"
+    "    WHERE ind>0\n"
+    "      AND NOT EXISTS (\n"
+    "            SELECT 1\n"
+    "              FROM digits AS lp\n"
+    "             WHERE z.z = substr(s, ((ind-1)/9)*9 + lp, 1)\n"
+    "                OR z.z = substr(s, ((ind-1)%%9) + (lp-1)*9 + 1, 1)\n"
+    "                OR z.z = substr(s, (((ind-1)/3) %% 3) * 3\n"
+    "                        + ((ind-1)/27) * 27 + lp\n"
+    "                        + ((lp-1) / 3) * 6, 1)\n"
+    "         )\n"
+    "  )\n"
+    "SELECT s FROM x WHERE ind=0;"
+  );
+  sqlite3_bind_text(g.pStmt, 1, zPuz, -1, SQLITE_STATIC);
+  speedtest1_run();
+  speedtest1_end_test();
+
+  rSpacing = 5.0/g.szTest;
+  speedtest1_begin_test(300, "Mandelbrot Set with spacing=%f", rSpacing);
+  speedtest1_prepare(
+   "WITH RECURSIVE \n"
+   "  xaxis(x) AS (VALUES(-2.0) UNION ALL SELECT x+?1 FROM xaxis WHERE x<1.2),\n"
+   "  yaxis(y) AS (VALUES(-1.0) UNION ALL SELECT y+?2 FROM yaxis WHERE y<1.0),\n"
+   "  m(iter, cx, cy, x, y) AS (\n"
+   "    SELECT 0, x, y, 0.0, 0.0 FROM xaxis, yaxis\n"
+   "    UNION ALL\n"
+   "    SELECT iter+1, cx, cy, x*x-y*y + cx, 2.0*x*y + cy FROM m \n"
+   "     WHERE (x*x + y*y) < 4.0 AND iter<28\n"
+   "  ),\n"
+   "  m2(iter, cx, cy) AS (\n"
+   "    SELECT max(iter), cx, cy FROM m GROUP BY cx, cy\n"
+   "  ),\n"
+   "  a(t) AS (\n"
+   "    SELECT group_concat( substr(' .+*#', 1+min(iter/7,4), 1), '') \n"
+   "    FROM m2 GROUP BY cy\n"
+   "  )\n"
+   "SELECT group_concat(rtrim(t),x'0a') FROM a;"
+  );
+  sqlite3_bind_double(g.pStmt, 1, rSpacing*.05);
+  sqlite3_bind_double(g.pStmt, 2, rSpacing);
+  speedtest1_run();
+  speedtest1_end_test();
+
+  nElem = 10000*g.szTest;
+  speedtest1_begin_test(400, "EXCEPT operator on %d-element tables", nElem);
+  speedtest1_prepare(
+    "WITH RECURSIVE \n"
+    "  t1(x) AS (VALUES(2) UNION ALL SELECT x+2 FROM t1 WHERE x<%d),\n"
+    "  t2(y) AS (VALUES(3) UNION ALL SELECT y+3 FROM t2 WHERE y<%d)\n"
+    "SELECT count(x), avg(x) FROM (\n"
+    "  SELECT x FROM t1 EXCEPT SELECT y FROM t2 ORDER BY 1\n"
+    ");",
+    nElem, nElem
+  );
+  speedtest1_run();
+  speedtest1_end_test();
+
+}
+
+#ifdef SQLITE_ENABLE_RTREE
+/* Generate two numbers between 1 and mx.  The first number is less than
+** the second.  Usually the numbers are near each other but can sometimes
+** be far apart.
+*/
+static void twoCoords(
+  int p1, int p2,                   /* Parameters adjusting sizes */
+  unsigned mx,                      /* Range of 1..mx */
+  unsigned *pX0, unsigned *pX1      /* OUT: write results here */
+){
+  unsigned d, x0, x1, span;
+
+  span = mx/100 + 1;
+  if( speedtest1_random()%3==0 ) span *= p1;
+  if( speedtest1_random()%p2==0 ) span = mx/2;
+  d = speedtest1_random()%span + 1;
+  x0 = speedtest1_random()%(mx-d) + 1;
+  x1 = x0 + d;
+  *pX0 = x0;
+  *pX1 = x1;
+}
+#endif
+
+#ifdef SQLITE_ENABLE_RTREE
+/* The following routine is an R-Tree geometry callback.  It returns
+** true if the object overlaps a slice on the Y coordinate between the
+** two values given as arguments.  In other words
+**
+**     SELECT count(*) FROM rt1 WHERE id MATCH xslice(10,20);
+**
+** Is the same as saying:
+**
+**     SELECT count(*) FROM rt1 WHERE y1>=10 AND y0<=20;
+*/
+static int xsliceGeometryCallback(
+  sqlite3_rtree_geometry *p,
+  int nCoord,
+  double *aCoord,
+  int *pRes
+){
+  *pRes = aCoord[3]>=p->aParam[0] && aCoord[2]<=p->aParam[1];
+  return SQLITE_OK;
+}
+#endif /* SQLITE_ENABLE_RTREE */
+
+#ifdef SQLITE_ENABLE_RTREE
+/*
+** A testset for the R-Tree virtual table
+*/
+void testset_rtree(int p1, int p2){
+  unsigned i, n;
+  unsigned mxCoord;
+  unsigned x0, x1, y0, y1, z0, z1;
+  unsigned iStep;
+  int *aCheck = sqlite3_malloc( sizeof(int)*g.szTest*100 );
+
+  mxCoord = 15000;
+  n = g.szTest*100;
+  speedtest1_begin_test(100, "%d INSERTs into an r-tree", n);
+  speedtest1_exec("BEGIN");
+  speedtest1_exec("CREATE VIRTUAL TABLE rt1 USING rtree(id,x0,x1,y0,y1,z0,z1)");
+  speedtest1_prepare("INSERT INTO rt1(id,x0,x1,y0,y1,z0,z1)"
+                     "VALUES(?1,?2,?3,?4,?5,?6,?7)");
+  for(i=1; i<=n; i++){
+    twoCoords(p1, p2, mxCoord, &x0, &x1);
+    twoCoords(p1, p2, mxCoord, &y0, &y1);
+    twoCoords(p1, p2, mxCoord, &z0, &z1);
+    sqlite3_bind_int(g.pStmt, 1, i);
+    sqlite3_bind_int(g.pStmt, 2, x0);
+    sqlite3_bind_int(g.pStmt, 3, x1);
+    sqlite3_bind_int(g.pStmt, 4, y0);
+    sqlite3_bind_int(g.pStmt, 5, y1);
+    sqlite3_bind_int(g.pStmt, 6, z0);
+    sqlite3_bind_int(g.pStmt, 7, z1);
+    speedtest1_run();
+  }
+  speedtest1_exec("COMMIT");
+  speedtest1_end_test();
+
+  speedtest1_begin_test(101, "Copy from rtree to a regular table");
+  speedtest1_exec("CREATE TABLE t1(id INTEGER PRIMARY KEY,x0,x1,y0,y1,z0,z1)");
+  speedtest1_exec("INSERT INTO t1 SELECT * FROM rt1");
+  speedtest1_end_test();
+
+  n = g.szTest*20;
+  speedtest1_begin_test(110, "%d one-dimensional intersect slice queries", n);
+  speedtest1_prepare("SELECT count(*) FROM rt1 WHERE x0>=?1 AND x1<=?2");
+  iStep = mxCoord/n;
+  for(i=0; i<n; i++){
+    sqlite3_bind_int(g.pStmt, 1, i*iStep);
+    sqlite3_bind_int(g.pStmt, 2, (i+1)*iStep);
+    speedtest1_run();
+    aCheck[i] = atoi(g.zResult);
+  }
+  speedtest1_end_test();
+
+  if( g.bVerify ){
+    n = g.szTest*20;
+    speedtest1_begin_test(111, "Verify result from 1-D intersect slice queries");
+    speedtest1_prepare("SELECT count(*) FROM t1 WHERE x0>=?1 AND x1<=?2");
+    iStep = mxCoord/n;
+    for(i=0; i<n; i++){
+      sqlite3_bind_int(g.pStmt, 1, i*iStep);
+      sqlite3_bind_int(g.pStmt, 2, (i+1)*iStep);
+      speedtest1_run();
+      if( aCheck[i]!=atoi(g.zResult) ){
+        fatal_error("Count disagree step %d: %d..%d.  %d vs %d",
+                    i, i*iStep, (i+1)*iStep, aCheck[i], atoi(g.zResult));
+      }
+    }
+    speedtest1_end_test();
+  }
+  
+  n = g.szTest*20;
+  speedtest1_begin_test(120, "%d one-dimensional overlap slice queries", n);
+  speedtest1_prepare("SELECT count(*) FROM rt1 WHERE y1>=?1 AND y0<=?2");
+  iStep = mxCoord/n;
+  for(i=0; i<n; i++){
+    sqlite3_bind_int(g.pStmt, 1, i*iStep);
+    sqlite3_bind_int(g.pStmt, 2, (i+1)*iStep);
+    speedtest1_run();
+    aCheck[i] = atoi(g.zResult);
+  }
+  speedtest1_end_test();
+
+  if( g.bVerify ){
+    n = g.szTest*20;
+    speedtest1_begin_test(121, "Verify result from 1-D overlap slice queries");
+    speedtest1_prepare("SELECT count(*) FROM t1 WHERE y1>=?1 AND y0<=?2");
+    iStep = mxCoord/n;
+    for(i=0; i<n; i++){
+      sqlite3_bind_int(g.pStmt, 1, i*iStep);
+      sqlite3_bind_int(g.pStmt, 2, (i+1)*iStep);
+      speedtest1_run();
+      if( aCheck[i]!=atoi(g.zResult) ){
+        fatal_error("Count disagree step %d: %d..%d.  %d vs %d",
+                    i, i*iStep, (i+1)*iStep, aCheck[i], atoi(g.zResult));
+      }
+    }
+    speedtest1_end_test();
+  }
+  
+
+  n = g.szTest*20;
+  speedtest1_begin_test(125, "%d custom geometry callback queries", n);
+  sqlite3_rtree_geometry_callback(g.db, "xslice", xsliceGeometryCallback, 0);
+  speedtest1_prepare("SELECT count(*) FROM rt1 WHERE id MATCH xslice(?1,?2)");
+  iStep = mxCoord/n;
+  for(i=0; i<n; i++){
+    sqlite3_bind_int(g.pStmt, 1, i*iStep);
+    sqlite3_bind_int(g.pStmt, 2, (i+1)*iStep);
+    speedtest1_run();
+    if( aCheck[i]!=atoi(g.zResult) ){
+      fatal_error("Count disagree step %d: %d..%d.  %d vs %d",
+                  i, i*iStep, (i+1)*iStep, aCheck[i], atoi(g.zResult));
+    }
+  }
+  speedtest1_end_test();
+
+  n = g.szTest*80;
+  speedtest1_begin_test(130, "%d three-dimensional intersect box queries", n);
+  speedtest1_prepare("SELECT count(*) FROM rt1 WHERE x1>=?1 AND x0<=?2"
+                     " AND y1>=?1 AND y0<=?2 AND z1>=?1 AND z0<=?2");
+  iStep = mxCoord/n;
+  for(i=0; i<n; i++){
+    sqlite3_bind_int(g.pStmt, 1, i*iStep);
+    sqlite3_bind_int(g.pStmt, 2, (i+1)*iStep);
+    speedtest1_run();
+    aCheck[i] = atoi(g.zResult);
+  }
+  speedtest1_end_test();
+
+  n = g.szTest*100;
+  speedtest1_begin_test(140, "%d rowid queries", n);
+  speedtest1_prepare("SELECT * FROM rt1 WHERE id=?1");
+  for(i=1; i<=n; i++){
+    sqlite3_bind_int(g.pStmt, 1, i);
+    speedtest1_run();
+  }
+  speedtest1_end_test();
+}
+#endif /* SQLITE_ENABLE_RTREE */
+
+/*
 ** A testset used for debugging speedtest1 itself.
 */
 void testset_debug1(void){
@@ -768,6 +1148,7 @@ int main(int argc, char **argv){
   int nPCache = 0, szPCache = 0;/* --pcache configuration */
   int nScratch = 0, szScratch=0;/* --scratch configuration */
   int showStats = 0;            /* True for --stats */
+  int nThread = 0;              /* --threads value */
   const char *zTSet = "main";   /* Which --testset torun */
   int doTrace = 0;              /* True for --trace */
   const char *zEncoding = 0;    /* --utf16be or --utf16le */
@@ -852,10 +1233,15 @@ int main(int argc, char **argv){
         zTSet = argv[++i];
       }else if( strcmp(z,"trace")==0 ){
         doTrace = 1;
+      }else if( strcmp(z,"threads")==0 ){
+        if( i>=argc-1 ) fatal_error("missing argument on %s\n", argv[i]);
+        nThread = integerValue(argv[++i]);
       }else if( strcmp(z,"utf16le")==0 ){
         zEncoding = "utf16le";
       }else if( strcmp(z,"utf16be")==0 ){
         zEncoding = "utf16be";
+      }else if( strcmp(z,"verify")==0 ){
+        g.bVerify = 1;
       }else if( strcmp(z,"without-rowid")==0 ){
         g.zWR = "WITHOUT ROWID";
         g.zPK = "PRIMARY KEY";
@@ -915,6 +1301,7 @@ int main(int argc, char **argv){
   /* Set database connection options */
   sqlite3_create_function(g.db, "random", 0, SQLITE_UTF8, 0, randomFunc, 0, 0);
   if( doTrace ) sqlite3_trace(g.db, traceCallback, 0);
+  speedtest1_exec("PRAGMA threads=%d", nThread);
   if( zKey ){
     speedtest1_exec("PRAGMA key('%s')", zKey);
   }
@@ -945,8 +1332,18 @@ int main(int argc, char **argv){
     testset_main();
   }else if( strcmp(zTSet,"debug1")==0 ){
     testset_debug1();
+  }else if( strcmp(zTSet,"cte")==0 ){
+    testset_cte();
+  }else if( strcmp(zTSet,"rtree")==0 ){
+#ifdef SQLITE_ENABLE_RTREE
+    testset_rtree(6, 147);
+#else
+    fatal_error("compile with -DSQLITE_ENABLE_RTREE to enable "
+                "the R-Tree tests\n");
+#endif
   }else{
-    fatal_error("unknown testset: \"%s\"\n", zTSet);
+    fatal_error("unknown testset: \"%s\"\nChoices: main debug1 cte rtree\n",
+                 zTSet);
   }
   speedtest1_final();
 

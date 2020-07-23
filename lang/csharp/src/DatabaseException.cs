@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2009, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2009, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 using System;
@@ -216,7 +216,7 @@ namespace BerkeleyDB {
     /// file. 
     /// </summary>
     public class MetaCheckSumFailException : DatabaseException {
-        /// <summary
+        /// <summary>
         /// Initialize a new instance of the MetaCheckSumFailException
         /// </summary>
         public MetaCheckSumFailException()

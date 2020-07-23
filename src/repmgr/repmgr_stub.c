@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -322,5 +322,20 @@ __repmgr_init_recover(env, dtabp)
 	COMPQUIET(env, NULL);
 	COMPQUIET(dtabp, NULL);
 	return (0);
+}
+
+/*
+ * PUBLIC: #ifndef HAVE_REPLICATION_THREADS
+ * PUBLIC: int __repmgr_set_socket __P((DB_ENV *,
+ * PUBLIC:     int (*)(DB_ENV *, DB_REPMGR_SOCKET, int *, u_int32_t)));
+ * PUBLIC: #endif
+ */
+int
+__repmgr_set_socket(dbenv, f_approval)
+	DB_ENV *dbenv;
+	int (*f_approval) __P((DB_ENV *, DB_REPMGR_SOCKET, int *, u_int32_t));
+{
+	COMPQUIET(f_approval, NULL);
+	return (__db_norepmgr(dbenv));
 }
 #endif /* !HAVE_REPLICATION_THREADS */

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -15,17 +15,16 @@
 
 #ifndef lint
 static const char copyright[] =
-    "Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.\n";
+    "Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.\n";
 #endif
 
 enum which_open { OPEN_ORIGINAL, OPEN_HOT_BACKUP };
 
 int env_init __P((DB_ENV **,
-     char *, char *, char **, char ***, char *, enum which_open, int));
+     char *, char *, char **, char ***, char *, char *, enum which_open, int));
 int main __P((int, char *[]));
 int usage __P((void));
 int version_check __P((void));
-void __db_util_msg __P((const DB_ENV *, const char *));
 void handle_event __P((DB_ENV *, u_int32_t, void *));
 
 const char *progname;
@@ -36,14 +35,6 @@ const char *progname;
  * due to a problem with db_hotbackup itself.
  */
 int failchk_count;
-
-void __db_util_msg(dbenv, msgstr)
-	const DB_ENV *dbenv;
-	const char *msgstr;
-{
-	COMPQUIET(dbenv, NULL);
-	printf("%s: %s\n", progname, msgstr);
-}
 
 void handle_event(dbenv, event, info)
 	DB_ENV *dbenv;
@@ -87,7 +78,7 @@ main(argc, argv)
 	int ch, checkpoint, db_config, debug, env_copy, exitval;
 	int ret, update, verbose;
 	char *backup_dir, **data_dir;
-	char *home, *home_blob_dir, *log_dir, *passwd;
+	char *home, *home_blob_dir, *log_dir, *msgpfx, *passwd;
 	char home_buf[DB_MAXPATHLEN], time_buf[CTIME_BUFLEN];
 	u_int32_t flags;
 
@@ -118,9 +109,9 @@ main(argc, argv)
 	checkpoint = db_config = data_cnt = data_next = debug = 
 	    exitval = update = verbose = 0;
 	data_dir = NULL;
-	backup_dir = home = home_blob_dir = passwd = NULL;
+	backup_dir = home = home_blob_dir = msgpfx = passwd = NULL;
 	log_dir = NULL;
-	while ((ch = getopt(argc, argv, "b:cDd:Fgh:i:l:P:uVv")) != EOF)
+	while ((ch = getopt(argc, argv, "b:cDd:Fgh:i:l:m:P:uVv")) != EOF)
 		switch (ch) {
 		case 'b':
 			backup_dir = optarg;
@@ -163,6 +154,9 @@ main(argc, argv)
 			break;
 		case 'l':
 			log_dir = optarg;
+			break;
+		case 'm':
+			msgpfx = optarg;
 			break;
 		case 'P':
 			if (passwd != NULL) {
@@ -277,7 +271,7 @@ main(argc, argv)
 	/* Open the source environment. */
 	if (env_init(&dbenv, home, home_blob_dir,
 	     (db_config || log_dir != NULL) ? &log_dir : NULL,
-	     &data_dir, passwd, OPEN_ORIGINAL, verbose) != 0)
+	     &data_dir, msgpfx, passwd, OPEN_ORIGINAL, verbose) != 0)
 		goto err;
 	
 	if (env_copy) {
@@ -351,7 +345,7 @@ main(argc, argv)
 		    "%s"), backup_dir);
 	}
 	if (env_init(&dbenv, backup_dir, NULL,
-	    NULL, NULL, passwd, OPEN_HOT_BACKUP, verbose) != 0)
+	    NULL, NULL, msgpfx, passwd, OPEN_HOT_BACKUP, verbose) != 0)
 		goto err;
 
 	/*
@@ -414,9 +408,9 @@ clean:
  *	Open a database environment.
  */
 int
-env_init(dbenvp, home, blob_dir, log_dirp, data_dirp, passwd, which, verbose)
+env_init(dbenvp, home, blob_dir, log_dirp, data_dirp, msgpfx, passwd, which, verbose)
 	DB_ENV **dbenvp;
-	char *home, *blob_dir, **log_dirp, ***data_dirp, *passwd;
+	char *home, *blob_dir, **log_dirp, ***data_dirp, *msgpfx, *passwd;
 	enum which_open which;
 	int verbose;
 {
@@ -443,11 +437,12 @@ env_init(dbenvp, home, blob_dir, log_dirp, data_dirp, passwd, which, verbose)
 	}
 	if (verbose) {
 		(void)dbenv->set_verbose(dbenv, DB_VERB_BACKUP, 1);
-		dbenv->set_msgcall(dbenv, __db_util_msg);
 	}
 	dbenv->set_errfile(dbenv, stderr);
 	(void)setvbuf(stderr, NULL, _IONBF, 0);
 	dbenv->set_errpfx(dbenv, progname);
+	if (msgpfx != NULL)
+		dbenv->set_msgpfx(dbenv, msgpfx);
 
 	/* Always enable logging blobs. */
 	if ((ret = dbenv->log_set_config(dbenv, DB_LOG_BLOB, 1)) != 0) {
@@ -598,7 +593,7 @@ usage()
 {
 	(void)fprintf(stderr, "usage: %s [-cDuVv]\n\t%s\n", progname,
 	    "[-d data_dir ...] [-i home_blob_dir] [-h home] [-l log_dir] "
-	    "[-P password] -b backup_dir");
+	    "[-m msg_pfx] [-P password] -b backup_dir");
 	return (EXIT_FAILURE);
 }
 

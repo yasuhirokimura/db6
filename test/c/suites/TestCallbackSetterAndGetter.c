@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2012, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2012, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -62,7 +62,8 @@ typedef void (*dbenv_feedback_fcn)(DB_ENV *dbenv, int opcode, int percent);
 typedef int (*is_alive_fcn)(DB_ENV *dbenv, pid_t pid,
     db_threadid_t tid, u_int32_t flags);
 /* For DB_ENV->get_msgcall & DB->get_msgcall */
-typedef void (*db_msgcall_fcn)(const DB_ENV *dbenv, const char *msg);
+typedef void (*db_msgcall_fcn)(const DB_ENV *dbenv,
+    const char *msgpfx, const char *msg);
 /* For DB_ENV->get_thread_id_fn */
 typedef void (*thread_id_fcn)(DB_ENV *dbenv, pid_t *pid, db_threadid_t *tid);
 /* For DB_ENV->get_thread_id_string_fn */
@@ -120,7 +121,8 @@ static void t_errcall(const DB_ENV *dbenv,
 static void t_dbenv_callback(DB_ENV *dbenv, int opcode, int percent);
 static int t_is_alive(DB_ENV *dbenv,
     pid_t pid, db_threadid_t tid, u_int32_t flags);
-static void t_msgcall(const DB_ENV *dbenv, const char *msg);
+static void t_msgcall(const DB_ENV *dbenv,
+    const char *msgpfx, const char *msg);
 static void t_thread_id(DB_ENV *dbenv, pid_t *pid, db_threadid_t *tid);
 static char *t_thread_id_string(DB_ENV *dbenv,
     pid_t pid, db_threadid_t tid, char *buf);
@@ -610,7 +612,8 @@ static int t_is_alive(DB_ENV *dbenv,
 	return 1;
 }
 
-static void t_msgcall(const DB_ENV *dbenv, const char *msg) {
+static void t_msgcall(const DB_ENV *dbenv,
+    const char *msgpfx, const char *msg) {
 	return;
 }
 

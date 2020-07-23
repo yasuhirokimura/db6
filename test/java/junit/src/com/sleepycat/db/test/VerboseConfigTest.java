@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
  */
 
 package com.sleepycat.db.test;
@@ -63,6 +63,7 @@ public class VerboseConfigTest {
 		envc.setVerbose(VerboseConfig.RECOVERY, true);
 		envc.setVerbose(VerboseConfig.REGISTER, true);
 		envc.setVerbose(VerboseConfig.REPLICATION, true);
+		envc.setVerbose(VerboseConfig.SLICE, true);
 		envc.setVerbose(VerboseConfig.WAITSFOR, true);
 		envc.setMessageStream(new FileOutputStream(new File("messages.txt")));
     	Environment db_env = new Environment(TestUtils.BASETEST_DBFILE, envc);

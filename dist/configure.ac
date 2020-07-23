@@ -32,13 +32,16 @@ topdir=`echo "$srcdir/.." | sed 's,/dist/\.\.,,'`
 # Substitution variables. BDB additions need to be documented.
 AC_SUBST(ADDITIONAL_INCS)
 AC_SUBST(ADDITIONAL_LANG)
+AC_SUBST(ADDITIONAL_INSTALL)
 AC_SUBST(ADDITIONAL_OBJS)
 AC_SUBST(ADDITIONAL_PROGS)
+AC_SUBST(ADDITIONAL_UNINSTALL)
 AC_SUBST(BUILD_TARGET)
 AC_SUBST(CFLAGS)
 AC_SUBST(CONFIGURATION_ARGS)
 AC_SUBST(CONFIGURATION_PATH)
 AC_SUBST(CPPFLAGS)
+AC_SUBST(CPPFLAGS_JNI_INCLUDE)
 AC_SUBST(CRYPTO_OBJS)
 AC_SUBST(CXX)
 AC_SUBST(CXXFLAGS)
@@ -254,9 +257,7 @@ if test "$GCC" = "yes"; then
 else
 	case "$host_os" in
 	hpux11.0*)	;;
-	hpux11*)	CPPFLAGS="$CPPFLAGS -mt"
-			test "$host_cpu" = "ia64" &&
-			    CFLAGS="$CFLAGS +u1";;
+	hpux11*)	CPPFLAGS="$CPPFLAGS -mt";;
 	solaris*)	CFLAGS="$CFLAGS "
 			CFLAGS=`echo "$CFLAGS" | sed 's/-O /-xO2 /g'`;;
 	esac
@@ -429,8 +430,14 @@ if test "$db_cv_cxx" = "yes"; then
 	fi
 fi
 
+# Optional Thrift Server and Client Driver.
+if test "$db_cv_server" = "yes"; then
+	ADDITIONAL_INSTALL=install_server
+	ADDITIONAL_UNINSTALL=uninstall_server
+fi
+
 # Optional Java API / JDBC.
-if test "$db_cv_java" = "yes" -o "$db_cv_jdbc" = "yes"; then
+if test "$db_cv_java" = "yes" -o "$db_cv_jdbc" = "yes" -o "$db_cv_server" = "yes"; then
 	# BDB Java API requires shared libraries.
 	if test "$db_cv_java" = "yes" -a "$enable_shared" = "no"; then
 		AC_MSG_ERROR([Java requires shared libraries])
@@ -471,10 +478,12 @@ if test "$db_cv_java" = "yes" -o "$db_cv_jdbc" = "yes"; then
 		SWIGCFLAGS="-fno-strict-aliasing"
 	fi
 
+	CPPFLAGS_JNI_INCLUDE=""
 	for JNI_INCLUDE_DIR in $JNI_INCLUDE_DIRS
 	do
-		CPPFLAGS="$CPPFLAGS -I$JNI_INCLUDE_DIR"
+		CPPFLAGS_JNI_INCLUDE="$CPPFLAGS_JNI_INCLUDE -I$JNI_INCLUDE_DIR"
 	done
+	CPPFLAGS="$CPPFLAGS $CPPFLAGS_JNI_INCLUDE"
 
 	if test "$db_cv_java" = "yes"; then
 		ADDITIONAL_LANG="$ADDITIONAL_LANG java"
@@ -495,6 +504,12 @@ else
 	OSDIR=os
 	PATH_SEPARATOR="/"
 	AC_DEFINE(HAVE_SYSTEM_INCLUDE_FILES)
+fi
+
+# Slices can be enabled.
+if test "$db_cv_slices" = "yes"; then
+	AC_DEFINE(HAVE_SLICES)
+	AH_TEMPLATE(HAVE_SLICES, [Define to 1 if building sliced environment support.])
 fi
 
 # Optional SQL API.
@@ -712,6 +727,15 @@ AC_CHECK_FUNCS(\
 	getrusage getuid hstrerror mprotect pstat_getdynamic\
 	pthread_self pthread_yield random sched_yield select setgid setuid\
 	sigaction snprintf stat sysconf vsnprintf yield)
+
+# The random_r/initstate_r/srandom_r functions in AIX and OSF/1 (Tru64) have
+# atypical function signatures. Disable BerkeleyDB's use of those functions.
+case "$host_os" in
+aix*|osf*)
+	AC_MSG_WARN([random_r is ignored on $host_os.]);;
+*)
+	AC_CHECK_FUNCS(initstate_r random_r srandom_r);;
+esac
 
 if test "$db_cv_error_history" = "yes"; then
 	# Check for pthread thread local storage support

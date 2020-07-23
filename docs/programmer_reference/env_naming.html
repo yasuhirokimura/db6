@@ -7,14 +7,14 @@
     <link rel="stylesheet" href="gettingStarted.css" type="text/css" />
     <meta name="generator" content="DocBook XSL Stylesheets V1.73.2" />
     <link rel="start" href="index.html" title="Berkeley DB Programmer's Reference Guide" />
-    <link rel="up" href="env.html" title="Chapter 9.  The Berkeley DB Environment" />
+    <link rel="up" href="env.html" title="Chapter 10.  The Berkeley DB Environment" />
     <link rel="prev" href="env_db_config.html" title="DB_CONFIG configuration file" />
     <link rel="next" href="env_region.html" title="Shared memory regions" />
   </head>
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -22,7 +22,7 @@
         </tr>
         <tr>
           <td width="20%" align="left"><a accesskey="p" href="env_db_config.html">Prev</a> </td>
-          <th width="60%" align="center">Chapter 9.  The Berkeley DB Environment </th>
+          <th width="60%" align="center">Chapter 10.  The Berkeley DB Environment </th>
           <td width="20%" align="right"> <a accesskey="n" href="env_region.html">Next</a></td>
         </tr>
       </table>
@@ -40,17 +40,17 @@
         <dl>
           <dt>
             <span class="sect2">
-              <a href="env_naming.html#idp1336768">Specifying file naming to Berkeley DB</a>
+              <a href="env_naming.html#idp100870448">Specifying file naming to Berkeley DB</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="env_naming.html#idp1347680">Filename resolution in Berkeley DB</a>
+              <a href="env_naming.html#idp100899856">Filename resolution in Berkeley DB</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="env_naming.html#idp1369760">Examples</a>
+              <a href="env_naming.html#idp98818816">Examples</a>
             </span>
           </dt>
         </dl>
@@ -79,7 +79,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp1336768"></a>Specifying file naming to Berkeley DB</h3>
+              <h3 class="title"><a id="idp100870448"></a>Specifying file naming to Berkeley DB</h3>
             </div>
           </div>
         </div>
@@ -131,7 +131,7 @@
             </dt>
             <dd>
               <p> 
-                        There are four <a href="../api_reference/C/env.html" class="olink">DB_ENV</a> methods that affect
+                        There are five <a href="../api_reference/C/env.html" class="olink">DB_ENV</a> methods that affect
                         file naming:
                     </p>
               <div class="itemizedlist">
@@ -165,6 +165,14 @@
                                 by the environment. 
                             </p>
                   </li>
+                  <li>
+                    <p>
+                                The <a href="../api_reference/C/envset_region_dir.html" class="olink">DB_ENV-&gt;set_region_dir()</a> method
+                                specifies the directory in which to
+                                create disk-backed region files used
+                                by the environment.
+                            </p>
+                  </li>
                 </ul>
               </div>
               <p> 
@@ -193,7 +201,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp1347680"></a>Filename resolution in Berkeley DB</h3>
+              <h3 class="title"><a id="idp100899856"></a>Filename resolution in Berkeley DB</h3>
             </div>
           </div>
         </div>
@@ -297,7 +305,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp1369760"></a>Examples</h3>
+              <h3 class="title"><a id="idp98818816"></a>Examples</h3>
             </div>
           </div>
         </div>

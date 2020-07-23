@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -48,7 +48,7 @@
           </dt>
           <dt>
             <span class="sect2">
-              <a href="build_unix_sql.html#idp244560">Enabling Extensions</a>
+              <a href="build_unix_sql.html#idp275744">Enabling Extensions</a>
             </span>
           </dt>
           <dt>
@@ -58,12 +58,12 @@
           </dt>
           <dt>
             <span class="sect2">
-              <a href="build_unix_sql.html#idp264944">Using the JDBC Driver</a>
+              <a href="build_unix_sql.html#idp326480">Using the JDBC Driver</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="build_unix_sql.html#idp298192">Building the ODBC Driver</a>
+              <a href="build_unix_sql.html#idp367520">Building the ODBC Driver</a>
             </span>
           </dt>
           <dt>
@@ -380,39 +380,57 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp244560"></a>Enabling Extensions</h3>
+              <h3 class="title"><a id="idp275744"></a>Enabling Extensions</h3>
             </div>
           </div>
         </div>
         <p> 
-            The Berkeley DB SQL API provides extensions such as
-            full text search and R-Tree index. By default, these
-            extensions are disabled. To enable an extension in the
-            Berkeley DB SQL interface, specify the related option as
-            an argument to the configure script using the standard
-            environment variable, CPPFLAGS. 
-        </p>
+            The Berkeley DB SQL API provides extensions such as full text
+            search, R-Tree index, user authentication and key-store based
+            user authentication. By default, these extensions are disabled.
+            To enable an extension in the Berkeley DB SQL interface,
+            specify the related option as an argument to the configure
+            script using the standard environment variable, CPPFLAGS.
+         </p>
         <div class="variablelist">
           <dl>
             <dt>
               <span class="term">SQLITE_ENABLE_FTS3</span>
             </dt>
             <dd>
-                    Enable building the Berkeley DB full text
-                    search layer 
+                    Enable building the Berkeley DB full text search layer. 
                 </dd>
             <dt>
               <span class="term">SQLITE_ENABLE_RTREE</span>
             </dt>
-            <dd> Enables the Berkeley DB R-Tree layer.
+            <dd>Enables the Berkeley DB R-Tree layer.
+              </dd>
+            <dt>
+              <span class="term">BDBSQL_USER_AUTHENTICATION</span>
+            </dt>
+            <dd>
+                    Enables the Berkeley DB user authentication module. 
+                </dd>
+            <dt>
+              <span class="term">BDBSQL_USER_AUTHENTICATION_KEYSTORE</span>
+            </dt>
+            <dd>
+                    Enables the Berkeley DB key-store based user
+                    authentication module. The BDB encryption must
+                    also be enabled. 
                 </dd>
           </dl>
         </div>
         <p> 
             See the SQLite Documentation for more information on
-            <a class="ulink" href="http://www.sqlite.org/fts3.html" target="_top">full text
-            search</a> and <a class="ulink" href="http://www.sqlite.org/rtree.html" target="_top">R-Tree</a>.
-        </p>
+            <a class="ulink" href="http://www.sqlite.org/fts3.html" target="_top">
+            Full Text Search</a> and  
+            <a class="ulink" href="http://www.sqlite.org/rtree.html" target="_top">R-Tree</a>.
+         </p>
+        <p>
+                For more information on user authentication and key-store based user
+                authentication, see <em class="citetitle">Berkeley DB Getting Started with the SQL APIs</em>.
+         </p>
       </div>
       <div class="sect2" lang="en" xml:lang="en">
         <div class="titlepage">
@@ -453,7 +471,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp264944"></a>Using the JDBC Driver</h3>
+              <h3 class="title"><a id="idp326480"></a>Using the JDBC Driver</h3>
             </div>
           </div>
         </div>
@@ -465,7 +483,7 @@
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp266568"></a>Downloading JDBC Sample Code</h4>
+                <h4 class="title"><a id="idp327280"></a>Downloading JDBC Sample Code</h4>
               </div>
             </div>
           </div>
@@ -482,7 +500,7 @@
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp259600"></a>Modifying Sample Code</h4>
+                <h4 class="title"><a id="idp305536"></a>Modifying Sample Code</h4>
               </div>
             </div>
           </div>
@@ -553,7 +571,7 @@
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp254584"></a>Building and Running the JDBC Sample code</h4>
+                <h4 class="title"><a id="idp295040"></a>Building and Running the JDBC Sample code</h4>
               </div>
             </div>
           </div>
@@ -618,7 +636,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp298192"></a>Building the ODBC Driver</h3>
+              <h3 class="title"><a id="idp367520"></a>Building the ODBC Driver</h3>
             </div>
           </div>
         </div>
@@ -629,7 +647,7 @@
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp291272"></a>Configuring Your System</h4>
+                <h4 class="title"><a id="idp356160"></a>Configuring Your System</h4>
               </div>
             </div>
           </div>
@@ -656,22 +674,37 @@
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp302984"></a>Building the Library</h4>
+                <h4 class="title"><a id="idp376528"></a>Building the Library</h4>
               </div>
             </div>
           </div>
           <p> 
-                To build the library, do the following: 
+                To build the library without encryption, do the following: 
             </p>
           <pre class="programlisting">
-    $ cd db-6.1.XX/build_unix
+    $ cd db-6.2.XX/build_unix
     $ CFLAGS="-fPIC" ../dist/configure --enable-sql_compat --disable-shared
     $ make
     $ cd ../lang/sql/odbc
     $ CFLAGS="-D_HAVE_SQLITE_CONFIG_H \
               -I../../../build_unix -I../../../build_unix/sql \
+              -I../../../src/dbinc -I../sqlite/src -I../../../src" \
+              LDFLAGS="../../../build_unix/libdb-6.2.a" \
+             ./configure --with-sqlite3=../generated
+    $ make</pre>
+          <p> 
+                To build the library with encryption, do the following: 
+            </p>
+          <pre class="programlisting">
+    $ cd db-6.2.XX/build_unix
+    $ CFLAGS="-fPIC" ../dist/configure --enable-sql_compat \
+	      --disable-shared --with-cryptography=yes
+    $ make
+    $ cd ../lang/sql/odbc
+    $ CFLAGS="-D_HAVE_SQLITE_CONFIG_H -DSQLITE_HAS_CODEC=1 \
+              -I../../../build_unix -I../../../build_unix/sql \
               -I../../../src/dbinc -I../sqlite/src" \
-              LDFLAGS="../../../build_unix/libdb-6.1.a" \
+              LDFLAGS="../../../build_unix/libdb-6.2.a" \
              ./configure --with-sqlite3=../generated
     $ make</pre>
           <p>
@@ -685,7 +718,7 @@
                 The warning states: <code class="literal">Warning: Linking the
                 shared library libsqlite3odbc.la against the
                 static library
-                ../../build_unix/libdb-6.1.a is not
+                ../../build_unix/libdb-6.2.a is not
                 portable!</code>. It is generally safe to
                 ignore the warning when using the generated library.
             </p>
@@ -694,7 +727,7 @@
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp306424"></a>Testing the ODBC Driver</h4>
+                <h4 class="title"><a id="idp382192"></a>Testing the ODBC Driver</h4>
               </div>
             </div>
           </div>
@@ -722,7 +755,7 @@
     $ /path/to/Berkeley DB/build_unix/sqlite3 mytest.db
     dbsql&gt; CREATE TABLE t1(x);
     dbsql&gt; .quit
-    $ DataManager </pre>
+    $ odbcinst -m </pre>
                 <p> 
                         The final step opens a GUI application that
                         displays ODBC data sources on a system. You

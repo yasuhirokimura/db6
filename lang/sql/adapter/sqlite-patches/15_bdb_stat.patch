@@ -1,25 +1,25 @@
 --- Makefile.in
 +++ Makefile.in
-@@ -163,8 +163,8 @@
+@@ -167,8 +167,8 @@
  #
  LIBOBJS0 = alter.lo analyze.lo attach.lo auth.lo \
           backup.lo bitvec.lo btmutex.lo btree.lo build.lo \
--         callback.lo complete.lo ctime.lo date.lo db_pragma.lo delete.lo \
--         expr.lo fault.lo fkey.lo \
-+         callback.lo complete.lo ctime.lo date.lo db_pragma.lo db_shell.lo \
-+         delete.lo expr.lo fault.lo fkey.lo \
+-         callback.lo complete.lo ctime.lo date.lo dbstat.lo db_pragma.lo \
+-         delete.lo expr.lo fault.lo fkey.lo \
++         callback.lo complete.lo ctime.lo date.lo dbstat.lo db_pragma.lo \
++         db_shell.lo delete.lo expr.lo fault.lo fkey.lo \
           fts3.lo fts3_aux.lo fts3_expr.lo fts3_hash.lo fts3_icu.lo \
           fts3_porter.lo fts3_snippet.lo fts3_tokenizer.lo fts3_tokenizer1.lo \
           fts3_tokenize_vtab.lo \
-@@ -210,6 +210,7 @@
-   $(TOP)/src/ctime.c \
+@@ -215,6 +215,7 @@
    $(TOP)/src/date.c \
+   $(TOP)/src/dbstat.c \
    $(TOP)/../adapter/db_pragma.c \
 +  $(TOP)/../adapter/db_shell.c \
    $(TOP)/src/delete.c \
    $(TOP)/src/expr.c \
    $(TOP)/src/fault.c \
-@@ -620,6 +621,10 @@
+@@ -662,6 +662,10 @@
  		$(TOP)/../adapter/btreeInt.h
  	$(LTCOMPILE) $(TEMP_STORE) -c $(TOP)/../adapter/db_pragma.c
  
@@ -32,9 +32,7 @@
  
 --- src/shell.c
 +++ src/shell.c
-@@ -1600,6 +1600,17 @@
-   "                         LIKE pattern TABLE.\n"
-   ".separator STRING      Change separator used by output mode and .import\n"
+@@ -1850,4 +1850,15 @@
    ".show                  Show the current values for various settings\n"
 +  ".stat ?ITEM?           Print statistics\n"
 +  "                         If ITEM=':env:', print statistics for the\n"
@@ -47,7 +45,7 @@
 +  "                         the Berkeley DB environment followed by\n"
 +  "                         statistics for all tables and indexes within the\n"
 +  "                         database.\n"
-   ".stats ON|OFF          Turn stats on or off\n"
+   ".stats on|off          Turn stats on or off\n"
    ".tables ?TABLE?        List names of tables\n"
    "                         If TABLE specified, only list tables matching\n"
 @@ -2685,6 +2696,27 @@
@@ -76,11 +74,11 @@
 +      rc = bdbSqlDbStatPrint(p->db, p->out, azArg[1]);
 +  }else
  
-   if( c=='s' && strncmp(azArg[0], "stats", n)==0 && nArg>1 && nArg<3 ){
-     p->statsOn = booleanValue(azArg[1]);
+   if( c=='s' && strncmp(azArg[0], "stats", n)==0 ){
+    if( nArg==2 ){
 --- tool/mksqlite3c.tcl
 +++ tool/mksqlite3c.tcl
-@@ -270,6 +270,7 @@
+@@ -309,6 +309,7 @@
     btree.c
     backup.c
     db_pragma.c

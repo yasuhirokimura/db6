@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -130,7 +130,11 @@ DbEnv::rep_process_message(Dbt *control, Dbt *rec, int envid,
                  client is unable to synchronize with the new master. This is possibly because the client
                  has turned off automatic internal initialization by setting the
                  <a class="link" href="repconfig.html#config_DB_REP_CONF_AUTOINIT">DB_REP_CONF_AUTOINIT</a> 
-                 flag to <code class="literal">0</code>.
+                 flag to <code class="literal">0</code>. Another possible reason is that
+                 an unencrypted client is attempting to join a replication
+                 group where encryption is use, or an encrypted client is
+                 attempting to join a replication group where encryption is
+                 not in use.
             </p>
           </li>
           <li>
@@ -177,7 +181,7 @@ DbEnv::rep_process_message(Dbt *control, Dbt *rec, int envid,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp62700496"></a>Parameters</h3>
+              <h3 class="title"><a id="idp106794208"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -185,7 +189,7 @@ DbEnv::rep_process_message(Dbt *control, Dbt *rec, int envid,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp62699848"></a>control</h4>
+                <h4 class="title"><a id="idp106792560"></a>control</h4>
               </div>
             </div>
           </div>
@@ -200,7 +204,7 @@ See the <a class="xref" href="reptransport.html" title="DbEnv::rep_set_transport
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp62715136"></a>rec</h4>
+                <h4 class="title"><a id="idp106807312"></a>rec</h4>
               </div>
             </div>
           </div>
@@ -215,7 +219,7 @@ See the <a class="xref" href="reptransport.html" title="DbEnv::rep_set_transport
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp62716800"></a>envid</h4>
+                <h4 class="title"><a id="idp106810416"></a>envid</h4>
               </div>
             </div>
           </div>
@@ -230,7 +234,7 @@ See the <a class="xref" href="reptransport.html" title="DbEnv::rep_set_transport
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp62719264"></a>ret_lsnp</h4>
+                <h4 class="title"><a id="idp106815376"></a>ret_lsnp</h4>
               </div>
             </div>
           </div>
@@ -253,7 +257,7 @@ See the <a class="xref" href="reptransport.html" title="DbEnv::rep_set_transport
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp62695352"></a>Errors</h3>
+              <h3 class="title"><a id="idp106746816"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -272,7 +276,7 @@ See the <a class="xref" href="reptransport.html" title="DbEnv::rep_set_transport
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp62727696"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp106834048"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -291,7 +295,7 @@ See the <a class="xref" href="reptransport.html" title="DbEnv::rep_set_transport
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp62707208"></a>Class</h3>
+              <h3 class="title"><a id="idp106826368"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -303,7 +307,7 @@ See the <a class="xref" href="reptransport.html" title="DbEnv::rep_set_transport
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp62691512"></a>See Also</h3>
+              <h3 class="title"><a id="idp106824720"></a>See Also</h3>
             </div>
           </div>
         </div>

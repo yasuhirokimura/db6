@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -79,11 +79,16 @@ Db::verify(const char *file,
             </span>
         </span>
     </p>
+      <p>
+         When called on a database that has been opened with sliced
+         support, the <code class="methodname">Db::verify()</code> method is
+         automatically called on each supporting slice database. 
+     </p>
       <div class="sect2" lang="en" xml:lang="en">
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp59155784"></a>Parameters</h3>
+              <h3 class="title"><a id="idp100328704"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -91,7 +96,7 @@ Db::verify(const char *file,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp59152000"></a>file</h4>
+                <h4 class="title"><a id="idp100360384"></a>file</h4>
               </div>
             </div>
           </div>
@@ -104,7 +109,7 @@ Db::verify(const char *file,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp59158944"></a>database</h4>
+                <h4 class="title"><a id="idp100308000"></a>database</h4>
               </div>
             </div>
           </div>
@@ -123,7 +128,7 @@ Db::verify(const char *file,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp59160632"></a>outfile</h4>
+                <h4 class="title"><a id="idp100346128"></a>outfile</h4>
               </div>
             </div>
           </div>
@@ -136,7 +141,7 @@ Db::verify(const char *file,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp59147872"></a>flags</h4>
+                <h4 class="title"><a id="idp100314816"></a>flags</h4>
               </div>
             </div>
           </div>
@@ -256,7 +261,7 @@ Db::verify(const char *file,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp59186776"></a>Environment Variables</h3>
+              <h3 class="title"><a id="idp100385872"></a>Environment Variables</h3>
             </div>
           </div>
         </div>
@@ -276,7 +281,7 @@ Db::verify(const char *file,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp59168888"></a>Errors</h3>
+              <h3 class="title"><a id="idp100352240"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -294,7 +299,7 @@ Db::verify(const char *file,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp59183504"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp100401680"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -307,7 +312,7 @@ Db::verify(const char *file,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp59181344"></a>ENOENT</h4>
+                <h4 class="title"><a id="idp100345840"></a>ENOENT</h4>
               </div>
             </div>
           </div>
@@ -320,7 +325,7 @@ Db::verify(const char *file,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp59191320"></a>Class</h3>
+              <h3 class="title"><a id="idp100376224"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -332,7 +337,7 @@ Db::verify(const char *file,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp59191128"></a>See Also</h3>
+              <h3 class="title"><a id="idp100386288"></a>See Also</h3>
             </div>
           </div>
         </div>

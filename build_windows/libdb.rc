@@ -1,6 +1,6 @@
 1 VERSIONINFO
- FILEVERSION 6,0,1,19
- PRODUCTVERSION 6,0,1,19
+ FILEVERSION 6,0,2,23
+ PRODUCTVERSION 6,0,2,23
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -17,13 +17,13 @@ BEGIN
         BLOCK "040904b0"
         BEGIN
             VALUE "CompanyName", "Oracle\0"
-            VALUE "FileDescription", "Berkeley DB 6.1 DLL\0"
-            VALUE "FileVersion", "6.1.19\0"
-            VALUE "InternalName", "libdb61.dll\0"
-            VALUE "LegalCopyright", "Copyright © Oracle 1997, 2014\0"
-            VALUE "OriginalFilename", "libdb61.dll\0"
+            VALUE "FileDescription", "Berkeley DB 6.2 DLL\0"
+            VALUE "FileVersion", "6.2.23\0"
+            VALUE "InternalName", "libdb62.dll\0"
+            VALUE "LegalCopyright", "Copyright © Oracle 1997, 2016\0"
+            VALUE "OriginalFilename", "libdb62.dll\0"
             VALUE "ProductName", "Oracle libdb\0"
-            VALUE "ProductVersion", "6.1.19\0"
+            VALUE "ProductVersion", "6.2.23\0"
         END
     END
     BLOCK "VarFileInfo"

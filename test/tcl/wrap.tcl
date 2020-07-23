@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2000, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2000, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -11,7 +11,7 @@
 
 source ./include.tcl
 source $test_path/testutils.tcl
-source $tcl_utils/multi_proc_utils.tcl
+source $tcl_utils/common_test_utils.tcl
 
 # Arguments:
 if { $argc < 2 } {

@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <title>The Replication APIs</title>
+    <title>Replication Mechanisms</title>
     <link rel="stylesheet" href="gettingStarted.css" type="text/css" />
     <meta name="generator" content="DocBook XSL Stylesheets V1.73.2" />
     <link rel="start" href="index.html" title="Getting Started with Replicated Berkeley DB Applications" />
@@ -14,11 +14,11 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
-          <th colspan="3" align="center">The Replication APIs</th>
+          <th colspan="3" align="center">Replication Mechanisms</th>
         </tr>
         <tr>
           <td width="20%" align="left"><a accesskey="p" href="repadvantage.html">Prev</a> </td>
@@ -32,7 +32,7 @@
       <div class="titlepage">
         <div>
           <div>
-            <h2 class="title" style="clear: both"><a id="apioverview"></a>The Replication APIs</h2>
+            <h2 class="title" style="clear: both"><a id="apioverview"></a>Replication Mechanisms</h2>
           </div>
         </div>
       </div>
@@ -45,28 +45,38 @@
           </dt>
           <dt>
             <span class="sect2">
+              <a href="apioverview.html#writefor_overview">Write Forwarding Overview</a>
+            </span>
+          </dt>
+          <dt>
+            <span class="sect2">
               <a href="apioverview.html#repapioverview">Replication Base API Overview</a>
             </span>
           </dt>
         </dl>
       </div>
       <p>
-                There are two ways that you can choose to implement
+                There are three ways that you can choose to implement
                 replication in your transactional application. The first,
                 and preferred, mechanism is to use the pre-packaged
                 Replication Manager that comes with the
                 DB distribution. This framework should be sufficient
-                for most customers.
+                for most customers.		
+			</p>
+      <p>
+                For applications with simple data and transaction models,
+                Replication Manager provides automatic write forwarding as a configurable
+                option.                
             </p>
       <p>
-                If for some reason the Replication Manager
+                If for some reason using Replication Manager or write forwarding
                 does not meet your application's technical requirements,
                 you will have to use the Replication Base APIs available
-                through the Berkeley DB  library to write your own custom
+                through the Berkeley DB library to write your own custom
                 replication framework. 
             </p>
       <p>
-                Both of these approaches are described in slightly greater
+                These approaches are described in slightly greater
                 detail in this section. The bulk of the chapters later in
                 this book are dedicated to these two replication
                 implementation mechanisms. 
@@ -141,6 +151,36 @@
                     Replication Manager, you must write implement replication
                     using the DB Replication Base APIs. See
                     the next section for introductory details.
+                </p>
+      </div>
+      <div class="sect2" lang="en" xml:lang="en">
+        <div class="titlepage">
+          <div>
+            <div>
+              <h3 class="title"><a id="writefor_overview"></a>Write Forwarding Overview</h3>
+            </div>
+          </div>
+        </div>
+        <p>
+                   By default, write operations cannot be performed on a
+                   replication client site. Replication Manager provides a configurable
+                   option that allows forwarding of simple client put and delete 
+                   operations to the master site for processing. These operations must 
+                   use an implicit NULL transaction ID to be forwarded. Any other write
+                   operation that specifies a non-NULL transaction or uses a cursor 
+                    
+                   <span>throws a DatabaseException.</span> 
+                   This option is turned off by default. 
+                </p>
+        <p>
+                   The master must have an open database handle for the database
+                   on which a forwarded write operation is being performed.
+                   All sites in the replication group should have the same value 
+                   for this configuration option. 
+                </p>
+        <p>
+                   For more information, see 
+                   <a class="xref" href="writeforwarding.html" title="Chapter 5. Configuring for Write Forwarding">Configuring for Write Forwarding</a>.
                 </p>
       </div>
       <div class="sect2" lang="en" xml:lang="en">

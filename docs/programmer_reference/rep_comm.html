@@ -7,14 +7,14 @@
     <link rel="stylesheet" href="gettingStarted.css" type="text/css" />
     <meta name="generator" content="DocBook XSL Stylesheets V1.73.2" />
     <link rel="start" href="index.html" title="Berkeley DB Programmer's Reference Guide" />
-    <link rel="up" href="rep.html" title="Chapter 12.  Berkeley DB Replication" />
+    <link rel="up" href="rep.html" title="Chapter 13.  Berkeley DB Replication" />
     <link rel="prev" href="rep_base_meth.html" title="Base API methods" />
     <link rel="next" href="rep_newsite.html" title="Connecting to a new site" />
   </head>
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -22,7 +22,7 @@
         </tr>
         <tr>
           <td width="20%" align="left"><a accesskey="p" href="rep_base_meth.html">Prev</a> </td>
-          <th width="60%" align="center">Chapter 12.  Berkeley DB Replication </th>
+          <th width="60%" align="center">Chapter 13.  Berkeley DB Replication </th>
           <td width="20%" align="right"> <a accesskey="n" href="rep_newsite.html">Next</a></td>
         </tr>
       </table>
@@ -38,7 +38,18 @@
       </div>
       <p>
         Replication Manager provides a built-in communications
-        infrastructure.
+        infrastructure that uses IPv6 whenever possible but also
+        supports IPv4. When multiple addresses are defined for a
+        site, Replication Manager attempts connections first
+        on any IPv6 addresses and then on any IPv4 addresses until
+        one succeeds. Replication Manager relies on platform
+        configuration and defaults to govern use of IPv4-mapped IPv6
+        addresses in cases where one site is using IPv6 and the other
+        site is using IPv4. If additional control over connections is
+        required, a Replication Manager application can use the 
+        <a href="../api_reference/C/repmgrset_socket.html" class="olink">DB_ENV-&gt;repmgr_set_socket()</a> method to specify a socket callback that
+        determines whether a particular socket should be used
+        in a connection attempt.        
     </p>
       <p>
         Base API applications must provide their own communications

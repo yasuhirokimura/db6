@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -75,18 +75,12 @@ proc recd002 { method {select 0} args} {
 				return
 			}
 			# Look for incompatible configurations of blob.
-			foreach c { "-encryptaes" "-encrypt" "-compress" \
-			    "-dup" "-dupsort" "-read_uncommitted" \
-			    "-multiversion" } {
+			foreach c { "-compress" "-dup" "-dupsort" \
+			    "-read_uncommitted" "-multiversion" } {
 				if { [lsearch -exact $args $c] != -1 } {
 					puts "Recd002 skipping $conf for blob"
 					return
 				}
-			}
-			if { [lsearch -exact $args "-chksum"] != -1 } {
-				set indx [lsearch -exact $args "-chksum"]
-				set args [lreplace $args $indx $indx]
-				puts "Recd002 ignoring -chksum for blob"
 			}
 			# Set up the blob argument.
 			if { $conf == "-log_blob" } {

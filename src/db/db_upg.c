@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -35,15 +35,17 @@ __db_upgrade_pp(dbp, fname, flags)
 
 	env = dbp->env;
 
-	/*
-	 * !!!
-	 * The actual argument checking is simple, do it inline.
-	 */
 	if ((ret = __db_fchk(env, "DB->upgrade", flags, DB_DUPSORT)) != 0)
 		return (ret);
 
 	ENV_ENTER(env, ip);
 	ret = __db_upgrade(dbp, fname, flags);
+
+#ifdef HAVE_SLICES
+	if (ret == 0)
+		ret = __db_slice_upgrade(dbp, fname, flags);
+#endif
+
 	ENV_LEAVE(env, ip);
 	return (ret);
 #else
@@ -217,9 +219,9 @@ __db_upgrade(dbp, fname, flags)
 				F_SET(dbp, DB_AM_CHKSUM);
 			if (meta->encrypt_alg != 0) {
 				if (!CRYPTO_ON(dbp->env)) {
+					ret = USR_ERR(env, EINVAL);
 					__db_errx(env, DB_STR("0777",
 "Attempt to upgrade an encrypted database without providing a password."));
-					ret = EINVAL;
 					goto err;
 				}
 				F_SET(dbp, DB_AM_ENCRYPT);
@@ -322,9 +324,9 @@ __db_upgrade(dbp, fname, flags)
 			memcpy(&tmpflags, &meta->encrypt_alg, sizeof(u_int8_t));
 			if (tmpflags != 0) {
 				if (!CRYPTO_ON(dbp->env)) {
+					ret = USR_ERR(env, EINVAL);
 					__db_errx(env, DB_STR("0667",
 "Attempt to upgrade an encrypted database without providing a password."));
-					ret = EINVAL;
 					goto err;
 				}
 				F_SET(dbp, DB_AM_ENCRYPT);
@@ -340,6 +342,8 @@ __db_upgrade(dbp, fname, flags)
 			 * page pass only updates DB_HASH_UNSORTED pages
 			 * in-place, and the mpool file is only used to read
 			 * OFFPAGE items.
+			 * XXX DB_HASH_UNSORTED no longer exists. since ~db-4.4.
+			 * Is this code, and the lesser versions above, needed?
 			 */
 			use_mp_open = 1;
 			if ((ret = __os_closehandle(env, fhp)) != 0)
@@ -373,9 +377,9 @@ __db_upgrade(dbp, fname, flags)
 				F_SET(dbp, DB_AM_CHKSUM);
 			if (meta->encrypt_alg != 0) {
 				if (!CRYPTO_ON(dbp->env)) {
+					ret = USR_ERR(env, EINVAL);
 					__db_errx(env, DB_STR("0778",
 "Attempt to upgrade an encrypted database without providing a password."));
-					ret = EINVAL;
 					goto err;
 				}
 				F_SET(dbp, DB_AM_ENCRYPT);
@@ -413,9 +417,9 @@ __db_upgrade(dbp, fname, flags)
 				F_SET(dbp, DB_AM_CHKSUM);
 			if (meta->encrypt_alg != 0) {
 				if (!CRYPTO_ON(dbp->env)) {
+					ret = USR_ERR(env, EINVAL);
 					__db_errx(env, DB_STR("0779",
 "Attempt to upgrade an encrypted database without providing a password."));
-					ret = EINVAL;
 					goto err;
 				}
 				F_SET(dbp, DB_AM_ENCRYPT);
@@ -482,7 +486,7 @@ __db_upgrade(dbp, fname, flags)
 			    "%s: unrecognized file type", "%s"), real_name);
 			break;
 		}
-		ret = EINVAL;
+		ret = USR_ERR(env, EINVAL);
 		goto err;
 	}
 

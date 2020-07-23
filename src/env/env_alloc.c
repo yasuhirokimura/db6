@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -218,6 +218,14 @@ __env_alloc(infop, len, retp)
 #ifdef HAVE_MUTEX_SUPPORT
 	MUTEX_REQUIRED(env, infop->mtx_alloc);
 #endif
+
+	if (len == 0) {
+#ifdef DIAGNOSTIC
+		__db_errx(env, DB_STR("1600", "allocation of 0-length block"));
+		__os_stack(env);
+#endif
+		return (EINVAL);
+	}
 
 	PERFMON3(env, mpool, env_alloc, len, infop->id, infop->type);
 	/*
@@ -511,6 +519,7 @@ __env_alloc_extend(infop, ptr, lenp)
 	head = infop->head;
 
 	p = ptr;
+	*lenp = DB_ALIGN(*lenp, sizeof(uintmax_t));
 	len = *lenp;
 	elp = (ALLOC_ELEMENT *)(p - sizeof(ALLOC_ELEMENT));
 #ifdef DIAGNOSTIC

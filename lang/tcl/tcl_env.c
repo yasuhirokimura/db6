@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1999, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1999, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -31,6 +31,8 @@ static int  env_GetOpenFlag __P((Tcl_Interp *,
     int, Tcl_Obj * CONST*, DB_ENV *));
 static int  env_GetLockDetect __P((Tcl_Interp *,
     int, Tcl_Obj * CONST*, DB_ENV *));
+static int  env_GetSlices __P((Tcl_Interp *,
+    int, Tcl_Obj * CONST*, DB_ENV *, Tcl_Obj **));
 static int  env_GetTimeout __P((Tcl_Interp *, int, Tcl_Obj * CONST*, DB_ENV *));
 static int  env_GetVerbose __P((Tcl_Interp *, int, Tcl_Obj * CONST*, DB_ENV *));
 
@@ -58,6 +60,7 @@ env_Cmd(clientData, interp, objc, objv)
 		"event_count",
 		"failchk",
 		"id_reset",
+		"is_sliced",
 		"lock_detect",
 		"lock_id",
 		"lock_id_free",
@@ -88,6 +91,7 @@ env_Cmd(clientData, interp, objc, objv)
 		"mpool_trickle",
 		"msgfile",
 		"msgfile_close",
+		"msgpfx",
 		"mutex",
 		"mutex_failchk_timeout",
 		"mutex_free",
@@ -180,8 +184,12 @@ env_Cmd(clientData, interp, objc, objv)
 		"get_mp_mtxcount",
 		"get_mp_pagesize",
 		"get_mp_tablesize",
+		"get_msgpfx",
 		"get_open_flags",
+		"get_region_dir",
 		"get_shm_key",
+		"get_slice_count",
+		"get_slices",
 		"get_tas_spins",
 		"get_thread_count",
 		"get_timeout",
@@ -209,6 +217,7 @@ env_Cmd(clientData, interp, objc, objv)
 		ENVEVENTCOUNT,
 		ENVFAILCHK,
 		ENVIDRESET,
+		ENVISSLICED,
 		ENVLKDETECT,
 		ENVLKID,
 		ENVLKFREEID,
@@ -239,6 +248,7 @@ env_Cmd(clientData, interp, objc, objv)
 		ENVTRICKLE,
 		ENVMSGFILE,
 		ENVMSGFILECLOSE,
+		ENVMSGPFX,
 		ENVMUTEX,
 		ENVMUTFAILCHKTIMEOUT,
 		ENVMUTFREE,
@@ -331,8 +341,12 @@ env_Cmd(clientData, interp, objc, objv)
 		ENVGETMPMTXCOUNT,
 		ENVGETMPPAGESIZE,
 		ENVGETMPTABLESIZE,
+		ENVGETMSGPFX,
 		ENVGETOPENFLAG,
+		ENVGETREGIONDIR,
 		ENVGETSHMKEY,
+		ENVGETSLICECNT,
+		ENVGETSLICES,
 		ENVGETTASSPINS,
 		ENVGETTHREADCOUNT,
 		ENVGETTIMEOUT,
@@ -422,6 +436,12 @@ env_Cmd(clientData, interp, objc, objv)
 		break;
 	case ENVIDRESET:
 		result = tcl_EnvIdReset(interp, objc, objv, dbenv);
+		break;
+	case ENVISSLICED:
+		if (dbenv->slice_cnt > 0)
+			res = Tcl_NewIntObj(1);
+		else
+			res = Tcl_NewIntObj(0);
 		break;
 	case ENVLSNRESET:
 		result = tcl_EnvLsnReset(interp, objc, objv, dbenv);
@@ -841,7 +861,7 @@ env_Cmd(clientData, interp, objc, objv)
 		 * One arg for this.  Error if different.
 		 */
 		if (objc != 3) {
-			Tcl_WrongNumArgs(interp, 2, objv, "pfx");
+			Tcl_WrongNumArgs(interp, 2, objv, "errpfx");
 			return (TCL_ERROR);
 		}
 		strarg = Tcl_GetStringFromObj(objv[2], NULL);
@@ -870,6 +890,17 @@ env_Cmd(clientData, interp, objc, objv)
 		if ((result = _ReturnSetup(interp, ret, DB_RETOK_STD(ret),
 		    "env close msgfile")) == TCL_OK)
 			res = Tcl_NewIntObj(ret);
+		break;
+	case ENVMSGPFX:
+		/*
+		 * One arg for this.  Error if different.
+		 */
+		if (objc != 3) {
+			Tcl_WrongNumArgs(interp, 2, objv, "msgpfx");
+			return (TCL_ERROR);
+		}
+		strarg = Tcl_GetStringFromObj(objv[2], NULL);
+		result = tcl_EnvSetMsgpfx(interp, dbenv, envip, strarg);
 		break;
 	case ENVSETFLAGS:
 		/*
@@ -915,7 +946,7 @@ env_Cmd(clientData, interp, objc, objv)
 			Tcl_WrongNumArgs(interp, 1, objv, NULL);
 			return (TCL_ERROR);
 		}
-		ret = dbenv->get_blob_dir(dbenv, &strval);
+		ret = dbenv->get_ext_file_dir(dbenv, &strval);
 		if ((result = _ReturnSetup(interp, ret, DB_RETOK_STD(ret),
 		    "env get_blob_dir")) == TCL_OK)
 			res = NewStringObj(strval,
@@ -926,7 +957,7 @@ env_Cmd(clientData, interp, objc, objv)
 			Tcl_WrongNumArgs(interp, 1, objv, NULL);
 			return (TCL_ERROR);
 		}
-		ret = dbenv->get_blob_threshold(dbenv, &value);
+		ret = dbenv->get_ext_file_threshold(dbenv, &value);
 		if ((result = _ReturnSetup(interp, ret, DB_RETOK_STD(ret),
 		    "env get_blob_threshold")) == TCL_OK)
 			res = Tcl_NewLongObj((long)value);
@@ -1247,8 +1278,26 @@ env_Cmd(clientData, interp, objc, objv)
 		    "env get_mp_tablesize")) == TCL_OK)
 			res = Tcl_NewLongObj((long)value);
 		break;
+	case ENVGETMSGPFX:
+		if (objc != 2) {
+			Tcl_WrongNumArgs(interp, 1, objv, NULL);
+			return (TCL_ERROR);
+		}
+		dbenv->get_msgpfx(dbenv, &strval);
+		res = NewStringObj(strval, strlen(strval));
+		break;
 	case ENVGETOPENFLAG:
 		result = env_GetOpenFlag(interp, objc, objv, dbenv);
+		break;
+	case ENVGETREGIONDIR:
+		if (objc != 2) {
+			Tcl_WrongNumArgs(interp, 1, objv, NULL);
+			return (TCL_ERROR);
+		}
+		ret = dbenv->get_region_dir(dbenv, &strval);
+		if ((result = _ReturnSetup(interp, ret, DB_RETOK_STD(ret),
+			"env get_region_dir")) == TCL_OK)
+			res = NewStringObj(strval, strlen(strval));
 		break;
 	case ENVGETSHMKEY:
 		if (objc != 2) {
@@ -1259,6 +1308,19 @@ env_Cmd(clientData, interp, objc, objv)
 		if ((result = _ReturnSetup(interp, ret, DB_RETOK_STD(ret),
 		    "env shm_key")) == TCL_OK)
 			res = Tcl_NewLongObj(shm_key);
+		break;
+	case ENVGETSLICECNT:
+		if (objc != 2) {
+			Tcl_WrongNumArgs(interp, 1, objv, NULL);
+			return (TCL_ERROR);
+		}
+		ret = dbenv->get_slice_count(dbenv, &value);
+		if ((result = _ReturnSetup(interp, ret, DB_RETOK_STD(ret),
+		    "env get_slice_count")) == TCL_OK)
+			res = Tcl_NewLongObj((long)value);
+		break;
+	case ENVGETSLICES:
+		result = env_GetSlices(interp, objc, objv, dbenv, &res);
 		break;
 	case ENVGETTASSPINS:
 		if (objc != 2) {
@@ -1360,7 +1422,7 @@ env_Cmd(clientData, interp, objc, objv)
 			break;
 		}
 		result = _GetUInt32(interp, objv[2], &bytes);
-		ret = dbenv->set_blob_threshold(dbenv, bytes, 0);
+		ret = dbenv->set_ext_file_threshold(dbenv, bytes, 0);
 		result = _ReturnSetup(interp, ret, DB_RETOK_STD(ret),
 		    "env set_blob_threshold");
 		break;
@@ -1440,6 +1502,7 @@ tcl_EnvRemove(interp, objc, objv)
 		"-home",
 		"-log_dir",
 		"-metadata_dir",
+		"-region_dir",
 		"-tmp_dir",
 		"-use_environ",
 		"-use_environ_root",
@@ -1456,6 +1519,7 @@ tcl_EnvRemove(interp, objc, objv)
 		ENVREM_HOME,
 		ENVREM_LOGDIR,
 		ENVREM_METADATADIR,
+		ENVREM_REGIONDIR,
 		ENVREM_TMPDIR,
 		ENVREM_USE_ENVIRON,
 		ENVREM_USE_ENVIRON_ROOT
@@ -1463,13 +1527,13 @@ tcl_EnvRemove(interp, objc, objv)
 	DB_ENV *dbenv;
 	u_int32_t cflag, enc_flag, flag, forceflag, sflag;
 	int i, optindex, result, ret;
-	char *datadir, *home, *logdir, *mddir, *passwd, *tmpdir;
+	char *datadir, *home, *logdir, *mddir, *regiondir, *passwd, *tmpdir;
 
 	result = TCL_OK;
 	cflag = flag = forceflag = sflag = 0;
 	home = NULL;
 	passwd = NULL;
-	datadir = logdir = mddir = tmpdir = NULL;
+	datadir = logdir = mddir = regiondir = tmpdir = NULL;
 	enc_flag = 0;
 
 	if (objc < 2) {
@@ -1559,6 +1623,15 @@ tcl_EnvRemove(interp, objc, objv)
 			}
 			mddir = Tcl_GetStringFromObj(objv[i++], NULL);
 			break;
+		case ENVREM_REGIONDIR:
+			if (i >= objc) {
+				Tcl_WrongNumArgs(interp, 2, objv,
+					"-region_dir dir");
+				result = TCL_ERROR;
+				break;
+			}
+			regiondir = Tcl_GetStringFromObj(objv[i++], NULL);
+			break;
 		case ENVREM_TMPDIR:
 			if (i >= objc) {
 				Tcl_WrongNumArgs(interp, 2, objv,
@@ -1603,6 +1676,14 @@ tcl_EnvRemove(interp, objc, objv)
 		ret = dbenv->set_metadata_dir(dbenv, mddir);
 		result = _ReturnSetup(interp, ret, DB_RETOK_STD(ret),
 		    "set_metadata_dir");
+		if (result != TCL_OK)
+			goto error;
+	}
+	if (regiondir != NULL) {
+		_debug_check();
+		ret = dbenv->set_region_dir(dbenv, regiondir);
+		result = _ReturnSetup(interp, ret, DB_RETOK_STD(ret),
+			"set_region_dir");
 		if (result != TCL_OK)
 			goto error;
 	}
@@ -1724,11 +1805,14 @@ tcl_EnvClose(interp, objc, objv, dbenv, envip)
 	enum closeoptions {
 		FORCESYNC
 	};
+	DB_ENV **dbenvs;
+	DBTCL_INFO *sliceip;
 	int i, result, ret, t_ret;
-	u_int32_t flags;
+	u_int32_t flags, j;
 
 	result = TCL_OK;
 	flags = 0;
+	dbenvs = NULL;
 	Tcl_SetResult(interp, "0", TCL_STATIC);
 	if (objc > 3) {
 		Tcl_WrongNumArgs(interp, 2, objv, "?-forcesync?");
@@ -1745,6 +1829,18 @@ tcl_EnvClose(interp, objc, objv, dbenv, envip)
 			case FORCESYNC:
 				flags |= DB_FORCESYNC;
 				break;
+		}
+	}
+
+	/* Free any Tcl slice handles. */
+	if (dbenv->slice_cnt != 0) {
+		if (dbenv->get_slices(dbenv, &dbenvs) == 0) {
+			for (j = 0; j < dbenv->slice_cnt; j++) {
+				sliceip = _PtrToInfo(dbenvs[j]);
+				if (sliceip != NULL) {
+					_EnvInfoDelete(interp, sliceip);
+				}
+			}
 		}
 	}
 
@@ -2041,6 +2137,7 @@ tcl_EnvVerbose(interp, dbenv, which, onoff)
 		"rep_test",
 		"repmgr_connfail",
 		"repmgr_misc",
+		"slice",
 		"wait",
 		NULL
 	};
@@ -2062,6 +2159,7 @@ tcl_EnvVerbose(interp, dbenv, which, onoff)
 		ENVVERB_REP_TEST,
 		ENVVERB_REPMGR_CONNFAIL,
 		ENVVERB_REPMGR_MISC,
+		ENVVERB_SLICE,
 		ENVVERB_WAITSFOR
 	};
 	static const char *verbonoff[] = {
@@ -2131,6 +2229,9 @@ tcl_EnvVerbose(interp, dbenv, which, onoff)
 		break;
 	case ENVVERB_REPMGR_MISC:
 		wh = DB_VERB_REPMGR_MISC;
+		break;
+	case ENVVERB_SLICE:
+		wh = DB_VERB_SLICE;
 		break;
 	case ENVVERB_WAITSFOR:
 		wh = DB_VERB_WAITSFOR;
@@ -2661,6 +2762,7 @@ tcl_EnvTest(interp, objc, objv, dbenv)
 	static const char *envtestat[] = {
 		"electinit",
 		"electvote1",
+		"no_chunks",
 		"no_pages",
 		"none",
 		"predestroy",
@@ -2678,6 +2780,7 @@ tcl_EnvTest(interp, objc, objv, dbenv)
 	enum envtestat {
 		ENVTEST_ELECTINIT,
 		ENVTEST_ELECTVOTE1,
+		ENVTEST_NO_CHUNKS,
 		ENVTEST_NO_PAGES,
 		ENVTEST_NONE,
 		ENVTEST_PREDESTROY,
@@ -2767,6 +2870,10 @@ tcl_EnvTest(interp, objc, objv, dbenv)
 	case ENVTEST_ELECTVOTE1:
 		DB_ASSERT(env, loc == &env->test_abort);
 		testval = DB_TEST_ELECTVOTE1;
+		break;
+	case ENVTEST_NO_CHUNKS:
+		DB_ASSERT(env, loc == &env->test_abort);
+		testval = DB_TEST_NO_CHUNKS;
 		break;
 	case ENVTEST_NO_PAGES:
 		DB_ASSERT(env, loc == &env->test_abort);
@@ -3284,9 +3391,10 @@ env_GetFlags(interp, objc, objv, dbenv)
 		for (i = 0; open_flags[i].flag != 0; i++)
 			if (LF_ISSET(open_flags[i].flag)) {
 				if (strlen(buf) > 0)
-					(void)strncat(buf, " ", sizeof(buf));
-				(void)strncat(
-				    buf, open_flags[i].arg, sizeof(buf) - 1);
+					(void)strncat(buf, " ",
+					    sizeof(buf) - (strlen(buf) + 1));
+				(void)strncat(buf, open_flags[i].arg,
+				    sizeof(buf) - (strlen(buf) + 1));
 			}
 
 		res = NewStringObj(buf, strlen(buf));
@@ -3350,9 +3458,10 @@ env_GetOpenFlag(interp, objc, objv, dbenv)
 		for (i = 0; open_flags[i].flag != 0; i++)
 			if (LF_ISSET(open_flags[i].flag)) {
 				if (strlen(buf) > 0)
-					(void)strncat(buf, " ", sizeof(buf));
-				(void)strncat(
-				    buf, open_flags[i].arg, sizeof(buf) - 1);
+					(void)strncat(buf, " ",
+					    sizeof(buf) - (strlen(buf) + 1));
+				(void)strncat(buf, open_flags[i].arg,
+				    sizeof(buf) - (strlen(buf) + 1));
 			}
 
 		res = NewStringObj(buf, strlen(buf));
@@ -3402,9 +3511,10 @@ tcl_EnvGetEncryptFlags(interp, objc, objv, dbenv)
 		for (i = 0; encrypt_flags[i].flag != 0; i++)
 			if (LF_ISSET(encrypt_flags[i].flag)) {
 				if (strlen(buf) > 0)
-					(void)strncat(buf, " ", sizeof(buf));
-				(void)strncat(
-				    buf, encrypt_flags[i].arg, sizeof(buf) -1);
+					(void)strncat(buf, " ",
+					    sizeof(buf) - (strlen(buf) + 1));
+				(void)strncat(buf, encrypt_flags[i].arg,
+				    sizeof(buf) - (strlen(buf) + 1));
 			}
 
 		res = NewStringObj(buf, strlen(buf));
@@ -3463,6 +3573,57 @@ env_GetLockDetect(interp, objc, objv, dbenv)
 
 	return (result);
 }
+/*
+ * env_GetSlices --
+ *	Implements the ENV->get_slices command.
+ */
+static int
+env_GetSlices(interp, objc, objv, dbenv, res)
+	Tcl_Interp *interp;		/* Interpreter */
+	int objc;			/* How many arguments? */
+	Tcl_Obj *CONST objv[];		/* The argument objects */
+	DB_ENV *dbenv;
+	Tcl_Obj **res;
+{
+	DB_ENV **dbenvs;
+	DBTCL_INFO *envip, *sliceip;
+	int i, result, ret;
+	char newname[DB_MAXPATHLEN];
+
+	result = TCL_OK;
+	envip = _PtrToInfo((void *)dbenv);
+	memset(newname, 0, sizeof(newname));
+	if (objc != 2) {
+		Tcl_WrongNumArgs(interp, 1, objv, NULL);
+		return (TCL_ERROR);
+	}
+	ret = dbenv->get_slices(dbenv, &dbenvs);
+	if ((result = _ReturnSetup(interp, ret, DB_RETOK_STD(ret),
+		"env get_slices")) == TCL_OK) {
+		*res = Tcl_NewListObj(0, NULL);
+		for (i = 0; result == TCL_OK
+		    && dbenvs != NULL && dbenvs[i] != NULL; i++) {
+			sliceip = _PtrToInfo(dbenvs[i]);
+			if (sliceip == NULL) {
+				snprintf(newname, sizeof(newname),
+				    "%s.slice%d", envip->i_name,
+				    envip->i_envsliceid);
+				envip->i_envsliceid++;
+				sliceip = _NewInfo(interp, NULL, newname, I_ENV);
+				(void)Tcl_CreateObjCommand(interp,
+				    newname,
+				    (Tcl_ObjCmdProc *)env_Cmd,
+				    (ClientData)(dbenvs[i]), NULL);
+				_SetInfoData(sliceip, dbenvs[i]);
+			}
+			result = Tcl_ListObjAppendElement(
+			    interp, *res, NewStringObj(
+			    sliceip->i_name, strlen(sliceip->i_name)));
+		}
+	}
+	return result;
+}
+
 
 /*
  * env_GetTimeout --
@@ -3549,6 +3710,7 @@ env_GetVerbose(interp, objc, objv, dbenv)
 		{ DB_VERB_REP_TEST, "rep_test" },
 		{ DB_VERB_REPMGR_CONNFAIL, "repmgr_connfail" },
 		{ DB_VERB_REPMGR_MISC, "repmgr_misc" },
+		{ DB_VERB_SLICE, "slice" },
 		{ DB_VERB_WAITSFOR, "wait" },
 		{ 0, NULL }
 	};
@@ -3722,6 +3884,46 @@ tcl_EnvSetErrpfx(interp, dbenv, ip, pfx)
 	}
 	if (ip->i_errpfx != NULL)
 		dbenv->set_errpfx(dbenv, ip->i_errpfx);
+	return (result);
+}
+
+/*
+ * PUBLIC: int tcl_EnvSetMsgpfx __P((Tcl_Interp *, DB_ENV *, DBTCL_INFO *,
+ * PUBLIC:    char *));
+ *
+ * tcl_EnvSetMsgpfx --
+ *	Implements the ENV->set_msgpfx command.
+ */
+int
+tcl_EnvSetMsgpfx(interp, dbenv, ip, pfx)
+	Tcl_Interp *interp;		/* Interpreter */
+	DB_ENV *dbenv;			/* Database pointer */
+	DBTCL_INFO *ip;			/* Our internal info */
+	char *pfx;
+{
+	int result, ret;
+
+	/*
+	 * Assume success.  The only thing that can fail is
+	 * the __os_strdup.
+	 */
+	result = TCL_OK;
+	Tcl_SetResult(interp, "0", TCL_STATIC);
+	/*
+	 * If the user already set one, free it.
+	 */
+	if (ip->i_msgpfx != NULL) {
+		dbenv->set_msgpfx(dbenv, NULL);
+		__os_free(dbenv->env, ip->i_msgpfx);
+		ip->i_msgpfx = NULL;
+	}
+	if ((ret = __os_strdup(dbenv->env, pfx, &ip->i_msgpfx)) != 0) {
+		result = _ReturnSetup(interp, ret,
+		    DB_RETOK_STD(ret), "__os_strdup");
+		ip->i_msgpfx = NULL;
+	}
+	if (ip->i_msgpfx != NULL)
+		dbenv->set_msgpfx(dbenv, ip->i_msgpfx);
 	return (result);
 }
 

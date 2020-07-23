@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2004, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2004, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -45,6 +45,7 @@ typedef struct {
 #define	BLOB_DONE           0x01
 #define	BLOB_DELETE         0x02
 #define	BLOB_CHUNK_FAIL     0x04
+#define	BLOB_REREQ          0x08
 
 #define	BLOB_ID_SIZE	    sizeof(db_seq_t)
 #define	BLOB_KEY_SIZE	    (2 * BLOB_ID_SIZE)
@@ -57,11 +58,11 @@ typedef int (FILE_WALK_FN) __P((ENV *, __rep_fileinfo_args *, void *));
 
 static int __rep_add_files_to_list __P((
     ENV *, const char *, const char *, FILE_LIST_CTX *, const char **, int));
-static int __rep_blob_chunk_gap
-    __P((ENV *, int, DB_THREAD_INFO *, REP *, int *, db_seq_t, int));
+static int __rep_blob_chunk_gap __P((
+    ENV *, int, DB_THREAD_INFO *, REP *, int *, db_seq_t, int, u_int32_t));
 static int __rep_blob_cleanup __P((ENV *, REP *));
 static int __rep_blobdone
-    __P((ENV *, int, DB_THREAD_INFO *, REP *, db_seq_t, int));
+    __P((ENV *, int, DB_THREAD_INFO *, REP *, db_seq_t, int, u_int32_t));
 static int __rep_blob_find_files __P((ENV *, DB_THREAD_INFO *, const char *,
     db_seq_t *, db_seq_t, db_seq_t, db_seq_t *, DBT *, size_t *, u_int32_t *));
 static int __rep_blob_sort_dirs __P((ENV *,
@@ -76,7 +77,7 @@ static FILE_WALK_FN __rep_find_inmem;
 static int __rep_get_fileinfo __P((ENV *, const char *,
     const char *, __rep_fileinfo_args *, u_int8_t *));
 static int __rep_get_file_list __P((ENV *,
-    DB_FH *, u_int32_t, u_int32_t *, DBT *));
+    DB_FH *, u_int32_t *, DBT *));
 static int __rep_init_file_list_context __P((ENV *,
     u_int32_t, u_int32_t, int, FILE_LIST_CTX *));
 static int __rep_is_replicated_db __P((const char *, const char *));
@@ -215,7 +216,7 @@ __rep_update_req(env, rp)
 	u_args.first_lsn = lsn;
 	u_args.first_vers = version;
 	u_args.num_files = context.count;
-	if ((ret = __rep_update_marshal(env, rp->rep_version,
+	if ((ret = __rep_update_marshal(env,
 	    &u_args, context.buf, __REP_UPDATE_SIZE, &updlen)) != 0)
 		goto err;
 	DB_ASSERT(env, updlen == __REP_UPDATE_SIZE);
@@ -335,11 +336,12 @@ __rep_blob_sort_dirs(env, select_fn, dirs, dirs_cnt, sorted, sorted_cnt)
  *	Send a list of blob files, starting after the blob id and sub-database
  *	id sent in the BLOB_UPDATE_REQ message.
  *
- * PUBLIC: int __rep_blob_update_req __P((ENV *, DB_THREAD_INFO *, DBT *));
+ * PUBLIC: int __rep_blob_update_req __P((ENV *, int, DB_THREAD_INFO *, DBT *));
  */
 int
-__rep_blob_update_req(env, ip, rec)
+__rep_blob_update_req(env, eid, ip, rec)
 	ENV *env;
+	int eid;
 	DB_THREAD_INFO *ip;
 	DBT *rec;
 {
@@ -347,6 +349,7 @@ __rep_blob_update_req(env, ip, rec)
 	REP *rep;
 	__rep_blob_update_args rbu;
 	__rep_blob_update_req_args rbur;
+	__rep_blob_update_req_v8_args rbur8;
 	db_seq_t blob_fid, blob_id, blob_sdb, tmp;
 	int cur, dirs_cnt, ret, sdb_cnt;
 	size_t sent;
@@ -366,16 +369,30 @@ __rep_blob_update_req(env, ip, rec)
 	if (throttle == 0)
 		throttle = BLOB_THROTTLE_DEFAULT;
 
-	if ((ret = __rep_blob_update_req_unmarshal(
-	    env, &rbur, rec->data, rec->size, &ptr)) != 0)
-		goto err;
+	if (rep->version < DB_REPVERSION_62) {
+		if ((ret = __rep_blob_update_req_v8_unmarshal(
+		    env, &rbur8, rec->data, rec->size, &ptr)) != 0)
+			goto err;
+		rbur.blob_fid = rbur8.blob_fid;
+		rbur.blob_sid = rbur8.blob_sid;
+		rbur.blob_id = rbur8.blob_id;
+		rbur.highest_id = rbur8.highest_id;
+		rbur.flags = 0;
+	} else {
+		if ((ret = __rep_blob_update_req_unmarshal(
+		    env, &rbur, rec->data, rec->size, &ptr)) != 0)
+			goto err;
+	}
 
 	RPRINT(env, (env, DB_VERB_REP_SYNC,
-"blob_update_req: file_id %llu sdb_id %llu blob_id %llu highest %llu",
+"blob_update_req: file_id %llu sdb_id %llu blob_id %llu highest %llu flag %lu",
 	    (long long)rbur.blob_fid, (long long)rbur.blob_sid,
-	    (long long)rbur.blob_id, (long long)rbur.highest_id));
+	    (long long)rbur.blob_id, (long long)rbur.highest_id,
+	    (long)rbur.flags));
 
 	rbu.blob_fid = rbur.blob_fid;
+	if (F_ISSET(&rbur, BLOB_REREQ))
+		F_SET(&rbu, BLOB_REREQ);
 
 	if ((ret = __os_malloc(env, MEGABYTE, &rbudbt.data)) != 0)
 		goto err;
@@ -474,11 +491,11 @@ filedone:		F_SET(&rbu, BLOB_DONE);
 	rbu.highest_id = rbur.highest_id;
 	__rep_blob_update_marshal(env, &rbu, rbudbt.data);
 	RPRINT(env, (env, DB_VERB_REP_SYNC,
-	    "Sending blob_update: file_id %llu, num_blobs %lu, flags %lu",
-	    (long long)rbu.blob_fid,
-	    (long)num_blobs, (unsigned long)rbu.flags));
+"Sending blob_update: file_id %llu, num_blobs %lu, highest %llu, flags %lu",
+	    (long long)rbu.blob_fid, (long)num_blobs,
+	    (long long)rbu.highest_id, (unsigned long)rbu.flags));
 	(void)__rep_send_message(
-	    env, DB_EID_BROADCAST, REP_BLOB_UPDATE, NULL, &rbudbt, 0, 0);
+	    env, eid, REP_BLOB_UPDATE, NULL, &rbudbt, 0, 0);
 
 err:	if (sdb != NULL)
 		__os_free(env, sdb);
@@ -559,11 +576,13 @@ __rep_blob_find_files(
 		if ((ret = __db_create_internal(&bmd, env, 0)) != 0)
 			goto err;
 
-		if ((ret = __txn_begin(env, ip, NULL, &txn, 0)) != 0)
+		if ((ret = __txn_begin(
+		    env, ip, NULL, &txn, DB_IGNORE_LEASE)) != 0)
 			goto err;
 
 		bmd->blob_file_id = blob_fid;
 		bmd->blob_sdb_id = blob_sid;
+
 		if ((ret = __blob_highest_id(bmd, txn, highest) ) != 0)
 			goto err;
 
@@ -632,8 +651,17 @@ __rep_blob_find_files(
 			rbf.blob_id = (u_int64_t)*blob_id;
 			/* Open the file and get its size. */
 			if ((ret = __os_open(
-			    env, path, 0, DB_OSO_RDONLY, 0, &fhp)) != 0)
+			    env, path, 0, DB_OSO_RDONLY, 0, &fhp)) != 0) {
+				if (ret == ENOENT) {
+					ret = 0;
+					RPRINT(env, (env, DB_VERB_REP_SYNC,
+			"blob_update external file: %llu deleted, skipping.",
+					    (long long)rbf.blob_id));
+					cur++;
+					continue;
+				}
 				goto err;
+			}
 			if ((ret = __os_ioinfo(
 			    env, path, fhp, &mbytes, &bytes, NULL)) != 0)
 				goto err;
@@ -1037,15 +1065,15 @@ retry:		avail = (size_t)(&context->buf[context->size] -
 		 * struct matches the old structs.
 		 */
 		if (context->version < DB_REPVERSION_53)
-			ret = __rep_fileinfo_v6_marshal(env, context->version,
+			ret = __rep_fileinfo_v6_marshal(env,
 			    (__rep_fileinfo_v6_args *)&tmpfp,
 			    context->fillptr, avail, &len);
 		else if (context->version < DB_REPVERSION_61)
-			ret = __rep_fileinfo_v7_marshal(env, context->version,
+			ret = __rep_fileinfo_v7_marshal(env,
 			    (__rep_fileinfo_v7_args *)&tmpfp,
 			    context->fillptr, avail, &len);
 		else
-			ret = __rep_fileinfo_marshal(env, context->version,
+			ret = __rep_fileinfo_marshal(env,
 			    &tmpfp, context->fillptr, avail, &len);
 		if (ret == ENOMEM) {
 			/*
@@ -1258,7 +1286,7 @@ __rep_page_req(env, ip, eid, rp, rec)
 	 * same location in the current struct.
 	 */
 	if (rp->rep_version < DB_REPVERSION_53) {
-		if ((ret = __rep_fileinfo_v6_unmarshal(env, rp->rep_version,
+		if ((ret = __rep_fileinfo_v6_unmarshal(env,
 		    &msgfpv6, rec->data, rec->size, &next)) != 0)
 			return (ret);
 		memcpy(&msgf, msgfpv6, sizeof(__rep_fileinfo_v6_args));
@@ -1268,7 +1296,7 @@ __rep_page_req(env, ip, eid, rp, rec)
 		msgfp = &msgf;
 		msgfree = msgfpv6;
 	} else if (rp->rep_version < DB_REPVERSION_61) {
-		if ((ret = __rep_fileinfo_v7_unmarshal(env, rp->rep_version,
+		if ((ret = __rep_fileinfo_v7_unmarshal(env,
 		    &msgfpv7, rec->data, rec->size, &next)) != 0)
 			return (ret);
 		memcpy(&msgf, msgfpv7, sizeof(__rep_fileinfo_v7_args));
@@ -1276,7 +1304,7 @@ __rep_page_req(env, ip, eid, rp, rec)
 		msgfp = &msgf;
 		msgfree = msgfpv7;
 	} else {
-		if ((ret = __rep_fileinfo_unmarshal(env, rp->rep_version,
+		if ((ret = __rep_fileinfo_unmarshal(env,
 		    &msgfp, rec->data, rec->size, &next)) != 0)
 			return (ret);
 		msgfree = msgfp;
@@ -1431,18 +1459,15 @@ __rep_page_sendpages(env, ip, eid, rp, msgfp, mpf, dbp)
 				 */
 				if (rp->rep_version < DB_REPVERSION_53)
 					ret = __rep_fileinfo_v6_marshal(env,
-					    rp->rep_version,
 					    (__rep_fileinfo_v6_args *)msgfp,
 					    buf, msgsz, &len);
 				else if (rp->rep_version < DB_REPVERSION_61)
 					ret = __rep_fileinfo_v7_marshal(env,
-					    rp->rep_version,
 					    (__rep_fileinfo_v7_args *)msgfp,
 					    buf, msgsz, &len);
 				else
 					ret = __rep_fileinfo_marshal(env,
-					    rp->rep_version, msgfp, buf,
-					    msgsz, &len);
+					    msgfp, buf, msgsz, &len);
 				if (ret != 0)
 					goto err;
 				LOG_SYSTEM_LOCK(env);
@@ -1484,16 +1509,14 @@ __rep_page_sendpages(env, ip, eid, rp, msgfp, mpf, dbp)
 		 */
 		if (rp->rep_version < DB_REPVERSION_53)
 			ret = __rep_fileinfo_v6_marshal(env,
-			    rp->rep_version,
 			    (__rep_fileinfo_v6_args *)msgfp,
 			    buf, msgsz, &len);
 		else if (rp->rep_version < DB_REPVERSION_61)
 			ret = __rep_fileinfo_v7_marshal(env,
-			    rp->rep_version,
 			    (__rep_fileinfo_v7_args *)msgfp,
 			    buf, msgsz, &len);
 		else
-			ret = __rep_fileinfo_marshal(env, rp->rep_version,
+			ret = __rep_fileinfo_marshal(env,
 			    msgfp, buf, msgsz, &len);
 		if (msgfp->type != (u_int32_t)DB_QUEUE || p == 0)
 			t_ret = __memp_fput(mpf,
@@ -1610,7 +1633,7 @@ __rep_update_setup(env, eid, rp, rec, savetime, lsn)
 	}
 	rep->sync_state = SYNC_OFF;
 
-	if ((ret = __rep_update_unmarshal(env, rp->rep_version,
+	if ((ret = __rep_update_unmarshal(env,
 	    &rup, rec->data, rec->size, &next)) != 0)
 		return (ret);
 	DB_ASSERT(env, next == FIRST_FILE_PTR((u_int8_t*)rec->data));
@@ -1642,6 +1665,9 @@ __rep_update_setup(env, eid, rp, rec, savetime, lsn)
 			F_SET(rep, REP_F_NIMDBS_LOADED);
 			rep->sync_state = SYNC_VERIFY;
 			F_CLR(rep, REP_F_ABBREVIATED);
+#ifdef HAVE_REPLICATION_THREADS
+			db_rep->abbrev_init = FALSE;
+#endif
 			ret = __rep_notify_threads(env, AWAIT_NIMDB);
 
 			REP_SYSTEM_UNLOCK(env);
@@ -1927,7 +1953,13 @@ __rep_blob_update(env, eid, ip, rec)
 		(void)__dbc_close(dbc);
 		dbc = NULL;
 		rep->blob_more_files = 0;
-		ret = __rep_blobdone(env, eid, ip, rep, blob_fid, 0);
+		rep->gap_bl_hi_id = rep->gap_bl_hi_sid = 0;
+		rep->last_blob_id = rep->last_blob_sid = 0;
+		rep->prev_blob_id = rep->prev_blob_sid = 0;
+		rep->gap_bl_hi_off = 0;
+		rep->blob_sync = 0;
+		rep->highest_id = 0;
+		ret = __rep_blobdone(env, eid, ip, rep, blob_fid, 0, 0);
 		goto unlock;
 	}
 
@@ -1966,10 +1998,10 @@ __rep_blob_update(env, eid, ip, rec)
 			 * supports 64 file offsets, but the client does not.
 			 */
 			if (offset < 0) {
+				ret = USR_ERR(env, EINVAL);
 				__db_errx(env,
 				    DB_STR("3704",
-					"Blob file offset overflow"));
-				ret = EINVAL;
+					"External file offset overflow"));
 				goto unlock;
 			}
 		} while ((u_int32_t)offset < rbf.blob_size);
@@ -1988,11 +2020,18 @@ __rep_blob_update(env, eid, ip, rec)
 	/*
 	 * Send the same message payload in a REP_BLOB_ALL_REQ message to get
 	 * the blob data.  Building the list of blob files is expensive, which
-	 * is why it is sent to whatever site is tasked with returning the
+	 * is why it is sent back to whatever site is tasked with returning the
 	 * data.
+	 *
+	 * If this is a re-request, send it to the master, otherwise send it
+	 * anywhere.
 	 */
-	(void)__rep_send_message(
-	    env, eid, REP_BLOB_ALL_REQ, NULL, rec, 0, DB_REP_ANYWHERE);
+	if (F_ISSET(&rbu, BLOB_REREQ))
+		(void)__rep_send_message(
+		    env, rep->master_id, REP_BLOB_ALL_REQ, NULL, rec, 0, 0);
+	else
+		(void)__rep_send_message(
+		    env, eid, REP_BLOB_ALL_REQ, NULL, rec, 0, DB_REP_ANYWHERE);
 
 unlock:	REP_SYSTEM_UNLOCK(env);
 	MUTEX_UNLOCK(env, rep->mtx_clientdb);
@@ -2017,6 +2056,9 @@ __rep_blob_allreq(env, eid, rec)
 	DB *dbp;
 	DB_FH *fhp;
 	DBT msg;
+#ifdef	CONFIG_TEST
+	REP *rep;
+#endif
 	__rep_blob_chunk_args rbc;
 	__rep_blob_file_args rbf;
 	__rep_blob_update_args rbu;
@@ -2026,7 +2068,9 @@ __rep_blob_allreq(env, eid, rec)
 	size_t len;
 	u_int32_t num_blobs;
 	u_int8_t *chunk_buf, *msg_buf, *ptr;
-
+#ifdef	CONFIG_TEST
+	rep = env->rep_handle->region;
+#endif
 	dbp = NULL;
 	fhp = NULL;
 	chunk_buf = msg_buf = NULL;
@@ -2047,8 +2091,8 @@ __rep_blob_allreq(env, eid, rec)
 
 	/*
 	 * The REP_BLOB_ALL_REQ message sends the REP_BLOB_UPDATE message
-	 * payload back to the master to request the actual blobs after the
-	 * client has prepared itself to receive them.
+	 * payload back to the master/peer to request the actual blobs after
+	 * the client has prepared itself to receive them.
 	 */
 	len = rec->size;
 	if ((ret = __rep_blob_update_unmarshal(
@@ -2100,12 +2144,22 @@ __rep_blob_allreq(env, eid, rec)
 			 * the file has been deleted.
 			 */
 			if (ret == ENOENT) {
+				if (IS_VIEW_SITE(env) && num_blobs == 1) {
+					ret = DB_NOTFOUND;
+					goto err;
+				}
 				F_SET(&rbc, BLOB_DELETE);
 				rbc.data.size = 0;
 				__rep_blob_chunk_marshal(env, &rbc, msg.data);
 				msg.size = __REP_BLOB_CHUNK_SIZE;
 				(void)__rep_send_message(env,
 				    eid, REP_BLOB_CHUNK, NULL, &msg, 0, 0);
+				ret = 0;
+				fhp = NULL;
+#ifdef	CONFIG_TEST
+				STAT_INC(env, rep,
+				    ext_deleted, rep->stat.st_ext_deleted, eid);
+#endif
 				continue;
 			}
 			goto err;
@@ -2127,6 +2181,10 @@ __rep_blob_allreq(env, eid, rec)
 			    (offset + rbc.data.size) < rbf.blob_size) {
 				F_SET(&rbc, BLOB_CHUNK_FAIL);
 				done = 1;
+#ifdef	CONFIG_TEST
+				STAT_INC(env, rep, ext_truncated,
+				    rep->stat.st_ext_truncated, eid);
+#endif
 			}
 			/* File may have grown since the list was made. */
 			if ((u_int64_t)
@@ -2142,11 +2200,23 @@ __rep_blob_allreq(env, eid, rec)
 			offset += MEGABYTE;
 		} while ((u_int64_t)offset < rbf.blob_size && !done);
 
-		if ((ret = __os_closehandle(env, fhp)) != 0)
+		if (fhp != NULL && (ret = __os_closehandle(env, fhp)) != 0)
 			goto err;
 		fhp = NULL;
+		/*
+		 * DB_TEST_NO_CHUNKS is set during testing to test
+		 * that a client will send a BLOB_CHUNK_REQ message
+		 * if any BLOB_CHUNK messages are lost.
+		 *
+		 * Have to send at least one blob chunk message or
+		 * BDB will send a BLOB_UPDATE message instead of a
+		 * BLOB_CHUNK_REQ message.
+		 */
+		DB_TEST_SET(env->test_abort, DB_TEST_NO_CHUNKS);
 	}
-err:	if (chunk_buf != NULL)
+err:
+DB_TEST_RECOVERY_LABEL
+	if (chunk_buf != NULL)
 		__os_free(env, chunk_buf);
 	if (msg_buf != NULL)
 		__os_free(env, msg_buf);
@@ -2262,7 +2332,7 @@ __rep_remove_all(env, msg_version, rec)
 	ZERO_LSN(u_args.first_lsn);
 	u_args.first_vers = 0;
 	u_args.num_files = context.count;
-	if ((ret = __rep_update_marshal(env, DB_REPVERSION,
+	if ((ret = __rep_update_marshal(env,
 	    &u_args, context.buf, __REP_UPDATE_SIZE, &updlen)) != 0)
 		goto out;
 	DB_ASSERT(env, updlen == __REP_UPDATE_SIZE);
@@ -2273,12 +2343,6 @@ __rep_remove_all(env, msg_version, rec)
 	 *    can clean up what we were doing. Only write database list to
 	 *    file if not running in-memory replication.
 	 *
-	 * The original version of the file contains:
-	 * data1 size (4 bytes)
-	 * data1
-	 * data2 size (possibly) (4 bytes)
-	 * data2 (possibly)
-	 *
 	 * As of 4.7 the file has the following form:
 	 * 0 (4 bytes - to indicate a new style file)
 	 * file version (4 bytes)
@@ -2288,6 +2352,9 @@ __rep_remove_all(env, msg_version, rec)
 	 * data2 version (possibly) (4 bytes)
 	 * data2 size (possibly) (4 bytes)
 	 * data2 (possibly)
+	 *
+	 * As of 5.3, repmgr can add group membership information to the end
+	 * of the file.
 	 */
 	if (!FLD_ISSET(rep->config, REP_C_INMEM)) {
 		if ((ret = __db_appname(env,
@@ -2692,7 +2759,7 @@ __rep_page(env, ip, eid, rp, rec)
 	 * same location in the current struct.
 	 */
 	if (rp->rep_version < DB_REPVERSION_53) {
-		if ((ret = __rep_fileinfo_v6_unmarshal(env, rp->rep_version,
+		if ((ret = __rep_fileinfo_v6_unmarshal(env,
 		    &msgfpv6, rec->data, rec->size, NULL)) != 0)
 			return (ret);
 		memcpy(&msgf, msgfpv6, sizeof(__rep_fileinfo_v6_args));
@@ -2702,7 +2769,7 @@ __rep_page(env, ip, eid, rp, rec)
 		msgfp = &msgf;
 		msgfree = msgfpv6;
 	} else if (rp->rep_version < DB_REPVERSION_61) {
-		if ((ret = __rep_fileinfo_v7_unmarshal(env, rp->rep_version,
+		if ((ret = __rep_fileinfo_v7_unmarshal(env,
 		    &msgfpv7, rec->data, rec->size, NULL)) != 0)
 			return (ret);
 		memcpy(&msgf, msgfpv7, sizeof(__rep_fileinfo_v7_args));
@@ -2710,7 +2777,7 @@ __rep_page(env, ip, eid, rp, rec)
 		msgfp = &msgf;
 		msgfree = msgfpv7;
 	} else {
-		if ((ret = __rep_fileinfo_unmarshal(env, rp->rep_version,
+		if ((ret = __rep_fileinfo_unmarshal(env,
 		    &msgfp, rec->data, rec->size, NULL)) != 0)
 			return (ret);
 		msgfree = msgfp;
@@ -2945,6 +3012,9 @@ __rep_blob_chunk(env, eid, ip, rec)
 				ret = 0;
 			goto err;
 		}
+#ifdef	CONFIG_TEST
+		STAT_INC(env, rep, ext_deleted, rep->stat.st_ext_deleted, eid);
+#endif
 		goto done;
 	}
 
@@ -2956,6 +3026,8 @@ __rep_blob_chunk(env, eid, ip, rec)
 	/* If not found we have already dealt with this chunk. */
 	if ((ret = __dbc_get(dbc, &key, &data, DB_GET_BOTH)) != 0) {
 		if (ret == DB_NOTFOUND) {
+			STAT_INC(env, rep,
+			    ext_duplicated, rep->stat.st_ext_duplicated, eid);
 			ret = 0;
 			goto done;
 		}
@@ -2975,6 +3047,10 @@ __rep_blob_chunk(env, eid, ip, rec)
 			ret = 0;
 		if ((ret = __dbc_close(dbc)) != 0)
 			goto err;
+#ifdef	CONFIG_TEST
+		STAT_INC(env, db_rep->region, ext_truncated,
+		    db_rep->region->stat.st_ext_truncated, eid);
+#endif
 		dbc = NULL;
 		goto done;
 	}
@@ -3024,8 +3100,9 @@ __rep_blob_chunk(env, eid, ip, rec)
 	if ((ret = __os_closehandle(env, fhp)) != 0)
 		goto err;
 	fhp = NULL;
+	STAT_INC(env, rep, ext_records, rep->stat.st_ext_records, eid);
 
-done:	ret = __rep_blobdone(env, eid, ip, rep, blob_fid, 0);
+done:	ret = __rep_blobdone(env, eid, ip, rep, blob_fid, 0, 0);
 
 err:	REP_SYSTEM_UNLOCK(env);
 	MUTEX_UNLOCK(env, rep->mtx_clientdb);
@@ -3465,7 +3542,6 @@ __rep_blob_cleanup(env, rep)
 	rep->blob_more_files = 0;
 	rep->blob_sync = 0;
 	rep->highest_id = 0;
-	rep->blob_rereq = 0;
 
 	return (ret);
 }
@@ -3736,7 +3812,15 @@ __rep_filedone(env, ip, eid, rep, msgfp, type)
 		    rfp->blob_fid_lo, rfp->blob_fid_hi, rbur.blob_fid, ret);
 		msg.size = __REP_BLOB_UPDATE_REQ_SIZE;
 		msg.data = buf;
-		__rep_blob_update_req_marshal(env, &rbur, msg.data);
+		/*
+		 * This is safe since the beginning of both messages is the
+		 * same.
+		 */
+		if (rep->version < DB_REPVERSION_62)
+			__rep_blob_update_req_v8_marshal(env,
+			    (__rep_blob_update_req_v8_args *)&rbur, msg.data);
+		else
+			__rep_blob_update_req_marshal(env, &rbur, msg.data);
 		(void)__rep_send_message(env,
 		    rep->master_id, REP_BLOB_UPDATE_REQ, NULL, &msg, 0, 0);
 		return (ret);
@@ -3763,13 +3847,14 @@ __rep_filedone(env, ip, eid, rep, msgfp, type)
  *	REP_SYSTEM_LOCK.
  */
 static int
-__rep_blobdone(env, eid, ip, rep, blob_fid, force)
+__rep_blobdone(env, eid, ip, rep, blob_fid, force, gapflags)
 	ENV *env;
 	int eid;
 	DB_THREAD_INFO *ip;
 	REP *rep;
 	db_seq_t blob_fid;
 	int force;
+	u_int32_t gapflags;
 {
 	DBT msg;
 	__rep_blob_update_req_args rbur;
@@ -3781,7 +3866,8 @@ __rep_blobdone(env, eid, ip, rep, blob_fid, force)
 	 * that might be needed to re-request chunks.
 	 */
 	done = 0;
-	ret = __rep_blob_chunk_gap(env, eid, ip, rep, &done, blob_fid, force);
+	ret = __rep_blob_chunk_gap(
+	    env, eid, ip, rep, &done, blob_fid, force, gapflags);
 	/*
 	 * The world changed while we were doing gap processing.
 	 * We're done here.
@@ -3802,12 +3888,36 @@ __rep_blobdone(env, eid, ip, rep, blob_fid, force)
 		rbur.blob_sid = (u_int64_t)rep->last_blob_sid;
 		rbur.blob_id = (u_int64_t)rep->last_blob_id;
 		rbur.highest_id = (u_int64_t)rep->highest_id;
+		/*
+		 * Re-requesting a BLOB_ALL_REQ message poses a special
+		 * problem.  Sending a BLOB_ALL_REQ message is basically taking
+		 * the BLOB_UPDATE message and sending it back to the
+		 * master/peer.  When doing a BLOB_ALL_REQ re-request, the
+		 * BLOB_UPDATE message is no longer available, so internal init
+		 * has to go back to the BLOB_UPDATE_REQ step.  However, when
+		 * dealing with a view that does not replicate that database,
+		 * this could result in an infinite loop of the peer not
+		 * responding to the BLOB_ALL_REQ message, so the client
+		 * re-sends the BLOB_UPDATE_REQ message to the master, the
+		 * master responding with BLOB_UPDATE, but since the client no
+		 * longer knows that this is a re-request situation it sends
+		 * the BLOB_ALL_REQ message to the peer again.
+		 */
+		if (gapflags != 0)
+			F_SET(&rbur, BLOB_REREQ);
 		rep->gap_bl_hi_id = rep->gap_bl_hi_sid = 0;
 		rep->gap_bl_hi_off = 0;
-		rep->blob_rereq = 0;
 		msg.size = __REP_BLOB_UPDATE_REQ_SIZE;
 		msg.data = buf;
-		__rep_blob_update_req_marshal(env, &rbur, msg.data);
+		/*
+		 * This is safe since the beginning of both messages is the
+		 * same.
+		 */
+		if (rep->version < DB_REPVERSION_62)
+			__rep_blob_update_req_v8_marshal(env,
+			    (__rep_blob_update_req_v8_args *)&rbur, msg.data);
+		else
+			__rep_blob_update_req_marshal(env, &rbur, msg.data);
 		(void)__rep_send_message(env,
 		    rep->master_id, REP_BLOB_UPDATE_REQ, NULL, &msg, 0, 0);
 		return (0);
@@ -3836,7 +3946,7 @@ err:
  *	REP_SYSTEM_LOCK.
  */
 static int
-__rep_blob_chunk_gap(env, eid, ip, rep, done, blob_fid, force)
+__rep_blob_chunk_gap(env, eid, ip, rep, done, blob_fid, force, gapflags)
 	ENV *env;
 	int eid;
 	DB_THREAD_INFO *ip;
@@ -3844,6 +3954,7 @@ __rep_blob_chunk_gap(env, eid, ip, rep, done, blob_fid, force)
 	int *done;
 	db_seq_t blob_fid;
 	int force;
+	u_int32_t gapflags;
 {
 	DBC *dbc;
 	DBT data, high, key, msg;
@@ -3856,6 +3967,7 @@ __rep_blob_chunk_gap(env, eid, ip, rep, done, blob_fid, force)
 	db_seq_t cur_blob_fid;
 	off_t offset;
 	int ret;
+	u_int32_t flags;
 	u_int8_t buf[BLOB_KEY_SIZE], msgbuf[__REP_BLOB_CHUNK_REQ_SIZE];
 
 	db_rep = env->rep_handle;
@@ -3876,6 +3988,11 @@ __rep_blob_chunk_gap(env, eid, ip, rep, done, blob_fid, force)
 		ret = DB_REP_PAGEDONE;
 		goto err;
 	}
+
+	if (FLD_ISSET(gapflags, REP_GAP_REREQUEST))
+		flags = DB_REP_REREQUEST;
+	else
+		flags = DB_REP_ANYWHERE;
 
 	/* Get the first missing blob chunk. */
 	if ((ret = __db_cursor(db_rep->blob_dbp, ip, NULL, &dbc, 0)) != 0)
@@ -3938,9 +4055,10 @@ __rep_blob_chunk_gap(env, eid, ip, rep, done, blob_fid, force)
 			    (long long)rbcr.blob_fid, (long long)rbcr.blob_sid,
 			    (long long)rbcr.blob_id, (long long)rbcr.offset));
 			__rep_blob_chunk_req_marshal(env, &rbcr, msg.data);
-			(void)__rep_send_message(
-			    env, eid, REP_BLOB_CHUNK_REQ,
-			    NULL, &msg, 0, DB_REP_ANYWHERE);
+			(void)__rep_send_message(env, eid,
+			    REP_BLOB_CHUNK_REQ, NULL, &msg, 0, flags);
+			STAT_INC(env, rep, ext_chunk_rereq,
+			    rep->stat.st_ext_rereq, rep->master_id);
 			/*
 			 * Break after requesting the chunk after the highest
 			 * one.
@@ -3981,6 +4099,9 @@ __rep_blob_chunk_req(env, eid, rec)
 	DB *dbp;
 	DBT msg;
 	DB_FH *fhp;
+#ifdef	CONFIG_TEST
+	DB_REP *db_rep;
+#endif
 	__rep_blob_chunk_args rbc;
 	__rep_blob_chunk_req_args rbcr;
 	int ret;
@@ -3989,6 +4110,9 @@ __rep_blob_chunk_req(env, eid, rec)
 	dbp = NULL;
 	fhp = NULL;
 	chunk_buf = msg_buf = NULL;
+#ifdef	CONFIG_TEST
+	db_rep = env->rep_handle;
+#endif
 
 	if ((ret =
 	    __os_malloc(env, MEGABYTE + __REP_BLOB_CHUNK_SIZE, &msg_buf)) != 0)
@@ -4031,6 +4155,10 @@ __rep_blob_chunk_req(env, eid, rec)
 		* the file has been deleted.
 		*/
 		if (ret == ENOENT) {
+			if (IS_VIEW_SITE(env)) {
+				ret = DB_NOTFOUND;
+				goto err;
+			}
 			ret = 0;
 			F_SET(&rbc, BLOB_DELETE);
 			rbc.data.size = 0;
@@ -4038,6 +4166,10 @@ __rep_blob_chunk_req(env, eid, rec)
 			msg.size = __REP_BLOB_CHUNK_SIZE;
 			(void)__rep_send_message(
 			    env, eid, REP_BLOB_CHUNK, NULL, &msg, 0, 0);
+#ifdef	CONFIG_TEST
+			STAT_INC(env, db_rep->region, ext_deleted,
+			    db_rep->region->stat.st_ext_deleted, eid);
+#endif
 			goto err;
 		}
 		goto err;
@@ -4051,8 +4183,13 @@ __rep_blob_chunk_req(env, eid, rec)
 	 * In rare cases the blob file may have gotten shorter
 	 * since the list was created.
 	 */
-	if (rbc.data.size == 0)
+	if (rbc.data.size == 0) {
 		F_SET(&rbc, BLOB_CHUNK_FAIL);
+#ifdef	CONFIG_TEST
+		STAT_INC(env, db_rep->region, ext_truncated,
+		    db_rep->region->stat.st_ext_truncated, eid);
+#endif
+	}
 	__rep_blob_chunk_marshal(env, &rbc, msg.data);
 	msg.size = __REP_BLOB_CHUNK_SIZE + rbc.data.size;
 	(void)__rep_send_message(env, eid, REP_BLOB_CHUNK, NULL, &msg, 0, 0);
@@ -4124,8 +4261,7 @@ __rep_nextfile(env, eid, rep)
 		 * same location in the current struct.
 		 */
 		if (rep->infoversion < DB_REPVERSION_53) {
-			if ((ret = __rep_fileinfo_v6_unmarshal(env,
-			    rep->infoversion, &rfpv6,
+			if ((ret = __rep_fileinfo_v6_unmarshal(env, &rfpv6,
 			    info_ptr, rep->infolen, &nextinfo)) != 0)
 				return (ret);
 			memcpy(&rf, rfpv6, sizeof(__rep_fileinfo_v6_args));
@@ -4135,8 +4271,7 @@ __rep_nextfile(env, eid, rep)
 			rfp = &rf;
 			rffree = rfpv6;
 		} else if (rep->infoversion < DB_REPVERSION_61) {
-			if ((ret = __rep_fileinfo_v7_unmarshal(env,
-			    rep->infoversion, &rfpv7,
+			if ((ret = __rep_fileinfo_v7_unmarshal(env, &rfpv7,
 			    info_ptr, rep->infolen, &nextinfo)) != 0)
 				return (ret);
 			memcpy(&rf, rfpv7, sizeof(__rep_fileinfo_v7_args));
@@ -4145,8 +4280,7 @@ __rep_nextfile(env, eid, rep)
 			rffree = rfpv7;
 		} else {
 			if ((ret = __rep_fileinfo_unmarshal(env,
-			    rep->infoversion, &rfp, info_ptr,
-			    rep->infolen, &nextinfo)) != 0) {
+			    &rfp, info_ptr, rep->infolen, &nextinfo)) != 0) {
 				RPRINT(env, (env, DB_VERB_REP_SYNC,
 				    "NEXTINFO: Fileinfo read: %s",
 				    db_strerror(ret)));
@@ -4157,7 +4291,7 @@ __rep_nextfile(env, eid, rep)
 #ifndef HAVE_64BIT_TYPES
 		if (rfp->blob_fid_lo != 0 || rfp->blob_fid_hi != 0) {
 		    __db_errx(env, DB_STR("3705",
-			"Blobs require 64 integer compiler support."));
+		"External files require 64 integer compiler support."));
 			__os_free(env, rffree);
 			return (DB_OPNOTSUP);
 		}
@@ -4240,6 +4374,29 @@ __rep_nextfile(env, eid, rep)
 			}
 		}
 
+		/*
+		 * Skip over regular DB's in "abbreviated" internal inits.
+		 * Masters at 6.0 and later only send in-memory databases for
+		 * abbreviated internal inits, but 5.3 and earlier masters
+		 * send all database files and this code is still needed to
+		 * avoid requesting pages for on-disk database files in
+		 * those cases.
+		 */
+		if (F_ISSET(rep, REP_F_ABBREVIATED) &&
+		    !FLD_ISSET(curinfo->db_flags, DB_AM_INMEM) &&
+		    rep->infoversion <= DB_REPVERSION_53) {
+			VPRINT(env, (env, DB_VERB_REP_SYNC,
+			    "Skipping file %d in abbreviated internal init",
+			    curinfo->filenum));
+			MUTEX_LOCK(env, renv->mtx_regenv);
+			__env_alloc_free(infop,
+			    R_ADDR(infop, rep->curinfo_off));
+			MUTEX_UNLOCK(env, renv->mtx_regenv);
+			rep->curinfo_off = INVALID_ROFF;
+			rep->curfile++;
+			continue;
+		}
+
 		/* Request this file's pages. */
 		DB_ASSERT(env, curinfo->pgno == 0);
 		rep->ready_pg = 0;
@@ -4266,15 +4423,15 @@ __rep_nextfile(env, eid, rep)
 		 * struct matches the old structs.
 		 */
 		if (rep->infoversion < DB_REPVERSION_53)
-			ret = __rep_fileinfo_v6_marshal(env, rep->infoversion,
+			ret = __rep_fileinfo_v6_marshal(env,
 			    (__rep_fileinfo_v6_args *)curinfo, buf,
 			    msgsz, &len);
 		else if (rep->infoversion < DB_REPVERSION_61)
-			ret = __rep_fileinfo_v7_marshal(env, rep->infoversion,
+			ret = __rep_fileinfo_v7_marshal(env,
 			    (__rep_fileinfo_v7_args *)curinfo, buf,
 			    msgsz, &len);
 		else
-			ret = __rep_fileinfo_marshal(env, rep->infoversion,
+			ret = __rep_fileinfo_marshal(env,
 			    curinfo, buf, msgsz, &len);
 		if (ret != 0) {
 			__os_free(env, buf);
@@ -4585,15 +4742,15 @@ __rep_pggap_req(env, rep, reqfp, gapflags)
 		 * struct matches the old structs.
 		 */
 		if (rep->infoversion < DB_REPVERSION_53)
-			ret = __rep_fileinfo_v6_marshal(env, rep->infoversion,
+			ret = __rep_fileinfo_v6_marshal(env,
 			    (__rep_fileinfo_v6_args *)tmpfp, buf,
 			    msgsz, &len);
 		else if (rep->infoversion < DB_REPVERSION_61)
-			ret = __rep_fileinfo_v7_marshal(env, rep->infoversion,
+			ret = __rep_fileinfo_v7_marshal(env,
 			    (__rep_fileinfo_v7_args *)tmpfp, buf,
 			    msgsz, &len);
 		else
-			ret = __rep_fileinfo_marshal(env, rep->infoversion,
+			ret = __rep_fileinfo_marshal(env,
 			    tmpfp, buf, msgsz, &len);
 		if (ret == 0) {
 			DB_INIT_DBT(max_pg_dbt, buf, len);
@@ -4621,12 +4778,13 @@ err:
  *
  * Assumes the caller holds mtx_clientdb and rep_mutex.
  *
- * PUBLIC: int __rep_blob_rereq __P((ENV *, REP *));
+ * PUBLIC: int __rep_blob_rereq __P((ENV *, REP *, u_int32_t));
  */
 int
-__rep_blob_rereq(env, rep)
+__rep_blob_rereq(env, rep, gapflags)
 	ENV *env;
 	REP *rep;
+	u_int32_t gapflags;
 {
 	DB_REP *db_rep;
 	DB_THREAD_INFO *ip;
@@ -4668,21 +4826,21 @@ __rep_blob_rereq(env, rep)
 	 */
 	ENV_GET_THREAD_INFO(env, ip);
 	if (rep->gap_bl_hi_id == 0) {
-		/*
-		 * It takes a while to create the blob update message, so skip
-		 * the first time it asks.
-		 */
-		if (rep->blob_rereq == 0) {
-			rep->blob_rereq = 1;
-			goto err;
-		}
-		rep->blob_rereq = 0;
 		if ((ret = __db_truncate(
 		    db_rep->blob_dbp, ip, NULL, &count)) != 0)
 			goto err;
 		rep->blob_more_files = 1;
 		rep->last_blob_id = rep->prev_blob_id;
 		rep->last_blob_sid = rep->prev_blob_sid;
+		STAT_INC(env, rep, ext_update_rereq,
+		    rep->stat.st_ext_update_rereq, rep->master_id);
+		/*
+		 * Always direct all REP_BLOB_UPDATE_REQ and REP_BLOB_ALL_REQ
+		 * messages to go to the master in case of a re-request, to
+		 * avoid an infinite loop of rerequests if the client is in
+		 * recovery.
+		 */
+		gapflags |= REP_GAP_REREQUEST;
 	}
 
 	GET_CURINFO(rep, infop, rfp);
@@ -4694,7 +4852,7 @@ __rep_blob_rereq(env, rep)
 	 * will perform gap processing, otherwise it will send
 	 * a REP_BLOB_UPDATE_REQ.
 	 */
-	ret = __rep_blobdone(env, master, ip, rep, blob_fid, 1);
+	ret = __rep_blobdone(env, master, ip, rep, blob_fid, 1, gapflags);
 
 err:
 	return (ret);
@@ -5048,21 +5206,12 @@ __rep_reset_init(env)
 	 */
 	if (cnt != sizeof(zero))
 		goto rm;
-	if (zero != 0) {
-		/*
-		 * Old style file.  We have to set fvers to the 4.6
-		 * version of the file and also rewind the file so
-		 * that __rep_get_file_list can read out the length itself.
-		 */
-		if ((ret = __os_seek(env, fhp, 0, 0, 0)) != 0)
-			goto out;
-		fvers = REP_INITVERSION_46;
-	} else if ((ret = __os_read(env,
+	if ((ret = __os_read(env,
 	    fhp, &fvers, sizeof(fvers), &cnt)) != 0)
 		goto out;
 	else if (cnt != sizeof(fvers))
 		goto rm;
-	ret = __rep_get_file_list(env, fhp, fvers, &dbtvers, &dbt);
+	ret = __rep_get_file_list(env, fhp, &dbtvers, &dbt);
 	if ((t_ret = __os_closehandle(env, fhp)) != 0 || ret != 0) {
 		if (ret == 0)
 			ret = t_ret;
@@ -5097,7 +5246,7 @@ __rep_reset_init(env)
 	 * Remove databases according to the list, and queue extent files by
 	 * searching them out on a walk through the data_dir's.
 	 */
-	if ((ret = __rep_update_unmarshal(env, dbtvers,
+	if ((ret = __rep_update_unmarshal(env,
 	    &rup, dbt.data, dbt.size, &next)) != 0)
 		goto out;
 	if ((ret = __rep_unlink_by_list(env, dbtvers,
@@ -5128,10 +5277,9 @@ out:	if (rup != NULL)
  * many parts of it in this case are meaningless).
  */
 static int
-__rep_get_file_list(env, fhp, fvers, dbtvers, dbt)
+__rep_get_file_list(env, fhp, dbtvers, dbt)
 	ENV *env;
 	DB_FH *fhp;
-	u_int32_t fvers;
 	u_int32_t *dbtvers;
 	DBT *dbt;
 {
@@ -5144,21 +5292,18 @@ __rep_get_file_list(env, fhp, fvers, dbtvers, dbt)
 
 	/* At most 2 file lists: old and new. */
 	dbt->data = NULL;
-	mvers = DB_REPVERSION_46;
 	length = 0;
 #ifdef HAVE_REPLICATION_THREADS
 	mgrdbt.data = NULL;
 #endif
 	for (i = 1; i <= 2; i++) {
-		if (fvers >= REP_INITVERSION_47) {
-			if ((ret = __os_read(env, fhp, &mvers,
-			    sizeof(mvers), &cnt)) != 0)
-				goto err;
-			if (cnt == 0 && dbt->data != NULL)
-				break;
-			if (cnt != sizeof(mvers))
-				goto err;
-		}
+		if ((ret = __os_read(env, fhp, &mvers,
+		    sizeof(mvers), &cnt)) != 0)
+			goto err;
+		if (cnt == 0 && dbt->data != NULL)
+			break;
+		if (cnt != sizeof(mvers))
+			goto err;
 		if ((ret = __os_read(env,
 		    fhp, &length, sizeof(length), &cnt)) != 0)
 			goto err;
@@ -5374,7 +5519,7 @@ __rep_walk_filelist(env, version, files, size, count, fn, arg)
 		 * same location in the current struct.
 		 */
 		if (version < DB_REPVERSION_53) {
-			if ((ret = __rep_fileinfo_v6_unmarshal(env, version,
+			if ((ret = __rep_fileinfo_v6_unmarshal(env,
 			    &rfpv6, files, size, &next)) != 0)
 				break;
 			memcpy(&rf, rfpv6, sizeof(__rep_fileinfo_v6_args));
@@ -5384,7 +5529,7 @@ __rep_walk_filelist(env, version, files, size, count, fn, arg)
 			rfp = &rf;
 			rffree = rfpv6;
 		} else if (version < DB_REPVERSION_61) {
-			if ((ret = __rep_fileinfo_v7_unmarshal(env, version,
+			if ((ret = __rep_fileinfo_v7_unmarshal(env,
 			    &rfpv7, files, size, &next)) != 0)
 				break;
 			memcpy(&rf, rfpv7, sizeof(__rep_fileinfo_v7_args));
@@ -5392,7 +5537,7 @@ __rep_walk_filelist(env, version, files, size, count, fn, arg)
 			rfp = &rf;
 			rffree = rfpv7;
 		} else {
-			if ((ret = __rep_fileinfo_unmarshal(env, version,
+			if ((ret = __rep_fileinfo_unmarshal(env,
 			    &rfp, files, size, &next)) != 0)
 				break;
 			rffree = rfp;

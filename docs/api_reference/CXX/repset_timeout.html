@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -87,7 +87,7 @@ DbEnv::rep_set_timeout(int which, u_int32_t timeout); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp62852952"></a>Parameters</h3>
+              <h3 class="title"><a id="idp107055568"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -95,7 +95,7 @@ DbEnv::rep_set_timeout(int which, u_int32_t timeout); </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp62852304"></a>which</h4>
+                <h4 class="title"><a id="idp107054320"></a>which</h4>
               </div>
             </div>
           </div>
@@ -242,6 +242,20 @@ DbEnv::rep_set_timeout(int which, u_int32_t timeout); </pre>
                          method and <a href="../../programmer_reference/rep_lease.html" class="olink">Master leases</a>.
                     </p>
               </li>
+              <li>
+                <p>
+                          <code class="literal">DB_REP_WRITE_FORWARD_TIMEOUT</code>
+                    </p>
+                <p>
+                         Configure the amount of time a Replication Manager client waits for a response
+                         from a forwarded write operation before returning a failure indication.
+                         The default value is 5 seconds.
+                    </p>
+                <p>
+                         For more information on write forwarding, see
+                         the <em class="citetitle">Berkeley DB Programmer's Reference Guide</em>.
+                    </p>
+              </li>
             </ul>
           </div>
         </div>
@@ -249,7 +263,7 @@ DbEnv::rep_set_timeout(int which, u_int32_t timeout); </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp62883032"></a>timeout</h4>
+                <h4 class="title"><a id="idp107067872"></a>timeout</h4>
               </div>
             </div>
           </div>
@@ -264,7 +278,7 @@ DbEnv::rep_set_timeout(int which, u_int32_t timeout); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp62857160"></a>Errors</h3>
+              <h3 class="title"><a id="idp107002800"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -282,7 +296,7 @@ DbEnv::rep_set_timeout(int which, u_int32_t timeout); </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp62868744"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp107086368"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -299,7 +313,7 @@ DbEnv::rep_set_timeout(int which, u_int32_t timeout); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp62863960"></a>Class</h3>
+              <h3 class="title"><a id="idp107061024"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -311,7 +325,7 @@ DbEnv::rep_set_timeout(int which, u_int32_t timeout); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp62874512"></a>See Also</h3>
+              <h3 class="title"><a id="idp107092720"></a>See Also</h3>
             </div>
           </div>
         </div>

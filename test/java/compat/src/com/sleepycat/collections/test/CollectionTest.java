@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 
@@ -27,6 +27,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.concurrent.ConcurrentMap;
+import java.util.regex.Pattern;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -698,7 +699,9 @@ public class CollectionTest extends TestBase {
         throws Exception {
 
         writeIterRunner.run(new TransactionWorker() {
-            public void doWork() {
+            public void doWork() throws Exception {
+                Pattern suppressedError = Pattern.compile("BDB1004.*");
+                Object oldErrHandler = DbCompat.getErrorHandler(env);
                 ListIterator iter = (ListIterator) iterator(coll);
                 try {
                     for (int i = beginKey; i <= endKey; i += 1) {
@@ -714,6 +717,7 @@ public class CollectionTest extends TestBase {
                             } catch (UnsupportedOperationException e) {}
                         } else if
                            (((StoredCollection) coll).areDuplicatesOrdered()) {
+                            DbCompat.suppressError(env, suppressedError);
                             try {
                                 setValuePlusOne(iter, obj);
                                 fail();
@@ -723,6 +727,7 @@ public class CollectionTest extends TestBase {
                                       e2 instanceof IllegalArgumentException ||
                                       e2 instanceof DatabaseException);
                             }
+                            DbCompat.setErrorHandler(env, oldErrHandler);
                         } else {
                             setValuePlusOne(iter, obj);
                             /* Ensure iterator position is correct. */

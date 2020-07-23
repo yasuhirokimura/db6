@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 
@@ -70,6 +70,10 @@ abstract class BasicIndex<K, E> implements EntityIndex<K, E> {
         keyAdapter = new KeyValueAdapter(keyClass, keyBinding);
     }
 
+    public Database getDatabase() {
+        return db;
+    }
+
     /*
      * Of the EntityIndex methods only get()/map()/sortedMap() are not
      * implemented here and therefore must be implemented by subclasses.
@@ -120,6 +124,7 @@ abstract class BasicIndex<K, E> implements EntityIndex<K, E> {
             return count;
         }
     }
+
 
     public boolean delete(K key)
         throws DatabaseException {

@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -58,9 +58,8 @@ proc test014 { method {nentries 10000} args } {
 				return
 			}
 			# Look for incompatible configurations of blob.
-			foreach conf { "-encryptaes" "-encrypt" "-compress" \
-			    "-dup" "-dupsort" "-read_uncommitted" \
-			    "-multiversion" } {
+			foreach conf { "-compress" "-dup" "-dupsort" \
+			    "-read_uncommitted" "-multiversion" } {
 				if { [lsearch -exact $args $conf] != -1 } {
 					puts "Test014 skipping $conf for blob"
 					return
@@ -76,25 +75,7 @@ proc test014 { method {nentries 10000} args } {
 					    skipping -snapshot for blob"
 					return
 				}
-				if { [is_repenv $env] == 1 } {
-					puts "Test014 skipping\
-					    replication env for blob"
-					return
-				}
-				if { $has_crypto == 1 } {
-					if { [$env get_encrypt_flags] != "" } {
-						puts "Test014 skipping\
-						    encrypted env for blob"
-						return
-					}
-				}
 			}
-			if { [lsearch -exact $args "-chksum"] != -1 } {
-				set indx [lsearch -exact $args "-chksum"]
-				set args [lreplace $args $indx $indx]
-				puts "Test014 ignoring -chksum for blob"
-			}
-
 			# Set up the blob arguments.
 			append args $blob
 			if { $eindex == -1 } {

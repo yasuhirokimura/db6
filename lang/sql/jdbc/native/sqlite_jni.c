@@ -358,7 +358,7 @@ static void
 globrefset(JNIEnv *env, jobject obj, jobject *ref)
 {
     if (ref) {
-	if (obj) {	
+	if (obj) {
 	    *ref = (*env)->NewGlobalRef(env, obj);
 	} else {
 	    *ref = 0;
@@ -471,7 +471,7 @@ trans2iso(JNIEnv *env, int haveutf, jstring enc, jstring src,
 	    throwoom(env, "string translation failed");
 	    return dest->result;
 	}
-	dest->result = dest->tofree;	
+	dest->result = dest->tofree;
 	(*env)->GetByteArrayRegion(env, bytes, 0, len, (jbyte *) dest->result);
 	dest->result[len] = '\0';
     } else {
@@ -1132,7 +1132,7 @@ JNIEXPORT void JNICALL
 Java_SQLite_Database__1open4(JNIEnv *env, jobject obj, jstring file, jint mode,
 			     jstring vfs, jboolean ver2)
 {
-    handle *h = gethandle(env, obj);
+    handle *h = gethandle(env, obj), *hh = 0;
     jthrowable exc;
     char *err = 0;
     transstr filename;
@@ -1165,7 +1165,7 @@ Java_SQLite_Database__1open4(JNIEnv *env, jobject obj, jstring file, jint mode,
 	    h->sqlite = 0;
 	}
     } else {
-	h = malloc(sizeof (handle));
+	h = hh = malloc(sizeof (handle));
 	if (!h) {
 	    throwoom(env, "unable to get SQLite handle");
 	    return;
@@ -1201,12 +1201,18 @@ Java_SQLite_Database__1open4(JNIEnv *env, jobject obj, jstring file, jint mode,
     }
     h->env = 0;
     if (!file) {
+	if (hh) {
+	    free(hh);
+	}
 	throwex(env, err ? err : "invalid file name");
 	return;
     }
     trans2iso(env, h->haveutf, h->enc, file, &filename);
     exc = (*env)->ExceptionOccurred(env);
     if (exc) {
+	if (hh) {
+	    free(hh);
+	}
 	(*env)->DeleteLocalRef(env, exc);
 	return;
     }
@@ -1216,6 +1222,9 @@ Java_SQLite_Database__1open4(JNIEnv *env, jobject obj, jstring file, jint mode,
 	exc = (*env)->ExceptionOccurred(env);
 	if (exc) {
 	    transfree(&filename);
+	    if (hh) {
+		free(hh);
+	    }
 	    (*env)->DeleteLocalRef(env, exc);
 	    return;
 	}
@@ -1298,6 +1307,9 @@ Java_SQLite_Database__1open4(JNIEnv *env, jobject obj, jstring file, jint mode,
 #endif
 	}
 	h->sqlite = 0;
+	if (hh) {
+	    free(hh);
+	}
 	return;
     }
     if (h->sqlite) {
@@ -1306,6 +1318,7 @@ Java_SQLite_Database__1open4(JNIEnv *env, jobject obj, jstring file, jint mode,
 	v.j = 0;
 	v.l = (jobject) h;
 	(*env)->SetLongField(env, obj, F_SQLite_Database_handle, v.j);
+	hh = 0;
 #if HAVE_SQLITE2
 	if (err) {
 	    sqlite_freemem(err);
@@ -1333,6 +1346,9 @@ Java_SQLite_Database__1open4(JNIEnv *env, jobject obj, jstring file, jint mode,
 #endif
 	h->ver = ((maj & 0xFF) << 16) | ((min & 0xFF) << 8) | (lev & 0xFF);
 	return;
+    }
+    if (hh) {
+	free(hh);
     }
     throwex(env, err ? err : "unknown error in open");
 #if HAVE_SQLITE2
@@ -2735,7 +2751,6 @@ Java_SQLite_Vm_step(JNIEnv *env, jobject obj, jobject cb)
 			data[0] = (const char *) ncol;
 			++data;
 			cols = data + ncol + 1;
-			blob = cols + ncol + 1;
 			freeproc = free_tab;
 		    } else {
 			ret = SQLITE_NOMEM;
@@ -2822,7 +2837,6 @@ Java_SQLite_Vm_step(JNIEnv *env, jobject obj, jobject cb)
 		    data[0] = (const char *) ncol;
 		    ++data;
 		    cols = data + ncol + 1;
-		    blob = cols + ncol + 1;
 		    freeproc = free_tab;
 		} else {
 		    ret = SQLITE_NOMEM;
@@ -2904,6 +2918,7 @@ Java_SQLite_Vm_step(JNIEnv *env, jobject obj, jobject cb)
 #if HAVE_SQLITE3
 	    if (data && freeproc) {
 		freeproc((void *) data);
+		data = 0;
 	    }
 #endif
 	    exc = (*env)->ExceptionOccurred(env);
@@ -2930,6 +2945,7 @@ dofin:
 #if HAVE_SQLITE3
 		if (data && freeproc) {
 		    freeproc((void *) data);
+		    data = 0;
 		}
 #endif
 		exc = (*env)->ExceptionOccurred(env);
@@ -3282,7 +3298,7 @@ Java_SQLite_Database_vm_1compile_1args(JNIEnv *env,
     throwex(env, "unsupported");
 #endif
 #endif
-#if HAVE_SQLITE3 
+#if HAVE_SQLITE3
     if (!h || !h->sqlite) {
 	throwclosed(env);
 	return;
@@ -4653,17 +4669,19 @@ Java_SQLite_Blob_finalize(JNIEnv *env, jobject obj)
 JNIEXPORT void
 JNICALL Java_SQLite_Database__1key(JNIEnv *env, jobject obj, jbyteArray key)
 {
-    jsize len;
-    jbyte *data;
+    jsize len = 0;
+    jbyte *data = 0;
 #if HAVE_SQLITE3_KEY
     handle *h = gethandle(env, obj);
 #endif
 
-    len = (*env)->GetArrayLength(env, key);
-    data = (*env)->GetByteArrayElements(env, key, 0);
-    if (len == 0) {
-	(*env)->ReleaseByteArrayElements(env, key, data, 0);
-	data = 0;
+    if (key) {
+	len = (*env)->GetArrayLength(env, key);
+	data = (*env)->GetByteArrayElements(env, key, 0);
+	if (len == 0) {
+	    (*env)->ReleaseByteArrayElements(env, key, data, 0);
+	    data = 0;
+	}
     }
     if (!data) {
 	len = 0;
@@ -4702,17 +4720,19 @@ JNICALL Java_SQLite_Database__1key(JNIEnv *env, jobject obj, jbyteArray key)
 JNIEXPORT void JNICALL
 Java_SQLite_Database__1rekey(JNIEnv *env, jobject obj, jbyteArray key)
 {
-    jsize len;
-    jbyte *data;
+    jsize len = 0;
+    jbyte *data = 0;
 #if HAVE_SQLITE3_KEY
     handle *h = gethandle(env, obj);
 #endif
 
-    len = (*env)->GetArrayLength(env, key);
-    data = (*env)->GetByteArrayElements(env, key, 0);
-    if (len == 0) {
-	(*env)->ReleaseByteArrayElements(env, key, data, 0);
-	data = 0;
+    if (key) {
+	len = (*env)->GetArrayLength(env, key);
+	data = (*env)->GetByteArrayElements(env, key, 0);
+	if (len == 0) {
+	    (*env)->ReleaseByteArrayElements(env, key, data, 0);
+	    data = 0;
+	}
     }
     if (!data) {
 	len = 0;

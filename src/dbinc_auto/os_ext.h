@@ -72,6 +72,8 @@ int __os_ioinfo __P((ENV *, const char *, DB_FH *, u_int32_t *, u_int32_t *, u_i
 int __os_tmpdir __P((ENV *, u_int32_t));
 int __os_truncate __P((ENV *, DB_FH *, db_pgno_t, u_int32_t, off_t));
 void __os_unique_id __P((ENV *, u_int32_t *));
+void __os_srandom __P((u_int));
+u_int __os_random __P((void));
 int __os_unlink __P((ENV *, const char *, int));
 void __os_yield __P((ENV *, u_long, u_long));
 #ifdef HAVE_QNX

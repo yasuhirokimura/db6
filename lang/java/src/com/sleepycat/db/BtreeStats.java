@@ -4,7 +4,7 @@
  *
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
  */
 
 package com.sleepycat.db;
@@ -20,6 +20,7 @@ public class BtreeStats extends DatabaseStats {
     private int bt_magic;
     /**
     The magic number that identifies the file as a Btree database.
+    @return the magic number that identifies the file as a Btree database
     */
     public int getMagic() {
         return bt_magic;
@@ -28,6 +29,7 @@ public class BtreeStats extends DatabaseStats {
     private int bt_version;
     /**
     The version of the Btree database.
+    @return the version of the Btree database
     */
     public int getVersion() {
         return bt_version;
@@ -36,6 +38,7 @@ public class BtreeStats extends DatabaseStats {
     private int bt_metaflags;
     /**
     Reports internal flags. For internal use only.
+    @return internal flags
     */
     public int getMetaFlags() {
         return bt_metaflags;
@@ -60,6 +63,7 @@ public class BtreeStats extends DatabaseStats {
     {@link com.sleepycat.db.Database#getStats Database.getStats} call was not configured by the
     {@link com.sleepycat.db.StatsConfig#setFast StatsConfig.setFast} method, the count will be exact and
     will not include deleted records.
+    @return the number of keys or records in the database
     */
     public int getNumKeys() {
         return bt_nkeys;
@@ -83,6 +87,7 @@ public class BtreeStats extends DatabaseStats {
     {@link com.sleepycat.db.Database#getStats Database.getStats} call was not configured by the
     {@link com.sleepycat.db.StatsConfig#setFast StatsConfig.setFast} method, the count will be exact and
     will not include deleted records.
+    @return the number of key/data pairs or records in the database
     */
     public int getNumData() {
         return bt_ndata;
@@ -93,6 +98,7 @@ public class BtreeStats extends DatabaseStats {
     The number of pages in the database.
     <p>
     Returned if {@link StatsConfig#setFast} was configured.
+    @return the number of pages in the database
     */
     public int getPageCount() {
         return bt_pagecnt;
@@ -101,6 +107,7 @@ public class BtreeStats extends DatabaseStats {
     private int bt_pagesize;
     /**
     The underlying database page size, in bytes.
+    @return the underlying database page size, in bytes
     */
     public int getPageSize() {
         return bt_pagesize;
@@ -109,14 +116,25 @@ public class BtreeStats extends DatabaseStats {
     private int bt_minkey;
     /**
     The minimum keys per page.
+    @return the minimum keys per page
     */
     public int getMinKey() {
         return bt_minkey;
     }
 
+    private int bt_ext_files;
+    /**
+    The number of external files.
+    @return the number of external files
+    */
+    public int getExtFiles() {
+        return bt_ext_files;
+    }
+
     private int bt_nblobs;
     /**
-    The number of blob records.
+    @deprecated Replaced by {@link #getExtFiles}.
+    @return the number of external files
     */
     public int getNumBlobs() {
         return bt_nblobs;
@@ -125,6 +143,7 @@ public class BtreeStats extends DatabaseStats {
     private int bt_re_len;
     /**
     The length of fixed-length records.
+    @return the length of fixed-length records
     */
     public int getReLen() {
         return bt_re_len;
@@ -133,6 +152,7 @@ public class BtreeStats extends DatabaseStats {
     private int bt_re_pad;
     /**
     The padding byte value for fixed-length records.
+    @return the padding byte value for fixed-length records
     */
     public int getRePad() {
         return bt_re_pad;
@@ -144,6 +164,7 @@ public class BtreeStats extends DatabaseStats {
 <p>
 The information is only included if the {@link com.sleepycat.db.Database#getStats Database.getStats} call
 was not configured by the {@link com.sleepycat.db.StatsConfig#setFast StatsConfig.setFast} method.
+    @return the number of levels in the database
     */
     public int getLevels() {
         return bt_levels;
@@ -155,6 +176,7 @@ was not configured by the {@link com.sleepycat.db.StatsConfig#setFast StatsConfi
 <p>
 The information is only included if the {@link com.sleepycat.db.Database#getStats Database.getStats} call
 was not configured by the {@link com.sleepycat.db.StatsConfig#setFast StatsConfig.setFast} method.
+    @return the number of database internal pages
     */
     public int getIntPages() {
         return bt_int_pg;
@@ -166,6 +188,7 @@ was not configured by the {@link com.sleepycat.db.StatsConfig#setFast StatsConfi
 <p>
 The information is only included if the {@link com.sleepycat.db.Database#getStats Database.getStats} call
 was not configured by the {@link com.sleepycat.db.StatsConfig#setFast StatsConfig.setFast} method.
+    @return the number of database leaf pages
     */
     public int getLeafPages() {
         return bt_leaf_pg;
@@ -177,6 +200,7 @@ was not configured by the {@link com.sleepycat.db.StatsConfig#setFast StatsConfi
 <p>
 The information is only included if the {@link com.sleepycat.db.Database#getStats Database.getStats} call
 was not configured by the {@link com.sleepycat.db.StatsConfig#setFast StatsConfig.setFast} method.
+    @return the number of database duplicate pages
     */
     public int getDupPages() {
         return bt_dup_pg;
@@ -188,6 +212,7 @@ was not configured by the {@link com.sleepycat.db.StatsConfig#setFast StatsConfi
 <p>
 The information is only included if the {@link com.sleepycat.db.Database#getStats Database.getStats} call
 was not configured by the {@link com.sleepycat.db.StatsConfig#setFast StatsConfig.setFast} method.
+    @return the number of database overflow pages
     */
     public int getOverPages() {
         return bt_over_pg;
@@ -199,6 +224,7 @@ was not configured by the {@link com.sleepycat.db.StatsConfig#setFast StatsConfi
 <p>
 The information is only included if the {@link com.sleepycat.db.Database#getStats Database.getStats} call
 was not configured by the {@link com.sleepycat.db.StatsConfig#setFast StatsConfig.setFast} method.
+    @return the number of empty database pages
     */
     public int getEmptyPages() {
         return bt_empty_pg;
@@ -210,6 +236,7 @@ was not configured by the {@link com.sleepycat.db.StatsConfig#setFast StatsConfi
 <p>
 The information is only included if the {@link com.sleepycat.db.Database#getStats Database.getStats} call
 was not configured by the {@link com.sleepycat.db.StatsConfig#setFast StatsConfig.setFast} method.
+    @return the number of pages on the free list
     */
     public int getFree() {
         return bt_free;
@@ -221,6 +248,7 @@ was not configured by the {@link com.sleepycat.db.StatsConfig#setFast StatsConfi
 <p>
 The information is only included if the {@link com.sleepycat.db.Database#getStats Database.getStats} call
 was not configured by the {@link com.sleepycat.db.StatsConfig#setFast StatsConfig.setFast} method.
+    @return the number of bytes free in database internal pages
     */
     public long getIntPagesFree() {
         return bt_int_pgfree;
@@ -232,6 +260,7 @@ was not configured by the {@link com.sleepycat.db.StatsConfig#setFast StatsConfi
 <p>
 The information is only included if the {@link com.sleepycat.db.Database#getStats Database.getStats} call
 was not configured by the {@link com.sleepycat.db.StatsConfig#setFast StatsConfig.setFast} method.
+    @return the number of bytes free in database leaf pages
     */
     public long getLeafPagesFree() {
         return bt_leaf_pgfree;
@@ -243,6 +272,7 @@ was not configured by the {@link com.sleepycat.db.StatsConfig#setFast StatsConfi
 <p>
 The information is only included if the {@link com.sleepycat.db.Database#getStats Database.getStats} call
 was not configured by the {@link com.sleepycat.db.StatsConfig#setFast StatsConfig.setFast} method.
+    @return the number of bytes free in database duplicate pages
     */
     public long getDupPagesFree() {
         return bt_dup_pgfree;
@@ -254,6 +284,7 @@ was not configured by the {@link com.sleepycat.db.StatsConfig#setFast StatsConfi
 <p>
 The information is only included if the {@link com.sleepycat.db.Database#getStats Database.getStats} call
 was not configured by the {@link com.sleepycat.db.StatsConfig#setFast StatsConfig.setFast} method.
+    @return the number of bytes free in database overflow pages
     */
     public long getOverPagesFree() {
         return bt_over_pgfree;
@@ -262,6 +293,7 @@ was not configured by the {@link com.sleepycat.db.StatsConfig#setFast StatsConfi
     /**
     For convenience, the BtreeStats class has a toString method
     that lists all the data fields.
+    @return a String that lists all the data fields
     */
     public String toString() {
         return "BtreeStats:"
@@ -273,6 +305,7 @@ was not configured by the {@link com.sleepycat.db.StatsConfig#setFast StatsConfi
             + "\n  bt_pagecnt=" + bt_pagecnt
             + "\n  bt_pagesize=" + bt_pagesize
             + "\n  bt_minkey=" + bt_minkey
+            + "\n  bt_ext_files=" + bt_ext_files
             + "\n  bt_nblobs=" + bt_nblobs
             + "\n  bt_re_len=" + bt_re_len
             + "\n  bt_re_pad=" + bt_re_pad

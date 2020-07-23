@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -73,13 +73,12 @@ struct __db_foreign_info {
 #define	DB_ADD_HEAP	8
 #define	DB_REM_HEAP	9
 
-#define OP_MODE_SHIFT   8
-#define OP_PAGE_MASK    0xff
+#define	OP_MODE_SHIFT   8
+#define	OP_PAGE_MASK    0xff
 
-#define OP_SET(mode, page)	(((mode) << OP_MODE_SHIFT) | (TYPE(page)))
-#define OP_MODE_GET(mode)	((mode) >> OP_MODE_SHIFT)
-#define OP_PAGE_GET(mode)	((mode) & OP_PAGE_MASK)
-
+#define	OP_SET(mode, page)	(((mode) << OP_MODE_SHIFT) | (TYPE(page)))
+#define	OP_MODE_GET(mode)	((mode) >> OP_MODE_SHIFT)
+#define	OP_PAGE_GET(mode)	((mode) & OP_PAGE_MASK)
 
 /*
  * Standard initialization and shutdown macros for all recovery functions.
@@ -150,13 +149,22 @@ struct __db_foreign_info {
 	}
 
 /*
- * Standard debugging macro for all recovery functions.
+ * Standard debugging macro for all recovery functions. The caller is required
+ * to have the typical local vars: env, dbtp, lsnp, op and info. However, the
+ * dbreg_register recovery function has to pass in an internal info pointer.
  */
+#define	REC_PRINT(func)			REC_PRINT_INTERNAL(func, info)
+#define	REC_PRINT_DBREG(func, dummy)	REC_PRINT_INTERNAL(func, dummy)
+
 #ifdef DEBUG_RECOVER
-#define	REC_PRINT(func)							\
-	(void)func(env, dbtp, lsnp, op, info);
+#define	REC_PRINT_INTERNAL(func, info)	 {		\
+	if (op != DB_TXN_PRINT && op != DB_TXN_LOG_VERIFY)		\
+		__db_msg(env, "%s:", DB_UNDO(op) ? "undo" :		\
+		    (DB_REDO(op) ? "redo" : "open/popen"));		\
+	(void)func(env, dbtp, lsnp, op, info);				\
+    }
 #else
-#define	REC_PRINT(func)
+#define	REC_PRINT_INTERNAL(func, __info)	NOP_STATEMENT
 #endif
 
 /*
@@ -239,7 +247,7 @@ struct __db_foreign_info {
 #define	DB_RETURNS_A_KEY(dbp, flags)					\
 	(((flags) != 0 && (flags) != DB_GET_BOTH &&			\
 	    (flags) != DB_GET_BOTH_RANGE && (flags) != DB_SET) ||	\
-	    ((BTREE *)(dbp)->bt_internal)->bt_compare != __bam_defcmp ||\
+	    ((BTREE *)(dbp)->bt_internal)->bt_compare != __dbt_defcmp ||\
 	    DB_RETURNS_A_KEY_HASH(dbp))
 
 /*
@@ -314,11 +322,11 @@ struct __db_foreign_info {
 /*
  * Flags to __db_truncate_page.
  */
-#define DB_EXCH_FREE		0x01	/* Free the old page. */
-#define DB_EXCH_PARENT		0x02	/* There is a parent to update. */
+#define	DB_EXCH_FREE		0x01	/* Free the old page. */
+#define	DB_EXCH_PARENT		0x02	/* There is a parent to update. */
 
 /* We usually want to do these operations. */
-#define DB_EXCH_DEFAULT		(DB_EXCH_FREE | DB_EXCH_PARENT)
+#define	DB_EXCH_DEFAULT		(DB_EXCH_FREE | DB_EXCH_PARENT)
 
 #if defined(__cplusplus)
 }

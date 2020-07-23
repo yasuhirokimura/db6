@@ -575,6 +575,43 @@ JAVA_TYPEMAP(DBC **, Dbc[], jobjectArray)
 	__os_free(NULL, $1);
 %}
 
+JAVA_TYPEMAP(DB **, Db[], jobjectArray)
+%typemap(out) DB ** { 
+	int i, len;
+
+	len = 0;
+	while ($1[len] != NULL)
+		len++;
+	if (($result = (*jenv)->NewObjectArray(jenv, (jsize)len, db_class,
+	    NULL)) == NULL)
+		return $null; /* an exception is pending */
+	for (i = 0; i < len; i++) {
+		jobject jdb = (*jenv)->NewObject(jenv, db_class,
+			    db_construct, $1[i], JNI_FALSE);
+		(*jenv)->SetObjectArrayElement(jenv, $result, (jsize)i, jdb);
+	}
+}
+
+
+JAVA_TYPEMAP(DB_ENV **, DbEnv[], jobjectArray)
+%typemap(out) DB_ENV ** {
+	int i, len;
+
+	len = 0;
+	while ($1[len] != NULL)
+		len++;
+	if (($result = (*jenv)->NewObjectArray(jenv, (jsize)len, dbenv_class,
+	    NULL)) == NULL)
+		return $null; /* an exception is pending */
+	for (i = 0; i < len; i++) {
+		jobject jdbenv = (*jenv)->NewObject(jenv, dbenv_class,
+			    dbenv_construct, $1[i], JNI_FALSE);
+		(*jenv)->SetObjectArrayElement(
+		    jenv, $result, (jsize)i, jdbenv);
+	}
+}
+
+
 JAVA_TYPEMAP(u_int8_t *gid, byte[], jbyteArray)
 %typemap(check) u_int8_t *gid %{
 	if ((*jenv)->GetArrayLength(jenv, $input) < DB_GID_SIZE) {

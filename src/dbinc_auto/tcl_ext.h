@@ -36,6 +36,7 @@ void tcl_EnvSetErrfile __P((Tcl_Interp *, DB_ENV *, DBTCL_INFO *, char *));
 int tcl_EnvSetMsgfile __P((Tcl_Interp *, DB_ENV *, DBTCL_INFO *, char *));
 int tcl_EnvCloseMsgfile __P((Tcl_Interp *, DB_ENV *, DBTCL_INFO *));
 int tcl_EnvSetErrpfx __P((Tcl_Interp *, DB_ENV *, DBTCL_INFO *, char *));
+int tcl_EnvSetMsgpfx __P((Tcl_Interp *, DB_ENV *, DBTCL_INFO *, char *));
 int tcl_EnvStatPrint __P((Tcl_Interp *, int, Tcl_Obj * CONST*, DB_ENV *));
 DBTCL_INFO *_NewInfo __P((Tcl_Interp *, void *, char *, enum INFOTYPE));
 void *_NameToPtr __P((CONST char *));

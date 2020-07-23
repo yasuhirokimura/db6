@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -14,9 +14,6 @@
 #include "dbinc/lock.h"
 #include "dbinc/mp.h"
 #include "dbinc/txn.h"
-
-static void __db_msgcall __P((const DB_ENV *, const char *, va_list));
-static void __db_msgfile __P((const DB_ENV *, const char *, va_list));
 
 #if defined(HAVE_ERROR_HISTORY)
 static void __db_thread_once_func __P((void));
@@ -91,10 +88,13 @@ __db_fnl(env, name)
 	const ENV *env;
 	const char *name;
 {
+	int ret;
+
+	ret = USR_ERR(env, EINVAL);
 	__db_errx(env, DB_STR_A("0056",
     "%s: DB_READ_COMMITTED, DB_READ_UNCOMMITTED and DB_RMW require locking",
 	    "%s"), name);
-	return (EINVAL);
+	return (ret);
 }
 
 /*
@@ -341,7 +341,7 @@ db_strerror(error)
 		    "DB_LOG_VERIFY_BAD: Log verification failed"));
 	case DB_META_CHKSUM_FAIL:
 		return (DB_STR("0247",
-	    "DB_META_CHKSUM_FAIL: Checksum mismatch detected on a database metadata page"));
+"DB_META_CHKSUM_FAIL: Checksum mismatch detected on a database metadata page"));
 	case DB_NOSERVER:
 		return (DB_STR("0072",
     "DB_NOSERVER: No message dispatch call-back function has been configured"));
@@ -396,6 +396,9 @@ db_strerror(error)
 	case DB_SECONDARY_BAD:
 		return (DB_STR("0088",
 	    "DB_SECONDARY_BAD: Secondary index inconsistent with primary"));
+	case DB_SLICE_CORRUPT:
+		return (DB_STR("0251",
+    "DB_SLICE_CORRUPT: One or more slices of this environment are malformed"));
 	case DB_TIMEOUT:
 		return (DB_STR("0089", "DB_TIMEOUT: Operation timed out"));
 	case DB_VERIFY_BAD:
@@ -446,15 +449,7 @@ __db_unknown_error(error)
  * PUBLIC:    __attribute__ ((__format__ (__printf__, 3, 4)));
  */
 void
-#ifdef STDC_HEADERS
 __db_syserr(const ENV *env, int error, const char *fmt, ...)
-#else
-__db_syserr(env, error, fmt, va_alist)
-	const ENV *env;
-	int error;
-	const char *fmt;
-	va_dcl
-#endif
 {
 	DB_ENV *dbenv;
 
@@ -479,15 +474,7 @@ __db_syserr(env, error, fmt, va_alist)
  * PUBLIC:    __attribute__ ((__format__ (__printf__, 3, 4)));
  */
 void
-#ifdef STDC_HEADERS
 __db_err(const ENV *env, int error, const char *fmt, ...)
-#else
-__db_err(env, error, fmt, va_alist)
-	const ENV *env;
-	int error;
-	const char *fmt;
-	va_dcl
-#endif
 {
 	DB_ENV *dbenv;
 
@@ -512,14 +499,7 @@ __db_err(env, error, fmt, va_alist)
  * PUBLIC:    __attribute__ ((__format__ (__printf__, 2, 3)));
  */
 void
-#ifdef STDC_HEADERS
 __db_errx(const ENV *env, const char *fmt, ...)
-#else
-__db_errx(env, fmt, va_alist)
-	const ENV *env;
-	const char *fmt;
-	va_dcl
-#endif
 {
 	DB_ENV *dbenv;
 
@@ -624,6 +604,10 @@ __db_errfile(dbenv, error, error_set, fmt, ap)
 		fmt = "";
 
 	if (dbenv != NULL && dbenv->db_errpfx != NULL) {
+		/*
+		 * Double each '%' in user-defined prefix so that
+		 * we can get the right output with printf.
+		 */
 		prefix = __db_fmt_quote(prefix_buf,
 		    sizeof(prefix_buf), dbenv->db_errpfx);
 		sep1 = ": ";
@@ -675,23 +659,11 @@ __db_errfile(dbenv, error, error_set, fmt, ap)
  * PUBLIC:    __attribute__ ((__format__ (__printf__, 3, 4)));
  */
 void
-#ifdef STDC_HEADERS
 __db_msgadd(const ENV *env, DB_MSGBUF *mbp, const char *fmt, ...)
-#else
-__db_msgadd(env, mbp, fmt, va_alist)
-	const ENV *env;
-	DB_MSGBUF *mbp;
-	const char *fmt;
-	va_dcl
-#endif
 {
 	va_list ap;
 
-#ifdef STDC_HEADERS
 	va_start(ap, fmt);
-#else
-	va_start(ap);
-#endif
 	__db_msgadd_ap(env, mbp, fmt, ap);
 	va_end(ap);
 }
@@ -747,14 +719,7 @@ __db_msgadd_ap(env, mbp, fmt, ap)
  * PUBLIC:    __attribute__ ((__format__ (__printf__, 2, 3)));
  */
 void
-#ifdef STDC_HEADERS
 __db_msg(const ENV *env, const char *fmt, ...)
-#else
-__db_msg(env, fmt, va_alist)
-	const ENV *env;
-	const char *fmt;
-	va_dcl
-#endif
 {
 	DB_ENV *dbenv;
 
@@ -771,14 +736,7 @@ __db_msg(env, fmt, va_alist)
  * PUBLIC: void __db_debug_msg __P((const ENV *, const char *, ...));
  */
 void
-#ifdef STDC_HEADERS
 __db_debug_msg(const ENV *env, const char *fmt, ...)
-#else
-__db_debug_msg(env, fmt, va_alist)
-	const ENV *env;
-	const char *fmt;
-	va_dcl
-#endif
 {
 #ifdef HAVE_ERROR_HISTORY
 	DB_MSGBUF *mb;
@@ -787,11 +745,7 @@ __db_debug_msg(env, fmt, va_alist)
 	if (env == NULL || (mb = __db_deferred_get()) == NULL)
 		return;
 
-#ifdef STDC_HEADERS
 	va_start(ap, fmt);
-#else
-	va_start(ap);
-#endif
 	__db_msgadd_ap(env, mb, fmt, ap);
 	va_end(ap);
 #endif
@@ -807,23 +761,12 @@ __db_debug_msg(env, fmt, va_alist)
  * PUBLIC:    __attribute__ ((__format__ (__printf__, 2, 3)));
  */
 void
-#ifdef STDC_HEADERS
 __db_repmsg(const ENV *env, const char *fmt, ...)
-#else
-__db_repmsg(env, fmt, va_alist)
-	const ENV *env;
-	const char *fmt;
-	va_dcl
-#endif
 {
 	va_list ap;
 	char buf[2048];
 
-#ifdef STDC_HEADERS
 	va_start(ap, fmt);
-#else
-	va_start(ap);
-#endif
 	(void)vsnprintf(buf, sizeof(buf), fmt, ap);
 	__rep_msg(env, buf);
 	va_end(ap);
@@ -831,9 +774,12 @@ __db_repmsg(env, fmt, va_alist)
 
 /*
  * __db_msgcall --
- *	Do the message work for callback functions in DB_REAL_MSG().
+ *	Do the non-error message work for callback functions.
+ *
+ * PUBLIC: void __db_msgcall
+ * PUBLIC:    __P((const DB_ENV *, const char *, va_list));
  */
-static void
+void
 __db_msgcall(dbenv, fmt, ap)
 	const DB_ENV *dbenv;
 	const char *fmt;
@@ -842,26 +788,48 @@ __db_msgcall(dbenv, fmt, ap)
 	char buf[2048];
 
 	(void)vsnprintf(buf, sizeof(buf), fmt, ap);
-	dbenv->db_msgcall(dbenv, buf);
+	dbenv->db_msgcall(dbenv, dbenv->db_msgpfx, buf);
 }
 
 /*
  * __db_msgfile --
- *	Do the message work for FILE *s in DB_REAL_MSG().
+ *	Do the non-error message work for FILE *s. Combine the messages into
+ *	a single fprintf() call, to avoid interspersed output when there are
+ *	multiple active threads.
+ *
+ *	Display a ": " after the dbenv prefix, if it has one.
+ *
+ * PUBLIC: void __db_msgfile
+ * PUBLIC:    __P((const DB_ENV *, const char *, va_list));
  */
-static void
+void
 __db_msgfile(dbenv, fmt, ap)
 	const DB_ENV *dbenv;
 	const char *fmt;
 	va_list ap;
 {
 	FILE *fp;
+	char *prefix, *sep;
+	char prefix_buf[200];
+	char full_fmt[4096];
 
+	prefix = sep = "";
 	fp = dbenv == NULL ||
 	    dbenv->db_msgfile == NULL ? stdout : dbenv->db_msgfile;
-	(void)vfprintf(fp, fmt, ap);
 
-	(void)fprintf(fp, "\n");
+	if (dbenv != NULL && dbenv->db_msgpfx != NULL) {
+		/*
+		 * Double each '%' in user-defined prefix so that
+		 * we can get the right output with printf.
+		 */
+		prefix = __db_fmt_quote(prefix_buf,
+		    sizeof(prefix_buf), dbenv->db_msgpfx);
+		sep = ": ";
+	}
+
+	(void)snprintf(full_fmt, sizeof(full_fmt), "%s%s%s\n",
+	    prefix, sep, fmt);
+	(void)vfprintf(fp, full_fmt, ap);
 	(void)fflush(fp);
 }
 
@@ -876,6 +844,9 @@ __db_unknown_flag(env, routine, flag)
 	char *routine;
 	u_int32_t flag;
 {
+	int ret;
+
+	ret = USR_ERR(env, EINVAL);
 	__db_errx(env, DB_STR_A("0093", "%s: Unknown flag: %#x", "%s %#x"),
 	    routine, (u_int)flag);
 
@@ -883,7 +854,7 @@ __db_unknown_flag(env, routine, flag)
 	__os_abort(env);
 	/* NOTREACHED */
 #endif
-	return (EINVAL);
+	return (ret);
 }
 
 /*
@@ -897,6 +868,9 @@ __db_unknown_type(env, routine, type)
 	char *routine;
 	DBTYPE type;
 {
+	int ret;
+
+	ret = USR_ERR(env, EINVAL);
 	__db_errx(env, DB_STR_A("0094", "%s: Unexpected database type: %s",
 	    "%s %s"), routine, __db_dbtype_to_string(type));
 
@@ -904,7 +878,7 @@ __db_unknown_type(env, routine, type)
 	__os_abort(env);
 	/* NOTREACHED */
 #endif
-	return (EINVAL);
+	return (ret);
 }
 
 /*
@@ -917,6 +891,9 @@ __db_unknown_path(env, routine)
 	ENV *env;
 	char *routine;
 {
+	int ret;
+
+	ret = USR_ERR(env, EINVAL);
 	__db_errx(env, DB_STR_A("0095", "%s: Unexpected code path error",
 	    "%s"), routine);
 
@@ -924,7 +901,7 @@ __db_unknown_path(env, routine)
 	__os_abort(env);
 	/* NOTREACHED */
 #endif
-	return (EINVAL);
+	return (ret);
 }
 
 /*
@@ -958,9 +935,11 @@ __db_check_txn(dbp, txn, assoc_locker, read_op)
 
 	if (txn != NULL && dbp->blob_threshold &&
 	    F_ISSET(txn, (TXN_READ_UNCOMMITTED | TXN_SNAPSHOT))) {
-	    __db_errx(env, DB_STR("0237",
-"Blob enabled databases do not support DB_READ_UNCOMMITTED and TXN_SNAPSHOT"));
-		return (EINVAL);
+		ret = USR_ERR(env, EINVAL);
+		__db_errx(env, DB_STR("0237",
+"External file databases do not support DB_READ_UNCOMMITTED and TXN_SNAPSHOT")
+		    );
+		return (ret);
 	}
 
 	/*
@@ -970,18 +949,19 @@ __db_check_txn(dbp, txn, assoc_locker, read_op)
 	 *	a transaction handle for a non-transactional database
 	 */
 	if (!read_op && txn != NULL && F_ISSET(txn, TXN_READONLY)) {
+		ret = USR_ERR(env, EINVAL);
 		__db_errx(env, DB_STR("0096",
 		    "Read-only transaction cannot be used for an update"));
-		return (EINVAL);
 	} else if (txn == NULL || F_ISSET(txn, TXN_PRIVATE)) {
 		if (dbp->cur_locker != NULL &&
 		    dbp->cur_locker->id >= TXN_MINIMUM)
 			goto open_err;
 
 		if (!read_op && F_ISSET(dbp, DB_AM_TXN)) {
+			ret = USR_ERR(env, EINVAL);
 			__db_errx(env, DB_STR("0097",
 		    "Transaction not specified for a transactional database"));
-			return (EINVAL);
+			return (ret);
 		}
 	} else if (F_ISSET(txn, TXN_FAMILY)) {
 		/*
@@ -994,9 +974,10 @@ __db_check_txn(dbp, txn, assoc_locker, read_op)
 			 return (__db_not_txn_env(env));
 
 		if (!F_ISSET(dbp, DB_AM_TXN)) {
+			ret = USR_ERR(env, EINVAL);
 			__db_errx(env, DB_STR("0098",
 		    "Transaction specified for a non-transactional database"));
-			return (EINVAL);
+			return (ret);
 		}
 
 		if (F_ISSET(txn, TXN_DEADLOCK))
@@ -1030,29 +1011,32 @@ __db_check_txn(dbp, txn, assoc_locker, read_op)
 	 */
 	if (!read_op && dbp->associate_locker != NULL &&
 	    txn != NULL && dbp->associate_locker != assoc_locker) {
+		ret = USR_ERR(env, EINVAL);
 		__db_errx(env, DB_STR("0099",
 	    "Operation forbidden while secondary index is being created"));
-		return (EINVAL);
+		return (ret);
 	}
 
 	/*
 	 * Check the txn and dbp are from the same env.
 	 */
 	if (txn != NULL && env != txn->mgrp->env) {
+		ret = USR_ERR(env, EINVAL);
 		__db_errx(env, DB_STR("0100",
 		    "Transaction and database from different environments"));
-		return (EINVAL);
+		return (ret);
 	}
 
 	return (0);
 open_err:
+	ret = USR_ERR(env, EINVAL);
 	if (F2_ISSET(dbp, DB2_AM_EXCL))
 	    __db_errx(env, DB_STR("0209",
 "Exclusive database handles can only have one active transaction at a time."));
 	else
 		__db_errx(env, DB_STR("0101",
 		    "Transaction that opened the DB handle is still active"));
-	return (EINVAL);
+	return (ret);
 }
 
 /*
@@ -1067,7 +1051,9 @@ __db_txn_deadlock_err(env, txn)
 	DB_TXN *txn;
 {
 	const char *name;
+	int ret;
 
+	ret = USR_ERR(env, EINVAL);
 	name = NULL;
 	(void)__txn_get_name(txn, &name);
 
@@ -1075,7 +1061,7 @@ __db_txn_deadlock_err(env, txn)
 	    "%s%sprevious transaction deadlock return not resolved",
 	    "%s %s"), name == NULL ? "" : name, name == NULL ? "" : ": ");
 
-	return (EINVAL);
+	return (ret);
 }
 
 /*
@@ -1088,9 +1074,12 @@ int
 __db_not_txn_env(env)
 	ENV *env;
 {
+	int ret;
+
+	ret = USR_ERR(env, EINVAL);
 	__db_errx(env, DB_STR("0103",
 	    "DB environment not configured for transactions"));
-	return (EINVAL);
+	return (ret);
 }
 
 /*
@@ -1104,10 +1093,13 @@ __db_rec_toobig(env, data_len, fixed_rec_len)
 	ENV *env;
 	u_int32_t data_len, fixed_rec_len;
 {
+	int ret;
+
+	ret = USR_ERR(env, EINVAL);
 	__db_errx(env, DB_STR_A("0104",
 	    "%lu larger than database's maximum record length %lu",
 	    "%lu %lu"), (u_long)data_len, (u_long)fixed_rec_len);
-	return (EINVAL);
+	return (ret);
 }
 
 /*
@@ -1121,11 +1113,14 @@ __db_rec_repl(env, data_size, data_dlen)
 	ENV *env;
 	u_int32_t data_size, data_dlen;
 {
+	int ret;
+
+	ret = USR_ERR(env, EINVAL);
 	__db_errx(env, DB_STR_A("0105",
 	    "Record length error: "
 	    "replacement length %lu differs from replaced length %lu",
 	    "%lu %lu"), (u_long)data_size, (u_long)data_dlen);
-	return (EINVAL);
+	return (ret);
 }
 
 #if defined(DIAGNOSTIC) || defined(DEBUG_ROP)  || defined(DEBUG_WOP)
@@ -1213,12 +1208,15 @@ __db_check_lsn(env, lsn, prev)
 	ENV *env;
 	DB_LSN *lsn, *prev;
 {
+	int ret;
+
+	ret = USR_ERR(env, EINVAL);
 	__db_errx(env, DB_STR_A("0110",
 	    "Log sequence error: page LSN %lu %lu; previous LSN %lu %lu",
 	    "%lu %lu %lu %lu"), (u_long)(lsn)->file,
 	    (u_long)(lsn)->offset, (u_long)(prev)->file,
 	    (u_long)(prev)->offset);
-	return (EINVAL);
+	return (ret);
 }
 
 /*
@@ -1231,9 +1229,12 @@ __db_rdonly(env, name)
 	const ENV *env;
 	const char *name;
 {
+	int ret;
+
+	ret = USR_ERR(env, EACCES);
 	__db_errx(env, DB_STR_A("0111",
 	    "%s: attempt to modify a read-only database", "%s"), name);
-	return (EACCES);
+	return (ret);
 }
 
 /*
@@ -1245,10 +1246,13 @@ int
 __db_space_err(dbp)
 	const DB *dbp;
 {
+	int ret;
+
+	ret = USR_ERR(dbp->env, ENOSPC);
 	__db_errx(dbp->env, DB_STR_A("0112",
 	    "%s: file limited to %lu pages", "%s %lu"),
 	    dbp->fname, (u_long)dbp->mpf->mfp->maxpgno);
-	return (ENOSPC);
+	return (ret);
 }
 
 /*

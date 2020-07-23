@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -25,15 +25,7 @@ static int  sprintf_retcharpnt __P((void));
  */
 #ifndef HAVE_SNPRINTF
 int
-#ifdef STDC_HEADERS
 snprintf(char *str, size_t n, const char *fmt, ...)
-#else
-snprintf(str, n, fmt, va_alist)
-	char *str;
-	size_t n;
-	const char *fmt;
-	va_dcl
-#endif
 {
 	static int ret_charpnt = -1;
 	va_list ap;
@@ -42,11 +34,7 @@ snprintf(str, n, fmt, va_alist)
 	if (ret_charpnt == -1)
 		ret_charpnt = sprintf_retcharpnt();
 
-#ifdef STDC_HEADERS
 	va_start(ap, fmt);
-#else
-	va_start(ap);
-#endif
 	len = (size_t)vsprintf(str, fmt, ap);
 	if (ret_charpnt)
 		len = strlen(str);

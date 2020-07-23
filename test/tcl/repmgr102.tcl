@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2009, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2009, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # TEST repmgr102
 # TEST Ensuring exactly one listener process.
@@ -15,6 +15,7 @@
 proc repmgr102 {  } {
 	source ./include.tcl
 	source $test_path/testutils.tcl
+	global ipversion
 
 	if { $is_freebsd_test == 1 } {
 		puts "Skipping replication manager test on FreeBSD platform."
@@ -38,11 +39,12 @@ proc repmgr102 {  } {
 
 	file mkdir $masterdir
 
+	set hoststr [get_hoststr $ipversion]
 	set ports [available_ports 1]
 	set master_port [lindex $ports 0]
 
 	make_dbconfig $masterdir \
-	    [list [list repmgr_site 127.0.0.1 $master_port db_local_site on] \
+	    [list [list repmgr_site $hoststr $master_port db_local_site on] \
 	    "rep_set_config db_repmgr_conf_2site_strict off"]
 	set masterenv [berkdb_env -rep -txn -thread -home $masterdir \
 	    -isalive my_isalive -create]

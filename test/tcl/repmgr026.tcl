@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2009, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2009, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # TEST	repmgr026
 # TEST	Test of "full election" timeouts.
@@ -34,6 +34,7 @@ proc repmgr026_sub { tnum client_down use_leases } {
 	global repfiles_in_memory
 	global rep_verbose
 	global verbose_type
+	global ipversion
 	
 	set verbargs ""
 	if { $rep_verbose == 1 } {
@@ -52,6 +53,7 @@ proc repmgr026_sub { tnum client_down use_leases } {
 	file mkdir [set dird $testdir/SITE_D]
 	file mkdir [set dire $testdir/SITE_E]
 	foreach { porta portb portc portd porte } [available_ports 5] {}
+	set hoststr [get_hoststr $ipversion]
 
 	# First, just create/establish the group.
 	puts -nonewline "Repmgr$tnum: Create a group of 5 sites: "
@@ -72,26 +74,26 @@ proc repmgr026_sub { tnum client_down use_leases } {
 	    -timeout {election 5000000} -timeout {ack 3000000}"
 	set enva [eval $cmda]
 	eval $enva repmgr $common_mgr  \
-	    -local {[list 127.0.0.1 $porta creator]}
+	    -local {[list $hoststr $porta creator]}
 	puts -nonewline "." ; 	flush stdout
 	set envb [eval $cmdb]
 	eval $envb repmgr $common_mgr \
-	    -local {[list 127.0.0.1 $portb]} -remote {[list 127.0.0.1 $porta]}
+	    -local {[list $hoststr $portb]} -remote {[list $hoststr $porta]}
 	await_startup_done $envb
 	puts -nonewline "." ; 	flush stdout
 	set envc [eval $cmdc]
 	eval $envc repmgr $common_mgr \
-	    -local {[list 127.0.0.1 $portc]} -remote {[list 127.0.0.1 $porta]}
+	    -local {[list $hoststr $portc]} -remote {[list $hoststr $porta]}
 	await_startup_done $envc
 	puts -nonewline "." ; 	flush stdout
 	set envd [eval $cmdd]
 	eval $envd repmgr $common_mgr \
-	    -local {[list 127.0.0.1 $portd]} -remote {[list 127.0.0.1 $porta]}
+	    -local {[list $hoststr $portd]} -remote {[list $hoststr $porta]}
 	await_startup_done $envd
 	puts -nonewline "." ; 	flush stdout
 	set enve [eval $cmde]
 	eval $enve repmgr $common_mgr \
-	    -local {[list 127.0.0.1 $porte]} -remote {[list 127.0.0.1 $porta]}
+	    -local {[list $hoststr $porte]} -remote {[list $hoststr $porta]}
 	await_startup_done $enve
 	puts "."
 	$enve close
@@ -116,16 +118,16 @@ proc repmgr026_sub { tnum client_down use_leases } {
 
 	puts "\tRepmgr$tnum.a: Start first four sites."
 	set enva [eval $cmda]
-	eval $enva repmgr $common_mgr -pri 200 -local {[list 127.0.0.1 $porta]}
+	eval $enva repmgr $common_mgr -pri 200 -local {[list $hoststr $porta]}
 
 	set envb [eval $cmdb]
-	eval $envb repmgr $common_mgr -pri 100 -local {[list 127.0.0.1 $portb]}
+	eval $envb repmgr $common_mgr -pri 100 -local {[list $hoststr $portb]}
 
 	set envc [eval $cmdc]
-	eval $envc repmgr $common_mgr -pri 90 -local {[list 127.0.0.1 $portc]}
+	eval $envc repmgr $common_mgr -pri 90 -local {[list $hoststr $portc]}
 
 	set envd [eval $cmdd]
-	eval $envd repmgr $common_mgr -pri 80 -local {[list 127.0.0.1 $portd]}
+	eval $envd repmgr $common_mgr -pri 80 -local {[list $hoststr $portd]}
 
 	if { $client_down } {
 		set enve NONE
@@ -133,7 +135,7 @@ proc repmgr026_sub { tnum client_down use_leases } {
 		puts "\tRepmgr$tnum.b: Start fifth site."
 		set enve [eval $cmde]
 		eval $enve repmgr $common_mgr -pri 50 \
-		    -local {[list 127.0.0.1 $porte]}
+		    -local {[list $hoststr $porte]}
 	}
 
 	# wait for results, and make sure they're correct

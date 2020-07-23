@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2009, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2009, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 using System;
@@ -64,7 +64,7 @@ namespace CsharpAPITest
 			cfg.LogSystemCfg.NoSync = true;
 			cfg.LogSystemCfg.ZeroOnCreate = true;
 			cfg.LogSystemCfg.InMemory = true;
-			cfg.LogSystemCfg.LogBlobContent = true;
+			cfg.LogSystemCfg.LogExternalFileContent = true;
 			DatabaseEnvironment env = DatabaseEnvironment.Open(testHome, cfg);
 
 			BTreeDatabase db;
@@ -148,7 +148,7 @@ namespace CsharpAPITest
 			cfg.LogSystemCfg.FileMode = 755;
 			cfg.LogSystemCfg.ForceSync = true;
 			cfg.LogSystemCfg.InMemory = false;
-			cfg.LogSystemCfg.LogBlobContent = false;
+			cfg.LogSystemCfg.LogExternalFileContent = false;
 			cfg.LogSystemCfg.MaxFileSize = 1048576;
 			cfg.LogSystemCfg.NoBuffer = false;
 			cfg.LogSystemCfg.NoSync = true;
@@ -198,7 +198,7 @@ namespace CsharpAPITest
 			Assert.AreNotEqual(0, stats.MBytesSinceCheckpoint);
 			Assert.AreNotEqual(0, stats.MinCommitsPerFlush);
 			Assert.AreNotEqual(0, stats.OverflowWrites);
-			Assert.AreNotEqual(0, stats.Syncs);
+			Assert.AreEqual(0, stats.Syncs);
 			Assert.AreNotEqual(0, stats.Writes);
 			Assert.AreEqual(0, stats.Reads);
 			Assert.AreEqual(0, stats.RegionLockWait);
@@ -271,7 +271,7 @@ namespace CsharpAPITest
 			envConfig.LogSystemCfg.FileMode = 755;
 			envConfig.LogSystemCfg.ForceSync = true;
 			envConfig.LogSystemCfg.InMemory = false;
-			envConfig.LogSystemCfg.LogBlobContent = false;
+			envConfig.LogSystemCfg.LogExternalFileContent = false;
 			envConfig.LogSystemCfg.MaxFileSize = 1048576;
 			envConfig.LogSystemCfg.NoBuffer = false;
 			envConfig.LogSystemCfg.NoSync = true;
@@ -344,8 +344,9 @@ namespace CsharpAPITest
 			    logConfig.ForceSync, compulsory);
 			Configuration.ConfirmBool(xmlElement, "InMemory",
 			    logConfig.InMemory, compulsory);
-			Configuration.ConfirmBool(xmlElement, "LogBlobContent",
-			    logConfig.LogBlobContent, compulsory);
+			Configuration.ConfirmBool(xmlElement,
+			    "LogExternalFileContent",
+			    logConfig.LogExternalFileContent, compulsory);
 			Configuration.ConfirmUint(xmlElement, "MaxFileSize",
 			    logConfig.MaxFileSize, compulsory);
 			Configuration.ConfirmBool(xmlElement, "NoBuffer",
@@ -378,8 +379,9 @@ namespace CsharpAPITest
 			    ref logConfig.ForceSync, compulsory);
 			Configuration.ConfigBool(xmlElement, "InMemory",
 			    ref logConfig.InMemory, compulsory);
-			Configuration.ConfigBool(xmlElement, "LogBlobContent",
-			    ref logConfig.LogBlobContent, compulsory);
+			Configuration.ConfigBool(xmlElement,
+			    "LogExternalFileContent",
+			    ref logConfig.LogExternalFileContent, compulsory);
 			if (Configuration.ConfigUint(xmlElement, "MaxFileSize",
 			    ref uintValue, compulsory))
 				logConfig.MaxFileSize = uintValue;

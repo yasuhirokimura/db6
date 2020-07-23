@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2009, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2009, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # TEST	repmgr028
 # TEST	Repmgr allows applications to choose master explicitly, instead of
@@ -30,6 +30,7 @@ proc repmgr028_sub { tnum } {
 	global repfiles_in_memory
 	global rep_verbose
 	global verbose_type
+	global ipversion
 	
 	set verbargs ""
 	if { $rep_verbose == 1 } {
@@ -45,6 +46,7 @@ proc repmgr028_sub { tnum } {
 	file mkdir [set dira $testdir/SITE_A]
 	file mkdir [set dirb $testdir/SITE_B]
 	foreach { porta portb } [available_ports 2] {}
+	set hoststr [get_hoststr $ipversion]
 
 	set common "-create -txn $verbargs $repmemargs \
 	    -rep -thread -event"
@@ -53,10 +55,10 @@ proc repmgr028_sub { tnum } {
 	set cmda "berkdb_env_noerr $common -errpfx SITE_A -home $dira"
 	set cmdb "berkdb_env_noerr $common -errpfx SITE_B -home $dirb"
 	set enva [eval $cmda]
-	eval $enva repmgr -local {[list 127.0.0.1 $porta]} -start master
+	eval $enva repmgr -local {[list $hoststr $porta]} -start master
 	set envb [eval $cmdb]
 	eval $envb repmgr -start client \
-	    -local {[list 127.0.0.1 $portb]} -remote {[list 127.0.0.1 $porta]}
+	    -local {[list $hoststr $portb]} -remote {[list $hoststr $porta]}
 	await_startup_done $envb
 	$envb close
 	$enva close
@@ -69,12 +71,12 @@ proc repmgr028_sub { tnum } {
 	set enva [eval $cmda -recover]
 	$enva rep_config {mgrelections off}
 	eval $enva repmgr $common_mgr \
-	    -local {[list 127.0.0.1 $porta]} -start elect -pri 100
+	    -local {[list $hoststr $porta]} -start elect -pri 100
 
 	set envb [eval $cmdb -recover]
 	$envb rep_config {mgrelections off}
 	eval $envb repmgr $common_mgr -start elect -pri 99 \
-	    -local {[list 127.0.0.1 $portb]}
+	    -local {[list $hoststr $portb]}
 	await_startup_done $envb
 
 	puts "\tRepmgr$tnum.b: Switch roles explicitly."
@@ -128,7 +130,7 @@ proc repmgr028_sub { tnum } {
 	set envb [eval $cmdb -recover]
 	$envb rep_config {mgrelections off}
 	eval $envb repmgr $common_mgr -start master \
-	    -local {[list 127.0.0.1 $portb]}
+	    -local {[list $hoststr $portb]}
 	
 	# Force a checkpoint so that the client hears something from the master,
 	# which should cause the client to notice the gen number change.  Try a
@@ -204,10 +206,10 @@ proc repmgr028_sub { tnum } {
 	puts "\tRepmgr$tnum.h: Start up again, elections on by default."
 	set enva [eval $cmda -recover]
 	eval $enva repmgr $common_mgr \
-	    -local {[list 127.0.0.1 $porta]} -start master
+	    -local {[list $hoststr $porta]} -start master
 	set envb [eval $cmdb -recover]
 	eval $envb repmgr $common_mgr -start client \
-	    -local {[list 127.0.0.1 $portb]}
+	    -local {[list $hoststr $portb]}
 	await_startup_done $envb
 
 	puts "\tRepmgr$tnum.i: Check that dynamic role change attempt fails."
@@ -240,10 +242,10 @@ proc repmgr028_sub { tnum } {
 	# 
 	set enva [eval $cmda -recover]
 	eval $enva repmgr $common_mgr \
-	    -local {[list 127.0.0.1 $porta]} -start client
+	    -local {[list $hoststr $porta]} -start client
 	set envb [eval $cmdb -recover]
 	eval $envb repmgr $common_mgr -start client \
-	    -local {[list 127.0.0.1 $portb]}
+	    -local {[list $hoststr $portb]}
 	puts "\tRepmgr$tnum.j: Pause 10 seconds, check no election held."
 	tclsleep 10
 	error_check_good no_election \
@@ -263,11 +265,11 @@ proc repmgr028_sub { tnum } {
 	puts "\tRepmgr$tnum.k: Test election start policy on client startup."
 	set enva [eval $cmda -recover]
 	eval $enva repmgr $common_mgr \
-	    -local {[list 127.0.0.1 $porta]} -start master
+	    -local {[list $hoststr $porta]} -start master
 	$enva rep_config {mgr2sitestrict on}
 	set envb [eval $cmdb -recover]
 	eval $envb repmgr $common_mgr -start client \
-	    -local {[list 127.0.0.1 $portb]} -remote {[list 127.0.0.1 $porta]}
+	    -local {[list $hoststr $portb]} -remote {[list $hoststr $porta]}
 	await_startup_done $envb
 	$envb rep_config {mgr2sitestrict on}
 	$envb close
@@ -279,7 +281,7 @@ proc repmgr028_sub { tnum } {
 	#
 	set envb [eval $cmdb]
 	eval $envb repmgr $common_mgr -start elect \
-	    -local {[list 127.0.0.1 $portb]} -remote {[list 127.0.0.1 $porta]}
+	    -local {[list $hoststr $portb]} -remote {[list $hoststr $porta]}
 	puts "\tRepmgr$tnum.l: Pause 5 seconds, check election was attempted."
 	tclsleep 5
 	error_check_good startup_election \

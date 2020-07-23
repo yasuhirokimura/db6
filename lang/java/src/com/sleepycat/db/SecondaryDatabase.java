@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -119,6 +119,8 @@ Queue format.
 a database handle for the primary database that is to be indexed.
 <p>
 @param config The secondary database open attributes.  If null, default attributes are used.
+@throws DatabaseException if a failure occurs.
+@throws java.io.FileNotFoundException if the database file does not exist
     */
     public SecondaryDatabase(final String fileName,
                              final String databaseName,
@@ -191,7 +193,6 @@ a database handle for the primary database that is to be indexed.
     <p>
     @return a copy of the secondary configuration of this database.
     <p>
-    <p>
 @throws DatabaseException if a failure occurs.
     */
     public SecondaryConfig getSecondaryConfig()
@@ -227,7 +228,6 @@ caller.
 <p>
 @return {@link com.sleepycat.db.OperationStatus#NOTFOUND OperationStatus.NOTFOUND} if no matching key/data pair is
 found; {@link com.sleepycat.db.OperationStatus#KEYEMPTY OperationStatus.KEYEMPTY} if the database is a Queue or Recno database and the specified key exists, but was never explicitly created by the application or was later deleted; otherwise, {@link com.sleepycat.db.OperationStatus#SUCCESS OperationStatus.SUCCESS}.
-<p>
 <p>
 @throws DeadlockException if the operation was selected to resolve a
 deadlock.
@@ -273,7 +273,6 @@ caller.
 @return {@link com.sleepycat.db.OperationStatus#NOTFOUND OperationStatus.NOTFOUND} if no matching key/data pair is
 found; {@link com.sleepycat.db.OperationStatus#KEYEMPTY OperationStatus.KEYEMPTY} if the database is a Queue or Recno database and the specified key exists, but was never explicitly created by the application or was later deleted; otherwise, {@link com.sleepycat.db.OperationStatus#SUCCESS OperationStatus.SUCCESS}.
 <p>
-<p>
 @throws DeadlockException if the operation was selected to resolve a
 deadlock.
 <p>
@@ -316,6 +315,11 @@ deadlock.
 <p>
 @throws DatabaseException if a failure occurs.
 <p>
+@param txn
+For a transactional database, an explicit transaction may be specified to
+transaction-protect the operation, or null may be specified to perform the
+operation without transaction protection.  For a non-transactional database,
+null must be specified.
 @param key the secondary key
 returned as output.  Its byte array does not need to be initialized by the
 caller.

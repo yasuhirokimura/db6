@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -194,7 +194,7 @@ __db_retcopy(env, dbt, data, len, memp, memsize)
 		if (len != 0 && (dbt->data == NULL || dbt->ulen < len))
 			ret = DB_BUFFER_SMALL;
 	} else if (memp == NULL || memsize == NULL)
-		ret = EINVAL;
+		ret = USR_ERR(env, EINVAL);
 	else {
 		if (len != 0 && (*memsize == 0 || *memsize < len)) {
 			if ((ret = __os_realloc(env, len, memp)) == 0)

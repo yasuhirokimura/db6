@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -85,7 +85,7 @@ DB_ENV-&gt;rep_set_timeout(DB_ENV *env, int which, u_int32_t timeout);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp4055128"></a>Parameters</h3>
+              <h3 class="title"><a id="idp7049392"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -93,7 +93,7 @@ DB_ENV-&gt;rep_set_timeout(DB_ENV *env, int which, u_int32_t timeout);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp4055600"></a>which</h4>
+                <h4 class="title"><a id="idp7050208"></a>which</h4>
               </div>
             </div>
           </div>
@@ -240,6 +240,20 @@ DB_ENV-&gt;rep_set_timeout(DB_ENV *env, int which, u_int32_t timeout);  </pre>
                          method and <a href="../../programmer_reference/rep_lease.html" class="olink">Master leases</a>.
                     </p>
               </li>
+              <li>
+                <p>
+                          <code class="literal">DB_REP_WRITE_FORWARD_TIMEOUT</code>
+                    </p>
+                <p>
+                         Configure the amount of time a Replication Manager client waits for a response
+                         from a forwarded write operation before returning a failure indication.
+                         The default value is 5 seconds.
+                    </p>
+                <p>
+                         For more information on write forwarding, see
+                         the <em class="citetitle">Berkeley DB Programmer's Reference Guide</em>.
+                    </p>
+              </li>
             </ul>
           </div>
         </div>
@@ -247,7 +261,7 @@ DB_ENV-&gt;rep_set_timeout(DB_ENV *env, int which, u_int32_t timeout);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp4088792"></a>timeout</h4>
+                <h4 class="title"><a id="idp7093104"></a>timeout</h4>
               </div>
             </div>
           </div>
@@ -262,7 +276,7 @@ DB_ENV-&gt;rep_set_timeout(DB_ENV *env, int which, u_int32_t timeout);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp4062880"></a>Errors</h3>
+              <h3 class="title"><a id="idp7088544"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -278,7 +292,7 @@ DB_ENV-&gt;rep_set_timeout(DB_ENV *env, int which, u_int32_t timeout);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp4070648"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp7079616"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -295,7 +309,7 @@ DB_ENV-&gt;rep_set_timeout(DB_ENV *env, int which, u_int32_t timeout);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp4069568"></a>Class</h3>
+              <h3 class="title"><a id="idp7077536"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -307,7 +321,7 @@ DB_ENV-&gt;rep_set_timeout(DB_ENV *env, int which, u_int32_t timeout);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp4071680"></a>See Also</h3>
+              <h3 class="title"><a id="idp7082192"></a>See Also</h3>
             </div>
           </div>
         </div>

@@ -8,20 +8,20 @@
     <meta name="generator" content="DocBook XSL Stylesheets V1.73.2" />
     <link rel="start" href="index.html" title="Berkeley DB C++ API Reference" />
     <link rel="up" href="env.html" title="Chapter 5.  The DbEnv Handle" />
-    <link rel="prev" href="envlsn_reset.html" title="DbEnv::lsn_reset()" />
+    <link rel="prev" href="envmsg.html" title="DbEnv::msg()" />
     <link rel="next" href="envremove.html" title="DbEnv::remove()" />
   </head>
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
           <th colspan="3" align="center">DbEnv::open()</th>
         </tr>
         <tr>
-          <td width="20%" align="left"><a accesskey="p" href="envlsn_reset.html">Prev</a> </td>
+          <td width="20%" align="left"><a accesskey="p" href="envmsg.html">Prev</a> </td>
           <th width="60%" align="center">Chapter 5. 
                 The DbEnv Handle
         </th>
@@ -78,7 +78,7 @@ DbEnv::open(const char *db_home, u_int32_t flags, int mode); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp60141888"></a>Parameters</h3>
+              <h3 class="title"><a id="idp102137600"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -86,7 +86,7 @@ DbEnv::open(const char *db_home, u_int32_t flags, int mode); </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp60138168"></a>db_home</h4>
+                <h4 class="title"><a id="idp102168992"></a>db_home</h4>
               </div>
             </div>
           </div>
@@ -112,7 +112,7 @@ DbEnv::open(const char *db_home, u_int32_t flags, int mode); </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp60151256"></a>flags</h4>
+                <h4 class="title"><a id="idp102132288"></a>flags</h4>
               </div>
             </div>
           </div>
@@ -558,7 +558,7 @@ DbEnv::open(const char *db_home, u_int32_t flags, int mode); </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp60118112"></a>mode</h4>
+                <h4 class="title"><a id="idp102215840"></a>mode</h4>
               </div>
             </div>
           </div>
@@ -587,7 +587,7 @@ DbEnv::open(const char *db_home, u_int32_t flags, int mode); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp60139104"></a>Errors</h3>
+              <h3 class="title"><a id="idp102159840"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -605,7 +605,7 @@ DbEnv::open(const char *db_home, u_int32_t flags, int mode); </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp60179992"></a>DB_RUNRECOVERY</h4>
+                <h4 class="title"><a id="idp102247936"></a>DB_RUNRECOVERY</h4>
               </div>
             </div>
           </div>
@@ -620,7 +620,7 @@ DbEnv::open(const char *db_home, u_int32_t flags, int mode); </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp60148640"></a>DB_VERSION_MISMATCH</h4>
+                <h4 class="title"><a id="idp102259552"></a>DB_VERSION_MISMATCH</h4>
               </div>
             </div>
           </div>
@@ -633,7 +633,7 @@ DbEnv::open(const char *db_home, u_int32_t flags, int mode); </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp60224760"></a>EAGAIN</h4>
+                <h4 class="title"><a id="idp102170816"></a>EAGAIN</h4>
               </div>
             </div>
           </div>
@@ -645,7 +645,7 @@ DbEnv::open(const char *db_home, u_int32_t flags, int mode); </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp60225184"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp102304752"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -663,7 +663,7 @@ DbEnv::open(const char *db_home, u_int32_t flags, int mode); </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp60117000"></a>ENOENT</h4>
+                <h4 class="title"><a id="idp102133952"></a>ENOENT</h4>
               </div>
             </div>
           </div>
@@ -676,7 +676,7 @@ DbEnv::open(const char *db_home, u_int32_t flags, int mode); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp60207168"></a>Class</h3>
+              <h3 class="title"><a id="idp102184000"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -688,7 +688,7 @@ DbEnv::open(const char *db_home, u_int32_t flags, int mode); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp60188152"></a>See Also</h3>
+              <h3 class="title"><a id="idp102273392"></a>See Also</h3>
             </div>
           </div>
         </div>
@@ -701,14 +701,14 @@ DbEnv::open(const char *db_home, u_int32_t flags, int mode); </pre>
       <hr />
       <table width="100%" summary="Navigation footer">
         <tr>
-          <td width="40%" align="left"><a accesskey="p" href="envlsn_reset.html">Prev</a> </td>
+          <td width="40%" align="left"><a accesskey="p" href="envmsg.html">Prev</a> </td>
           <td width="20%" align="center">
             <a accesskey="u" href="env.html">Up</a>
           </td>
           <td width="40%" align="right"> <a accesskey="n" href="envremove.html">Next</a></td>
         </tr>
         <tr>
-          <td width="40%" align="left" valign="top">DbEnv::lsn_reset() </td>
+          <td width="40%" align="left" valign="top">DbEnv::msg() </td>
           <td width="20%" align="center">
             <a accesskey="h" href="index.html">Home</a>
           </td>

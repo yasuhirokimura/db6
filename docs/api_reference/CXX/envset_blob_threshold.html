@@ -3,27 +3,27 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <title>DbEnv::set_blob_threshold()</title>
+    <title>DbEnv::set_ext_file_threshold()</title>
     <link rel="stylesheet" href="apiReference.css" type="text/css" />
     <meta name="generator" content="DocBook XSL Stylesheets V1.73.2" />
     <link rel="start" href="index.html" title="Berkeley DB C++ API Reference" />
-    <link rel="up" href="blob.html" title="Chapter 14.  Binary Large Objects" />
-    <link rel="prev" href="envset_blob_dir.html" title="DbEnv::set_blob_dir()" />
+    <link rel="up" href="blob.html" title="Chapter 14.  External Files" />
+    <link rel="prev" href="envset_blob_dir.html" title="DbEnv::set_ext_file_dir()" />
     <link rel="next" href="utilities.html" title="Appendix A.  Berkeley DB Command Line Utilities" />
   </head>
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
-          <th colspan="3" align="center">DbEnv::set_blob_threshold()</th>
+          <th colspan="3" align="center">DbEnv::set_ext_file_threshold()</th>
         </tr>
         <tr>
           <td width="20%" align="left"><a accesskey="p" href="envset_blob_dir.html">Prev</a> </td>
           <th width="60%" align="center">Chapter 14. 
-                Binary Large Objects
+                External Files
         </th>
           <td width="20%" align="right"> <a accesskey="n" href="utilities.html">Next</a></td>
         </tr>
@@ -34,39 +34,33 @@
       <div class="titlepage">
         <div>
           <div>
-            <h2 class="title" style="clear: both"><a id="envset_blob_threshold"></a>DbEnv::set_blob_threshold()</h2>
+            <h2 class="title" style="clear: both"><a id="envset_blob_threshold"></a>DbEnv::set_ext_file_threshold()</h2>
           </div>
         </div>
       </div>
       <pre class="programlisting">#include &lt;db_cxx.h&gt;
  
 int
-DbEnv::set_blob_threshold(u_int32_t bytes, u_int32_t flags);  </pre>
+DbEnv::set_ext_file_threshold(u_int32_t bytes, u_int32_t flags);  </pre>
       <p>
-        The <code class="methodname">DbEnv::set_blob_threshold()</code> method sets
+        The <code class="methodname">DbEnv::set_ext_file_threshold()</code> method sets
         a default size for the environment which is used to determine when
-        a data item will be stored as a BLOB. Data items sized less than
-        this threshold are stored as normal data within the database. Data
+        a data item will be stored as an external file. Data items sized less
+        than this threshold are stored as normal data within the database. Data
         items larger than this size are stored on-disk in a subdirectory
         set aside for the purpose.
     </p>
       <p>
-         If this threshold value is set to <code class="literal">0</code>, then BLOB
-         support is turned off by default for databases created in the
-         environment. If this method is never called, then the default BLOB
-         threshold is <code class="literal">0</code>.
+         If this threshold value is set to <code class="literal">0</code>, then external
+         file support is turned off by default for databases created in the
+         environment. If this method is never called, then the default external
+         file threshold is <code class="literal">0</code>.
      </p>
       <p>
-         This method only sets the default BLOB threshold for the
-         environment. The BLOB threshold can be set for individual
+         This method only sets the default external file threshold for the
+         environment. The external file threshold can be set for individual
          databases created within the environment using
-         <a class="xref" href="set_blob_threshold.html" title="Db::set_blob_threshold()">Db::set_blob_threshold()</a>.
-     </p>
-      <p>
-         It is illegal to set a BLOB threshold if replication is enabled
-         for the environment. That is, if the 
-         <a class="link" href="envopen.html#envopen_DB_INIT_REP">DB_INIT_REP</a>
-         flag is specified to <a class="xref" href="envopen.html" title="DbEnv::open()">DbEnv::open()</a>.
+         <a class="xref" href="set_blob_threshold.html" title="Db::set_ext_file_threshold()">Db::set_ext_file_threshold()</a>.
      </p>
       <p>
          This method configures operations performed using the specified
@@ -79,7 +73,7 @@ DbEnv::set_blob_threshold(u_int32_t bytes, u_int32_t flags);  </pre>
      </p>
       <p>
          Unless otherwise specified, the
-         <code class="methodname">DbEnv::set_blob_threshold()</code> <span>
+         <code class="methodname">DbEnv::set_ext_file_threshold()</code> <span>
             
             <span>
                 method either returns a non-zero error value or throws an
@@ -92,7 +86,7 @@ DbEnv::set_blob_threshold(u_int32_t bytes, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp63942624"></a>Parameters</h3>
+              <h3 class="title"><a id="idp109034736"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -100,26 +94,27 @@ DbEnv::set_blob_threshold(u_int32_t bytes, u_int32_t flags);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp63941976"></a>bytes</h4>
+                <h4 class="title"><a id="idp109036016"></a>bytes</h4>
               </div>
             </div>
           </div>
           <p>
                  The <span class="bold"><strong>bytes</strong></span> parameter
                  identifies the threshold size, in bytes, beyond which a
-                 data item is stored as a BLOB.
+                 data item is stored as an external file.
              </p>
         </div>
         <div class="sect3" lang="en" xml:lang="en">
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp63927360"></a>flags</h4>
+                <h4 class="title"><a id="idp109027344"></a>flags</h4>
               </div>
             </div>
           </div>
           <p>
-                  The <span class="bold"><strong>flags</strong></span> parameter must be set to 0.
+                  The <span class="bold"><strong>flags</strong></span> parameter must be
+                  set to 0.
              </p>
         </div>
       </div>
@@ -127,12 +122,12 @@ DbEnv::set_blob_threshold(u_int32_t bytes, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp63932352"></a>Errors</h3>
+              <h3 class="title"><a id="idp109034096"></a>Errors</h3>
             </div>
           </div>
         </div>
         <p>
-             The <code class="methodname">DbEnv::set_blob_threshold()</code> <span>
+             The <code class="methodname">DbEnv::set_ext_file_threshold()</code> <span>
             
             <span>
                 method may fail and throw a <a class="link" href="dbexception.html" title="Chapter 6. The DbException Class">DbException</a> 
@@ -145,7 +140,7 @@ DbEnv::set_blob_threshold(u_int32_t bytes, u_int32_t flags);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp63951496"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp109049760"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -158,7 +153,7 @@ DbEnv::set_blob_threshold(u_int32_t bytes, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp63949520"></a>Class</h3>
+              <h3 class="title"><a id="idp109046784"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -170,12 +165,12 @@ DbEnv::set_blob_threshold(u_int32_t bytes, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp63945448"></a>See Also</h3>
+              <h3 class="title"><a id="idp109026928"></a>See Also</h3>
             </div>
           </div>
         </div>
         <p>
-             <a class="xref" href="blob.html#bloblist" title="BLOBs and Related Methods">BLOBs and Related Methods</a> 
+             <a class="xref" href="blob.html#bloblist" title="External Files and Related Methods">External Files and Related Methods</a> 
         </p>
       </div>
     </div>
@@ -190,7 +185,7 @@ DbEnv::set_blob_threshold(u_int32_t bytes, u_int32_t flags);  </pre>
           <td width="40%" align="right"> <a accesskey="n" href="utilities.html">Next</a></td>
         </tr>
         <tr>
-          <td width="40%" align="left" valign="top">DbEnv::set_blob_dir() </td>
+          <td width="40%" align="left" valign="top">DbEnv::set_ext_file_dir() </td>
           <td width="20%" align="center">
             <a accesskey="h" href="index.html">Home</a>
           </td>

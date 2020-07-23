@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1999, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1999, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -183,7 +183,6 @@ __db_pthread_mutex_init(env, mutex, flags)
 #endif
 #ifdef HAVE_MUTEX_SOLARIS_LWP
 	/*
-	 * XXX
 	 * Gcc complains about missing braces in the static initializations of
 	 * lwp_cond_t and lwp_mutex_t structures because the structures contain
 	 * sub-structures/unions and the Solaris include file that defines the
@@ -337,16 +336,17 @@ __db_pthread_mutex_condwait(env, mutex, mutexp, timespec)
 	DB_MUTEX *mutexp;
 	db_timespec *timespec;
 {
-	DB_ENV *dbenv;
 	int ret;
 #ifdef HAVE_FAILCHK_BROADCAST
+	DB_ENV *dbenv;
 	db_timespec failchk_timespec;
 #endif
 
-	dbenv = env->dbenv;
 	PERFMON4(env, mutex, suspend, mutex, TRUE, mutexp->alloc_id, mutexp);
 
 #ifdef HAVE_FAILCHK_BROADCAST
+	dbenv = env->dbenv;
+
 	/*
 	 * If the failchk timeout would be soon than the timeout passed in,
 	 * argument, use the failchk timeout. The caller handles "short" waits.
@@ -372,8 +372,17 @@ __db_pthread_mutex_condwait(env, mutex, mutexp, timespec)
 			goto err;
 		}
 #endif
+		/*
+		 * Return any timeout error unless the timeout was only for
+		 * the failure check.
+		 */
 		if (ret == ETIMEDOUT) {
-			ret = DB_TIMEOUT;
+#ifdef HAVE_FAILCHK_BROADCAST
+			if (timespec == &failchk_timespec)
+				ret = 0;
+			else
+#endif
+				ret = USR_ERR(env, DB_TIMEOUT);
 			goto err;
 		}
 	} else
@@ -556,7 +565,9 @@ __db_pthread_mutex_readlock(env, mutex)
 	DB_ENV *dbenv;
 	DB_MUTEX *mutexp;
 	MUTEX_STATE *state;
+#ifdef HAVE_FAILCHK_BROADCAST
 	db_timespec timespec;
+#endif
 	int ret;
 
 	dbenv = env->dbenv;
@@ -598,6 +609,7 @@ __db_pthread_mutex_readlock(env, mutex)
 			    &timespec, dbenv->mutex_failchk_timeout);
 			RET_SET(pthread_rwlock_timedrdlock(&mutexp->u.rwlock,
 			    (struct timespec *)&timespec), ret);
+			ret = ETIME_TO_ETIMEDOUT(ret);
 			if (F_ISSET(mutexp, DB_MUTEX_OWNER_DEAD) &&
 			    !F_ISSET(dbenv, DB_ENV_FAILCHK)) {
 				if (ret == 0)
@@ -606,16 +618,18 @@ __db_pthread_mutex_readlock(env, mutex)
 				ret = USR_ERR(env, __mutex_died(env, mutex));
 				goto err;
 			}
-		} while (ret == DB_TIMEOUT);
+		} while (ret == ETIMEDOUT);
+		if (ret != 0)
+			ret = USR_ERR(env, ret);
 	} else
 #endif
 		RET_SET(pthread_rwlock_rdlock(&mutexp->u.rwlock), ret);
 
 	PERFMON4(env, mutex, resume, mutex, FALSE, mutexp->alloc_id, mutexp);
-	DB_ASSERT(env, !F_ISSET(mutexp, DB_MUTEX_LOCKED));
 	if (ret != 0)
 		goto err;
-
+	if (state != NULL)
+		state->action = MUTEX_ACTION_SHARED;
 #ifdef HAVE_FAILCHK_BROADCAST
 	if (F_ISSET(mutexp, DB_MUTEX_OWNER_DEAD) &&
 	    !F_ISSET(dbenv, DB_ENV_FAILCHK)) {
@@ -636,6 +650,7 @@ __db_pthread_mutex_readlock(env, mutex)
 	if (F_ISSET(dbenv, DB_ENV_YIELDCPU))
 		__os_yield(env, 0, 0);
 #endif
+	DB_ASSERT(env, !F_ISSET(mutexp, DB_MUTEX_LOCKED));
 	return (0);
 
 err:
@@ -643,6 +658,52 @@ err:
 		state->action = MUTEX_ACTION_UNLOCKED;
 	__db_err(env, ret, DB_STR("2024", "pthread readlock failed"));
 	return (__env_panic(env, ret));
+}
+
+/*
+ * __db_pthread_mutex_tryreadlock
+ *	Try to get a shared lock on a mutex, but do not wait if it is busy.
+ *
+ * PUBLIC: #if defined(HAVE_SHARED_LATCHES)
+ * PUBLIC: int __db_pthread_mutex_tryreadlock __P((ENV *, db_mutex_t));
+ * PUBLIC: #endif
+ */
+int
+__db_pthread_mutex_tryreadlock(env, mutex)
+	ENV *env;
+	db_mutex_t mutex;
+{
+	DB_MUTEX *mutexp;
+	MUTEX_STATE *state;
+	int ret;
+
+	if (!MUTEX_ON(env) || F_ISSET(env->dbenv, DB_ENV_NOLOCKING))
+		return (0);
+	mutexp = MUTEXP_SET(env, mutex);
+	if (!F_ISSET(mutexp, DB_MUTEX_SHARED))
+		return (USR_ERR(env, EINVAL));
+	/*
+	 * Failchk support: note that this thread is attempting to get this
+	 * lock. Afterwards, either reset the state to unlocked, or promote
+	 * it to say that the read-lock was acquired.
+	 */
+	state = NULL;
+	if (env->thr_hashtab != NULL && (ret = __mutex_record_lock(env,
+	    mutex, MUTEX_ACTION_INTEND_SHARE, &state)) != 0)
+		return (ret);
+	if ((ret = pthread_rwlock_tryrdlock(&mutexp->u.rwlock)) != 0) {
+		if (ret == EBUSY || ret == EAGAIN)
+			ret = DB_LOCK_NOTGRANTED;
+		ret = USR_ERR(env, ret);
+		if (state != NULL)
+			state->action = MUTEX_ACTION_UNLOCKED;
+	} else {
+		STAT_INC(env,
+		    mutex, set_rd_nowait, mutexp->mutex_set_nowait, mutex);
+		if (state != NULL)
+			state->action = MUTEX_ACTION_SHARED;
+	}
+	return (ret);
 }
 #endif
 
@@ -790,7 +851,11 @@ __db_pthread_mutex_unlock(env, mutex)
 			goto err;
 	} else {
 #ifndef HAVE_MUTEX_HYBRID
-		F_CLR(mutexp, DB_MUTEX_LOCKED);
+		if (F_ISSET(mutexp, DB_MUTEX_LOCKED))
+			F_CLR(mutexp, DB_MUTEX_LOCKED);
+		else if (env->thr_hashtab != NULL &&
+		    (ret = __mutex_record_unlock(env, mutex)) != 0)
+			goto err;
 #endif
 	}
 
@@ -848,7 +913,7 @@ __db_pthread_mutex_destroy(env, mutex)
 		 * If there were dead processes waiting on the condition
 		 * we may not be able to destroy it.  Let failchk thread skip
 		 * this, unless destroy is required.
-		 * XXX What operating system resources might this leak?
+		 * !!! What operating system resources might this leak?
 		 */
 #ifdef HAVE_PTHREAD_RWLOCK_REINIT_OKAY
 		if (!failchk_thread)

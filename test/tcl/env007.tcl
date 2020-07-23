@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 1999, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 1999, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -41,11 +41,11 @@ proc env007 { } {
 	# The initial values for both locks and lock objects have silently
 	# enforced minimums of 50 * #cpus. These values work for up to 8 cpus.
 	set rlist {
-	{ "-blob_dir" "set_blob_dir" "." "./BLOBDIR"
-	    "Env007.a1: Blob dir" ""
-	    "" "" "get_blob_dir" }
-	{ "-blob_threshold" "set_blob_threshold" "10485760" "20971520 0"
-	    "Env007.a2: Blob threshold" ""
+	{ "-blob_dir" "set_ext_file_dir" "." "./BLOBDIR"
+	    "Env007.a1: External file dir" ""
+	    "External file dir" "" "get_blob_dir" }
+	{ "-blob_threshold" "set_ext_file_threshold" "10485760" "20971520 0"
+	    "Env007.a2: External file threshold" ""
 	    "" "" "get_blob_threshold" }
 	{ "-cache_max" "set_cache_max" "1 0" "0 134217728" 
 	    "Env007.a3: Cache max" ""
@@ -143,6 +143,9 @@ proc env007 { } {
 	{ "-mutex_set_tas_spins" "mutex_set_tas_spins" "60" "85"
 	    "Env007.a31: Mutex tas spins" "mutex_stat"
 	    "Mutex TAS spins" "0" "mutex_get_tas_spins" }
+	{ "-region_dir" "set_region_dir" "."
+	    "." "Env007.a31.1: Region dir" ""
+	    "Region dir" "" "get_region_dir" }
 	{ "-reg_timeout" "set_reg_timeout" "25000" "35000"
 	    "Env007.a32: Register timeout" ""
 	    "" "" "get_timeout reg" }
@@ -190,6 +193,10 @@ proc env007 { } {
 	    "mgrprefmasmaster off" "DB_REPMGR_CONF_PREFMAS_MASTER on"
 	    "Env007.a33.10: Replication config" ""
 	    "" "" "rep_get_config mgrprefmasmaster" }
+	{ "-rep_config" "rep_set_config"
+	    "mgrforwardwrites off" "DB_REPMGR_CONF_FORWARD_WRITES on"
+	    "Env007.a33.11: Replication config" ""
+	    "" "" "rep_get_config mgrforwardwrites" }
 	{ "-rep_lease" "rep_set_clockskew" "60 1003 1000" "101 100"
 	    "Env007.a34: Replication clock skew" ""
 	    "" "0" "rep_get_clockskew" }
@@ -207,8 +214,44 @@ proc env007 { } {
 	    "" "0" "rep_get_request" }
 	{ "-rep_timeout" "rep_set_timeout"
 	    "1 15000000" "DB_REP_ACK_TIMEOUT 10000000"
-	    "Env007.a39: Replication timeout" ""
+	    "Env007.a39.0: Replication timeout" ""
 	    "" "0" "rep_get_timeout ack" }
+	{ "-rep_timeout" "rep_set_timeout"
+	    "2 2000000" "DB_REP_CHECKPOINT_DELAY 3000000"
+	    "Env007.a39.1: Replication checkpoint delay" ""
+	    "" "0" "rep_get_timeout checkpoint_delay" }
+	{ "-rep_timeout" "rep_set_timeout"
+	    "3 3000000" "DB_REP_CONNECTION_RETRY 4000000"
+	    "Env007.a39.2: Replication connection retry" ""
+	    "" "0" "rep_get_timeout connection_retry" }
+	{ "-rep_timeout" "rep_set_timeout"
+	    "4 4000000" "DB_REP_ELECTION_RETRY 5000000"
+	    "Env007.a39.3: Replication election retry" ""
+	    "" "0" "rep_get_timeout election_retry" }
+	{ "-rep_timeout" "rep_set_timeout"
+	    "5 5000000" "DB_REP_ELECTION_TIMEOUT 6000000"
+	    "Env007.a39.4: Replication election timeout" ""
+	    "" "0" "rep_get_timeout election" }
+	{ "-rep_timeout" "rep_set_timeout"
+	    "6 6000000" "DB_REP_FULL_ELECTION_TIMEOUT 7000000"
+	    "Env007.a39.5: Replication full election timeout" ""
+	    "" "0" "rep_get_timeout full_election" }
+	{ "-rep_timeout" "rep_set_timeout"
+	    "7 7000000" "DB_REP_HEARTBEAT_MONITOR 8000000"
+	    "Env007.a39.6: Replication heartbeat monitor" ""
+	    "" "0" "rep_get_timeout heartbeat_monitor" }
+	{ "-rep_timeout" "rep_set_timeout"
+	    "8 8000000" "DB_REP_HEARTBEAT_SEND 9000000"
+	    "Env007.a39.7: Replication heartbeat send" ""
+	    "" "0" "rep_get_timeout heartbeat_send" }
+	{ "-rep_timeout" "rep_set_timeout"
+	    "9 9000000" "DB_REP_LEASE_TIMEOUT 10000000"
+	    "Env007.a39.8: Replication lease timeout" ""
+	    "" "0" "rep_get_timeout lease" }
+	{ "-rep_timeout" "rep_set_timeout"
+	    "10 3000000" "DB_REP_WRITE_FORWARD_TIMEOUT 4000000"
+	    "Env007.a39.9: Replication write forwarding timeout" ""
+	    "" "0" "rep_get_timeout write_forward" }
 	{ "-repmgr_ack_policy" "repmgr_set_ack_policy"
 	    "1" "DB_REPMGR_ACKS_ALL"
 	    "Env007.a40.0: Rep mgr ack policy" ""
@@ -411,6 +454,7 @@ proc env007 { } {
 	{ "set_open_flags" "db_private on" "get_open_flags" "-private" }
 	{ "set_open_flags" "db_init_rep" "get_open_flags" "-rep" }
 	{ "set_open_flags" "db_thread" "get_open_flags" "-thread" }
+	{ "set_region_dir" "." "get_region_dir" "." }
 	{ "set_region_init" "1" "get_flags" "-region_init" }
 	{ "set_reg_timeout" "60" "get_timeout reg" "60" }
 	{ "set_shm_key" "15" "get_shm_key" "15" }
@@ -430,6 +474,7 @@ proc env007 { } {
 	{ "set_verbose" "db_verb_repmgr_connfail" 
 	    "get_verbose repmgr_connfail" "on" }
 	{ "set_verbose" "db_verb_repmgr_misc" "get_verbose repmgr_misc" "on" }
+	{ "set_verbose" "db_verb_slice" "get_verbose slice" "on" }
 	{ "set_verbose" "db_verb_waitsfor" "get_verbose wait" "on" }
 	{ "log_set_config" "db_log_blob" "log_get_config" "blob" } 
 	{ "log_set_config" "db_log_direct" "log_get_config" "direct" }
@@ -1121,7 +1166,7 @@ proc env007_check_getter { msg env arg val getter} {
 	    $arg == "rep_set_config" || $arg == "rep_set_timeout"} {
 		set valtmp [lrange $val 1\
 		    [expr [llength $val]-1]]
-	} elseif { $msg == "config" && $arg == "set_blob_threshold" } {
+	} elseif { $msg == "config" && $arg == "set_ext_file_threshold" } {
 		set valtmp [lindex $val 0]
 	} else {
 		set valtmp $val

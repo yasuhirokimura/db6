@@ -13,7 +13,7 @@
 <projects>
   <variable name="sourcePath">../../</variable>
   <variable name="outputBase.7.10">../../build_wince/</variable>
-  <variable name="outputBase.8.00">../../build_wince/</variable>
+  <variable name="outputBase.9.00">../../build_wince/</variable>
   <variable name="mobile">true</variable>
   
   <preprocessor config="all">DB_WIN32;DB_WINCE;_WIN32_WCE=$(CEVER);$(CePlatform);ARM;_ARM_;ARMV4;UNDER_CE=$(CEVER);UNICODE;_UNICODE;__NO_SYSTEM_INCLUDES</preprocessor>
@@ -136,6 +136,7 @@
       <file name="src\db\db_ret.c"/>
       <file name="src\db\db_setid.c"/>
       <file name="src\db\db_setlsn.c"/>
+      <file name="src\db\db_slice.c"/>
       <file name="src\db\db_sort_multiple.c"/>
       <file name="src\db\db_stati.c"/>
       <file name="src\db\db_truncate.c"/>
@@ -161,6 +162,7 @@
       <file name="src\env\env_region.c"/>
       <file name="src\env\env_register.c"/>
       <file name="src\env\env_sig.c"/>
+      <file name="src\env\env_slice.c"/>
       <file name="src\env\env_stat.c"/>
       <file name="src\fileops\fileops_auto.c"/>
       <file name="src\fileops\fop_basic.c"/>
@@ -377,6 +379,7 @@
       <file name="src\db\db_ret.c"/>
       <file name="src\db\db_setid.c"/>
       <file name="src\db\db_setlsn.c"/>
+      <file name="src\db\db_slice.c"/>
       <file name="src\db\db_sort_multiple.c"/>
       <file name="src\db\db_stati.c"/>
       <file name="src\db\db_truncate.c"/>
@@ -401,6 +404,7 @@
       <file name="src\env\env_region.c"/>
       <file name="src\env\env_register.c"/>
       <file name="src\env\env_sig.c"/>
+      <file name="src\env\env_slice.c"/>
       <file name="src\env\env_stat.c"/>
       <file name="src\fileops\fileops_auto.c"/>
       <file name="src\fileops\fop_basic.c"/>
@@ -567,9 +571,11 @@
       <file name="lang\sql\sqlite\src\select.c"/>
       <file name="lang\sql\sqlite\src\status.c"/>
       <file name="lang\sql\sqlite\src\table.c"/>
+      <file name="lang\sql\sqlite\src\threads.c"/>
       <file name="lang\sql\sqlite\src\tokenize.c"/>
       <file name="lang\sql\sqlite\src\trigger.c"/>
       <file name="lang\sql\sqlite\src\update.c"/>
+      <file name="lang\sql\adapter\userauth.c"/>
       <file name="lang\sql\sqlite\src\utf.c"/>
       <file name="lang\sql\sqlite\src\util.c"/>
       <file name="lang\sql\adapter\vacuum.c"/>

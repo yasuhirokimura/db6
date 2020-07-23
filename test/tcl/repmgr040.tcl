@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2013, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2013, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -32,6 +32,7 @@ proc repmgr040_sub { method niter tnum largs } {
 	global testdir
 	global rep_verbose
 	global verbose_type
+	global ipversion
 	set nsites 2
 
 	set verbargs ""
@@ -40,6 +41,7 @@ proc repmgr040_sub { method niter tnum largs } {
 	}
 
 	env_cleanup $testdir
+	set hoststr [get_hoststr $ipversion]
 	set ports [available_ports $nsites]
 
 	set masterdir $testdir/MASTERDIR
@@ -63,15 +65,15 @@ proc repmgr040_sub { method niter tnum largs } {
 	$masterenv rep_config {mgrprefmasmaster on}
 	# Test that preferred master site can only be started as client.
 	catch {$masterenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 0]] -start master} res
+	    -local [list $hoststr [lindex $ports 0]] -start master} res
 	error_check_good startmaster [is_substr $res \
 	    "preferred master site must be started"] 1
 	catch {$masterenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 0]] -start elect} res
+	    -local [list $hoststr [lindex $ports 0]] -start elect} res
 	error_check_good startelect [is_substr $res \
 	    "preferred master site must be started"] 1
 	$masterenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 0]] \
+	    -local [list $hoststr [lindex $ports 0]] \
 	    -timeout [list heartbeat_send 500000] \
 	    -timeout [list heartbeat_monitor 1500000] \
 	    -timeout [list election_retry 2000000] -start client
@@ -86,8 +88,8 @@ proc repmgr040_sub { method niter tnum largs } {
 	$clientenv rep_config {mgr2sitestrict off}
 	$clientenv rep_config {mgrprefmasclient on}
 	$clientenv repmgr -ack all \
-	    -local [list 127.0.0.1 [lindex $ports 1]] \
-	    -remote [list 127.0.0.1 [lindex $ports 0]] \
+	    -local [list $hoststr [lindex $ports 1]] \
+	    -remote [list $hoststr [lindex $ports 0]] \
 	    -start client
 	await_startup_done $clientenv
 

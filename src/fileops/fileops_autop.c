@@ -27,6 +27,23 @@ __fop_create_42_print(env, dbtp, lsnp, notused2, info)
 }
 
 /*
+ * PUBLIC: int __fop_create_60_print __P((ENV *, DBT *, DB_LSN *,
+ * PUBLIC:     db_recops, void *));
+ */
+int
+__fop_create_60_print(env, dbtp, lsnp, notused2, info)
+	ENV *env;
+	DBT *dbtp;
+	DB_LSN *lsnp;
+	db_recops notused2;
+	void *info;
+{
+	COMPQUIET(notused2, DB_TXN_PRINT);
+
+	return (__log_print_record(env, dbtp, lsnp, "__fop_create_60", __fop_create_60_desc, info));
+}
+
+/*
  * PUBLIC: int __fop_create_print __P((ENV *, DBT *, DB_LSN *,
  * PUBLIC:     db_recops, void *));
  */
@@ -41,6 +58,23 @@ __fop_create_print(env, dbtp, lsnp, notused2, info)
 	COMPQUIET(notused2, DB_TXN_PRINT);
 
 	return (__log_print_record(env, dbtp, lsnp, "__fop_create", __fop_create_desc, info));
+}
+
+/*
+ * PUBLIC: int __fop_remove_60_print __P((ENV *, DBT *, DB_LSN *,
+ * PUBLIC:     db_recops, void *));
+ */
+int
+__fop_remove_60_print(env, dbtp, lsnp, notused2, info)
+	ENV *env;
+	DBT *dbtp;
+	DB_LSN *lsnp;
+	db_recops notused2;
+	void *info;
+{
+	COMPQUIET(notused2, DB_TXN_PRINT);
+
+	return (__log_print_record(env, dbtp, lsnp, "__fop_remove_60", __fop_remove_60_desc, info));
 }
 
 /*
@@ -75,6 +109,23 @@ __fop_write_42_print(env, dbtp, lsnp, notused2, info)
 	COMPQUIET(notused2, DB_TXN_PRINT);
 
 	return (__log_print_record(env, dbtp, lsnp, "__fop_write_42", __fop_write_42_desc, info));
+}
+
+/*
+ * PUBLIC: int __fop_write_60_print __P((ENV *, DBT *, DB_LSN *,
+ * PUBLIC:     db_recops, void *));
+ */
+int
+__fop_write_60_print(env, dbtp, lsnp, notused2, info)
+	ENV *env;
+	DBT *dbtp;
+	DB_LSN *lsnp;
+	db_recops notused2;
+	void *info;
+{
+	COMPQUIET(notused2, DB_TXN_PRINT);
+
+	return (__log_print_record(env, dbtp, lsnp, "__fop_write_60", __fop_write_60_desc, info));
 }
 
 /*
@@ -146,6 +197,23 @@ __fop_rename_42_print(env, dbtp, lsnp, notused2, info)
 }
 
 /*
+ * PUBLIC: int __fop_rename_60_print __P((ENV *, DBT *, DB_LSN *,
+ * PUBLIC:     db_recops, void *));
+ */
+int
+__fop_rename_60_print(env, dbtp, lsnp, notused2, info)
+	ENV *env;
+	DBT *dbtp;
+	DB_LSN *lsnp;
+	db_recops notused2;
+	void *info;
+{
+	COMPQUIET(notused2, DB_TXN_PRINT);
+
+	return (__log_print_record(env, dbtp, lsnp, "__fop_rename_60", __fop_rename_60_desc, info));
+}
+
+/*
  * PUBLIC: int __fop_rename_print __P((ENV *, DBT *, DB_LSN *,
  * PUBLIC:     db_recops, void *));
  */
@@ -160,6 +228,23 @@ __fop_rename_print(env, dbtp, lsnp, notused2, info)
 	COMPQUIET(notused2, DB_TXN_PRINT);
 
 	return (__log_print_record(env, dbtp, lsnp, "__fop_rename", __fop_rename_desc, info));
+}
+
+/*
+ * PUBLIC: int __fop_file_remove_60_print __P((ENV *, DBT *,
+ * PUBLIC:     DB_LSN *, db_recops, void *));
+ */
+int
+__fop_file_remove_60_print(env, dbtp, lsnp, notused2, info)
+	ENV *env;
+	DBT *dbtp;
+	DB_LSN *lsnp;
+	db_recops notused2;
+	void *info;
+{
+	COMPQUIET(notused2, DB_TXN_PRINT);
+
+	return (__log_print_record(env, dbtp, lsnp, "__fop_file_remove_60", __fop_file_remove_60_desc, info));
 }
 
 /*

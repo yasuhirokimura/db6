@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -99,6 +99,29 @@
                 with encryption support. See <a href="../bdb-sql/sql_encryption.html" class="olink">SQL Encryption</a> in the
                     <em class="citetitle">Berkeley DB Getting Started with the SQL APIs</em> guide for
                 usage details.
+            </p>
+          </li>
+          <li>
+            <p>
+                BDBSQL_USER_AUTHENTICATION 
+            </p>
+            <p>
+                Causes the Berkeley DB SQL interface to be built with
+                user authentication support. For more information, see
+                "User Authentication" section in
+                <em class="citetitle">Berkeley DB Getting Started with the SQL APIs</em>.
+            </p>
+          </li>
+          <li>
+            <p>
+                BDBSQL_USER_AUTHENTICATION_KEYSTORE 
+            </p>
+            <p>
+                Causes the Berkeley DB SQL interface to be built with
+                key-store based user authentication support. The BDB
+                encryption must also be enabled. For more information, see
+                "Key-store Based User Authentication" section in
+                <em class="citetitle">Berkeley DB Getting Started with the SQL APIs</em>.
             </p>
           </li>
         </ul>

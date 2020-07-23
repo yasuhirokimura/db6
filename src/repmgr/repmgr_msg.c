@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2005, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2005, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -520,7 +520,16 @@ __repmgr_handle_event(env, event, info)
 		 */
 		break;
 	case DB_EVENT_REP_INIT_DONE:
-		db_rep->gmdb_dirty = TRUE;
+		/*
+		 * An abbreviated internal init doesn't change the gmdb, so
+		 * don't mark it dirty in this case.  A dirty gmdb will be
+		 * reloaded, which causes problems in some mixed-version
+		 * cases when the gmdb needs conversion.
+		 */
+		if (db_rep->abbrev_init)
+			db_rep->abbrev_init = FALSE;
+		else
+			db_rep->gmdb_dirty = TRUE;
 		break;
 	case DB_EVENT_REP_NEWMASTER:
 		DB_ASSERT(env, info != NULL);
@@ -920,7 +929,7 @@ serve_join_request(env, ip, msg)
 	u_int8_t *buf;
 	char *host;
 	size_t len;
-	u_int32_t status;
+	u_int32_t membership, status;
 	int eid, ret, t_ret;
 
 	db_rep = env->rep_handle;
@@ -945,7 +954,15 @@ serve_join_request(env, ip, msg)
 	RPRINT(env, (env, DB_VERB_REPMGR_MISC,
 	    "Request to join group from %s:%u", host, (u_int)site_info.port));
 
-	if ((ret = __repmgr_hold_master_role(env, conn)) == DB_REP_UNAVAIL)
+	/*
+	 * If the requesting site is already known, get its group membership
+	 * status for the 2-site edge case check in hold_master_role().
+	 */
+	membership = 0;
+	if ((site = __repmgr_lookup_site(env, host, site_info.port)) != NULL)
+		membership = site->membership;
+	if ((ret =
+	    __repmgr_hold_master_role(env, conn, membership)) == DB_REP_UNAVAIL)
 		return (0);
 	if (ret != 0)
 		return (ret);
@@ -1054,7 +1071,8 @@ serve_remove_request(env, ip, msg)
 	RPRINT(env, (env, DB_VERB_REPMGR_MISC,
 	    "Request to remove %s:%u from group", host, (u_int)site_info.port));
 
-	if ((ret = __repmgr_hold_master_role(env, conn)) == DB_REP_UNAVAIL)
+	if ((ret =
+	    __repmgr_hold_master_role(env, conn, 0)) == DB_REP_UNAVAIL)
 		return (0);
 	if (ret != 0)
 		return (ret);
@@ -1290,7 +1308,8 @@ resolve_limbo_wrapper(env, ip)
 {
 	int do_close, ret, t_ret;
 
-	if ((ret = __repmgr_hold_master_role(env, NULL)) == DB_REP_UNAVAIL)
+	if ((ret =
+	    __repmgr_hold_master_role(env, NULL, 0)) == DB_REP_UNAVAIL)
 		return (0);
 	if (ret != 0)
 		return (ret);
@@ -1363,7 +1382,13 @@ resolve_limbo_int(env, ip)
 	if (orig_status == SITE_PRESENT || orig_status == 0)
 		goto out;
 
-	if (IS_ZERO_LSN(db_rep->limbo_failure))
+	/*
+	 * It is possible after an autotakeover on a master to have no
+	 * limbo_failure LSN but to have a limbo_victim that was found
+	 * in the gmdb that still needs to be resolved.
+	 */
+	if (IS_ZERO_LSN(db_rep->limbo_failure) &&
+	    !db_rep->limbo_resolution_needed)
 		goto out;
 
 	/*
@@ -1936,12 +1961,14 @@ __repmgr_cleanup_gmdb_op(env, do_close)
  * the mutex needs to be available in order to send out the log
  * records.
  *
- * PUBLIC: int __repmgr_hold_master_role __P((ENV *, REPMGR_CONNECTION *));
+ * PUBLIC: int __repmgr_hold_master_role __P((ENV *,
+ * PUBLIC:     REPMGR_CONNECTION *, u_int32_t));
  */
 int
-__repmgr_hold_master_role(env, conn)
+__repmgr_hold_master_role(env, conn, membership)
 	ENV *env;
 	REPMGR_CONNECTION *conn;
+	u_int32_t membership;
 {
 	DB_REP *db_rep;
 	REP *rep;
@@ -1965,6 +1992,23 @@ __repmgr_hold_master_role(env, conn)
 			db_rep->gmdb_busy = TRUE;
 	}
 	UNLOCK_MUTEX(db_rep->mutex);
+
+	/*
+	 * Check for an edge case that is possible with a newly-joining site
+	 * in a 2SITE_STRICT group.  If both sites crash before the joining
+	 * site receives this site's gmdb contents with the GM_SUCCESS message,
+	 * the group is left is a state where this site can't elect itself
+	 * master and the joining site has no master to retry joining the
+	 * group.  Be a little extra lenient if the joining site retries its
+	 * join when there is no master: enable caller to return GM_SUCCESS
+	 * and this site's gmdb contents again if the joining site is already
+	 * in the ADDING or PRESENT state in this site's gmdb.
+	 */
+	if (conn != NULL && ret == DB_REP_UNAVAIL && rep->config_nsites == 2 &&
+	    FLD_ISSET(rep->config, REP_C_2SITE_STRICT) &&
+	    (membership == SITE_ADDING || membership == SITE_PRESENT))
+		ret = 0;
+
 	if (conn != NULL && ret == DB_REP_UNAVAIL &&
 	    (t_ret = reject_fwd(env, conn)) != 0)
 		ret = t_ret;

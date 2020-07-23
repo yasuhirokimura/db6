@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2009, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2009, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 using System;
@@ -103,6 +103,18 @@ namespace BerkeleyDB {
         /// unavailable.
         /// </summary>
         public bool PrefmasClient;
+        /// <summary>
+        /// Enable simple write forwarding for this site. By default, write
+        /// operations cannot be performed on a replication client site. This
+        /// option enables forwarding of simple client put and delete operations
+        /// to the master site for processing. These operations must use an implicit
+        /// NULL transaction ID to be forwarded. Any other write operation that
+        /// specifies a non-NULL transaction throws a DatabaseException. The master 
+        /// must have an open database handle for the database on which a forwarded 
+        /// write operation is being performed. All sites in the replication group 
+        /// should have the same value for this configuration option.
+        /// </summary>
+        public bool ForwardWrites;
         #endregion Config Flags
 
         #region Timeout Values
@@ -252,6 +264,21 @@ namespace BerkeleyDB {
             set {
                 _leaseTimeout = value;
                 leaseTimeoutIsSet = true;
+            }
+        }
+
+        private uint _writeForwardTimeout;
+        internal bool writeForwardTimeoutIsSet;
+        /// <summary>
+        /// Configure the amount of time a Replication Manager client waits
+        /// for a response from a forwarded write operation before returning
+        /// a failure indication. The default value is 5 seconds.
+        /// </summary>
+        public uint WriteForwardTimeout {
+            get { return _writeForwardTimeout; }
+            set {
+                _writeForwardTimeout = value;
+                writeForwardTimeoutIsSet = true;
             }
         }
         #endregion Timeout Values

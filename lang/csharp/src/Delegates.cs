@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2009, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2009, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 using System;
@@ -160,8 +160,10 @@ namespace BerkeleyDB {
     /// <summary>
     /// The application-specified reporting function.
     /// </summary>
+    /// <param name="msgPrefix">The prefix string</param>
     /// <param name="Message">The message string</param>
-    public delegate void MessageFeedbackDelegate(string Message);
+    public delegate void MessageFeedbackDelegate(
+        string msgPrefix, string Message);
     /// <summary>
     /// Application-specific function used by a replication view to determine
     /// whether a database file is replicated to the local site.

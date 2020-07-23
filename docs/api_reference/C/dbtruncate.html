@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -60,6 +60,11 @@ DB-&gt;truncate(DB *db,
          open cursors.
     </p>
       <p>
+         The <code class="methodname">DB-&gt;truncate()</code> method is non-atomic when used on a sliced
+         database. If the operation fails, it is possible for the resulting database files
+         to be in an inconsistent state.
+     </p>
+      <p>
          The <code class="methodname">DB-&gt;truncate()</code> <span>
             <span>
                   method returns a non-zero error value on failure and 0 on success.
@@ -71,7 +76,7 @@ DB-&gt;truncate(DB *db,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp531920"></a>Parameters</h3>
+              <h3 class="title"><a id="idp643840"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -79,7 +84,7 @@ DB-&gt;truncate(DB *db,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp532112"></a>txnid</h4>
+                <h4 class="title"><a id="idp644224"></a>txnid</h4>
               </div>
             </div>
           </div>
@@ -99,7 +104,7 @@ DB-&gt;truncate(DB *db,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp452032"></a>countp</h4>
+                <h4 class="title"><a id="idp508688"></a>countp</h4>
               </div>
             </div>
           </div>
@@ -113,7 +118,7 @@ DB-&gt;truncate(DB *db,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp517104"></a>flags</h4>
+                <h4 class="title"><a id="idp633520"></a>flags</h4>
               </div>
             </div>
           </div>
@@ -127,7 +132,7 @@ DB-&gt;truncate(DB *db,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp447160"></a>Errors</h3>
+              <h3 class="title"><a id="idp555408"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -143,7 +148,7 @@ DB-&gt;truncate(DB *db,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp539536"></a>DB_LOCK_DEADLOCK</h4>
+                <h4 class="title"><a id="idp657696"></a>DB_LOCK_DEADLOCK</h4>
               </div>
             </div>
           </div>
@@ -156,7 +161,7 @@ DB-&gt;truncate(DB *db,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp547016"></a>DB_LOCK_NOTGRANTED</h4>
+                <h4 class="title"><a id="idp670960"></a>DB_LOCK_NOTGRANTED</h4>
               </div>
             </div>
           </div>
@@ -176,7 +181,7 @@ DB-&gt;truncate(DB *db,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp540872"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp647632"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -190,7 +195,7 @@ DB-&gt;truncate(DB *db,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp537336"></a>Class</h3>
+              <h3 class="title"><a id="idp653520"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -202,7 +207,7 @@ DB-&gt;truncate(DB *db,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp541728"></a>See Also</h3>
+              <h3 class="title"><a id="idp661920"></a>See Also</h3>
             </div>
           </div>
         </div>

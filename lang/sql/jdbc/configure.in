@@ -566,7 +566,7 @@ if test "x$JDBCVER"  = "x" ; then
   $JAVA_RUN -version 2>&1 | grep 'version "1.4' >/dev/null && JDBCVER=JDBC2x
   $JAVA_RUN -version 2>&1 | grep 'version "1.5' >/dev/null && JDBCVER=JDBC2y
   $JAVA_RUN -version 2>&1 | grep 'version "1.6' >/dev/null && JDBCVER=JDBC2z
-  $JAVA_RUN -version 2>&1 | grep 'version "1.7' >/dev/null && JDBCVER=JDBC2z1
+  $JAVA_RUN -version 2>&1 | grep 'version "1.[78]' >/dev/null && JDBCVER=JDBC2z1
   $JAVA_RUN -version 2>&1 | grep 'JSR169' >/dev/null && JDBCVER=JDBC0
 else
   AC_MSG_WARN([overriding JDBC driver: $JDBCVER])

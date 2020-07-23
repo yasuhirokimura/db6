@@ -30,7 +30,7 @@
 #ifdef HAVE_MIXED_SIZE_ADDRESSING
 #define	__STRUCTURE_COUNT	48
 #else
-#define	__STRUCTURE_COUNT	(48 + 108)
+#define	__STRUCTURE_COUNT	(48 + 109)
 #endif
 
 /*
@@ -113,6 +113,7 @@ __env_struct_sig()
 	__ADD(__my_cursors);
 	__ADD(__femfs);
 	__ADD(__db_preplist);
+	__ADD(__db_txn_active_slice);
 	__ADD(__db_txn_active);
 	__ADD(__db_txn_stat);
 	__ADD(__db_txn_token);

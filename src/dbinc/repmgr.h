@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2006, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2006, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -70,7 +70,7 @@ extern "C" {
 
 /* The range of protocol versions we're willing to support. */
 #define	DB_REPMGR_VERSION	6
-#define	DB_REPMGR_MIN_VERSION	1
+#define	DB_REPMGR_MIN_VERSION	2
 
 /*
  * For messages with the "REPMGR_OWN_MSG" format code, a message type (see
@@ -101,10 +101,62 @@ extern "C" {
 #define	REPMGR_READONLY_RESPONSE	17
 #define	REPMGR_RESTART_CLIENT		18
 
+/*
+ * Write forwarding definitions.
+ *
+ * This is always the first value in a repmgr write forwarding message.
+ * Testing this helps ensure that repmgr write forwarding code only
+ * attempts to process a write forwarding message and not some other
+ * type of repmgr application-defined message or random noise.
+ */
+#define	REPMGR_WF_IDENTIFIER 64424
+
+/*
+ * Values for write forwarded operations.  These values should remain
+ * constant across BDB versions for backward compatibility.  Add values
+ * for any new write forwarded operations to the end of this list.
+ */
+#define	REPMGR_WF_SINGLE_DEL 1
+#define	REPMGR_WF_SINGLE_PUT 2
+
+/* Current protocol version and a fast way to test for a supported message. */
+#define	REPMGR_WF_VERSION 1
+#define	REPMGR_WF_MAX_V1_MSG_TYPE 2
+
+/* These masks enable two small integers to share the space of a large one. */
+#define	REPMGR_WF_LOWER_MASK 0x0000ffff
+#define	REPMGR_WF_UPPER_MASK 0xffff0000
+
+/* The minimum and maximum number of DBTs in a write forwarding message. */
+#define	REPMGR_WF_MIN_DBTS 5
+#define	REPMGR_WF_MAX_DBTS 6
+
+/* Length of a string to which to dump a hex fileid value in verbose output. */
+#define	REPMGR_WF_FILEID_STRLEN 80
+
+#define	IS_USING_WRITE_FORWARDING(env)					\
+	(FLD_ISSET(((env)->rep_handle->region)->config, REP_C_FORWARD_WRITES))
+
+#define	REPMGR_WF_DUMP_FILEID(fileid, i, str)				\
+	memset(str, 0, REPMGR_WF_FILEID_STRLEN);			\
+	for (i = 0; i < DB_FILE_ID_LEN; i++)				\
+		(void)sprintf(str, "%s%x ", str, fileid[i]);
+
+/*
+ * Enable two u_int32_t numbers to share the space of a single u_int64_t.
+ * This helps the write forwarding protocol to use fewer iovec segments
+ * and stay within the bounds on systems where IOV_MAX is a small number
+ * (e.g. 16 on Solaris).
+ */
+typedef union {
+	u_int64_t unum64;
+	u_int32_t unum32[2];
+} wf_uint32_pair;
+
 /* Detect inconsistencies between view callback and site's gmdb. */
-#define PARTICIPANT_TO_VIEW(db_rep, site)      				\
+#define	PARTICIPANT_TO_VIEW(db_rep, site)				\
 	((db_rep)->partial && !FLD_ISSET((site)->gmdb_flags, SITE_VIEW))
-#define VIEW_TO_PARTICIPANT(db_rep, site)      				\
+#define	VIEW_TO_PARTICIPANT(db_rep, site)				\
 	(!(db_rep)->partial && FLD_ISSET((site)->gmdb_flags, SITE_VIEW))
 
 struct __repmgr_connection;
@@ -155,10 +207,9 @@ typedef struct iovec db_iovec_t;
 
 /*
  * The system value is available from sysconf(_SC_HOST_NAME_MAX).
- * Historically, the maximum host name was 256.
  */
 #ifndef MAXHOSTNAMELEN
-#define	MAXHOSTNAMELEN	256
+#define	MAXHOSTNAMELEN	1025
 #endif
 
 /* A buffer big enough for the string "site host.domain.com:65535". */
@@ -214,7 +265,7 @@ struct __repmgr_runnable {
 		/* For connector thread. */
 		struct {
 			int eid;
-#define CONNECT_F_REFRESH	0x01 /* New connection to replace old one. */
+#define	CONNECT_F_REFRESH	0x01 /* New connection to replace old one. */
 			u_int32_t flags;
 		} conn_th;
 
@@ -602,7 +653,7 @@ struct __repmgr_site {
 			 * connection due to the remote client system having
 			 * crashed and rebooted, in which case KEEPALIVE will
 			 * eventually clear it.
-			 */ 
+			 */
 			REPMGR_CONNECTION *in; /* incoming connection */
 			REPMGR_CONNECTION *out; /* outgoing connection */
 		} conn;
@@ -748,7 +799,7 @@ struct __channel {
 #define	REPMGR_HDR2(hdr)		((hdr).word2)
 
 /* REPMGR_APP_MESSAGE */
-#define APP_MSG_BUFFER_SIZE		REPMGR_HDR1
+#define	APP_MSG_BUFFER_SIZE		REPMGR_HDR1
 #define	APP_MSG_SEGMENT_COUNT		REPMGR_HDR2
 
 /* REPMGR_REP_MESSAGE and the other traditional repmgr message types. */
@@ -786,8 +837,10 @@ struct __channel {
 #define	REPMGR_RESPONSE_LIMIT	0x04
 
 /*
- * Legacy V1 handshake message format.  For compatibility, we send this as part
- * of version negotiation upon connection establishment.
+ * Legacy V1 handshake message format.  This is still used in the repmgr
+ * protocol for the initial handshake sent as part of version negotiation
+ * upon connection establishment.  It is no longer needed for V1
+ * compatibility because 4.6/V1 is no longer supported.
  */
 typedef struct {
 	u_int32_t version;
@@ -820,7 +873,7 @@ typedef struct {
  * Message types whose processing could take a long time.  We're careful to
  * avoid using up all our message processing threads on these message types, so
  * that we don't starve out the more important rep messages.
- */ 
+ */
 #define	IS_DEFERRABLE(t) ((t) == REPMGR_OWN_MSG || (t) == REPMGR_APP_MESSAGE)
 /*
  * When using leases there are times when a thread processing a message
@@ -844,7 +897,7 @@ typedef struct {
  * fraction of the code, it's a tiny fraction of the time: repmgr spends most of
  * its time in a call to select(), and as well a bit in calls into the Base
  * replication API.  All of those release the mutex.
- *     Access to repmgr's shared values is protected by another mutex: 
+ *     Access to repmgr's shared values is protected by another mutex:
  * mtx_repmgr.  And, when changing space allocation for that site list
  * we conform to the convention of acquiring renv->mtx_regenv.  These are
  * less frequent of course.

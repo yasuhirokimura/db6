@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -40,22 +40,27 @@
         <dl>
           <dt>
             <span class="sect2">
-              <a href="build_win_sql.html#idm707688">Binary Compatibility With SQLite</a>
+              <a href="build_win_sql.html#idm1786944">Setting User Authentication</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="build_win_sql.html#idm762048">Setting Encryption</a>
+              <a href="build_win_sql.html#idm1852752">Binary Compatibility With SQLite</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="build_win_sql.html#idm595344">Changing Compile Options</a>
+              <a href="build_win_sql.html#idm2049184">Setting Encryption</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="build_win_sql.html#idm1553008">Enabling Extensions</a>
+              <a href="build_win_sql.html#idm1890304">Changing Compile Options</a>
+            </span>
+          </dt>
+          <dt>
+            <span class="sect2">
+              <a href="build_win_sql.html#idm2892544">Enabling Extensions</a>
             </span>
           </dt>
           <dt>
@@ -70,22 +75,22 @@
           </dt>
           <dt>
             <span class="sect2">
-              <a href="build_win_sql.html#idm1940752">Using the JDBC Driver</a>
+              <a href="build_win_sql.html#idm208944">Using the JDBC Driver</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="build_win_sql.html#idm201464">Using the JDBC Driver in ADF/JDeveloper</a>
+              <a href="build_win_sql.html#idm4017264">Using the JDBC Driver in ADF/JDeveloper</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="build_win_sql.html#idm598344">Building the ODBC Driver</a>
+              <a href="build_win_sql.html#idm1127408">Building the ODBC Driver</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="build_win_sql.html#idm1664040"> Using the ADO.NET Driver </a>
+              <a href="build_win_sql.html#idm178880"> Using the ADO.NET Driver </a>
             </span>
           </dt>
         </dl>
@@ -97,8 +102,8 @@
         </p>
       <p>
             The SQL library is built as
-            <code class="literal">libdb_sql61.dll</code> in the Release mode
-            or <code class="literal">libdb_sql61d.dll</code> in the Debug mode.
+            <code class="literal">libdb_sql62.dll</code> in the Release mode
+            or <code class="literal">libdb_sql62d.dll</code> in the Debug mode.
             An SQL command line interpreter called
             <code class="literal">dbsql.exe</code> is also built.
         </p>
@@ -106,14 +111,40 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm707688"></a>Binary Compatibility With SQLite</h3>
+              <h3 class="title"><a id="idm1786944"></a>Setting User Authentication</h3>
             </div>
           </div>
         </div>
         <p>
-                <code class="literal">libdb_sql61.dll</code> is compatible with
+            To enable user authentication in the Berkeley DB SQL API,
+            specify <code class="literal">BDBSQL_USER_AUTHENTICATION</code> in
+            Preprocessor Definitions of the <code class="literal">db_sql</code>
+            and the <code class="literal">db_sql_shell</code> project. 
+            </p>
+        <p>
+            To enable key-store based user authentication in the Berkeley
+            DB SQL API, specify <code class="literal">BDBSQL_USER_AUTHENTICATION_KEYSTORE</code>
+            and <code class="literal">SQLITE_HAS_CODEC</code> in Preprocessor Definitions
+            of the <code class="literal">db_sql</code> and the
+            <code class="literal">db_sql_shell</code> project. 
+            </p>
+        <p>
+           For more information on user authentication and key-store based
+           user authentication, see <em class="citetitle">Berkeley DB Getting Started with the SQL APIs</em>.
+            </p>
+      </div>
+      <div class="sect2" lang="en" xml:lang="en">
+        <div class="titlepage">
+          <div>
+            <div>
+              <h3 class="title"><a id="idm1852752"></a>Binary Compatibility With SQLite</h3>
+            </div>
+          </div>
+        </div>
+        <p>
+                <code class="literal">libdb_sql62.dll</code> is compatible with
                     <code class="literal">sqlite3.dll</code>. You can copy
-                    <code class="literal">libdb_sql61.dll</code> to
+                    <code class="literal">libdb_sql62.dll</code> to
                     <code class="literal">sqlite3.dll</code> and
                     <code class="literal">dbsql.exe</code> to
                     <code class="literal">sqlite3.exe</code>, and use these
@@ -151,7 +182,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm762048"></a>Setting Encryption</h3>
+              <h3 class="title"><a id="idm2049184"></a>Setting Encryption</h3>
             </div>
           </div>
         </div>
@@ -169,7 +200,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm595344"></a>Changing Compile Options</h3>
+              <h3 class="title"><a id="idm1890304"></a>Changing Compile Options</h3>
             </div>
           </div>
         </div>
@@ -313,7 +344,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm1553008"></a>Enabling Extensions</h3>
+              <h3 class="title"><a id="idm2892544"></a>Enabling Extensions</h3>
             </div>
           </div>
         </div>
@@ -398,18 +429,15 @@
               <p> 
                         Configure your build environment. For
                         information on how to configure to build Java
-                        applications, see <a class="xref" href="build_win_java.html" title="Building the Java API">Building the Java API</a>. 
-                    </p>
-            </li>
-            <li>
-              <p> 
-                        Build the SQL project in Debug mode.
+                        applications, see <a class="xref" href="build_win_java.html" title="Building the Java API">Building the Java API</a>. In Visual Studio
+                        2010/Visual Studio 2012, you need to configure the
+                        db_sql_jdbc project.
                     </p>
             </li>
             <li>
               <p>
-                        Open Berkeley_DB.sln or
-                        Berkeley_DB_vs2010.sln in Visual Studio. If
+                        Open Berkeley_DB.sln, Berkeley_DB_vs2010.sln, or
+                        Berkeley_DB_vs2012.sln in Visual Studio. If
                         you are using Java 1.6, do the following:
                     </p>
               <div class="itemizedlist">
@@ -436,7 +464,7 @@
                 </ul>
               </div>
               <p>
-                        If you are using Java 1.7, do the
+                        If you are using Java 1.7 or Java 1.8, do the
                         following:
                     </p>
               <div class="itemizedlist">
@@ -457,8 +485,7 @@
                                 Pre-Build Event</em></span> section,
                                 alter the command to refer to
                                 <code class="literal">JDBC2z1</code> instead
-                                of <code class="literal">JDBC2x</code>. Also,
-                                remove the option of "-target 1.5".
+                                of <code class="literal">JDBC2x</code>.
                             </p>
                   </li>
                   <li>
@@ -482,7 +509,7 @@
               <p>
                         To enable encryption in the Berkeley DB SQL
                         JDBC driver, make sure the 
-                        <code class="literal">db_dql</code> project is built
+                        <code class="literal">db_sql</code> project is built
                         with encryption enabled and specify
                         <code class="literal">HAVE_SQLITE3_KEY</code> in
                         <code class="literal">Preprocessor
@@ -521,7 +548,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm1940752"></a>Using the JDBC Driver</h3>
+              <h3 class="title"><a id="idm208944"></a>Using the JDBC Driver</h3>
             </div>
           </div>
         </div>
@@ -534,7 +561,7 @@
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm70640"></a>Downloading JDBC Sample Code</h4>
+                <h4 class="title"><a id="idm2769120"></a>Downloading JDBC Sample Code</h4>
               </div>
             </div>
           </div>
@@ -551,7 +578,7 @@
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm76792"></a>Modifying Sample Code</h4>
+                <h4 class="title"><a id="idm85856"></a>Modifying Sample Code</h4>
               </div>
             </div>
           </div>
@@ -619,7 +646,7 @@
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm312944"></a>Building and Running the JDBC Sample code</h4>
+                <h4 class="title"><a id="idm983824"></a>Building and Running the JDBC Sample code</h4>
               </div>
             </div>
           </div>
@@ -675,7 +702,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm201464"></a>Using the JDBC Driver in ADF/JDeveloper</h3>
+              <h3 class="title"><a id="idm4017264"></a>Using the JDBC Driver in ADF/JDeveloper</h3>
             </div>
           </div>
         </div>
@@ -792,7 +819,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm598344"></a>Building the ODBC Driver</h3>
+              <h3 class="title"><a id="idm1127408"></a>Building the ODBC Driver</h3>
             </div>
           </div>
         </div>
@@ -804,7 +831,7 @@
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm1621640"></a>Configuring Your System</h4>
+                <h4 class="title"><a id="idm1188880"></a>Configuring Your System</h4>
               </div>
             </div>
           </div>
@@ -818,7 +845,8 @@
                         Download and install the latest SQLite
                         ODBC driver Windows installer package for
                             <a class="ulink" href="http://www.ch-werner.de/sqliteodbc/sqliteodbc.exe" target="_top">32 bit Windows</a>
-                            or <a class="ulink" href="http://www.ch-werner.de/sqliteodbc/sqliteodbc_w64.exe" target="_top">
+                            or
+			    <a class="ulink" href="http://www.ch-werner.de/sqliteodbc/sqliteodbc_w64.exe" target="_top">
                             64 bit Windows</a>.
                         </li>
               <li> 
@@ -834,7 +862,7 @@
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm204488"></a>Building the Library</h4>
+                <h4 class="title"><a id="idm63904"></a>Building the Library</h4>
               </div>
             </div>
           </div>
@@ -868,8 +896,9 @@
                     </li>
               <li>
                         Select the appropriate directory for
-                        your compiler: <code class="filename">VS8</code> or
-                        <code class="filename">VS10</code>.
+                        your compiler: <code class="filename">VS8</code>, 
+                        <code class="filename">VS10</code>, or
+                        <code class="filename">VS12</code>.
                     </li>
               <li>
                         Select
@@ -878,6 +907,19 @@
                         adds the <code class="filename">db_sql_odbc</code>
                         Visual Studio project to the Berkeley_DB
                         solution file.
+                    </li>
+              <li>
+                        To enable encryption in the Berkeley DB SQL
+                        ODBC driver, make sure the 
+                        <code class="literal">db_sql</code> project is built
+                        with encryption enabled and specify
+                        <code class="literal">SQLITE_HAS_CODEC=1</code> and
+                        <code class="literal">SQLITE_ACTIVATION_KEY="password_str"</code> in
+                        <code class="literal">Preprocessor Definitions</code> of the
+                        <code class="filename">db_sql_odbc</code> project. The "password_str" can
+                        be any string you want. See <a href="../bdb-sql/sql_encryption.html" class="olink">SQL Encryption</a> in the
+                        <em class="citetitle">Berkeley DB Getting Started with the SQL APIs</em> guide
+                        for usage details.
                     </li>
               <li>
                         Build the
@@ -890,9 +932,9 @@
             </ol>
           </div>
           <p>
-                    The <code class="literal">db_sql_odbc61.dll</code>,
-                    <code class="literal">libdb_sql61.dll</code> and
-                    <code class="literal">libdb61.dll</code> files are now
+                    The <code class="literal">db_sql_odbc62.dll</code>,
+                    <code class="literal">libdb_sql62.dll</code> and
+                    <code class="literal">libdb62.dll</code> files are now
                     built.
                 </p>
         </div>
@@ -900,12 +942,12 @@
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm508832"></a>Installing the Library</h4>
+                <h4 class="title"><a id="idm981168"></a>Installing the Library</h4>
               </div>
             </div>
           </div>
           <p>
-                    Rename <code class="literal">db_sql_odbc61.dll</code>
+                    Rename <code class="literal">db_sql_odbc62.dll</code>
                     to <code class="literal">sqlite3odbc.dll</code>
                     and copy the dll files built in the
                     <span class="emphasis"><em>Building the Library</em></span>
@@ -916,12 +958,16 @@
                     different systems, but is often
                     <code class="literal">C:\WINDOWS\System32</code>.
                 </p>
+          <p>
+                    By default, the DSN name is <code class="literal">SQLite3 Datasource</code>, but
+                    for the encryption build, the name is <code class="literal">SQLite3 SEE Datasource</code>.
+                </p>
         </div>
         <div class="sect3" lang="en" xml:lang="en">
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm720912"></a>Testing the ODBC Install</h4>
+                <h4 class="title"><a id="idm3797296"></a>Testing the ODBC Install</h4>
               </div>
             </div>
           </div>
@@ -937,7 +983,8 @@
                         start</em></span> -&gt; <span class="emphasis"><em>Microsoft
                         Data Access SDK 2.8</em></span> -&gt;
                         <span class="emphasis"><em>ODBCTest (Unicode,
-                        x86).</em></span></li>
+                        x86)</em></span> (or <span class="emphasis"><em>ODBCTest (Unicode,
+                        amd64)</em></span> for 64 bit Windows).</li>
               <li>
                         Select the <span class="emphasis"><em>Conn</em></span> -&gt;
                         <span class="emphasis"><em>Full Connect...</em></span> menu
@@ -970,7 +1017,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm1664040"></a> Using the ADO.NET Driver </h3>
+              <h3 class="title"><a id="idm178880"></a> Using the ADO.NET Driver </h3>
             </div>
           </div>
         </div>

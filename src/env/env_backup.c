@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2011, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2011, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -26,6 +26,31 @@ __env_backup_alloc(dbenv)
 }
 
 /*
+ * __env_backup_copy --
+ *	Set a slice to have the same backup copy function as its container.
+ *
+ * PUBLIC: int __env_backup_copy  __P((DB_ENV *, const DB_ENV *));
+ */
+int
+__env_backup_copy(slice, container)
+	DB_ENV *slice;
+	const DB_ENV *container;
+{
+	int ret;
+
+	ret = 0;
+	/* Allocate the slice's backup handle only if the container has one. */
+	if (container->env->backup_handle != NULL) {
+		if ((ret = __env_backup_alloc(slice)) != 0)
+			return (ret);
+		memmove(slice->env->backup_handle,
+		    container->env->backup_handle,
+		    sizeof(DB_BACKUP));
+	}
+	return (ret);
+}
+
+/*
  * __env_get_backup_config --
  *
  * PUBLIC: int __env_get_backup_config __P((DB_ENV *,
@@ -41,7 +66,7 @@ __env_get_backup_config(dbenv, config, valuep)
 
 	backup = dbenv->env->backup_handle;
 	if (backup == NULL)
-		return (EINVAL);
+		return (USR_ERR(dbenv->env, EINVAL));
 
 	switch (config) {
 	case DB_BACKUP_WRITE_DIRECT:
@@ -75,8 +100,9 @@ __env_set_backup_config(dbenv, config, value)
 	DB_BACKUP_CONFIG config;
 	u_int32_t value;
 {
-	DB_BACKUP	*backup;
-	int ret;
+	DB_BACKUP *backup;
+	DB_ENV *slice;
+	int i, ret;
 
 	if ((ret = __env_backup_alloc(dbenv)) != 0)
 		return (ret);
@@ -102,8 +128,10 @@ __env_set_backup_config(dbenv, config, value)
 		backup->size = value;
 		break;
 	}
-
-	return (0);
+	SLICE_FOREACH(dbenv, slice, i)
+		if ((ret = __env_set_backup_config(slice, config, value)) != 0)
+			break;
+	return (ret);
 }
 
 /*
@@ -127,7 +155,7 @@ __env_get_backup_callbacks(dbenv, openp, writep, closep)
 
 	backup = dbenv->env->backup_handle;
 	if (backup == NULL)
-		return (EINVAL);
+		return (USR_ERR(dbenv->env, EINVAL));
 
 	*openp = backup->open;
 	*writep = backup->write;
@@ -152,8 +180,9 @@ __env_set_backup_callbacks(dbenv, open_func, write_func, close_func)
 	    u_int32_t, u_int32_t, u_int32_t, u_int8_t *, void *);
 	int (*close_func)(DB_ENV *, const char *, void *);
 {
-	DB_BACKUP	*backup;
-	int ret;
+	DB_BACKUP *backup;
+	DB_ENV *slice;
+	int i, ret;
 
 	if ((ret = __env_backup_alloc(dbenv)) != 0)
 		return (ret);
@@ -162,5 +191,9 @@ __env_set_backup_callbacks(dbenv, open_func, write_func, close_func)
 	backup->open = open_func;
 	backup->write = write_func;
 	backup->close = close_func;
-	return (0);
+	SLICE_FOREACH(dbenv, slice, i)
+		if ((ret = __env_set_backup_callbacks(slice,
+		    open_func, write_func, close_func)) != 0)
+			break;
+	return (ret);
 }

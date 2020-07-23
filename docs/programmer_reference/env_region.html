@@ -7,14 +7,14 @@
     <link rel="stylesheet" href="gettingStarted.css" type="text/css" />
     <meta name="generator" content="DocBook XSL Stylesheets V1.73.2" />
     <link rel="start" href="index.html" title="Berkeley DB Programmer's Reference Guide" />
-    <link rel="up" href="env.html" title="Chapter 9.  The Berkeley DB Environment" />
+    <link rel="up" href="env.html" title="Chapter 10.  The Berkeley DB Environment" />
     <link rel="prev" href="env_naming.html" title="File naming" />
     <link rel="next" href="env_security.html" title="Security" />
   </head>
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -22,7 +22,7 @@
         </tr>
         <tr>
           <td width="20%" align="left"><a accesskey="p" href="env_naming.html">Prev</a> </td>
-          <th width="60%" align="center">Chapter 9.  The Berkeley DB Environment </th>
+          <th width="60%" align="center">Chapter 10.  The Berkeley DB Environment </th>
           <td width="20%" align="right"> <a accesskey="n" href="env_security.html">Next</a></td>
         </tr>
       </table>
@@ -80,7 +80,9 @@
                 necessary after an application fails because there may
                 be no way for Berkeley DB to ensure that system
                 resources backing the shared memory regions are
-                returned to the system.
+                returned to the system. <a href="../api_reference/C/envremove.html" class="olink">DB_ENV-&gt;remove()</a> can be called to
+                free up system resources when the shared memory regions
+                are not used any more.
             </p>
             <p> 
                 The system memory that is used is
@@ -121,6 +123,8 @@
       </div>
       <p>
         Any files created in the filesystem to back the regions are
+        created in the directory set by calling <a href="../api_reference/C/envset_region_dir.html" class="olink">DB_ENV-&gt;set_region_dir()</a>.
+        If no region directory is set then the files are
         created in the environment home directory specified to the
         <a href="../api_reference/C/envopen.html" class="olink">DB_ENV-&gt;open()</a> call. These files are named __db.### (for example,
         __db.001, __db.002 and so on). When region files are backed by

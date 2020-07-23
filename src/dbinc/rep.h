@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2001, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2001, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -33,8 +33,7 @@ extern "C" {
 #define	REPLSNHIST	"__db.lsn.history"
 #define	REPMEMBERSHIP	"__db.membership"
 #define	REPSYSDBPGSZ	1024
-#define IS_REP_FILE(name)	(strcmp(name, REPSYSDBNAME) == 0)
-				    
+#define	IS_REP_FILE(name)	(strcmp(name, REPSYSDBNAME) == 0)
 
 /* Current version of commit token format, and LSN history database format. */
 #define	REP_COMMIT_TOKEN_FMT_VERSION	1
@@ -146,7 +145,8 @@ extern "C" {
 #define	DB_LOGVERSION_60	20
 #define	DB_LOGVERSION_60p1	21
 #define	DB_LOGVERSION_61	22
-#define	DB_LOGVERSION_MIN	DB_LOGVERSION_44
+#define	DB_LOGVERSION_62	23
+#define	DB_LOGVERSION_MIN	DB_LOGVERSION_47
 #define	DB_REPVERSION_INVALID	0
 #define	DB_REPVERSION_44	3
 #define	DB_REPVERSION_45	3
@@ -158,8 +158,9 @@ extern "C" {
 #define	DB_REPVERSION_53	7
 #define	DB_REPVERSION_60	7
 #define	DB_REPVERSION_61	8
-#define	DB_REPVERSION		DB_REPVERSION_61
-#define	DB_REPVERSION_MIN	DB_REPVERSION_44
+#define	DB_REPVERSION_62	9
+#define	DB_REPVERSION		DB_REPVERSION_62
+#define	DB_REPVERSION_MIN	DB_REPVERSION_47
 
 /*
  * RPRINT - Replication diagnostic output
@@ -274,7 +275,7 @@ typedef enum {
 	SYNC_LOG,	/* Recovery - log. */
 	SYNC_PAGE,	/* Recovery - pages and blobs. */
 	SYNC_UPDATE,	/* Recovery - update. */
-	SYNC_VERIFY 	/* Recovery - verify. */
+	SYNC_VERIFY	/* Recovery - verify. */
 } repsync_t;
 
 /*
@@ -389,7 +390,6 @@ typedef struct __rep { /* SHARED */
 	db_seq_t	highest_id;	/* Highest file id to request. */
 	u_int32_t	blob_more_files;/* More blob files to be processed. */
 	int		blob_sync;	/* Currently handling blobs. */
-	int		blob_rereq;	/* When to rereq a blob update msg. */
 	db_timespec	last_pg_ts;	/* Last page stored timestamp. */
 	db_pgno_t	ready_pg;	/* Next pg expected. */
 	db_pgno_t	waiting_pg;	/* First pg after gap. */
@@ -449,6 +449,7 @@ typedef struct __rep { /* SHARED */
 	db_timeout_t	connection_retry_wait;
 	db_timeout_t	heartbeat_frequency; /* Max period between msgs. */
 	db_timeout_t	heartbeat_monitor_timeout;
+	db_timeout_t	write_forward_timeout;
 	u_int32_t	inqueue_max_gbytes;
 	u_int32_t	inqueue_max_bytes;
 	u_int32_t	inqueue_rz_gbytes;
@@ -475,11 +476,12 @@ typedef struct __rep { /* SHARED */
 #define	REP_C_DELAYCLIENT	0x00020		/* Delay client sync-up. */
 #define	REP_C_ELECT_LOGLENGTH	0x00040		/* Log length wins election. */
 #define	REP_C_ELECTIONS		0x00080		/* Repmgr to use elections. */
-#define	REP_C_INMEM		0x00100		/* In-memory replication. */
-#define	REP_C_LEASE		0x00200		/* Leases configured. */
-#define	REP_C_NOWAIT		0x00400		/* Immediate error return. */
-#define	REP_C_PREFMAS_CLIENT	0x00800		/* Preferred master client. */
-#define	REP_C_PREFMAS_MASTER	0x01000		/* Preferred master site. */
+#define	REP_C_FORWARD_WRITES	0x00100		/* Repmgr write forwarding. */
+#define	REP_C_INMEM		0x00200		/* In-memory replication. */
+#define	REP_C_LEASE		0x00400		/* Leases configured. */
+#define	REP_C_NOWAIT		0x00800		/* Immediate error return. */
+#define	REP_C_PREFMAS_CLIENT	0x01000		/* Preferred master client. */
+#define	REP_C_PREFMAS_MASTER	0x02000		/* Preferred master site. */
 	u_int32_t	config;		/* Configuration flags. */
 
 	/* Election. */
@@ -556,10 +558,10 @@ struct __rep_waiter {
  * locked out/set individually because they pertain to different pieces of
  * the BDB API, they are otherwise always checked and cleared together.
  */
-#define ISSET_LOCKOUT_BDB(R) 						\
+#define	ISSET_LOCKOUT_BDB(R)						\
     (FLD_ISSET((R)->lockout_flags, (REP_LOCKOUT_API | REP_LOCKOUT_OP)))
 
-#define CLR_LOCKOUT_BDB(R) 						\
+#define	CLR_LOCKOUT_BDB(R)						\
     (FLD_CLR((R)->lockout_flags, (REP_LOCKOUT_API | REP_LOCKOUT_OP)))
 
 /*
@@ -570,7 +572,7 @@ struct __rep_waiter {
  * areas and we want to manipulate it separately (see especially
  * in __rep_new_master).
  */
-#define CLR_RECOVERY_SETTINGS(R)					\
+#define	CLR_RECOVERY_SETTINGS(R)					\
 do {									\
 	(R)->sync_state = SYNC_OFF;					\
 	CLR_LOCKOUT_BDB(R);						\
@@ -611,7 +613,7 @@ do {									\
 
 #define	IS_CLIENT_PGRECOVER(env)					\
 	(IS_REP_CLIENT(env) &&						\
-	    (((env)->rep_handle->region)->sync_state ==  SYNC_PAGE))
+	    (((env)->rep_handle->region)->sync_state == SYNC_PAGE))
 
 /*
  * Macros to figure out if we need to do replication pre/post-amble processing.
@@ -619,7 +621,7 @@ do {									\
  * replication is running recovery or because it's a handle entirely owned by
  * the replication code (replication opens its own databases to track state).
  */
-#define REP_FLAGS_SET(env)						\
+#define	REP_FLAGS_SET(env)						\
 	((env)->rep_handle->region->flags != 0 ||			\
 	(env)->rep_handle->region->elect_flags != 0 ||			\
 	(env)->rep_handle->region->lockout_flags != 0)
@@ -650,20 +652,19 @@ do {									\
 	ZERO_LSN(rep->gen_base_lsn);					\
 } while (0)
 
-
 /* Macros to determine current replication configuration options. */
-#define REP_CONFIG_IS_SET(env, flags) 					\
-	(REP_ON(env) ? 							\
-	FLD_ISSET(((env)->rep_handle->region)->config, flags) : 	\
+#define	REP_CONFIG_IS_SET(env, flags)					\
+	(REP_ON(env) ?							\
+	FLD_ISSET(((env)->rep_handle->region)->config, flags) :	\
 	FLD_ISSET(((env)->rep_handle)->config, flags))
 #ifdef HAVE_REPLICATION_THREADS
-#define PREFMAS_IS_SET(env) 						\
-	(REP_CONFIG_IS_SET(env, 					\
+#define	PREFMAS_IS_SET(env)						\
+	(REP_CONFIG_IS_SET(env,					\
 	(REP_C_PREFMAS_MASTER | REP_C_PREFMAS_CLIENT)))
 #else
-#define PREFMAS_IS_SET(env)	0
+#define	PREFMAS_IS_SET(env)	0
 #endif
-#define IS_PREFMAS_MODE(env)						\
+#define	IS_PREFMAS_MODE(env)						\
 	(REP_ON(env) && PREFMAS_IS_SET(env) &&				\
 	((env)->rep_handle->region)->config_nsites < 3)
 
@@ -687,10 +688,10 @@ do {									\
 /*
  * Flags indicating what kind of record we want to back up to, in the log.
  */
-#define REP_REC_COMMIT		0x001   /* Most recent commit record. */
-#define REP_REC_PERM		0x002   /* Most recent perm record. */
+#define	REP_REC_COMMIT		0x001   /* Most recent commit record. */
+#define	REP_REC_PERM		0x002   /* Most recent perm record. */
 					/* PERM is a superset of COMMIT. */
-#define REP_REC_PERM_DEL	0x004   /* Most recent PERM, or fail if a
+#define	REP_REC_PERM_DEL	0x004   /* Most recent PERM, or fail if a
 					 * file delete is found first. */
 
 /*
@@ -729,7 +730,7 @@ do {									\
  * region addresses.  This means that curinfo and its pointers to DBT data
  * must be recalculated for each process starting with the offset.
  */
-#define GET_CURINFO(rep, infop, curinfo)				\
+#define	GET_CURINFO(rep, infop, curinfo)				\
 do {									\
 	curinfo = R_ADDR(infop, rep->curinfo_off);			\
 	if ((curinfo)->uid.size > 0)					\
@@ -826,6 +827,7 @@ struct __db_rep {
 
 	DB		*rep_db;	/* Bookkeeping database. */
 	DB		*lsn_db;	/* (Replicated) LSN history database. */
+	db_mutex_t	mtx_lsnhist;	/* LSN history database mutex. */
 
 	REP		*region;	/* In memory structure. */
 	u_int8_t	*bulk;		/* Shared memory bulk area. */
@@ -866,6 +868,7 @@ struct __db_rep {
 	db_timeout_t	connection_retry_wait;
 	db_timeout_t	heartbeat_frequency; /* Max period between msgs. */
 	db_timeout_t	heartbeat_monitor_timeout;
+	db_timeout_t	write_forward_timeout;
 	u_int32_t	inqueue_max_gbytes;
 	u_int32_t	inqueue_max_bytes;
 
@@ -913,7 +916,7 @@ struct __db_rep {
 	/*
 	 * Status of repmgr.  It is ready when repmgr is not yet started.  It
 	 * is running after repmgr is (re)started.  It is stopped if the env
-	 * of the running repmgr is closed, or the site is removed. 
+	 * of the running repmgr is closed, or the site is removed.
 	 */
 	enum { ready, running, stopped } repmgr_status;
 	int		new_connection;	  /* Since last master seek attempt. */
@@ -926,6 +929,7 @@ struct __db_rep {
 	int		have_gmdb;
 	int		seen_repmsg;
 	int		view_mismatch; /* View callback and gmdb don't match. */
+	int		abbrev_init;	/* For mixed version gmdb upgrade. */
 
 	/*
 	 * Flag to show what kind of transaction is currently in progress.
@@ -936,7 +940,7 @@ struct __db_rep {
 	 * we don't have a more proper direct channel to communicate information
 	 * between the originator of a transaction and the replication send()
 	 * function that has to wait for acks and decide what to do about them.
-	 */ 
+	 */
 	enum { none, gmdb_primary, gmdb_secondary } active_gmdb_update;
 	int		limbo_resolution_needed;
 
@@ -956,7 +960,8 @@ struct __db_rep {
 	DB_LSN		durable_lsn;
 	DB		*gmdb;	/* Membership database handle. */
 	/*
-	 * Membership list restored from init file after crash during internal init.
+	 * Membership list restored from init file after crash
+	 * during internal init.
 	 */
 	u_int8_t	*restored_list;
 	size_t		restored_list_length;
@@ -974,6 +979,9 @@ struct __db_rep {
 	/* Application's message dispatch call-back function. */
 	void  (*msg_dispatch) __P((DB_ENV *, DB_CHANNEL *,
 		DBT *, u_int32_t, u_int32_t));
+
+	/* Socket approval callback function. */
+	int	(*approval) __P((DB_ENV *, DB_REPMGR_SOCKET, int *, u_int32_t));
 #endif  /* HAVE_REPLICATION_THREADS */
 };
 
@@ -1065,15 +1073,6 @@ struct __db_rep {
  * Control structure flags for replication communication infrastructure.
  */
 /*
- * Define old DB_LOG_ values that we must support here.  For reasons of
- * compatibility with old versions, these values must be reserved explicitly in
- * the list of flag values (below)
- */
-#define	DB_LOG_PERM_42_44	0x020
-#define	DB_LOG_RESEND_42_44	0x040
-#define	REPCTL_INIT_45		0x002	/* Back compatible flag value. */
-
-/*
  * Add new REPCTL flags to the end of this list to preserve compatibility
  * with old versions.
  */
@@ -1082,14 +1081,11 @@ struct __db_rep {
 #define	REPCTL_GROUP_ESTD	0x004	/* Message from site in a group. */
 #define	REPCTL_INIT		0x008	/* Internal init message. */
 #define	REPCTL_LEASE		0x010	/* Lease related message. */
-			/*
-			 * Skip over reserved values 0x20
-			 * and 0x40, as explained above.
-			 */
+#define	REPCTL_PERM		0x020	/* Permanent message (e.g. commit). */
+#define	REPCTL_RESEND		0x040	/* Rerequested message. */
 #define	REPCTL_LOG_END		0x080	/* Approximate end of group-wide log. */
-#define	REPCTL_PERM		DB_LOG_PERM_42_44
-#define	REPCTL_RESEND		DB_LOG_RESEND_42_44
 #define	REPCTL_INMEM_ONLY	0x100	/* In-memory databases only. */
+#define	REPCTL_ENCRYPTED	0x200	/* Master is using encryption. */
 
 /*
  * File info flags for internal init.  The per-database (i.e., file) flag
@@ -1106,38 +1102,8 @@ struct __db_rep {
 #define	REPINFO_DB_LITTLEENDIAN	0x0001	/* File is little-endian lorder. */
 #define	REPINFO_PG_LITTLEENDIAN	0x0002	/* Page is little-endian lorder. */
 
-/*
- * Control message format for 4.6 release.  The db_timespec_t is
- * not a portable structure.  Therefore, in 4.6, replication among
- * mixed OSs such as Linux and Windows, which have different time_t
- * sizes, does not work.
- */
-typedef struct {
-	u_int32_t	rep_version;	/* Replication version number. */
-	u_int32_t	log_version;	/* Log version number. */
-
-	DB_LSN		lsn;		/* Log sequence number. */
-	u_int32_t	rectype;	/* Message type. */
-	u_int32_t	gen;		/* Generation number. */
-	db_timespec	msg_time;	/* Timestamp seconds for leases. */
-	u_int32_t	flags;		/* log_put flag value. */
-} REP_46_CONTROL;
-
-/*
- * Control message format for 4.5 release and earlier.
- */
-typedef struct {
-	u_int32_t	rep_version;	/* Replication version number. */
-	u_int32_t	log_version;	/* Log version number. */
-
-	DB_LSN		lsn;		/* Log sequence number. */
-	u_int32_t	rectype;	/* Message type. */
-	u_int32_t	gen;		/* Generation number. */
-	u_int32_t	flags;		/* log_put flag value. */
-} REP_OLD_CONTROL;
-
-#define	LEASE_REFRESH_MIN	30	/* Minimum number of refresh retries. */
-#define	LEASE_REFRESH_USEC	50000	/* Microseconds between refresh tries. */
+#define	LEASE_REFRESH_MIN	30     /* Minimum number of refresh retries. */
+#define	LEASE_REFRESH_USEC	50000  /* Microseconds between refresh tries. */
 
 /* Master granted lease information. */
 typedef struct __rep_lease_entry {
@@ -1146,18 +1112,6 @@ typedef struct __rep_lease_entry {
 	db_timespec	end_time;	/* Master lease expiration time. */
 	DB_LSN		lease_lsn;	/* Durable LSN lease applies to. */
 } REP_LEASE_ENTRY;
-
-/*
- * Old vote info where some fields were not fixed size.
- */
-typedef struct {
-	u_int32_t	egen;		/* Election generation. */
-	int		nsites;		/* Number of sites I've been in
-					 * communication with. */
-	int		nvotes;		/* Number of votes needed to win. */
-	int		priority;	/* My site's priority. */
-	u_int32_t	tiebreaker;	/* Tie-breaking quasi-random value. */
-} REP_OLD_VOTE_INFO;
 
 typedef struct {
 	u_int32_t	egen;		/* Voter's election generation. */

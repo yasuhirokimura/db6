@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -133,6 +133,10 @@ Db::join(Dbc **curslist, Dbc **dbcp, u_int32_t flags);</pre>
         </ul>
       </div>
       <p>
+          The <code class="methodname">Db::join()</code> method can not be used
+          with a sliced database.
+      </p>
+      <p>
           The <code class="methodname">Db::join()</code> <span>
             
             <span>
@@ -146,7 +150,7 @@ Db::join(Dbc **curslist, Dbc **dbcp, u_int32_t flags);</pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp58163912"></a>Parameters</h3>
+              <h3 class="title"><a id="idp98442736"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -154,7 +158,7 @@ Db::join(Dbc **curslist, Dbc **dbcp, u_int32_t flags);</pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp58164560"></a>curslist</h4>
+                <h4 class="title"><a id="idp98426256"></a>curslist</h4>
               </div>
             </div>
           </div>
@@ -190,7 +194,7 @@ Db::join(Dbc **curslist, Dbc **dbcp, u_int32_t flags);</pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp58154096"></a>dbcp</h4>
+                <h4 class="title"><a id="idp98431072"></a>dbcp</h4>
               </div>
             </div>
           </div>
@@ -203,7 +207,7 @@ Db::join(Dbc **curslist, Dbc **dbcp, u_int32_t flags);</pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp58156352"></a>flags</h4>
+                <h4 class="title"><a id="idp98400176"></a>flags</h4>
               </div>
             </div>
           </div>
@@ -235,7 +239,7 @@ Db::join(Dbc **curslist, Dbc **dbcp, u_int32_t flags);</pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp58165056"></a>Errors</h3>
+              <h3 class="title"><a id="idp98432800"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -253,7 +257,7 @@ Db::join(Dbc **curslist, Dbc **dbcp, u_int32_t flags);</pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp58180872"></a> <span>DbRepHandleDeadException or</span> DB_REP_HANDLE_DEAD</h4>
+                <h4 class="title"><a id="idp98475296"></a> <span>DbRepHandleDeadException or</span> DB_REP_HANDLE_DEAD</h4>
               </div>
             </div>
           </div>
@@ -275,7 +279,7 @@ Db::join(Dbc **curslist, Dbc **dbcp, u_int32_t flags);</pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp58163296"></a><span>DbDeadlockException or </span>DB_REP_LOCKOUT</h4>
+                <h4 class="title"><a id="idp98406496"></a><span>DbDeadlockException or </span>DB_REP_LOCKOUT</h4>
               </div>
             </div>
           </div>
@@ -292,7 +296,7 @@ Db::join(Dbc **curslist, Dbc **dbcp, u_int32_t flags);</pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp58130856"></a>DB_SECONDARY_BAD</h4>
+                <h4 class="title"><a id="idp98391952"></a>DB_SECONDARY_BAD</h4>
               </div>
             </div>
           </div>
@@ -304,13 +308,14 @@ Db::join(Dbc **curslist, Dbc **dbcp, u_int32_t flags);</pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp58149264"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp98431744"></a>EINVAL</h4>
               </div>
             </div>
           </div>
           <p>
                           If cursor methods other than  <a class="xref" href="dbcget.html" title="Dbc::get()">Dbc::get()</a>  
                           or <a class="xref" href="dbcclose.html" title="Dbc::close()">Dbc::close()</a>  were called;
+                          if this method is called on a sliced database; 
                           or if an invalid flag value or parameter was specified.
                         </p>
         </div>
@@ -319,7 +324,7 @@ Db::join(Dbc **curslist, Dbc **dbcp, u_int32_t flags);</pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp58176304"></a>Class</h3>
+              <h3 class="title"><a id="idp98454048"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -331,7 +336,7 @@ Db::join(Dbc **curslist, Dbc **dbcp, u_int32_t flags);</pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp58132368"></a>See Also</h3>
+              <h3 class="title"><a id="idp98459664"></a>See Also</h3>
             </div>
           </div>
         </div>

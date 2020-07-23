@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1998, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1998, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -121,7 +121,7 @@ extern "C" {
 #define	DB_REGION_PREFIX	"__db"		/* DB file name prefix. */
 #define	DB_REGION_FMT		"__db.%03d"	/* Region file name format. */
 #define	DB_REGION_ENV		"__db.001"	/* Primary environment name. */
-#define IS_DB_FILE(name)	(strncmp(name, DB_REGION_PREFIX,	\
+#define	IS_DB_FILE(name)	(strncmp(name, DB_REGION_PREFIX,	\
 				    sizeof(DB_REGION_PREFIX) - 1) == 0)
 
 #define	INVALID_REGION_ID	0	/* Out-of-band region ID. */
@@ -163,9 +163,9 @@ typedef struct __db_reg_env { /* SHARED */
 	/*
 	 * !!!
 	 * The magic, panic, version, envid and signature fields of the region
-	 * are fixed in size, the timestamp field is the first field which is
-	 * variable length.  These fields must never change in order, to
-	 * guarantee we can always read them, no matter what release we have.
+	 * are fixed in size and position, to guarantee we can always read them,
+	 * no matter what release we have.  The timestamp field is the first
+	 * field which might change size between systems or releases.
 	 *
 	 * !!!
 	 * The magic and panic fields are NOT protected by any mutex, and for
@@ -196,7 +196,6 @@ typedef struct __db_reg_env { /* SHARED */
 #define	DB_INITENV_MPOOL	0x0010	/* DB_INIT_MPOOL */
 #define	DB_INITENV_REP		0x0020	/* DB_INIT_REP */
 #define	DB_INITENV_TXN		0x0040	/* DB_INIT_TXN */
-
 
 	/*
 	 * The mtx_regenv mutex protects the environment reference count,
@@ -258,7 +257,7 @@ typedef struct __db_region { /* SHARED */
  */
 
 /*
- * Structure used for tracking allocations in DB_PRIVATE regions. 
+ * Structure used for tracking allocations in DB_PRIVATE regions.
  */
 struct __db_region_mem_t;	typedef struct __db_region_mem_t REGION_MEM;
 struct __db_region_mem_t {
@@ -328,7 +327,7 @@ struct __db_reginfo_t {		/* __env_region_attach IN parameters. */
 	if (PANIC_ISSET(env))						\
 		return (__env_panic_msg(env));
 
-#define	PANIC_CHECK_RET(env, ret)			       		\
+#define	PANIC_CHECK_RET(env, ret)					\
 	if (PANIC_ISSET(env))						\
 		ret = (__env_panic_msg(env));
 

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2013, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2013, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -24,7 +24,7 @@ extern "C" {
  * produce a path and file name:
  * 009/223/372/036/854/775/807/__db.bl009223372036854775807
  */
-#define MAX_BLOB_PATH	"009/223/372/036/854/775/807/__db.bl009223372036854775807"
+#define	MAX_BLOB_PATH	"009/223/372/036/854/775/807/__db.bl009223372036854775807"
 #define	MAX_BLOB_PATH_SZ	sizeof(MAX_BLOB_PATH)
 #define	BLOB_DEFAULT_DIR	"__db_bl"
 #define	BLOB_META_FILE_NAME	"__db_blob_meta.db"
@@ -33,9 +33,9 @@ extern "C" {
 
 #define	BLOB_DIR_ELEMS		1000
 
-#define IS_BLOB_META(name)						\
+#define	IS_BLOB_META(name)						\
     (name != NULL && strstr(name, BLOB_META_FILE_NAME) != NULL)
-#define IS_BLOB_FILE(name)						\
+#define	IS_BLOB_FILE(name)						\
     (name != NULL && strstr(name, BLOB_FILE_PREFIX) != NULL)
 
 /*
@@ -45,7 +45,7 @@ extern "C" {
  * be readable on 32 bit only compilers.  So the ids are split into
  * two 32 bit integers, and combined when needed.
  */
-#define GET_LO_HI(e, lo, hi, o, ret)	do {				\
+#define	GET_LO_HI(e, lo, hi, o, ret)	do {				\
 	DB_ASSERT((e), sizeof(o) <= 8);					\
 	if (sizeof(o) == 8) {						\
 		(o) = (hi);						\
@@ -61,14 +61,14 @@ extern "C" {
 	}								\
 } while (0);
 
-#define GET_BLOB_FILE_ID(e, p, o, ret)					\
+#define	GET_BLOB_FILE_ID(e, p, o, ret)					\
 	GET_LO_HI(e, (p)->blob_file_lo, (p)->blob_file_hi, o, ret);
 
-#define GET_BLOB_SDB_ID(e, p, o, ret)					\
+#define	GET_BLOB_SDB_ID(e, p, o, ret)					\
 	GET_LO_HI(e, (p)->blob_sdb_lo, (p)->blob_sdb_hi, o, ret);
 
 /* Splits a 64 bit integer into two unsigned 32 bit integers. */
-#define SET_LO_HI(p, v, type, field_lo, field_hi)	do {		\
+#define	SET_LO_HI(p, v, type, field_lo, field_hi)	do {		\
 	u_int32_t tmp;							\
 	if (sizeof((v)) == 8) {						\
 		tmp = (u_int32_t)((v) >> 32);				\
@@ -83,7 +83,7 @@ extern "C" {
 	    &tmp, sizeof(u_int32_t));					\
 } while (0);
 
-#define SET_LO_HI_VAR(v, field_lo, field_hi)	do {			\
+#define	SET_LO_HI_VAR(v, field_lo, field_hi)	do {			\
 	if (sizeof((v)) == 8)						\
 		field_hi = (u_int32_t)((v) >> 32);			\
 	else								\
@@ -91,10 +91,10 @@ extern "C" {
 	field_lo = (u_int32_t)(v);					\
 } while (0);
 
-#define SET_BLOB_META_FILE_ID(p, v, type)					\
+#define	SET_BLOB_META_FILE_ID(p, v, type)				\
 	SET_LO_HI(p, v, type, blob_file_lo, blob_file_hi);
 
-#define SET_BLOB_META_SDB_ID(p, v, type)					\
+#define	SET_BLOB_META_SDB_ID(p, v, type)				\
 	SET_LO_HI(p, v, type, blob_sdb_lo, blob_sdb_hi);
 
 #if defined(__cplusplus)

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2009, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2009, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 using System;
@@ -168,6 +168,11 @@ namespace BerkeleyDB {
         /// Berkeley DB.
         /// </summary>
         public String ErrorPrefix;
+        /// <summary>
+        /// The prefix string that appears before informational messages issued
+        /// by Berkeley DB.
+        /// </summary>
+        public String MessagePrefix;
         /// <summary>
         /// The mechanism for reporting error messages to the application.
         /// </summary>
@@ -343,6 +348,7 @@ namespace BerkeleyDB {
             pagesizeIsSet = false;
             encryptionIsSet = false;
             ErrorPrefix = null;
+            MessagePrefix = null;
             Feedback = null;
             DoChecksum = false;
             NonDurableTxns = false;

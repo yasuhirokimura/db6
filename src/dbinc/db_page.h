@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -81,6 +81,9 @@ typedef struct _dbmeta33 {
 #define	DBMETA_CHKSUM		0x01
 #define	DBMETA_PART_RANGE	0x02
 #define	DBMETA_PART_CALLBACK	0x04
+#define	DBMETA_SLICED		0x08
+#define	DBMETA_ALLFLAGS	\
+    (DBMETA_CHKSUM | DBMETA_PART_RANGE | DBMETA_PART_CALLBACK | DBMETA_SLICED)
 	u_int8_t  metaflags;	/* 26: Meta-only flags */
 	u_int8_t  unused1;	/* 27: Unused. */
 	u_int32_t free;		/* 28-31: Free list page number. */
@@ -92,7 +95,6 @@ typedef struct _dbmeta33 {
 				/* 52-71: Unique file ID. */
 	u_int8_t  uid[DB_FILE_ID_LEN];
 } DBMETA33, DBMETA;
-
 
 /************************************************************************
  BTREE METADATA PAGE LAYOUT
@@ -106,7 +108,8 @@ typedef struct _btmeta33 {
 #define	BTM_SUBDB	0x020	/*	  Subdatabases. */
 #define	BTM_DUPSORT	0x040	/*	  Duplicates are sorted. */
 #define	BTM_COMPRESS	0x080	/*	  Compressed. */
-#define	BTM_MASK	0x0ff
+#define	BTM_SLICED	0x100	/*	  Sliced. */
+#define	BTM_MASK	0x1ff
 	DBMETA	dbmeta;		/* 00-71: Generic meta-data header. */
 
 	u_int32_t unused1;	/* 72-75: Unused space. */
@@ -135,9 +138,11 @@ typedef struct _btmeta33 {
  HASH METADATA PAGE LAYOUT
  ************************************************************************/
 typedef struct _hashmeta33 {
-#define	DB_HASH_DUP	0x01	/*	  Duplicates. */
-#define	DB_HASH_SUBDB	0x02	/*	  Subdatabases. */
-#define	DB_HASH_DUPSORT	0x04	/*	  Duplicates are sorted. */
+#define	HASHM_DUP	0x01	/*	  Duplicates. */
+#define	HASHM_SUBDB	0x02	/*	  Subdatabases. */
+#define	HASHM_DUPSORT	0x04	/*	  Duplicates are sorted. */
+#define	HASHM_SLICED	0x08	/*	  Sliced. */
+#define	HASHM_MASK	0x0f
 	DBMETA dbmeta;		/* 00-71: Generic meta-data page header. */
 
 	u_int32_t max_bucket;	/* 72-75: ID of Maximum bucket in use */
@@ -190,12 +195,11 @@ typedef struct _heapmeta {
 	u_int8_t  iv[DB_IV_BYTES];	/* 476-495: Crypto IV */
 	u_int8_t  chksum[DB_MAC_KEY];	/* 496-511: Page chksum */
 
-
 	/*
 	 * Minimum page size is 512.
 	 */
 } HEAPMETA;
-		
+
 /************************************************************************
  QUEUE METADATA PAGE LAYOUT
  ************************************************************************/
@@ -224,9 +228,8 @@ typedef struct _qmeta33 {
 } QMETA33, QMETA;
 
 /*
- * DBMETASIZE is a constant used by __db_file_setup and DB->verify
- * as a buffer which is guaranteed to be larger than any possible
- * metadata page size and smaller than any disk sector.
+ * Use DBMETASIZE to size the buffer used for reading a metadata page.
+ * It fits in any disk sector and is large enough for any metadata page.
  */
 #define	DBMETASIZE	512
 
@@ -335,9 +338,9 @@ typedef struct _db_page {
 /************************************************************************
  HEAP PAGE LAYOUT
  ************************************************************************/
-#define HEAPPG_NORMAL	26
-#define HEAPPG_CHKSUM	48
-#define HEAPPG_SEC	64
+#define	HEAPPG_NORMAL	26
+#define	HEAPPG_CHKSUM	48
+#define	HEAPPG_SEC	64
 
 /*
  *	+0-----------2------------4-----------6-----------7+
@@ -351,7 +354,7 @@ typedef struct _db_page {
  *	+-------+-----+-----------+------------------------+
  *	|  ...iv...   |   offset table / free space map    |
  *	+-------------+------------------------------------+
- *	|free->	 	F R E E A R E A                    |
+ *	|free->		F R E E A R E A                    |
  *	+--------------------------------------------------+
  *	|                <-- free |          item          |
  *	+-------------------------+------------------------+
@@ -374,20 +377,20 @@ typedef struct _heappg {
 	db_indx_t hf_offset;	/* 22-23: High free byte page offset. */
 	u_int8_t unused2[1];	/*    24: Unused. */
 	u_int8_t type;		/*    25: Page type. */
-	u_int8_t unused3[2];    /* 26-27: Never used, just checksum alignment. */
+	u_int8_t unused3[2];    /* 26-27: Not used, just checksum alignment. */
 	u_int8_t  chksum[DB_MAC_KEY]; /* 28-47: Checksum */
 	u_int8_t  iv[DB_IV_BYTES]; /* 48-63: IV */
 } HEAPPG;
 
 /* Define first possible data page for heap, 0 is metapage, 1 is region page */
-#define FIRST_HEAP_RPAGE 1 
-#define FIRST_HEAP_DPAGE 2
+#define	FIRST_HEAP_RPAGE 1
+#define	FIRST_HEAP_DPAGE 2
 
 typedef struct __heaphdr {
-#define HEAP_RECSPLIT 0x01 /* Heap data record is split */
-#define HEAP_RECFIRST 0x02 /* First piece of a split record */
-#define HEAP_RECLAST  0x04 /* Last piece of a split record */
-#define HEAP_RECBLOB  0x08 /* Record refers to a blob */
+#define	HEAP_RECSPLIT 0x01 /* Heap data record is split */
+#define	HEAP_RECFIRST 0x02 /* First piece of a split record */
+#define	HEAP_RECLAST  0x04 /* Last piece of a split record */
+#define	HEAP_RECBLOB  0x08 /* Record refers to a blob */
 	u_int8_t flags;		/* 00: Flags describing record. */
 	u_int8_t unused;	/* 01: Padding. */
 	u_int16_t size;		/* 02-03: The size of the stored data piece. */
@@ -423,55 +426,55 @@ typedef struct _heapblob {
 	u_int64_t file_id;		/* 72-80: File directory. */
 } HEAPBLOBHDR, HEAPBLOBHDR60P1;
 
-#define HEAP_HDRSIZE(hdr) 					\
+#define	HEAP_HDRSIZE(hdr)					\
 	(F_ISSET((hdr), HEAP_RECSPLIT) ? sizeof(HEAPSPLITHDR) :	\
 	sizeof(HEAPHDR))
 
-#define HEAPBLOBREC_SIZE		(sizeof(HEAPBLOBHDR))
-#define HEAPBLOBREC_DSIZE		(sizeof(HEAPBLOBHDR) - sizeof(HEAPHDR))
-#define HEAPBLOBREC_DATA(p)		(((u_int8_t *)p) + sizeof(HEAPHDR))
+#define	HEAPBLOBREC_SIZE		(sizeof(HEAPBLOBHDR))
+#define	HEAPBLOBREC_DSIZE		(sizeof(HEAPBLOBHDR) - sizeof(HEAPHDR))
+#define	HEAPBLOBREC_DATA(p)		(((u_int8_t *)p) + sizeof(HEAPHDR))
 
-#define HEAPPG_SZ(dbp)			       			\
+#define	HEAPPG_SZ(dbp)						\
 	(F_ISSET((dbp), DB_AM_ENCRYPT) ? HEAPPG_SEC :		\
 	F_ISSET((dbp), DB_AM_CHKSUM) ? HEAPPG_CHKSUM : HEAPPG_NORMAL)
 
 /* Each byte in the bitmap describes 4 pages (2 bits per page.) */
-#define HEAP_REGION_COUNT(dbp, size) (((size) - HEAPPG_SZ(dbp)) * 4)
-#define HEAP_DEFAULT_REGION_MAX(dbp)				\
+#define	HEAP_REGION_COUNT(dbp, size) (((size) - HEAPPG_SZ(dbp)) * 4)
+#define	HEAP_DEFAULT_REGION_MAX(dbp)				\
 	(HEAP_REGION_COUNT(dbp, (u_int32_t)8 * 1024))
 #define	HEAP_REGION_SIZE(dbp)	(((HEAP*) (dbp)->heap_internal)->region_size)
 
 /* Figure out which region a given page belongs to. */
-#define HEAP_REGION_PGNO(dbp, p) 				\
-	((((p) - 1) / (HEAP_REGION_SIZE(dbp) + 1)) * 		\
+#define	HEAP_REGION_PGNO(dbp, p)				\
+	((((p) - 1) / (HEAP_REGION_SIZE(dbp) + 1)) *		\
 	(HEAP_REGION_SIZE(dbp) + 1) + 1)
 /* Translate a region pgno to region number */
-#define HEAP_REGION_NUM(dbp, pgno)				\
-	((((pgno) - 1) / (HEAP_REGION_SIZE((dbp)) + 1)) + 1)
-/* 
+#define	HEAP_REGION_NUM(dbp, pgno)				\
+	((((pgno) - 1) / (((u_int64_t)HEAP_REGION_SIZE((dbp))) + 1)) + 1)
+/*
  * Given an internal heap page and page number relative to that page, return the
  * bits from map describing free space on the nth page.  Each byte in the map
  * describes 4 pages. Point at the correct byte and mask the correct 2 bits.
  */
-#define HEAP_SPACE(dbp, pg, n)					\
+#define	HEAP_SPACE(dbp, pg, n)					\
 	(HEAP_SPACEMAP((dbp), (pg))[(n) / 4] >> (2 * ((n) % 4)) & 3)
-      
-#define HEAP_SETSPACE(dbp, pg, n, b) do {				\
+
+#define	HEAP_SETSPACE(dbp, pg, n, b) do {				\
 	HEAP_SPACEMAP((dbp), (pg))[(n) / 4] &= ~(3 << (2 * ((n) % 4))); \
 	HEAP_SPACEMAP((dbp), (pg))[(n) / 4] |= ((b & 3) << (2 * ((n) % 4))); \
 } while (0)
-		
+
 /* Return the bitmap describing free space on heap data pages. */
-#define HEAP_SPACEMAP(dbp, pg) ((u_int8_t *)P_INP((dbp), (pg)))
+#define	HEAP_SPACEMAP(dbp, pg) ((u_int8_t *)P_INP((dbp), (pg)))
 
 /* Return the offset table for a heap data page. */
-#define HEAP_OFFSETTBL(dbp, pg) P_INP((dbp), (pg))
+#define	HEAP_OFFSETTBL(dbp, pg) P_INP((dbp), (pg))
 
-/* 
+/*
  * Calculate the % of a page a given size occupies and translate that to the
- * corresponding bitmap value. 
+ * corresponding bitmap value.
  */
-#define HEAP_CALCSPACEBITS(dbp, sz, space) do {			\
+#define	HEAP_CALCSPACEBITS(dbp, sz, space) do {			\
 	(space) = 100 * (sz) / (dbp)->pgsize;			\
 	if ((space) <= HEAP_PG_FULL_PCT)			\
 		(space) = HEAP_PG_FULL;				\
@@ -482,21 +485,21 @@ typedef struct _heapblob {
 	else							\
 		(space) = HEAP_PG_LT33;				\
 } while (0)
-	
+
 /* Return the amount of free space on a heap data page. */
-#define HEAP_FREESPACE(dbp, p)                                  \
+#define	HEAP_FREESPACE(dbp, p)                                  \
 	((HOFFSET(p) - HEAPPG_SZ(dbp)) -			\
 	(NUM_ENT(p) == 0 ? 0 : ((HEAP_HIGHINDX(p) + 1) * sizeof(db_indx_t))))
 
 /* The maximum amount of data that can fit on an empty heap data page. */
-#define HEAP_MAXDATASIZE(dbp)					\
+#define	HEAP_MAXDATASIZE(dbp)					\
 	(((dbp)->pgsize - HEAPPG_SZ(dbp)) - sizeof(db_indx_t))
 
-#define HEAP_FREEINDX(p)	(((HEAPPG *)p)->free_indx)
-#define HEAP_HIGHINDX(p)	(((HEAPPG *)p)->high_indx)
+#define	HEAP_FREEINDX(p)	(((HEAPPG *)p)->free_indx)
+#define	HEAP_HIGHINDX(p)	(((HEAPPG *)p)->high_indx)
 
 /* True if we have a page that deals with heap */
-#define HEAPTYPE(h)                                           \
+#define	HEAPTYPE(h)                                           \
     (TYPE(h) == P_HEAPMETA || TYPE(h) == P_HEAP || TYPE(h) == P_IHEAP)
 
 /************************************************************************
@@ -595,7 +598,7 @@ typedef struct _qpage {
  *
  *	Before 4.3 the implementation reference counted overflow items as it
  *	once was possible for them to be promoted onto btree internal pages.
- *	The reference count is stored in the entries field. 
+ *	The reference count is stored in the entries field.
  */
 #define	OV_LEN(p)	(((PAGE *)p)->hf_offset)
 #define	OV_REF(p)	(((PAGE *)p)->entries)
@@ -767,7 +770,7 @@ typedef struct _hblob {
 	} else {							\
 		if ((p).size > INT_MAX) {				\
 			__db_errx((e), DB_STR("0769",			\
-			    "Blob size overflow."));			\
+			    "External file size overflow."));		\
 			(ret) = EINVAL;					\
 		}							\
 		(o) = (int32_t)(p).size;				\
@@ -800,7 +803,6 @@ typedef struct _hblob {
 #define	HBLOB_SIZE		(sizeof(HBLOB))
 #define	HBLOB_DSIZE		(sizeof(HBLOB) - SSZA(HKEYDATA, data))
 #define	HBLOB_PSIZE		(HBLOB_SIZE + sizeof(db_indx_t))
-
 
 /************************************************************************
  BTREE PAGE LAYOUT

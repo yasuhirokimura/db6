@@ -7,14 +7,14 @@
     <link rel="stylesheet" href="apiReference.css" type="text/css" />
     <meta name="generator" content="DocBook XSL Stylesheets V1.73.2" />
     <link rel="start" href="index.html" title="Berkeley DB C++ API Reference" />
-    <link rel="up" href="blob.html" title="Chapter 14.  Binary Large Objects" />
+    <link rel="up" href="blob.html" title="Chapter 14.  External Files" />
     <link rel="prev" href="dbstream_size.html" title="DbStream::size()" />
-    <link rel="next" href="envget_blob_dir.html" title="DbEnv::get_blob_dir()" />
+    <link rel="next" href="envget_blob_dir.html" title="DbEnv::get_ext_file_dir()" />
   </head>
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.1</p>
+        <p>Library Version 12.1.6.2</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -23,7 +23,7 @@
         <tr>
           <td width="20%" align="left"><a accesskey="p" href="dbstream_size.html">Prev</a> </td>
           <th width="60%" align="center">Chapter 14. 
-                Binary Large Objects
+                External Files
         </th>
           <td width="20%" align="right"> <a accesskey="n" href="envget_blob_dir.html">Next</a></td>
         </tr>
@@ -44,20 +44,20 @@ int
 DbStream::write(Dbt *data, db_off_t offset, u_int32_t flags); </pre>
       <p>
          The <code class="methodname">DbStream::write()</code> method writes data
-         to an existing BLOB object in the database. This method writes
-         data contained in the <a class="link" href="dbt.html" title="Chapter 4.  The Dbt Handle">Dbt</a>
-         <span class="bold"><strong>data</strong></span> to the BLOB stream. Data is
-         written into the stream starting at the position indicated by
+         to an existing external file object in the database. This method
+         writes data contained in the <a class="link" href="dbt.html" title="Chapter 4.  The Dbt Handle">Dbt</a>
+         <span class="bold"><strong>data</strong></span> to the external file stream.
+         Data is written into the stream starting at the position indicated by
          <span class="bold"><strong>offset</strong></span>. The amount of data
          written is determined by the <code class="literal">size</code> field in the
          Dbt.
      </p>
       <p>
-         If this method writes data in the middle of the BLOB, it will
+         If this method writes data in the middle of the external file, it will
          overwrite existing data, instead of shifting it. If this method
-         writes data to the end of the BLOB, the data is appended to the
-         existing BLOB. You can determine how large a BLOB is using
-         <a class="xref" href="dbstream_size.html" title="DbStream::size()">DbStream::size()</a>.
+         writes data to the end of the external file, the data is appended to
+         the existing external file. You can determine how large an external
+         file is using <a class="xref" href="dbstream_size.html" title="DbStream::size()">DbStream::size()</a>.
      </p>
       <p>
          To open a stream, use <a class="xref" href="dbstream.html" title="Dbc::db_stream()">Dbc::db_stream()</a>.
@@ -77,7 +77,7 @@ DbStream::write(Dbt *data, db_off_t offset, u_int32_t flags); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp63900928"></a>Parameters</h3>
+              <h3 class="title"><a id="idp108960336"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -85,15 +85,15 @@ DbStream::write(Dbt *data, db_off_t offset, u_int32_t flags); </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp63900280"></a>data</h4>
+                <h4 class="title"><a id="idp108959088"></a>data</h4>
               </div>
             </div>
           </div>
           <p>
                   The <span class="bold"><strong>data</strong></span> parameter is
                   the <a class="link" href="dbt.html" title="Chapter 4.  The Dbt Handle">Dbt</a> containing the
-                  data to be written to the BLOB. The amount of data to be
-                  written is determined by the Dbt's
+                  data to be written to the external file. The amount of data
+                  to be written is determined by the Dbt's
                   <code class="literal">size</code> field.
              </p>
         </div>
@@ -101,13 +101,13 @@ DbStream::write(Dbt *data, db_off_t offset, u_int32_t flags); </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp63896752"></a>offset</h4>
+                <h4 class="title"><a id="idp108943744"></a>offset</h4>
               </div>
             </div>
           </div>
           <p>
                   The <span class="bold"><strong>offset</strong></span> parameter
-                  identifies the position in the BLOB where the write
+                  identifies the position in the external file where the write
                   operation will begin.
              </p>
         </div>
@@ -115,13 +115,13 @@ DbStream::write(Dbt *data, db_off_t offset, u_int32_t flags); </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp63876936"></a>flags</h4>
+                <h4 class="title"><a id="idp108925248"></a>flags</h4>
               </div>
             </div>
           </div>
           <p>
-                  The <span class="bold"><strong>flags</strong></span> parameter must be set to 0
-                  or the following value:
+                  The <span class="bold"><strong>flags</strong></span> parameter must be
+                  set to 0 or the following value:
              </p>
           <div class="itemizedlist">
             <ul type="disc">
@@ -148,7 +148,7 @@ DbStream::write(Dbt *data, db_off_t offset, u_int32_t flags); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp63909280"></a>Errors</h3>
+              <h3 class="title"><a id="idp108975200"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -166,7 +166,7 @@ DbStream::write(Dbt *data, db_off_t offset, u_int32_t flags); </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp63917456"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp108991376"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -182,24 +182,24 @@ DbStream::write(Dbt *data, db_off_t offset, u_int32_t flags); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp63915048"></a>Class</h3>
+              <h3 class="title"><a id="idp108901328"></a>Class</h3>
             </div>
           </div>
         </div>
         <p>
-            <a class="link" href="blob.html" title="Chapter 14.  Binary Large Objects">DbStream</a>  
+            <a class="link" href="blob.html" title="Chapter 14.  External Files">DbStream</a>  
         </p>
       </div>
       <div class="sect2" lang="en" xml:lang="en">
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp63913104"></a>See Also</h3>
+              <h3 class="title"><a id="idp108980896"></a>See Also</h3>
             </div>
           </div>
         </div>
         <p>
-             <a class="xref" href="blob.html#bloblist" title="BLOBs and Related Methods">BLOBs and Related Methods</a> 
+             <a class="xref" href="blob.html#bloblist" title="External Files and Related Methods">External Files and Related Methods</a> 
         </p>
       </div>
     </div>
@@ -218,7 +218,7 @@ DbStream::write(Dbt *data, db_off_t offset, u_int32_t flags); </pre>
           <td width="20%" align="center">
             <a accesskey="h" href="index.html">Home</a>
           </td>
-          <td width="40%" align="right" valign="top"> DbEnv::get_blob_dir()</td>
+          <td width="40%" align="right" valign="top"> DbEnv::get_ext_file_dir()</td>
         </tr>
       </table>
     </div>

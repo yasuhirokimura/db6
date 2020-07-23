@@ -47,7 +47,11 @@ _ACJNI_FOLLOW_SYMLINKS("$_ACJNI_JAVAC")
 _JTOPDIR=`echo "$_ACJNI_FOLLOWED" | sed -e 's://*:/:g' -e 's:/[[^/]]*$::'`
 case "$host_os" in
 	darwin*)	_JTOPDIR=`echo "$_JTOPDIR" | sed -e 's:/[[^/]]*$::'`
-			_JINC="$_JTOPDIR/Headers";;
+			if test -d "$_JTOPDIR/include"; then
+				_JINC="$_JTOPDIR/include"
+			else
+				_JINC="$_JTOPDIR/Headers"
+			fi;;
 	*)		_JINC="$_JTOPDIR/include";;
 esac
 
@@ -76,6 +80,7 @@ if test "$_JTOPDIR" != "/usr"; then
 	aix*)		_JNI_INC_SUBDIRS="aix";;
 	bsdi*)		_JNI_INC_SUBDIRS="bsdos";;
 	cygwin*)	_JNI_INC_SUBDIRS="win32";;
+	darwin*)	_JNI_INC_SUBDIRS="darwin";;
 	freebsd*)	_JNI_INC_SUBDIRS="freebsd";;
 	hp*)		_JNI_INC_SUBDIRS="hp-ux";;
 	linux*)		_JNI_INC_SUBDIRS="linux genunix";;

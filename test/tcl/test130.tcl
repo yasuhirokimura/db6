@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2010, 2014 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2010, 2016 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -197,16 +197,8 @@ proc test130 { method {nentries 10000} {num_db 3} {tnum "130"} args } {
 		}
 		error_check_good db_sync [$db(0,$i) sync] 0
 
-		puts "\tTest$tnum.c: Do a dump_file on contents."
-		if { $txnenv == 1 } {
-			set t [$env txn]
-			error_check_good txn [is_valid_txn $t $env] TRUE
-			set txn "-txn $t"
-		}
-		dump_file $db(0,$i) $txn $t1
-		if { $txnenv == 1 } {
-			error_check_good txn_commit [$t commit] 0
-		}
+		puts "\tTest$tnum.c: Save contents."
+		dump_file_env  $env $db(0,$i) $t1
 
 		puts "\tTest$tnum.d: Compact and verify databases"
 		for {set commit 0} {$commit <= $txnenv} {incr commit} {

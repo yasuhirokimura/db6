@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2004, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2004, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -175,16 +175,6 @@ __rep_verify(env, rp, rec, eid, savetime)
 			 * to fall through to the verify_match.
 			 */
 		}
-		/*
-		 * Mixed version internal init doesn't work with 4.4, so we
-		 * can't load NIMDBs from a very old-version master.  So, fib to
-		 * ourselves that they're already loaded, so that we don't try.
-		 */
-		if (rep->version == DB_REPVERSION_44) {
-			REP_SYSTEM_LOCK(env);
-			F_SET(rep, REP_F_NIMDBS_LOADED);
-			REP_SYSTEM_UNLOCK(env);
-		}
 		if (F_ISSET(rep, REP_F_NIMDBS_LOADED))
 			ret = __rep_verify_match(env, &rp->lsn, savetime);
 		else {
@@ -211,11 +201,13 @@ __rep_internal_init(env, abbrev)
 	ENV *env;
 	u_int32_t abbrev;
 {
+	DB_REP *db_rep;
 	REP *rep;
 	u_int32_t ctlflags;
 	int master, ret;
 
 	ctlflags = 0;
+	db_rep = env->rep_handle;
 	rep = env->rep_handle->region;
 	REP_SYSTEM_LOCK(env);
 #ifdef HAVE_STATISTICS
@@ -237,6 +229,15 @@ __rep_internal_init(env, abbrev)
 			 "send UPDATE_REQ, merely to check for NIMDB refresh"));
 			F_SET(rep, REP_F_ABBREVIATED);
 			FLD_SET(ctlflags, REPCTL_INMEM_ONLY);
+#ifdef HAVE_REPLICATION_THREADS
+			/*
+			 * Inform repmgr that an abbreviated internal init
+			 * is in progress.  This needs to remain set until
+			 * repmgr receives the REP_INIT_DONE event so that
+			 * it can avoid marking the gmdb dirty in this case.
+			 */
+			db_rep->abbrev_init = TRUE;
+#endif
 		} else
 			F_CLR(rep, REP_F_ABBREVIATED);
 		ZERO_LSN(rep->first_lsn);
@@ -465,7 +466,6 @@ __rep_dorecovery(env, lsnp, trunclsnp)
 	int ret, rollback, skip_rec, t_ret, update;
 	u_int32_t rectype, opcode;
 	__txn_regop_args *txnrec;
-	__txn_regop_42_args *txn42rec;
 
 	db_rep = env->rep_handle;
 	rep = db_rep->region;
@@ -517,19 +517,11 @@ __rep_dorecovery(env, lsnp, trunclsnp)
 		if (IS_PERM_RECTYPE(rectype) || rectype == DB___dbreg_register)
 			skip_rec = 0;
 		if (rectype == DB___txn_regop) {
-			if (rep->version >= DB_REPVERSION_44) {
-				if ((ret = __txn_regop_read(
-				    env, mylog.data, &txnrec)) != 0)
-					goto err;
-				opcode = txnrec->opcode;
-				__os_free(env, txnrec);
-			} else {
-				if ((ret = __txn_regop_42_read(
-				    env, mylog.data, &txn42rec)) != 0)
-					goto err;
-				opcode = txn42rec->opcode;
-				__os_free(env, txn42rec);
-			}
+			if ((ret = __txn_regop_read(
+			    env, mylog.data, &txnrec)) != 0)
+				goto err;
+			opcode = txnrec->opcode;
+			__os_free(env, txnrec);
 			if (opcode != TXN_ABORT) {
 				rollback = 1;
 				update = 1;
@@ -576,10 +568,12 @@ __rep_dorecovery(env, lsnp, trunclsnp)
 	 * close it here now, to save ourselves the trouble of worrying about it
 	 * later.
 	 */
+	MUTEX_LOCK(env, db_rep->mtx_lsnhist);
 	if (update && db_rep->lsn_db != NULL) {
 		ret = __db_close(db_rep->lsn_db, NULL, DB_NOSYNC);
 		db_rep->lsn_db = NULL;
 	}
+	MUTEX_UNLOCK(env, db_rep->mtx_lsnhist);
 
 err:	if ((t_ret = __logc_close(logc)) != 0 && ret == 0)
 		ret = t_ret;

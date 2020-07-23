@@ -11,7 +11,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>(Library Version 12.1.6.1)</p>
+        <p>(Library Version 12.1.6.2)</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -24,11 +24,11 @@
       <div class="titlepage">
         <div>
           <div>
-            <h1 class="title"><a id="idm349552"></a>Berkeley DB Message Reference Guide</h1>
+            <h1 class="title"><a id="idm127200"></a>Berkeley DB Message Reference Guide</h1>
           </div>
           <div>
             <div class="legalnotice">
-              <a id="idm365176"></a>
+              <a id="idm329120"></a>
               <p class="legalnotice-title">
                 <b>Legal Notice</b>
               </p>
@@ -66,7 +66,7 @@
             </div>
           </div>
           <div>
-            <p class="pubdate">6/10/2014</p>
+            <p class="pubdate">3/28/2016</p>
           </div>
         </div>
         <hr />
@@ -107,7 +107,7 @@
           </dt>
           <dt>
             <span class="sect1">
-              <a href="index.html#blob">Binary Large Objects Messages</a>
+              <a href="index.html#blob">External File Messages</a>
             </span>
           </dt>
           <dt>
@@ -282,6 +282,13 @@
                             Access method. These are error messages related
                             to usage of the various access methods (Btree,
                             Heap, Queue, and so forth).
+                        </p>
+              </li>
+              <li>
+                <p>
+                            External File messages. These are error messages related
+                            to usage of external file (large object)
+                            methods.
                         </p>
               </li>
               <li>
@@ -510,15 +517,15 @@
               </tr>
               <tr>
                 <td>1185</td>
-                <td>Blob item key.</td>
+                <td>External file key.</td>
               </tr>
               <tr>
                 <td>1186</td>
-                <td>Error - found a blob file in a duplicate data set.</td>
+                <td>Error - found an external file in a duplicate data set.</td>
               </tr>
               <tr>
                 <td>1198</td>
-                <td>compression cannot be used with blobs enabled.</td>
+                <td>compression cannot be used with external files.</td>
               </tr>
             </tbody>
           </table>
@@ -528,7 +535,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h2 class="title" style="clear: both"><a id="blob"></a>Binary Large Objects Messages</h2>
+              <h2 class="title" style="clear: both"><a id="blob"></a>External File Messages</h2>
             </div>
           </div>
         </div>
@@ -547,7 +554,7 @@
             <tbody>
               <tr>
                 <td>0211</td>
-                <td>Error, cursor does not point to a blob.</td>
+                <td>Error, cursor does not point to an external file.</td>
               </tr>
               <tr>
                 <td>0212</td>
@@ -555,7 +562,7 @@
               </tr>
               <tr>
                 <td>0213</td>
-                <td>Error, blob is read only.</td>
+                <td>Error, external file is read only.</td>
               </tr>
               <tr>
                 <td>0214</td>
@@ -563,35 +570,35 @@
               </tr>
               <tr>
                 <td>0217</td>
-                <td>library build did not include support for blobs</td>
+                <td>library build did not include support for external files</td>
               </tr>
               <tr>
                 <td>0218</td>
-                <td>library build did not include support for blobs</td>
+                <td>library build did not include support for external files</td>
               </tr>
               <tr>
                 <td>0219</td>
-                <td>library build did not include support for blobs</td>
+                <td>library build did not include support for external files</td>
               </tr>
               <tr>
                 <td>0220</td>
-                <td>library build did not include support for blobs</td>
+                <td>library build did not include support for external files</td>
               </tr>
               <tr>
                 <td>0221</td>
-                <td>Error creating blob directory.</td>
+                <td>Error creating external file directory.</td>
               </tr>
               <tr>
                 <td>0233</td>
-                <td>Error reading blob file.</td>
+                <td>Error reading external file.</td>
               </tr>
               <tr>
                 <td>0245</td>
-                <td>library build did not include support for blobs</td>
+                <td>library build did not include support for external files</td>
               </tr>
               <tr>
                 <td>0246</td>
-                <td>Blob id integer overflow.</td>
+                <td>External file id integer overflow.</td>
               </tr>
             </tbody>
           </table>
@@ -1016,15 +1023,27 @@
               </tr>
               <tr>
                 <td>0237</td>
-                <td>Blob enabled databases do not support DB_READ_UNCOMMITTED and TXN_SNAPSHOT</td>
+                <td>External file databases do not support DB_READ_UNCOMMITTED and TXN_SNAPSHOT</td>
               </tr>
               <tr>
                 <td>0243</td>
-                <td>Blobs require 64 integer compiler support.</td>
+                <td>External files require 64 integer compiler support.</td>
               </tr>
               <tr>
                 <td>0244</td>
-                <td>Blobs require 64 integer compiler support.</td>
+                <td>External files require 64 integer compiler support.</td>
+              </tr>
+              <tr>
+                <td>0247</td>
+                <td>DB_META_CHKSUM_FAIL: Checksum mismatch detected on a database metadata page</td>
+              </tr>
+              <tr>
+                <td>0248</td>
+                <td>msync failed on closing environment</td>
+              </tr>
+              <tr>
+                <td>0251</td>
+                <td>DB_SLICE_CORRUPT: One or more slices of this environment are malformed</td>
               </tr>
             </tbody>
           </table>
@@ -1133,7 +1152,7 @@
               </tr>
               <tr>
                 <td>0580</td>
-                <td>replication recovery unrolled committed transactions;</td>
+                <td>replication recovery unrolled committed transactions;open DB and DBcursor handles must be closed</td>
               </tr>
               <tr>
                 <td>0581</td>
@@ -1157,7 +1176,7 @@
               </tr>
               <tr>
                 <td>0587</td>
-                <td>DB_MULTIPLE buffers must be aligned, </td>
+                <td>DB_MULTIPLE buffers must be aligned, at least page size and multiples of 1KB</td>
               </tr>
               <tr>
                 <td>0588</td>
@@ -1257,11 +1276,11 @@
               </tr>
               <tr>
                 <td>0614</td>
-                <td>When specifying a delete action of nullify, a callback </td>
+                <td>When specifying a delete action of nullify, a callback function needs to be configured</td>
               </tr>
               <tr>
                 <td>0615</td>
-                <td>When not specifying a delete action of nullify, a </td>
+                <td>When not specifying a delete action of nullify, a callback function cannot be configured</td>
               </tr>
               <tr>
                 <td>0616</td>
@@ -1293,7 +1312,7 @@
               </tr>
               <tr>
                 <td>0623</td>
-                <td>DB_MULTIPLE/DB_MULTIPLE_KEY buffers must be </td>
+                <td>DB_MULTIPLE/DB_MULTIPLE_KEY buffers must be aligned, at least page size and multiples of 1KB</td>
               </tr>
               <tr>
                 <td>0624</td>
@@ -1342,10 +1361,6 @@
               <tr>
                 <td>0642</td>
                 <td>Checksum failure requires catastrophic recovery</td>
-              </tr>
-              <tr>
-                <td>0643</td>
-                <td>Cannot replicate prepared transactions from master running release 4.2 </td>
               </tr>
               <tr>
                 <td>0645</td>
@@ -1465,7 +1480,7 @@
               </tr>
               <tr>
                 <td>0695</td>
-                <td>Put results in a non-unique secondary key in an </td>
+                <td>Put results in a non-unique secondary key in an index not configured to support duplicates</td>
               </tr>
               <tr>
                 <td>0696</td>
@@ -1489,7 +1504,7 @@
               </tr>
               <tr>
                 <td>0701</td>
-                <td>DB_PRIVATE is not supported by</td>
+                <td>DB_PRIVATE is not supported by 64-bit applications in mixed-size-addressing mode</td>
               </tr>
               <tr>
                 <td>0708</td>
@@ -1549,7 +1564,7 @@
               </tr>
               <tr>
                 <td>0751</td>
-                <td>Secondary and primary databases cannot support blobs.</td>
+                <td>Secondary and primary databases cannot support external files.</td>
               </tr>
               <tr>
                 <td>0752</td>
@@ -1557,19 +1572,19 @@
               </tr>
               <tr>
                 <td>0753</td>
-                <td>Blob enabled databases do not support READ_UNCOMMITTED and TXN_SNAPSHOT.</td>
+                <td>External file enabled databases do not support READ_UNCOMMITTED and TXN_SNAPSHOT.</td>
               </tr>
               <tr>
                 <td>0754</td>
-                <td>Blob enabled databases do not support DB_READ_UNCOMMITTED.</td>
+                <td>External file enabled databases do not support DB_READ_UNCOMMITTED.</td>
               </tr>
               <tr>
                 <td>0755</td>
-                <td>DB_MULTIVERSION illegal with blob enabled databases</td>
+                <td>DB_MULTIVERSION illegal with external file enabled databases</td>
               </tr>
               <tr>
                 <td>0756</td>
-                <td>DB_READ_UNCOMMITTED illegal with blob enabled databases</td>
+                <td>DB_READ_UNCOMMITTED illegal with external file enabled databases</td>
               </tr>
               <tr>
                 <td>0758</td>
@@ -1581,15 +1596,15 @@
               </tr>
               <tr>
                 <td>0760</td>
-                <td>Cannot enable blobs in databases with checksum, encryption, or duplicates.</td>
+                <td>Cannot enable external files in databases with duplicates.</td>
               </tr>
               <tr>
                 <td>0761</td>
-                <td>Cannot enable blobs in databases with compression.</td>
+                <td>Cannot enable external files in databases with compression.</td>
               </tr>
               <tr>
                 <td>0763</td>
-                <td>Cannot enable checksum, encryption, or duplicates with blob support.</td>
+                <td>Cannot enable duplicates with external file support.</td>
               </tr>
               <tr>
                 <td>0765</td>
@@ -1597,15 +1612,19 @@
               </tr>
               <tr>
                 <td>0766</td>
-                <td>Blob identifier overflow.</td>
+                <td>External file identifier overflow.</td>
               </tr>
               <tr>
                 <td>0767</td>
-                <td>Blob size overflow.</td>
+                <td>External file size overflow.</td>
               </tr>
               <tr>
                 <td>0768</td>
-                <td>Blob size overflow.</td>
+                <td>External file size overflow.</td>
+              </tr>
+              <tr>
+                <td>0769</td>
+                <td>External file size overflow.</td>
               </tr>
               <tr>
                 <td>0777</td>
@@ -1621,11 +1640,11 @@
               </tr>
               <tr>
                 <td>0782</td>
-                <td>Hot backup requires DB_LOG_BLOB</td>
+                <td>Hot backup requires DB_LOG_EXT_FILE</td>
               </tr>
               <tr>
                 <td>0783</td>
-                <td>In-memory databases are not </td>
+                <td>In-memory databases are not supported in Replication Manager preferred master mode</td>
               </tr>
             </tbody>
           </table>
@@ -1754,7 +1773,7 @@
               </tr>
               <tr>
                 <td>1559</td>
-                <td>DB_TXN_NOSYNC and DB_TXN_WRITE_NOSYNC</td>
+                <td>DB_TXN_NOSYNC and DB_TXN_WRITE_NOSYNC may not be used with DB_LOG_IN_MEMORY</td>
               </tr>
               <tr>
                 <td>1560</td>
@@ -1830,11 +1849,11 @@
               </tr>
               <tr>
                 <td>1589</td>
-                <td>DB_PRIVATE is not </td>
+                <td>DB_PRIVATE is not supported by 64-bit applications in mixed-size-addressing mode</td>
               </tr>
               <tr>
                 <td>1591</td>
-                <td>Warning: Ignoring blob_threshold size when joining environment</td>
+                <td>Warning: Ignoring ext_file_threshold size when joining environment</td>
               </tr>
               <tr>
                 <td>1592</td>
@@ -1846,7 +1865,7 @@
               </tr>
               <tr>
                 <td>1594</td>
-                <td>DB_PRIVATE is not </td>
+                <td>DB_PRIVATE is not supported in Replication Manager preferred master mode</td>
               </tr>
               <tr>
                 <td>1595</td>
@@ -1855,6 +1874,34 @@
               <tr>
                 <td>1596</td>
                 <td>env_open DB_REGISTER w/o RECOVER panic: trying w/recovery</td>
+              </tr>
+              <tr>
+                <td>1598</td>
+                <td>set_slice_count has already been specified for this environment</td>
+              </tr>
+              <tr>
+                <td>1600</td>
+                <td>allocation of 0-length block</td>
+              </tr>
+              <tr>
+                <td>1602</td>
+                <td>"slice all home" is not permitted</td>
+              </tr>
+              <tr>
+                <td>1603</td>
+                <td>"slice all" configurations may not include absolute paths</td>
+              </tr>
+              <tr>
+                <td>1604</td>
+                <td>The region directory cannot be set with DB_PRIVATE or DB_SYSTEM_MEM.</td>
+              </tr>
+              <tr>
+                <td>1605</td>
+                <td>replication is not compatible with slices</td>
+              </tr>
+              <tr>
+                <td>1606</td>
+                <td>A sliced environment cannot use DB_INIT_CDB</td>
               </tr>
             </tbody>
           </table>
@@ -2002,12 +2049,16 @@
                 <td>Warning: Ignoring DB_SET_TXN_TIMEOUT when joining the environment.</td>
               </tr>
               <tr>
-                <td>2060</td>
-                <td>Freeing locker %x with locks</td>
-              </tr>
-              <tr>
                 <td>2069</td>
                 <td>pthread unlock %s: already unlocked</td>
+              </tr>
+              <tr>
+                <td>2076</td>
+                <td>DB_ENV-&gt;set_lk_conflicts: nmodes cannot be 0.</td>
+              </tr>
+              <tr>
+                <td>2077</td>
+                <td>DB_ENV-&gt;set_lk_partitions: partitions cannot be 0.</td>
               </tr>
             </tbody>
           </table>
@@ -2036,7 +2087,7 @@
             <tbody>
               <tr>
                 <td>2501</td>
-                <td>Set either an lsn range or a time range to verify logs </td>
+                <td>Set either an lsn range or a time range to verify logs in the range, don't mix time and lsn.</td>
               </tr>
               <tr>
                 <td>2503</td>
@@ -2064,7 +2115,7 @@
               </tr>
               <tr>
                 <td>2512</td>
-                <td>Non-replication DB_ENV handle attempting </td>
+                <td>Non-replication DB_ENV handle attempting to modify a replicated environment</td>
               </tr>
               <tr>
                 <td>2514</td>
@@ -2076,7 +2127,7 @@
               </tr>
               <tr>
                 <td>2517</td>
-                <td>Database environment corrupt; the wrong log files may </td>
+                <td>Database environment corrupt; the wrong log files may have been removed or incompatible database files imported from another environment</td>
               </tr>
               <tr>
                 <td>2518</td>
@@ -2156,7 +2207,7 @@
               </tr>
               <tr>
                 <td>2587</td>
-                <td>DB_LOG_IN_MEMORY is not </td>
+                <td>DB_LOG_IN_MEMORY is not supported in Replication Manager preferred master mode</td>
               </tr>
             </tbody>
           </table>
@@ -2184,6 +2235,10 @@
             </thead>
             <tbody>
               <tr>
+                <td>0511</td>
+                <td>page sizes must be a power-of-2</td>
+              </tr>
+              <tr>
                 <td>3003</td>
                 <td>individual cache size too large: maximum is 4GB</td>
               </tr>
@@ -2197,7 +2252,7 @@
               </tr>
               <tr>
                 <td>3006</td>
-                <td>Can't get the required free size while</td>
+                <td>Can't get the required free size whileoperating in mixed-size-addressing mode</td>
               </tr>
               <tr>
                 <td>3014</td>
@@ -2334,11 +2389,11 @@
               </tr>
               <tr>
                 <td>3535</td>
-                <td>Application type mismatch for a replication </td>
+                <td>Application type mismatch for a replication process joining the environment</td>
               </tr>
               <tr>
                 <td>3550</td>
-                <td>DB_ENV-&gt;rep_set_config: leases must be </td>
+                <td>DB_ENV-&gt;rep_set_config: leases must be configured before DB_ENV-&gt;rep_start</td>
               </tr>
               <tr>
                 <td>3551</td>
@@ -2406,7 +2461,7 @@
               </tr>
               <tr>
                 <td>3572</td>
-                <td>DB_ENV-&gt;rep_set_transport: cannot call from </td>
+                <td>DB_ENV-&gt;rep_set_transport: cannot call from Replication Manager application</td>
               </tr>
               <tr>
                 <td>3573</td>
@@ -2418,11 +2473,11 @@
               </tr>
               <tr>
                 <td>3575</td>
-                <td>DB_ENV-&gt;rep_set_clockskew: Zero only valid for </td>
+                <td>DB_ENV-&gt;rep_set_clockskew: Zero only valid for when used for both arguments</td>
               </tr>
               <tr>
                 <td>3576</td>
-                <td>DB_ENV-&gt;rep_set_clockskew: slow_clock value is </td>
+                <td>DB_ENV-&gt;rep_set_clockskew: slow_clock value is larger than fast_clock_value</td>
               </tr>
               <tr>
                 <td>3577</td>
@@ -2698,7 +2753,7 @@
               </tr>
               <tr>
                 <td>3688</td>
-                <td>Application environment and view mismatch </td>
+                <td>Application environment and view mismatch joining the environment</td>
               </tr>
               <tr>
                 <td>3694</td>
@@ -2734,7 +2789,7 @@
               </tr>
               <tr>
                 <td>3702</td>
-                <td>A preferred master site must be started with </td>
+                <td>A preferred master site must be started with DB_REP_CLIENT</td>
               </tr>
               <tr>
                 <td>3703</td>
@@ -2742,27 +2797,23 @@
               </tr>
               <tr>
                 <td>3704</td>
-                <td>Blob file offset overflow</td>
+                <td>External file offset overflow</td>
               </tr>
               <tr>
                 <td>3705</td>
-                <td>Blobs require 64 integer compiler support.</td>
-              </tr>
-              <tr>
-                <td>3706</td>
-                <td>DB_ENV-&gt;rep_set_config: %s </td>
-              </tr>
-              <tr>
-                <td>3707</td>
-                <td>DB_ENV-&gt;rep_set_config: preferred master mode </td>
-              </tr>
-              <tr>
-                <td>3708</td>
-                <td>DB_ENV-&gt;rep_set_config: cannot %s %s </td>
+                <td>External files require 64 integer compiler support.</td>
               </tr>
               <tr>
                 <td>3709</td>
-                <td>DB_ENV-&gt;rep_set_config: could not complete automatic </td>
+                <td>DB_ENV-&gt;rep_set_config: could not complete automatic preferred master configuration</td>
+              </tr>
+              <tr>
+                <td>3712</td>
+                <td>pthread_attr_destroy in repmgr_thread_start</td>
+              </tr>
+              <tr>
+                <td>3714</td>
+                <td>DB_ENV-&gt;rep_set_nsites: nsites cannot be 0.</td>
               </tr>
             </tbody>
           </table>
@@ -2870,10 +2921,6 @@
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>4501</td>
-                <td>Transaction has in memory logs</td>
-              </tr>
               <tr>
                 <td>4502</td>
                 <td>Transaction has in memory logs</td>
@@ -3102,6 +3149,22 @@
                 <td>4572</td>
                 <td>DB_TXN_SNAPSHOT may not be used on a replication client</td>
               </tr>
+              <tr>
+                <td>4573</td>
+                <td>Transaction has in memory logs</td>
+              </tr>
+              <tr>
+                <td>4574</td>
+                <td>DB_TXN-&gt;set_name: name cannot be empty.</td>
+              </tr>
+              <tr>
+                <td>4576</td>
+                <td>A transaction tried to access a second slice</td>
+              </tr>
+              <tr>
+                <td>4577</td>
+                <td>Sliced environments do not support distributed transactions</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -3129,7 +3192,7 @@
             <tbody>
               <tr>
                 <td>5001</td>
-                <td>%s: Unsupported database type</td>
+                <td>Unsupported database type</td>
               </tr>
               <tr>
                 <td>5007</td>
@@ -3293,7 +3356,7 @@
               </tr>
               <tr>
                 <td>5140</td>
-                <td>The environment does not exist or cannot be opened. \</td>
+                <td>The environment does not exist or cannot be opened. "-F" is required. </td>
               </tr>
               <tr>
                 <td>5141</td>
@@ -3301,15 +3364,15 @@
               </tr>
               <tr>
                 <td>5142</td>
-                <td>Queue and recno databases cannot support blobs</td>
+                <td>Queue and recno databases cannot support external files</td>
               </tr>
               <tr>
                 <td>5143</td>
-                <td>Encountered a data item too large to store in the database. </td>
+                <td>Encountered a data item too large to store in the database. Enable ext_file_threshold to store it.</td>
               </tr>
               <tr>
                 <td>5144</td>
-                <td>Blob directory may not be specified twice</td>
+                <td>External file directory may not be specified twice</td>
               </tr>
             </tbody>
           </table>

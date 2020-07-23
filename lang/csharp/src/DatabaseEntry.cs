@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2009, 2014 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2009, 2016 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 using System;
@@ -117,16 +117,28 @@ namespace BerkeleyDB {
         }
 
         /// <summary>
-        /// Whether the record data will be stored as a blob,
+        /// Whether the record data will be stored as an external file,
         /// regardless of size.
         /// </summary>
-        public bool Blob {
-            get { return (dbt.flags & DbConstants.DB_DBT_BLOB) != 0; }
+        public bool ExternalFile {
+            get { return (dbt.flags & DbConstants.DB_DBT_EXT_FILE) != 0; }
             set {
                 if (value == true)
-                    dbt.flags |= DbConstants.DB_DBT_BLOB;
+                    dbt.flags |= DbConstants.DB_DBT_EXT_FILE;
                 else
-                    dbt.flags &= ~DbConstants.DB_DBT_BLOB;
+                    dbt.flags &= ~DbConstants.DB_DBT_EXT_FILE;
+                }
+        }
+	/// <summary>
+        /// Deprecated.  Replaced by ExternalFile.
+        /// </summary>
+        public bool Blob {
+            get { return (dbt.flags & DbConstants.DB_DBT_EXT_FILE) != 0; }
+            set {
+                if (value == true)
+                    dbt.flags |= DbConstants.DB_DBT_EXT_FILE;
+                else
+                    dbt.flags &= ~DbConstants.DB_DBT_EXT_FILE;
                 }
         }
 
