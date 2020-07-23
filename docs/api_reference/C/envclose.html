@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.0</p>
+        <p>Library Version 12.1.6.1</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -145,7 +145,7 @@ DB_ENV-&gt;close(DB_ENV *dbenv, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp51283352"></a>Parameters</h3>
+              <h3 class="title"><a id="idp1072288"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -153,13 +153,13 @@ DB_ENV-&gt;close(DB_ENV *dbenv, u_int32_t flags);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp51296232"></a>flags</h4>
+                <h4 class="title"><a id="idp1072888"></a>flags</h4>
               </div>
             </div>
           </div>
           <p>
                   The <span class="bold"><strong>flags</strong></span> parameter must be set to 0
-                  or be set to the following value:
+                  or be set to one of the following values:
              </p>
           <div class="itemizedlist">
             <ul type="disc">
@@ -174,6 +174,20 @@ DB_ENV-&gt;close(DB_ENV *dbenv, u_int32_t flags);  </pre>
                             synchronizing the database.
                         </p>
               </li>
+              <li>
+                <p>
+                            <code class="literal">DB_FORCESYNCENV</code>
+                        </p>
+                <p>
+                            When closing the enviroment, flush memory
+                            mapped environment regions to disk. Specifying
+                            this flag may help prevent loss of updates when 
+                            <code class="literal">__db.00*</code> files are on NFS
+                            storage. However, there is a risk that this
+                            flag will significantly slow down this method
+                            call.
+                        </p>
+              </li>
             </ul>
           </div>
         </div>
@@ -182,7 +196,7 @@ DB_ENV-&gt;close(DB_ENV *dbenv, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp51329496"></a>Class</h3>
+              <h3 class="title"><a id="idp1119744"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -194,7 +208,7 @@ DB_ENV-&gt;close(DB_ENV *dbenv, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp51324760"></a>See Also</h3>
+              <h3 class="title"><a id="idp1113616"></a>See Also</h3>
             </div>
           </div>
         </div>

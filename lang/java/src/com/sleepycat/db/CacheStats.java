@@ -267,7 +267,7 @@ public class CacheStats {
     private long st_region_nowait;
     /**
     The number of times that a thread of control was able to obtain a
-    region lock without waiting.
+    cache region mutex without waiting.
     */
     public long getRegionNowait() {
         return st_region_nowait;
@@ -276,7 +276,7 @@ public class CacheStats {
     private long st_region_wait;
     /**
     The number of times that a thread of control was forced to wait
-    before obtaining a region lock.
+    before obtaining a cache region mutex.
     */
     public long getRegionWait() {
         return st_region_wait;
@@ -371,18 +371,14 @@ public class CacheStats {
     }
 
     private int st_oddfsize_detect;
-    /**
-    Odd file size detected.
-    */
-    public int getOddfSizeDetect() {
+    /** TODO */
+    /* package */ int getOddfSizeDetect() {
         return st_oddfsize_detect;
     }
 
     private int st_oddfsize_resolve;
-    /**
-    Odd file size resolved.
-    */
-    public int getOddfSizeResolve() {
+    /** TODO */
+    /* package */ int getOddfSizeResolve() {
         return st_oddfsize_resolve;
     }
 
@@ -395,7 +391,7 @@ public class CacheStats {
     }
 
     private long st_regmax;
-    /** The max size of the mutex region size. */
+    /** The maximum size, in bytes, of the mutex region. */
     public long getRegmax() {
         return st_regmax;
     }
@@ -449,8 +445,6 @@ public class CacheStats {
             + "\n  st_alloc_max_pages=" + st_alloc_max_pages
             + "\n  st_io_wait=" + st_io_wait
             + "\n  st_sync_interrupted=" + st_sync_interrupted
-            + "\n  st_oddfsize_detect=" + st_oddfsize_detect
-            + "\n  st_oddfsize_resolve=" + st_oddfsize_resolve
             + "\n  st_regsize=" + st_regsize
             + "\n  st_regmax=" + st_regmax
             ;

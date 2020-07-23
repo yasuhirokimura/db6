@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.0</p>
+        <p>Library Version 12.1.6.1</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -50,7 +50,7 @@
             <dl>
               <dt>
                 <span class="sect2">
-                  <a href="admin.html#idp50788872">Backing Up Replicated Berkeley DB SQL Databases</a>
+                  <a href="admin.html#idp322056">Backing Up Replicated Berkeley DB SQL Databases</a>
                 </span>
               </dt>
             </dl>
@@ -126,7 +126,7 @@
           <dl>
             <dt>
               <span class="sect2">
-                <a href="admin.html#idp50788872">Backing Up Replicated Berkeley DB SQL Databases</a>
+                <a href="admin.html#idp322056">Backing Up Replicated Berkeley DB SQL Databases</a>
               </span>
             </dt>
           </dl>
@@ -146,23 +146,21 @@
                 To learn how to use SQLite Online Backup API, see the official <a class="ulink" href="http://www.sqlite.org/backup.html" target="_top">SQLite
                 Documentation Page.</a>
             </p>
-        <p>
-                If you are using replication, you will also need to copy the
-                file that contains the replication pragma information in order
-                to have a full backup. To do that copy the file named <code class="literal">
-                pragma</code> from the database journal directory.
-            </p>
         <div class="sect2" lang="en" xml:lang="en">
           <div class="titlepage">
             <div>
               <div>
-                <h3 class="title"><a id="idp50788872"></a>Backing Up Replicated Berkeley DB SQL Databases</h3>
+                <h3 class="title"><a id="idp322056"></a>Backing Up Replicated Berkeley DB SQL Databases</h3>
               </div>
             </div>
           </div>
           <p>
-	        When BDB SQL interface databases are replicated the process for backing up
-		a regular database should be followed. The user must then copy
+	        When BDB SQL interface databases are replicated .dump and the SQLite Online
+		Backup API are not sufficient to create a backup.  In a separate 
+		process you should use the <a href="../api_reference/C/db_hotbackup.html" class="olink">db_hotbackup</a> utility or other methods
+		described in the 
+		<a href="../gsg_txn/C/backuprestore.html" class="olink">Oracle Berkeley DB Backup Procedures</a>
+                section.  You must then copy
 		some additional files for the backup to be complete.
 	    </p>
           <p>
@@ -190,6 +188,9 @@
               </li>
               <li>
                 <code class="literal">__db.rep.system</code>
+              </li>
+              <li>
+                <code class="literal">pragma</code>
               </li>
             </ul>
           </div>

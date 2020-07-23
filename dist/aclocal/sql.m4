@@ -97,7 +97,6 @@ if test "$db_cv_build_cryptography" = "yes"; then
 	CPPFLAGS="$CPPFLAGS -DSQLITE_HAS_CODEC=1"
 fi
 (cd sql && eval "\$SHELL ../$sqlite_dir/configure --disable-option-checking $ac_sub_configure_args CPPFLAGS=\"-I.. $CPPFLAGS\" --enable-amalgamation=$db_cv_sql_amalgamation --enable-readline=$with_readline " && cat build_config.h >> config.h) || exit 1
-CPPFLAGS="$orig_CPPFLAGS"
 
 # Configure JDBC if --enable-jdbc
 if test "$db_cv_jdbc" != "no"; then
@@ -152,4 +151,6 @@ if test "$db_cv_jdbc" != "no"; then
   sed "s/@BDB_LIB@/$BDB_LIB/g" Makefile.in.tmp > Makefile.in
   eval "\$SHELL ./configure --with-sqlite3=../../lang/sql/generated $jdbc_args $jdbc_flags"
 fi
+
+CPPFLAGS="$orig_CPPFLAGS"
 ])

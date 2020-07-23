@@ -63,7 +63,7 @@ __bam_split(dbc, arg, root_pgnop)
 	db_pgno_t *root_pgnop;
 {
 	BTREE_CURSOR *cp;
-	DB_LOCK metalock, next_lock;
+	DB_LOCK meta_lock, next_lock;
 	enum { UP, DOWN } dir;
 	db_pgno_t pgno, next_pgno, root_pgno;
 	int exact, level, ret;
@@ -72,17 +72,16 @@ __bam_split(dbc, arg, root_pgnop)
 		LOCK_CHECK_OFF(dbc->thread_info);
 
 	cp = (BTREE_CURSOR *)dbc->internal;
+	LOCK_INIT(meta_lock);
 	LOCK_INIT(next_lock);
 	next_pgno = PGNO_INVALID;
 
 	/*
-	 * First get a lock on the metadata page, we will have to allocate
+	 * First get a lock on the metadata page; we will have to allocate
 	 * pages and cannot get a lock while we have the search tree pinned.
 	 */
-
 	pgno = PGNO_BASE_MD;
-	if ((ret = __db_lget(dbc,
-	    0, pgno, DB_LOCK_WRITE, 0, &metalock)) != 0)
+	if ((ret = __db_lget(dbc, 0, pgno, DB_LOCK_WRITE, 0, &meta_lock)) != 0)
 		goto err;
 	root_pgno = BAM_ROOT_PGNO(dbc);
 
@@ -189,7 +188,7 @@ no_split:		/* Once we've split the leaf page, we're done. */
 	if (root_pgnop != NULL)
 		*root_pgnop = BAM_ROOT_PGNO(dbc);
 err:
-done:	(void)__LPUT(dbc, metalock);
+done:	(void)__LPUT(dbc, meta_lock);
 	(void)__TLPUT(dbc, next_lock);
 
 	if (F_ISSET(dbc, DBC_OPD))

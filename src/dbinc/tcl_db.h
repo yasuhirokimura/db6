@@ -24,10 +24,11 @@ enum INFOTYPE {
 #define	DBTCL_DBM	1
 #define	DBTCL_NDBM	2
 
-#define	DBTCL_GETCLOCK		0
-#define	DBTCL_GETINQUEUE	1
-#define	DBTCL_GETLIMIT		2
-#define	DBTCL_GETREQ		3
+#define	DBTCL_GETCLOCK			0
+#define	DBTCL_GETINQUEUE_MAX		1
+#define	DBTCL_GETINQUEUE_REDZONE	2
+#define	DBTCL_GETLIMIT			3	
+#define	DBTCL_GETREQ			4
 
 #define	DBTCL_MUT_ALIGN	0
 #define	DBTCL_MUT_INCR	1
@@ -37,9 +38,11 @@ enum INFOTYPE {
 
 /*
  * Data structure to record information about events that have occurred.  Tcl
- * command "env event_info" can retrieve the information.  For now, we record
- * only one occurrence per event type; "env event_info -clear" can be used to
- * reset the info.
+ * command "env event_info" can retrieve all the information except the number
+ * of times, and "env event_count" can retrieve the number of times a specific
+ * event is fired.  We added "env event_count" instead of merging the times
+ * information into "env event_info" to avoid breaking the existing tests.
+ * Tcl command "env event_info -clear" can be used to reset the info.
  *
  * Besides the bit flag that records the fact that an event type occurred, some
  * event types have associated "info" and we record that here too.  When new
@@ -58,6 +61,7 @@ typedef struct dbtcl_event_info {
 	DB_REPMGR_CONN_ERR conn_broken_info;
 	DB_REPMGR_CONN_ERR conn_failed_try_info;
 	DB_LSN		  sync_point;
+	size_t		  count[32]; /* The number of times for each event. */
 } DBTCL_EVENT_INFO;
 
 /*

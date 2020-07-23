@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.0</p>
+        <p>Library Version 12.1.6.1</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -51,8 +51,12 @@
         </dl>
       </div>
       <p>
-                The Berkeley DB SQL API supports both the native Berkeley
-                DB encryption, as well as the SQLite encryption extension.
+		    When encryption is enabled, the Berkeley DB SQL API uses 
+		    native Berkeley DB encryption to assure the security of 
+		    your data.  As usual, the Berkeley DB SQL API is almost 
+                    identical to the SQLite API, so you can use the syntax of
+		    the SQLite Encryption Extension to interact with your 
+		    encrypted data. 
             </p>
       <div class="sect2" lang="en" xml:lang="en">
         <div class="titlepage">
@@ -86,11 +90,6 @@
             </div>
           </div>
         </div>
-        <p>
-                   The Berkeley DB SQL interface supports the SQLite Encryption
-                   Extension (SEE) to ensure security of your data. The
-                   supported encryption algorithm is AES-128 in CBC mode.
-                </p>
         <p>
                    To learn how to use the SQLite Encryption Extension (SEE),
                    see the official

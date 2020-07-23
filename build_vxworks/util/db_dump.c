@@ -251,7 +251,7 @@ retry:	if ((ret = db_env_create(&dbenv, 0)) != 0) {
 		goto err;
 
 	/*
-	 * Set data_len after environment opens. We want the value passed
+	 * Set data_len after environment opens.  The value passed
 	 * by -D takes priority.
 	 */
 	if (data_len != NULL && (ret = dbenv->set_data_len(dbenv,

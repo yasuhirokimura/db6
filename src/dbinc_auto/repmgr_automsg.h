@@ -130,5 +130,13 @@ typedef struct ___repmgr_v4connect_reject_args {
 	u_int32_t	gen;
 } __repmgr_v4connect_reject_args;
 
-#define	__REPMGR_MAXMSG_SIZE	14
+#define	__REPMGR_LSNHIST_MATCH_SIZE	24
+typedef struct ___repmgr_lsnhist_match_args {
+	DB_LSN		lsn;
+	u_int32_t	hist_sec;
+	u_int32_t	hist_nsec;
+	DB_LSN		next_gen_lsn;
+} __repmgr_lsnhist_match_args;
+
+#define	__REPMGR_MAXMSG_SIZE	24
 #endif

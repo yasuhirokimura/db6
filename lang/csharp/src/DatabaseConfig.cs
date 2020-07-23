@@ -15,14 +15,14 @@ namespace BerkeleyDB {
     public class DatabaseConfig {
         /// <summary>
         /// The Berkeley DB environment within which to create a database.  If 
-        /// null, the database will be created stand-alone; that is, it is not
+        /// null, the database is created stand-alone; it is not
         /// part of any Berkeley DB environment. 
         /// </summary>
         /// <remarks>
         /// The database access methods automatically make calls to the other
         /// subsystems in Berkeley DB, based on the enclosing environment. For
         /// example, if the environment has been configured to use locking, the
-        /// access methods will automatically acquire the correct locks when
+        /// access methods automatically acquire the correct locks when
         /// reading and writing pages of the database.
         /// </remarks>
         public DatabaseEnvironment Env;
@@ -33,7 +33,7 @@ namespace BerkeleyDB {
         /// <remarks>
         /// The priority of a page biases the replacement algorithm to be more
         /// or less likely to discard a page when space is needed in the buffer
-        /// pool. The bias is temporary, and pages will eventually be discarded
+        /// pool. The bias is temporary, and pages are eventually discarded
         /// if they are not referenced again. This priority is only advisory,
         /// and does not guarantee pages will be treated in a specific way.
         /// </remarks>
@@ -55,7 +55,7 @@ namespace BerkeleyDB {
         /// by 25% to account for buffer pool overhead; cache sizes larger than
         /// 500MB are used as specified. The maximum size of a single cache is
         /// 4GB on 32-bit systems and 10TB on 64-bit systems. (All sizes are in
-        /// powers-of-two, that is, 256KB is 2^18 not 256,000.) For information
+        /// powers-of-two, 256KB is 2^18 not 256,000.) For information
         /// on tuning the Berkeley DB cache size, see Selecting a cache size in
         /// the Programmer's Reference Guide.
         /// </para>
@@ -70,13 +70,13 @@ namespace BerkeleyDB {
         /// <remarks>
         /// <para>
         /// The access methods provide no guarantees about the byte ordering of
-        /// the application data stored in the database, and applications are
+        /// the application data stored in the database. Applications are
         /// responsible for maintaining any necessary ordering.
         /// </para>
         /// <para>
         /// If creating additional databases in a single physical file, this
-        /// parameter will be ignored and the byte order of the existing
-        /// databases will be used.
+        /// parameter is ignored and the byte order of the existing
+        /// databases is used.
         /// </para>
         /// </remarks>
         public ByteOrder ByteOrder = ByteOrder.MACHINE;
@@ -95,13 +95,13 @@ namespace BerkeleyDB {
         /// lower limit of 512 bytes and an upper limit of 16K bytes.
         /// </para>
         /// <para>
-        /// For information on tuning the Berkeley DB page size, see Selecting a
-        /// page size in the Programmer's Reference Guide.
+        /// For information on tuning the Berkeley DB page size, see the "Selecting a
+        /// page size" section in the Programmer's Reference Guide.
         /// </para>
         /// <para>
         /// If creating additional databases in a single physical file, this
-        /// parameter will be ignored and the page size of the existing
-        /// databases will be used.
+        /// parameter is ignored and the page size of the existing
+        /// databases is used.
         /// </para>
         /// </remarks>
         public uint PageSize {
@@ -150,7 +150,7 @@ namespace BerkeleyDB {
         /// <remarks>
         /// <para>
         /// If the database already exists, the value of Encrypted must be the
-        /// same as the existing database or an error will be returned.
+        /// same as the existing database or an error is returned.
         /// </para>
         /// <para>
         /// Encrypted databases are not portable between machines of different
@@ -173,7 +173,7 @@ namespace BerkeleyDB {
         /// </summary>
         /// <remarks>
         /// <para>
-        /// In some cases, when an error occurs, Berkeley DB will call
+        /// In some cases, when an error occurs, Berkeley DB calls
         /// ErrorFeedback with additional error information. It is up to the
         /// delegate function to display the error message in an appropriate
         /// manner.
@@ -206,20 +206,20 @@ namespace BerkeleyDB {
         /// configured and a general hash algorithm if it is not.
         /// </para>
         /// <para>
-        /// If the database already exists, this setting will be ignored.
+        /// If the database already exists, this setting is ignored.
         /// </para>
         /// </remarks>
         public bool DoChecksum;
 
         /// <summary>
-        /// If true, Berkeley DB will not write log records for this database.
+        /// If true, Berkeley DB does not write log records for this database.
         /// </summary>
         /// <remarks>
         /// If Berkeley DB does not write log records, updates of this database
-        /// will exhibit the ACI (atomicity, consistency, and isolation)
-        /// properties, but not D (durability); that is, database integrity will
-        /// be maintained, but if the application or system fails, integrity
-        /// will not persist. The database file must be verified and/or restored
+        /// exhibit the ACI (atomicity, consistency, and isolation)
+        /// properties, but not D (durability); database integrity 
+        /// persists if the application or system does not fail. 
+        /// The database file must be verified and/or restored
         /// from backup after a failure. In order to ensure integrity after
         /// application shut down, the database must be synced when closed, or
         /// all database changes must be flushed from the database environment
@@ -239,10 +239,10 @@ namespace BerkeleyDB {
         /// <para>
         /// If true, configure the <see cref="BaseDatabase"/> handle to obtain a
         /// write lock on the entire database. When the database is opened it
-        /// will immediately throw <see cref="LockNotGrantedException"/> if it
+        /// immediately throws <see cref="LockNotGrantedException"/> if it
         /// cannot obtain the exclusive lock immediately. If False, configure
         /// the <see cref="BaseDatabase"/> handle to obtain a write lock on the
-        /// entire database. When the database is opened, it will block until it
+        /// entire database. When the database is opened, it blocks until it
         /// can obtain the exclusive lock. If null, do not configure the
         /// <see cref="BaseDatabase"/> handle to obtain a write lock on the
         /// entire database.
@@ -262,9 +262,9 @@ namespace BerkeleyDB {
 
         /// <summary>
         /// Enclose the open call within a transaction. If the call succeeds,
-        /// the open operation will be recoverable and all subsequent database
+        /// the open operation is recoverable and all subsequent database
         /// modification operations based on this handle will be transactionally
-        /// protected. If the call fails, no database will have been created. 
+        /// protected. If the call fails, no database has been created. 
         /// </summary>
         public bool AutoCommit;
         /// <summary>

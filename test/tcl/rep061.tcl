@@ -114,6 +114,11 @@ proc rep061_sub { method niter tnum logset recargs opts dpct largs } {
 		set repmemargs "-rep_inmem_files "
 	}
 
+	set blobargs ""
+    	if { [can_support_blobs $method $largs] == 1 } {
+		set blobargs "-blob_threshold 100"
+	}
+
 	env_cleanup $testdir
 
 	replsetup $testdir/MSGQUEUEDIR
@@ -144,7 +149,7 @@ proc rep061_sub { method niter tnum logset recargs opts dpct largs } {
 	# Open a master.
 	repladd 1
 	set ma_envcmd "berkdb_env_noerr -create $m_txnargs $verbargs \
-	    $repmemargs \
+	    $repmemargs $blobargs \
 	    -log_max $log_max -cachesize { 0 $cache 1 } -errpfx MASTER \
 	    -home $masterdir -rep_transport \[list 1 replsend\]"
 	set masterenv [eval $ma_envcmd $recargs -rep_master]
@@ -152,7 +157,7 @@ proc rep061_sub { method niter tnum logset recargs opts dpct largs } {
 	# Open a client
 	repladd 2
 	set cl_envcmd "berkdb_env_noerr -create $c_txnargs $verbargs \
-	    $repmemargs \
+	    $repmemargs $blobargs \
 	    -log_max $log_max -cachesize { 0 $cache 1 } -errpfx CLIENT \
 	    -home $clientdir -rep_transport \[list 2 replsend\]"
 	set clientenv [eval $cl_envcmd $recargs -rep_client]

@@ -9,9 +9,7 @@
 #include "db_int.h"
 #include "dbinc/db_page.h"
 #include "dbinc/db_am.h"
-#include "dbinc/blob.h"
 #include "dbinc/fop.h"
-#include "dbinc/mp.h"
 
 static int __db_stream_close __P((DB_STREAM *, u_int32_t));
 static int __db_stream_read
@@ -69,7 +67,7 @@ __db_stream_init(dbc, dbsp, flags)
 	dbs->file_size = size;
 
 	if ((ret = __blob_file_open(
-	    dbs->dbc->dbp, &dbs->fhp, dbs->blob_id, flags)) != 0)
+	    dbs->dbc->dbp, &dbs->fhp, dbs->blob_id, flags, 1)) != 0)
 		goto err;
 	ENV_LEAVE(env, ip);
 
@@ -82,7 +80,7 @@ __db_stream_init(dbc, dbsp, flags)
 	return (0);
 
 err:	if (dbs != NULL && dbs->dbc != NULL)
-		__dbc_close(dbs->dbc);
+		(void)__dbc_close(dbs->dbc);
 	ENV_LEAVE(env, ip);
 	if (dbs != NULL)
 		__os_free(env, dbs);
@@ -258,7 +256,7 @@ __db_stream_write(dbs, data, offset, flags)
 		return (ret);
 	}
 	/* Catch overflow. */
-	if (offset + (off_t)data->size < offset) {
+	if (offset + (db_off_t)data->size < offset) {
 		ret = EINVAL;
 		__db_errx(env, DB_STR_A("0216",
 	"Error, this write will exceed the maximum blob size: %lu %lld",

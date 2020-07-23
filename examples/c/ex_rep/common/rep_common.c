@@ -19,6 +19,18 @@
 #define	DATABASE	"quote.db"
 #define	SLEEPTIME	3
 
+/*
+ * Definition of thread-specific data key for PERM_FAILED structure
+ * stored in thread local storage.
+ */
+#ifdef _WIN32
+/* Windows style. */
+DWORD permfail_key;
+#else
+/* Posix style. */
+pthread_key_t permfail_key;
+#endif
+
 static int print_stocks __P((DB *));
 
 /*
@@ -346,14 +358,26 @@ doloop(dbenv, shared_data)
 {
 	DB *dbp;
 	DBT key, data;
+	permfail_t *pfinfo;
 	char buf[BUFSIZE], *first, *price;
 	u_int32_t flags;
 	int ret;
 
 	dbp = NULL;
+	pfinfo = NULL;
 	ret = 0;
 	memset(&key, 0, sizeof(key));
 	memset(&data, 0, sizeof(data));
+
+	/* Allocate put/commit thread's PERM_FAILED structure. */
+	if (shared_data->is_repmgr) {
+		if ((pfinfo = malloc(sizeof(permfail_t))) == NULL)
+			goto err;
+		if ((ret = thread_setspecific(permfail_key, pfinfo)) != 0)
+			goto err;
+		pfinfo->thread_name = "PutCommit";
+		pfinfo->flag = 0;
+	}
 
 	for (;;) {
 		printf("QUOTESERVER%s> ",
@@ -431,6 +455,16 @@ doloop(dbenv, shared_data)
 				dbenv->err(dbenv, ret, "DB->open");
 				goto err;
 			}
+			/* Check this thread's PERM_FAILED indicator. */
+			if (shared_data->is_repmgr) {
+				pfinfo = (permfail_t *)thread_getspecific(
+				    permfail_key);
+				if (pfinfo->flag)
+					printf(
+					    "%s Thread: dbopen not durable.\n",
+					    pfinfo->thread_name);
+				pfinfo->flag = 0;
+			}
 		}
 
 		if (first == NULL) {
@@ -470,11 +504,23 @@ doloop(dbenv, shared_data)
 				dbp->err(dbp, ret, "DB->put");
 				goto err;
 			}
+			/* Check this thread's PERM_FAILED indicator. */
+			if (shared_data->is_repmgr) {
+				pfinfo = (permfail_t *)thread_getspecific(
+				    permfail_key);
+				if (pfinfo->flag)
+					printf(
+		    "%s Thread: put %s %s not durable.\n",
+					    pfinfo->thread_name, first, price);
+				pfinfo->flag = 0;
+			}
 		}
 	}
 
 err:	if (dbp != NULL)
 		(void)dbp->close(dbp, DB_NOSYNC);
+	if (pfinfo != NULL)
+		free(pfinfo);
 	return (ret);
 }
 
@@ -575,12 +621,24 @@ checkpoint_thread(args)
 {
 	DB_ENV *dbenv;
 	SHARED_DATA *shared;
+	permfail_t *pfinfo;
 	supthr_args *ca;
 	int i, ret;
 
 	ca = (supthr_args *)args;
 	dbenv = ca->dbenv;
 	shared = ca->shared;
+	pfinfo = NULL;
+
+	/* Allocate checkpoint thread's PERM_FAILED structure. */
+	if (shared->is_repmgr) {
+		if ((pfinfo = malloc(sizeof(permfail_t))) == NULL)
+			return ((void *)EXIT_FAILURE);
+		if ((ret = thread_setspecific(permfail_key, pfinfo)) != 0)
+			return ((void *)EXIT_FAILURE);
+		pfinfo->thread_name = "Checkpoint";
+		pfinfo->flag = 0;
+	}
 
 	for (;;) {
 		/*
@@ -590,15 +648,29 @@ checkpoint_thread(args)
 		 */
 		for (i = 0; i < 60; i++) {
 			sleep(1);
-			if (shared->app_finished == 1)
+			if (shared->app_finished == 1) {
+				if (pfinfo != NULL)
+					free(pfinfo);
 				return ((void *)EXIT_SUCCESS);
+			}
 		}
 
 		/* Perform a checkpoint. */
 		if ((ret = dbenv->txn_checkpoint(dbenv, 0, 0, 0)) != 0) {
 			dbenv->err(dbenv, ret,
 			    "Could not perform checkpoint.\n");
+			if (pfinfo != NULL)
+				free(pfinfo);
 			return ((void *)EXIT_FAILURE);
+		}
+		/* Check this thread's PERM_FAILED indicator. */
+		if (shared->is_repmgr) {
+			pfinfo = (permfail_t *)thread_getspecific(
+			    permfail_key);
+			if (pfinfo->flag)
+				printf("%s Thread: checkpoint not durable.\n",
+				    pfinfo->thread_name);
+			pfinfo->flag = 0;
 		}
 	}
 }

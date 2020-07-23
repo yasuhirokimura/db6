@@ -15,9 +15,8 @@ namespace BerkeleyDB {
     /// </summary>
     public class SecondaryBTreeDatabaseConfig : SecondaryDatabaseConfig {
         /// <summary>
-        /// Policy for duplicate data items in the database; that is, insertion
-        /// when the key of the key/data pair being inserted already exists in
-        /// the database will be successful.
+        /// Policy for duplicate data items in the database. Allows a key/data 
+        /// pair to be inserted into the database even if the key already exists.
         /// </summary>
         /// <remarks>
         /// <para>The ordering of duplicates in the database for
@@ -29,7 +28,7 @@ namespace BerkeleyDB {
         /// duplicate comparison function. If the application does not specify a
         /// comparison function using 
         /// <see cref="DuplicateCompare"/>, a default lexical
-        /// comparison will be used.
+        /// comparison is used.
         /// </para>
         /// <para>
         /// <see cref="DuplicatesPolicy.SORTED"/> is preferred to 
@@ -39,7 +38,7 @@ namespace BerkeleyDB {
         /// </para>
         /// <para>
         /// If the database already exists, the value of Duplicates must be the
-        /// same as the existing database or an error will be returned.
+        /// same as the existing database or an error is returned.
         /// </para>
         /// <para>
         /// It is an error to specify <see cref="UseRecordNumbers"/> and
@@ -55,7 +54,7 @@ namespace BerkeleyDB {
         /// implementation attempts to coalesce empty pages into higher-level
         /// pages in order to keep the database as small as possible and
         /// minimize search time. This can hurt performance in applications with
-        /// cyclical data demands; that is, applications where the database
+        /// cyclical data demands; applications where the database
         /// grows and shrinks repeatedly. For example, because Berkeley DB does
         /// page-level locking, the maximum level of concurrency in a database
         /// of two pages is far smaller than that in a database of 100 pages, so
@@ -86,7 +85,7 @@ namespace BerkeleyDB {
         /// </para>
         /// <para>
         /// If the database already exists, the value of UseRecordNumbers must
-        /// be the same as the existing database or an error will be returned. 
+        /// be the same as the existing database or an error is returned. 
         /// </para>
         /// </remarks>
         public bool UseRecordNumbers;
@@ -107,7 +106,7 @@ namespace BerkeleyDB {
         /// <remarks>
         /// If the database does not already exist and
         /// <see cref="CreatePolicy.NEVER"/> is set,
-        /// <see cref="SecondaryBTreeDatabase.Open"/> will fail.
+        /// <see cref="SecondaryBTreeDatabase.Open"/> fails.
         /// </remarks>
         public CreatePolicy Creation;
         internal new uint openFlags {
@@ -198,14 +197,14 @@ namespace BerkeleyDB {
         /// </summary>
         /// <remarks>
         /// <para>
-        /// This value is used to determine if key or data items will be stored
+        /// This value is used to determine if key or data items are stored
         /// on overflow pages instead of Btree leaf pages. For more information
         /// on the specific algorithm used, see the Berkeley DB Reference Guide.
         /// The value specified must be at least 2; if not explicitly set, a
         /// value of 2 is used. 
         /// </para>
         /// <para>
-        /// If the database already exists, MinKeysPerPage will be ignored. 
+        /// If the database already exists, MinKeysPerPage is ignored. 
         /// </para>
         /// </remarks>
         public uint MinKeysPerPage {

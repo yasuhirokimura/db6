@@ -3,7 +3,7 @@
 # Configure clocks and timers.
 AC_DEFUN(AC_TIMERS, [
 
-AC_CHECK_FUNCS(gettimeofday localtime time strftime)
+AC_CHECK_FUNCS(gettimeofday localtime localtime_r time strftime)
 
 # AIX 4.3 will link applications with calls to clock_gettime, but the
 # calls always fail.

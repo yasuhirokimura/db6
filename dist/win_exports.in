@@ -86,6 +86,8 @@ __os_support_direct_io					db db_small
 __os_umalloc						db db_small 
 __os_unlink						db db_small 
 __os_write						db db_small 
+__repmgr_get_incoming_queue_fullevent			db db_small 
+__repmgr_get_incoming_queue_redzone			db db_small
 __txn_id_set						db db_small 
 
 # These are needed for linking tools or java.
@@ -163,7 +165,8 @@ __db_util_logset						db db_small
 __db_util_siginit						db db_small 
 __db_util_sigresend						db db_small 
 __db_verify_internal						db db_small 
-__dbreg_register_desc						db db_small 
+__dbreg_register_desc						db db_small
+__dbreg_register_42_desc					db db_small
 __dbt_usercopy						db db_small 
 __dbt_userfree						db db_small 
 __fop_create_42_desc						db db_small 
@@ -195,6 +198,7 @@ __ham_release_meta						db
 __ham_replace_42_desc						db 
 __ham_replace_desc						db 
 __ham_splitdata_desc						db 
+__heap_addrem_60_desc						db
 __heap_addrem_50_desc						db
 __heap_addrem_desc						db 
 __heap_exist						db db_small 
@@ -251,3 +255,4 @@ __txn_xa_regop_42_desc						db db_small
 
 # These are needed for internal test programs.
 __repmgr_getaddr						db 
+__db_ctimespec							db

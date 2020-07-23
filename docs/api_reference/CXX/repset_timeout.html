@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.0</p>
+        <p>Library Version 12.1.6.1</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -87,7 +87,7 @@ DbEnv::rep_set_timeout(int which, u_int32_t timeout); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp4252504"></a>Parameters</h3>
+              <h3 class="title"><a id="idp62852952"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -95,7 +95,7 @@ DbEnv::rep_set_timeout(int which, u_int32_t timeout); </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp4251856"></a>which</h4>
+                <h4 class="title"><a id="idp62852304"></a>which</h4>
               </div>
             </div>
           </div>
@@ -159,13 +159,16 @@ DbEnv::rep_set_timeout(int which, u_int32_t timeout); </pre>
                      </p>
               </li>
               <li>
-                <p>
+                <p><a id="set_timeout_DB_REP_ELECTION_RETRY"></a>
                           <code class="literal">DB_REP_ELECTION_RETRY</code>
                     </p>
                 <p>
                          Configure the amount of time the Replication
                          Manager will wait before retrying a failed
                          election.  The default wait time is 10 seconds.
+                         In preferred master mode, a shorter wait time is
+                         recommended to facilitate automatic takeovers,
+                         so the default wait time is reduced to 1 second.
                     </p>
               </li>
               <li>
@@ -184,7 +187,7 @@ DbEnv::rep_set_timeout(int which, u_int32_t timeout); </pre>
                     </p>
               </li>
               <li>
-                <p>
+                <p><a id="set_timeout_DB_REP_HEARTBEAT_MONITOR"></a>
                           <code class="literal">DB_REP_HEARTBEAT_MONITOR</code>
                     </p>
                 <p>
@@ -196,11 +199,14 @@ DbEnv::rep_set_timeout(int which, u_int32_t timeout); </pre>
                          should be of longer duration than the
                          <code class="literal">DB_REP_HEARTBEAT_SEND</code> timeout
                          to ensure that heartbeats are not missed.  When 0
-                         (the default), no monitoring is performed. 
+                         (the default), no monitoring is performed. In
+                         preferred master mode the default is 2 seconds and
+                         heartbeat monitoring cannot be turned off because
+                         heartbeats are required for automatic takeovers.
                     </p>
               </li>
               <li>
-                <p>
+                <p><a id="set_timeout_DB_REP_HEARTBEAT_SEND"></a>
                           <code class="literal">DB_REP_HEARTBEAT_SEND</code>
                     </p>
                 <p>
@@ -211,7 +217,9 @@ DbEnv::rep_set_timeout(int which, u_int32_t timeout); </pre>
                          connection to the master and to help request missing
                          master changes in the absence of master activity.
                          When 0 (the default), no heartbeat messages will be
-                         sent.
+                         sent. In preferred master mode the default is 0.75
+                         second and heartbeats cannot be turned off because
+                         they are required for automatic takeovers.
                     </p>
               </li>
               <li>
@@ -241,7 +249,7 @@ DbEnv::rep_set_timeout(int which, u_int32_t timeout); </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp4281784"></a>timeout</h4>
+                <h4 class="title"><a id="idp62883032"></a>timeout</h4>
               </div>
             </div>
           </div>
@@ -256,7 +264,7 @@ DbEnv::rep_set_timeout(int which, u_int32_t timeout); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp4256928"></a>Errors</h3>
+              <h3 class="title"><a id="idp62857160"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -274,13 +282,15 @@ DbEnv::rep_set_timeout(int which, u_int32_t timeout); </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp4268296"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp62868744"></a>EINVAL</h4>
               </div>
             </div>
           </div>
           <p>
-                If setting the lease timeout and replication has already been started; if
-                setting a Replication Manager timeout for a Base API application;
+                If setting the lease timeout and replication has already been
+                started; if turning off a heartbeat timeout in Replication
+                Manager preferred master mode; if setting a Replication
+                Manager timeout for a Base API application;
                 or if an invalid flag value or parameter was specified.
             </p>
         </div>
@@ -289,7 +299,7 @@ DbEnv::rep_set_timeout(int which, u_int32_t timeout); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp4264808"></a>Class</h3>
+              <h3 class="title"><a id="idp62863960"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -301,7 +311,7 @@ DbEnv::rep_set_timeout(int which, u_int32_t timeout); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp4257792"></a>See Also</h3>
+              <h3 class="title"><a id="idp62874512"></a>See Also</h3>
             </div>
           </div>
         </div>

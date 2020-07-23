@@ -33,11 +33,11 @@ namespace BerkeleyDB {
         /// </para>
         /// <para>
         /// Any attempt to insert records into the database that are greater
-        /// than Length bytes long will cause the call to fail immediately and
+        /// than Length bytes long cause the call to fail immediately and
         /// return an error. 
         /// </para>
         /// <para>
-        /// If the database already exists, this setting will be ignored.
+        /// If the database already exists, this setting is ignored.
         /// </para>
         /// </remarks>
         public uint Length {
@@ -54,7 +54,7 @@ namespace BerkeleyDB {
         /// <remarks>
         /// If the database does not already exist and
         /// <see cref="CreatePolicy.NEVER"/> is set,
-        /// <see cref="SecondaryQueueDatabase.Open"/> will fail.
+        /// <see cref="SecondaryQueueDatabase.Open"/> fails.
         /// </remarks>
         public CreatePolicy Creation;
         internal new uint openFlags {
@@ -73,11 +73,11 @@ namespace BerkeleyDB {
         /// </summary>
         /// <remarks>
         /// <para>
-        /// If no pad character is specified, space characters (that is, ASCII
+        /// If no pad character is specified, space characters (ASCII
         /// 0x20) are used for padding.
         /// </para>
         /// <para>
-        /// If the database already exists, this setting will be ignored.
+        /// If the database already exists, this setting is ignored.
         /// </para>
         /// </remarks>
         public int PadByte {
@@ -106,7 +106,7 @@ namespace BerkeleyDB {
         /// size in the Programmer's Reference Guide.
         /// </para>
         /// <para>
-        /// If the database already exists, this setting will be ignored.
+        /// If the database already exists, this setting is ignored.
         /// </para>
         /// </remarks>
         public uint ExtentSize {

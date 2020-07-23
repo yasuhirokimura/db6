@@ -2,7 +2,7 @@
  * @file sqliteodbc.c
  * SQLite ODBC Driver main module.
  *
- * $Id: sqliteodbc.c,v 1.205 2013/02/27 06:36:58 chw Exp chw $
+ * $Id: sqliteodbc.c,v 1.209 2013/12/08 07:18:56 chw Exp chw $
  *
  * Copyright (c) 2001-2013 Christian Werner <chw@ch-werner.de>
  * OS/2 Port Copyright (c) 2004 Lorne R. Sunley <lsunley@mb.sympatico.ca>
@@ -1823,12 +1823,16 @@ errout:
 	     */
 	    if (!inq) {
 		int ojfn = 0;
-		char *inq2 = NULL, *end = q + 1;
+		char *inq2 = NULL, *end = q + 1, *start;
 
+		while (*end && ISSPACE(*end)) {
+		    ++end;
+		}
 		if (*end != 'd' && *end != 'D' &&
 		    *end != 't' && *end != 'T') {
 		    ojfn = 1;
 		}
+		start = end;
 		while (*end) {
 		    if (inq2 && *end == *inq2) {
 			inq2 = NULL;
@@ -1840,7 +1844,6 @@ errout:
 		    ++end;
 		}
 		if (*end == '}') {
-		    char *start = q + 1;
 		    char *end2 = end - 1;
 
 		    if (ojfn) {
@@ -1923,6 +1926,9 @@ errout:
 	    if (size >= 6 &&
 		(strncasecmp(p, "select", 6) == 0 ||
 		 strncasecmp(p, "pragma", 6) == 0)) {
+		*isselect = 1;
+	    } else if (size >= 7 &&
+		       strncasecmp(p, "explain", 7) == 0) {
 		*isselect = 1;
 	    } else {
 		*isselect = 0;
@@ -3869,10 +3875,10 @@ substparam(STMT *s, int pnum, char **outp)
 		(*s->ov3) ? "07009" : "S1093");
 	return SQL_ERROR;
     }
-    if (!p->parbuf && p->lenp) {
+    if (!p->parbuf) {
 #ifdef WCHARSUPPORT
 	if (type == SQL_C_WCHAR) {
-	    if (*p->lenp == SQL_NTS) {
+	    if (!p->lenp || *p->lenp == SQL_NTS) {
 		p->max = uc_strlen(p->param) * sizeof (SQLWCHAR);
 	    } else if (*p->lenp >= 0) {
 		p->max = *p->lenp;
@@ -3880,7 +3886,7 @@ substparam(STMT *s, int pnum, char **outp)
 	} else
 #endif
 	if (type == SQL_C_CHAR) {
-	    if (*p->lenp == SQL_NTS) {
+	    if (!p->lenp || *p->lenp == SQL_NTS) {
 		p->len = p->max = strlen(p->param);
 	    } else if (*p->lenp >= 0) {
 		p->len = p->max = *p->lenp;
@@ -3889,7 +3895,7 @@ substparam(STMT *s, int pnum, char **outp)
 	}
 #if (HAVE_ENCDEC)
 	else if (type == SQL_C_BINARY) {
-	    p->len = p->max = *p->lenp;
+	    p->len = p->max = p->lenp ? *p->lenp : 0;
 	}
 #endif
     }
@@ -10337,14 +10343,8 @@ unbindcols(STMT *s)
 {
     int i;
 
-    s->bkmrkcol.type = -1;
-    s->bkmrkcol.max = 0;
-    s->bkmrkcol.lenp = NULL;
-    s->bkmrkcol.valp = NULL;
-    s->bkmrkcol.index = 0;
-    s->bkmrkcol.offs = 0;
     for (i = 0; s->bindcols && i < s->nbindcols; i++) {
-	s->bindcols[i].type = -1;
+	s->bindcols[i].type = SQL_UNKNOWN_TYPE;
 	s->bindcols[i].max = 0;
 	s->bindcols[i].lenp = NULL;
 	s->bindcols[i].valp = NULL;
@@ -10373,7 +10373,7 @@ mkbindcols(STMT *s, int ncols)
 		return nomem(s);
 	    }
 	    for (i = s->nbindcols; i < ncols; i++) {
-		bindcols[i].type = -1;
+		bindcols[i].type = SQL_UNKNOWN_TYPE;
 		bindcols[i].max = 0;
 		bindcols[i].lenp = NULL;
 		bindcols[i].valp = NULL;
@@ -10430,6 +10430,9 @@ getrowdata(STMT *s, SQLUSMALLINT col, SQLSMALLINT otype,
 	setstat(s, -1, "invalid column", (*s->ov3) ? "07009" : "S1002");
 	return SQL_ERROR;
     }
+    if (s->retr_data != SQL_RD_ON) {
+	return SQL_SUCCESS;
+    }
     if (!s->rows) {
 	*lenp = SQL_NULL_DATA;
 	goto done;
@@ -10437,9 +10440,6 @@ getrowdata(STMT *s, SQLUSMALLINT col, SQLSMALLINT otype,
     if (s->rowp < 0 || s->rowp >= s->nrows) {
 	*lenp = SQL_NULL_DATA;
 	goto done;
-    }
-    if (s->retr_data != SQL_RD_ON) {
-	return SQL_SUCCESS;
     }
     type = mapdeftype(type, s->cols[col].type, s->cols[col].nosign ? 1 : 0,
 		      s->nowchar[0]);
@@ -10885,12 +10885,12 @@ drvbindcol(SQLHSTMT stmt, SQLUSMALLINT col, SQLSMALLINT type,
     s = (STMT *) stmt;
     if (col < 1) {
 	if (col == 0 && s->bkmrk && type == SQL_C_BOOKMARK) {
-	    s->bkmrkcol.type = type;
-	    s->bkmrkcol.max = sizeof (SQLINTEGER);
-	    s->bkmrkcol.lenp = lenp;
+	    s->bkmrkcol.type = val ? type : SQL_UNKNOWN_TYPE;
+	    s->bkmrkcol.max = val ? sizeof (SQLINTEGER) : 0;
+	    s->bkmrkcol.lenp = val ? lenp : 0;
 	    s->bkmrkcol.valp = val;
 	    s->bkmrkcol.offs = 0;
-	    if (lenp) {
+	    if (val && lenp) {
 		*lenp = 0;
 	    }
 	    return SQL_SUCCESS;
@@ -10977,7 +10977,7 @@ drvbindcol(SQLHSTMT stmt, SQLUSMALLINT col, SQLSMALLINT type,
     }
     if (val == NULL) {
 	/* unbind column */
-	s->bindcols[col].type = -1;
+	s->bindcols[col].type = SQL_UNKNOWN_TYPE;
 	s->bindcols[col].max = 0;
 	s->bindcols[col].lenp = NULL;
 	s->bindcols[col].valp = NULL;
@@ -16138,7 +16138,7 @@ InUn(int remove, char *cmdline)
 	if (GetFileAttributesA(dllbuf) == INVALID_FILE_ATTRIBUTES) {
 	    return FALSE;
 	}
-	if (strcmp(dllbuf, inst) != 0 && !CopyFile(dllbuf, inst, 0)) {
+	if (strcasecmp(dllbuf, inst) != 0 && !CopyFile(dllbuf, inst, 0)) {
 	    char buf[512];
 
 	    sprintf(buf, "Copy %s to %s failed.", dllbuf, inst);

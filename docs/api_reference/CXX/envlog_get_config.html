@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.0</p>
+        <p>Library Version 12.1.6.1</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -67,7 +67,7 @@ DbEnv::log_get_config(u_int32_t which, int *onoffp)</pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp2917440"></a>Parameters</h3>
+              <h3 class="title"><a id="idp61496640"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -75,7 +75,7 @@ DbEnv::log_get_config(u_int32_t which, int *onoffp)</pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp2916792"></a>which</h4>
+                <h4 class="title"><a id="idp61495992"></a>which</h4>
               </div>
             </div>
           </div>
@@ -134,6 +134,21 @@ DbEnv::log_get_config(u_int32_t which, int *onoffp)</pre>
                     </p>
               </li>
               <li>
+                <p><a id="log_get_config_DB_LOG_NOSYNC"></a>
+                        <code class="literal">DB_LOG_NOSYNC</code>
+                    </p>
+                <p>
+                        The transaction log is not flushed from from the operating system cache to
+                        stable storage when the logging system switches log files or a durable
+                        transaction commits.  This means that transactions exhibit the ACI
+                        (atomicity, consistency, and isolation) properties, but only partially
+                        support D (durability); that is, database integrity will be maintained if
+                        the application fails and the environment is recovered, but not if the
+                        system fails.  All database files must be verified and/or restored from a
+                        replication group master or archival backup after system failure.
+                    </p>
+              </li>
+              <li>
                 <p><a id="log_get_config_DB_LOG_ZERO"></a>
                         <code class="literal">DB_LOG_ZERO</code>
                     </p>
@@ -148,7 +163,7 @@ DbEnv::log_get_config(u_int32_t which, int *onoffp)</pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp2929120"></a>onoffp</h4>
+                <h4 class="title"><a id="idp61509864"></a>onoffp</h4>
               </div>
             </div>
           </div>
@@ -168,7 +183,7 @@ DbEnv::log_get_config(u_int32_t which, int *onoffp)</pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp2889368"></a>Class</h3>
+              <h3 class="title"><a id="idp61510080"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -180,7 +195,7 @@ DbEnv::log_get_config(u_int32_t which, int *onoffp)</pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp2931528"></a>See Also</h3>
+              <h3 class="title"><a id="idp61496856"></a>See Also</h3>
             </div>
           </div>
         </div>

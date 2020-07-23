@@ -16,7 +16,7 @@ namespace BerkeleyDB {
     /// </summary>
     public class LogConfig {
         /// <summary>
-        /// If true, Berkeley DB will automatically remove log files that are no
+        /// If true, Berkeley DB automatically removes log files that are no
         /// longer needed.
         /// </summary>
         /// <remarks>
@@ -24,21 +24,21 @@ namespace BerkeleyDB {
         /// Automatic log file removal is likely to make catastrophic recovery
         /// impossible.
         /// </para>
-        /// <para>
+        /// <para>   
         /// Replication Manager applications operate in a group-aware manner for
-        /// log file removal, and automatic log file removal simplifies the
+        /// log file removal. Automatic log file removal simplifies the
         /// application. 
         /// </para>
         /// <para>
-        /// Replication Base API applications will rarely want to configure
+        /// Replication Base API applications rarely want to configure
         /// automatic log file removal as it increases the likelihood a master
-        /// will be unable to satisfy a client's request for a recent log
+        /// is unable to satisfy a client's request for a recent log
         /// record.
         /// </para>
         /// </remarks>
         public bool AutoRemove;
         /// <summary>
-        /// If true, Berkeley DB will flush log writes to the backing disk
+        /// If true, Berkeley DB flushes log writes to the backing disk
         /// before returning from the write system call, rather than flushing
         /// log writes explicitly in a separate system call, as necessary. 
         /// </summary>
@@ -55,14 +55,14 @@ namespace BerkeleyDB {
         /// </remarks>
         public bool ForceSync;
         /// <summary>
-        /// If true, maintain transaction logs in memory rather than on disk.
+        /// If true, maintain transaction logs in-memory rather than on disk.
         /// </summary>
         /// <remarks>
         /// <para>
         /// This means that transactions exhibit the ACI (atomicity,
-        /// consistency, and isolation) properties, but not D (durability); that
-        /// is, database integrity will be maintained, but if the application or
-        /// system fails, integrity will not persist. All database files must be
+        /// consistency, and isolation) properties, but not D (durability); 
+        /// database integrity is maintained, but if the application or
+        /// system fails, integrity does not persist. All database files must be
         /// verified and/or restored from a replication group master or archival
         /// backup after application or system failure.
         /// </para> 
@@ -71,8 +71,8 @@ namespace BerkeleyDB {
         /// available, Berkeley DB methods may throw
         /// <see cref="FullLogBufferException"/>. When choosing log buffer and
         /// file sizes for in-memory logs, applications should ensure the
-        /// in-memory log buffer size is large enough that no transaction will
-        /// ever span the entire buffer, and avoid a state where the in-memory
+        /// in-memory log buffer size is large enough that no transaction 
+        /// ever spans the entire buffer, and avoids a state where the in-memory
         /// buffer is full and no space can be freed because a transaction that
         /// started in the first log "file" is still active.
         /// </para>
@@ -89,12 +89,16 @@ namespace BerkeleyDB {
         /// </summary>
         public bool NoBuffer;
         /// <summary>
+        /// If true, avoid the fsync() call when the log flies are flushed.
+        /// </summary>
+        public bool NoSync;
+        /// <summary>
         /// If true, zero all pages of a log file when that log file is created.
         /// </summary>
         /// <remarks>
         /// <para>
         /// This has shown to provide greater transaction throughput in some
-        /// environments. The log file will be zeroed by the thread which needs
+        /// environments. The log file is zeroed by the thread which needs
         /// to re-create the new log file. Other threads may not write to the
         /// log file while this is happening.
         /// </para>
@@ -114,6 +118,8 @@ namespace BerkeleyDB {
                     ret |= DbConstants.DB_LOG_BLOB;
                 if (NoBuffer)
                     ret |= DbConstants.DB_LOG_DIRECT;
+                if (NoSync)
+                    ret |= DbConstants.DB_LOG_NOSYNC;
                 if (ZeroOnCreate)
                     ret |= DbConstants.DB_LOG_ZERO;
                 return ret;
@@ -145,7 +151,7 @@ namespace BerkeleyDB {
         /// all log information that can accumulate during the longest running
         /// transaction. When choosing log buffer and file sizes for in-memory
         /// logs, applications should ensure the in-memory log buffer size is
-        /// large enough that no transaction will ever span the entire buffer,
+        /// large enough that no transaction ever spans the entire buffer,
         /// and avoid a state where the in-memory buffer is full and no space
         /// can be freed because a transaction that started in the first log
         /// "file" is still active.
@@ -166,7 +172,7 @@ namespace BerkeleyDB {
 
         /// <summary>
         /// The path of a directory to be used as the location of logging files.
-        /// Log files created by the Log Manager subsystem will be created in
+        /// Log files created by the Log Manager subsystem are created in
         /// this directory. 
         /// </summary>
         /// <remarks>
@@ -207,7 +213,7 @@ namespace BerkeleyDB {
         /// <para>
         /// If the database environment already exists when
         /// <see cref="DatabaseEnvironment.Open"/> is called, the value of
-        /// InitLogIds will be ignored.
+        /// InitLogIds is ignored.
         /// </para>
         /// </remarks>
         public uint InitLogIdCount {
@@ -230,7 +236,7 @@ namespace BerkeleyDB {
         /// </para>
         /// <para>
         /// Normally, if Berkeley DB applications set their umask appropriately,
-        /// all processes in the application suite will have read permission on
+        /// all processes in the application suite obtain read permission on
         /// the log files created by any process in the application suite.
         /// However, if the Berkeley DB application is a library, a process
         /// using the library might set its umask to a value preventing other
@@ -270,7 +276,7 @@ namespace BerkeleyDB {
         /// may be configured to store log records on-disk.) When choosing log
         /// buffer and file sizes for in-memory logs, applications should ensure
         /// the in-memory log buffer size is large enough that no transaction
-        /// will ever span the entire buffer, and avoid a state where the
+        /// ever spans the entire buffer, and avoids a state where the
         /// in-memory buffer is full and no space can be freed because a
         /// transaction that started in the first log "file" is still active.
         /// </para>
@@ -280,8 +286,8 @@ namespace BerkeleyDB {
         /// </para>
         /// <para>
         /// If no size is specified by the application, the size last specified
-        /// for the database region will be used, or if no database region
-        /// previously existed, the default will be used.
+        /// for the database region is used, or if no database region
+        /// previously existed, the default is used.
         /// </para></remarks>
         public uint MaxFileSize {
             get { return _maxSize; }
@@ -301,14 +307,14 @@ namespace BerkeleyDB {
         /// <para>
         /// By default, or if the value is set to 0, the default size is
         /// approximately 60KB. The log region is used to store filenames, and
-        /// so may need to be increased in size if a large number of files will
-        /// be opened and registered with the specified Berkeley DB
+        /// so may need to be increased in size if a large number of files are
+        /// opened and registered with the specified Berkeley DB
         /// environment's log manager.
         /// </para>
         /// <para>
         /// If the database environment already exists when
         /// <see cref="DatabaseEnvironment.Open"/> is called, the value of
-        /// RegionSize will be ignored.
+        /// RegionSize is ignored.
         /// </para>
         /// </remarks>
         public uint RegionSize {

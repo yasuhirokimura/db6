@@ -210,6 +210,10 @@ static void __dbj_event_notify(DB_ENV *dbenv, u_int32_t event_id, void * info)
 		(*jenv)->CallNonvirtualVoidMethod(jenv, jdbenv,
 		    dbenv_class, rep_init_done_event_notify_method);
 		break;
+	case DB_EVENT_REP_INQUEUE_FULL:
+		(*jenv)->CallNonvirtualVoidMethod(jenv, jdbenv,
+		    dbenv_class, rep_inqueue_full_event_notify_method);
+		break;
 	case DB_EVENT_REP_JOIN_FAILURE:
 		(*jenv)->CallNonvirtualVoidMethod(jenv, jdbenv,
 		    dbenv_class, rep_join_failure_event_notify_method);

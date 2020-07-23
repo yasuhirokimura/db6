@@ -71,4 +71,5 @@ rep_test btree $masterenv NULL 10 0 0 0
 # Close the envs
 puts "Closing Masterenv $masterenv"
 error_check_good script_master_close [$masterenv close] 0
+replclose $testdir/MSGQUEUEDIR
 puts "\tRepscript completed successfully"

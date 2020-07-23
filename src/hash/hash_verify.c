@@ -170,38 +170,48 @@ __ham_vrfy_meta(dbp, vdp, m, pgno, flags)
  * Where 64-bit integer support is not available,
  * return an error if the file has any blobs.
  */
+	t_ret = 0;
 #ifdef HAVE_64BIT_TYPES
-	GET_BLOB_FILE_ID(env, m, blob_id, ret);
-	if (ret != 0) {
+	GET_BLOB_FILE_ID(env, m, blob_id, t_ret);
+	if (t_ret != 0) {
 		isbad = 1;
 		EPRINT((env, DB_STR_A("1178",
 		    "Page %lu: blob file id overflow.", "%lu"), (u_long)pgno));
+		if (ret == 0)
+			ret = t_ret;
 	}
-	GET_BLOB_SDB_ID(env, m, blob_id, ret);
-	if (ret != 0) {
+	t_ret = 0;
+	GET_BLOB_SDB_ID(env, m, blob_id, t_ret);
+	if (t_ret != 0) {
 		isbad = 1;
 		EPRINT((env, DB_STR_A("1179",
 		    "Page %lu: blob subdatabase id overflow.",
 		    "%lu"), (u_long)pgno));
+		if (ret == 0)
+			ret = t_ret;
 	}
 #else /* HAVE_64BIT_TYPES */
 	/*
 	 * db_seq_t is an int on systems that do not have 64 integer types, so
 	 * this will compile and run.
 	 */
-	GET_BLOB_FILE_ID(env, m, blob_id, ret);
-	if (ret != 0 || blob_id != 0) {
+	GET_BLOB_FILE_ID(env, m, blob_id, t_ret);
+	if (t_ret != 0 || blob_id != 0) {
 		isbad = 1;
 		EPRINT((env, DB_STR_A("1203",
 		    "Page %lu: blobs require 64 integer compiler support.",
 		    "%lu"), (u_long)pgno));
+		if (ret == 0)
+			ret = t_ret;
 	}
-	GET_BLOB_SDB_ID(env, m, blob_id, ret);
-	if (ret != 0 || blob_id != 0) {
+	GET_BLOB_SDB_ID(env, m, blob_id, t_ret);
+	if (t_ret != 0 || blob_id != 0) {
 		isbad = 1;
 		EPRINT((env, DB_STR_A("1204",
 		    "Page %lu: blobs require 64 integer compiler support.",
 		    "%lu"), (u_long)pgno));
+		if (ret == 0)
+			ret == t_ret;
 	}
 #endif
 

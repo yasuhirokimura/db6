@@ -398,6 +398,7 @@
 			<LogBlobContent>True</LogBlobContent>
 			<MaxFileSize>1048576</MaxFileSize>
 			<NoBuffer>True</NoBuffer>
+			<NoSync>True</NoSync>
 			<RegionSize>30720</RegionSize>
 			<ZeroOnCreate>True</ZeroOnCreate>
 		</Test>
@@ -642,6 +643,7 @@
 			<LogBlobContent>True</LogBlobContent>
 			<MaxFileSize>1048576</MaxFileSize>
 			<NoBuffer>True</NoBuffer>
+			<NoSync>True</NoSync>
 			<RegionSize>20480</RegionSize>
 			<ZeroOnCreate>True</ZeroOnCreate>
 		</Test>
@@ -763,6 +765,7 @@
 				<LogBlobContent>False</LogBlobContent>
 				<MaxFileSize>1048576</MaxFileSize>
 				<NoBuffer>False</NoBuffer>
+				<NoSync>True</NoSync>
 				<RegionSize>204800</RegionSize>
 				<ZeroOnCreate>True</ZeroOnCreate>
 			</LogConfig>

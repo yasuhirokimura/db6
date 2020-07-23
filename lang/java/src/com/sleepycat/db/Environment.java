@@ -156,14 +156,40 @@ public class Environment {
     Close the database environment, freeing any allocated resources and
     closing any underlying subsystems. 
     <p>
-    This function has verify similar
-    behavior as Environment.close(), except the following:
-    When each open database handle is closed, the database is synchronized.
+    This function is similar to Environment.close(), except that
+    each open database is synchronized as it is closed.
     */
     public void closeForceSync()
         throws DatabaseException {
 
         dbenv.close(DbConstants.DB_FORCESYNC);
+    }
+
+    /**
+    Close the database environment, freeing any allocated resources and
+    closing any underlying subsystems. 
+    <p>
+    This function is similar to Environment.close(), except that
+    all memory mapped environment regions are synchronized as the
+    environment is closed.
+    */
+    public void closeForceSyncEnv()
+        throws DatabaseException {
+
+        dbenv.close(DbConstants.DB_FORCESYNCENV);
+    }
+
+    /**
+    Close the database environment, freeing any allocated resources and
+    closing any underlying subsystems. 
+    <p>
+    This function is similar to Environment.close(), except that
+    it has the effect of both closeForceSync() and closeForceSyncEnv().
+    */
+    public void closeForceSyncAndForceSyncEnv()
+        throws DatabaseException {
+
+        dbenv.close(DbConstants.DB_FORCESYNC | DbConstants.DB_FORCESYNCENV);
     }
 
     /* package */
@@ -1368,6 +1394,162 @@ performed using a specified {@link com.sleepycat.db.Environment Environment} han
         return dbenv.txn_stat(StatsConfig.checkNull(config).getFlags());
     }
 
+    /* Statistics */
+    /**
+    Print the cache subsystem statistical information to a specified output
+    channel (see the setMsgfile() method for more information), or passed to an
+    application callback function (see the setMsgcall() method for more
+    information).
+    <p>
+    @param config The statistics attributes. If null, default attributes are used.
+    <p>
+    @return A non-zero error value on failure and 0 on success.
+    <p>
+    <p>
+@throws DatabaseException if a failure occurs.
+    */
+    public int printMempStats(StatsConfig config)
+        throws DatabaseException {
+
+        return dbenv.memp_stat_print(StatsConfig.checkNull(config).getFlags());
+    }
+
+    /**
+    Print the logging subsystem statistical information to a specified output
+    channel (see the setMsgfile() method for more information), or passed to an
+    application callback function (see the setMsgcall() method for more
+    information).
+    <p>
+    @param config The statistics attributes. If null, default attributes are used.
+    <p>
+    @return A non-zero error value on failure and 0 on success.
+    <p>
+    <p>
+@throws DatabaseException if a failure occurs.
+    */
+    public int printLogStats(StatsConfig config)
+        throws DatabaseException {
+
+        return dbenv.log_stat_print(StatsConfig.checkNull(config).getFlags());
+    }
+
+    /**
+    Print the replication subsystem statistical information to a specified output
+    channel (see the setMsgfile() method for more information), or passed to an
+    application callback function (see the setMsgcall() method for more
+    information).
+    <p>
+    @param config The statistics attributes. If null, default attributes are used.
+    <p>
+    @return A non-zero error value on failure and 0 on success.
+    <p>
+    <p>
+@throws DatabaseException if a failure occurs.
+    */
+    public int printReplicationStats(StatsConfig config)
+        throws DatabaseException {
+
+        return dbenv.rep_stat_print(StatsConfig.checkNull(config).getFlags());
+    }
+
+    /**
+    Print the Replication Manager subsystem statistical information to a
+    specified output channel (see the setMsgfile() method for more
+    information), or passed to an application callback function (see the
+    setMsgcall() method for more information).
+    <p>
+    @param config The statistics attributes. If null, default attributes are used.
+    <p>
+    @return A non-zero error value on failure and 0 on success.
+    <p>
+    <p>
+@throws DatabaseException if a failure occurs.
+    */
+    public int printReplicationManagerStats(
+        StatsConfig config)
+        throws DatabaseException {
+
+        return dbenv.repmgr_stat_print(StatsConfig.checkNull(config).getFlags());
+    }
+
+    /**
+    Print the locking subsystem statistical information to a specified output
+    channel (see the setMsgfile() method for more information), or passed to an
+    application callback function (see the setMsgcall() method for more
+    information).
+    <p>
+    @param config The statistics attributes. If null, default attributes are used.
+    <p>
+    @return A non-zero error value on failure and 0 on success.
+    <p>
+    <p>
+@throws DatabaseException if a failure occurs.
+    */
+    public int printLockStats(StatsConfig config)
+        throws DatabaseException {
+
+        return dbenv.lock_stat_print(StatsConfig.checkNull(config).getFlags());
+    }
+
+    /**
+    Print the mutex subsystem statistical information to a specified output
+    channel (see the setMsgfile() method for more information), or passed to an
+    application callback function (see the setMsgcall() method for more
+    information).
+    <p>
+    @param config The statistics attributes. If null, default attributes are used.
+    <p>
+    @return A non-zero error value on failure and 0 on success.
+    <p>
+    <p>
+@throws DatabaseException if a failure occurs.
+    */
+    public int printMutexStats(StatsConfig config)
+        throws DatabaseException {
+
+        return dbenv.mutex_stat_print(StatsConfig.checkNull(config).getFlags());
+    }
+
+    /**
+    Print environment statistical information to a specified output
+    channel (see the setMsgfile() method for more information), or passed to an
+    application callback function (see the setMsgcall() method for more
+    information).
+    <p>
+    @param config The statistics attributes. If null, default attributes are used.
+    <p>
+    @return A non-zero error value on failure and 0 on success.
+    <p>
+    <p>
+@throws DatabaseException if a failure occurs.
+    */
+    public int printStats(StatsConfig config)
+        throws DatabaseException {
+
+        return dbenv.stat_print(StatsConfig.checkNull(config).getFlags());
+    }
+
+
+    /**
+    Print the transaction subsystem statistical information to a specified
+    output channel (see the setMsgfile() method for more information), or
+    passed to an application callback function (see the setMsgcall() method
+    for more information).
+    <p>
+    @param config The statistics attributes. If null, default attributes are used.
+    <p>
+    @return A non-zero error value on failure and 0 on success.
+    <p>
+    <p>
+@throws DatabaseException if a failure occurs.
+    */
+    public int printTransactionStats(StatsConfig config)
+        throws DatabaseException {
+
+        return dbenv.txn_stat_print(StatsConfig.checkNull(config).getFlags());
+    }
+
+
     /* Transaction management */
     /**
     Allocate a locker ID in an environment configured for Berkeley DB
@@ -2008,5 +2190,22 @@ The release patch number.
     */
     public void setBlobThreshold(int value) throws DatabaseException {
         dbenv.set_blob_threshold(value, 0);
+    }
+
+    /**
+    Sets the path of a file to store statistical information.
+    <p>
+    @param file
+    The path of a file to store statistical information.
+    <p>
+    @throws DatabaseException if a failure occurs.
+    */
+    public void setMsgfile(java.io.File file) throws DatabaseException {
+        if (file != null) {
+            dbenv.set_msgfile(file.toString());
+        }
+        else {
+            dbenv.set_msgfile(null);
+        }
     }
 }

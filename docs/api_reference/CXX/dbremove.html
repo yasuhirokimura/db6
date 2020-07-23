@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.0</p>
+        <p>Library Version 12.1.6.1</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -91,7 +91,7 @@ Db::remove(const char *file, const char *database, u_int32_t flags);</pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm3039448"></a>Parameters</h3>
+              <h3 class="title"><a id="idp58341872"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -99,7 +99,7 @@ Db::remove(const char *file, const char *database, u_int32_t flags);</pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm806720"></a>file</h4>
+                <h4 class="title"><a id="idp58341224"></a>file</h4>
               </div>
             </div>
           </div>
@@ -112,7 +112,7 @@ Db::remove(const char *file, const char *database, u_int32_t flags);</pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm6438320"></a>database</h4>
+                <h4 class="title"><a id="idp58344296"></a>database</h4>
               </div>
             </div>
           </div>
@@ -125,7 +125,7 @@ Db::remove(const char *file, const char *database, u_int32_t flags);</pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm2750768"></a>flags</h4>
+                <h4 class="title"><a id="idp58284688"></a>flags</h4>
               </div>
             </div>
           </div>
@@ -139,7 +139,7 @@ Db::remove(const char *file, const char *database, u_int32_t flags);</pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm6231840"></a>Environment Variables</h3>
+              <h3 class="title"><a id="idp58349456"></a>Environment Variables</h3>
             </div>
           </div>
         </div>
@@ -159,7 +159,7 @@ Db::remove(const char *file, const char *database, u_int32_t flags);</pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm6244792"></a>Errors</h3>
+              <h3 class="title"><a id="idp58350120"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -177,7 +177,7 @@ Db::remove(const char *file, const char *database, u_int32_t flags);</pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm6513768"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp58358296"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -190,7 +190,7 @@ Db::remove(const char *file, const char *database, u_int32_t flags);</pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idm6220800"></a>ENOENT</h4>
+                <h4 class="title"><a id="idp58342304"></a>ENOENT</h4>
               </div>
             </div>
           </div>
@@ -198,12 +198,26 @@ Db::remove(const char *file, const char *database, u_int32_t flags);</pre>
                 The file or directory does not exist.
             </p>
         </div>
+        <div class="sect3" lang="en" xml:lang="en">
+          <div class="titlepage">
+            <div>
+              <div>
+                <h4 class="title"><a id="idp58355032"></a>DB_META_CHKSUM_FAIL</h4>
+              </div>
+            </div>
+          </div>
+          <p>
+                Checksum mismatch detected on a database metadata page.
+                Either the database is corrupted or the file is not a Berkeley DB
+                database file.
+            </p>
+        </div>
       </div>
       <div class="sect2" lang="en" xml:lang="en">
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm5463456"></a>Class</h3>
+              <h3 class="title"><a id="idp58354424"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -215,7 +229,7 @@ Db::remove(const char *file, const char *database, u_int32_t flags);</pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idm5968272"></a>See Also</h3>
+              <h3 class="title"><a id="idp58352952"></a>See Also</h3>
             </div>
           </div>
         </div>

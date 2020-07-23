@@ -166,9 +166,13 @@ import java.util.Comparator;
 		event_notify_handler.handleRepElectionFailedEvent();
 	}
 
-        private final void handle_rep_init_done_event_notify() {
-                event_notify_handler.handleRepInitDoneEvent();
-        }
+	private final void handle_rep_init_done_event_notify() {
+		event_notify_handler.handleRepInitDoneEvent();
+	}
+
+	private final void handle_rep_inqueue_full_event_notify() {
+		event_notify_handler.handleRepInQueueFullEvent();
+	}
 
 	private final void handle_rep_join_failure_event_notify() {
 		event_notify_handler.handleRepJoinFailureEvent();

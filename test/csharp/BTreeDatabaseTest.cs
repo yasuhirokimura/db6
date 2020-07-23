@@ -1328,6 +1328,124 @@ ASCIIEncoding.ASCII.GetBytes(Configuration.RandomString(100)));
 		}
 
 		[Test]
+		public void TestMessageCall()
+		{
+			testName = "TestMessageCall";
+			SetUpTest(true);
+
+			// Configure and open an environment.
+			DatabaseEnvironmentConfig envConfig =
+			    new DatabaseEnvironmentConfig();
+			envConfig.Create = true;
+			envConfig.UseMPool = true;
+			DatabaseEnvironment env = DatabaseEnvironment.Open(
+			    testHome, envConfig);
+
+			// Configure and open a database.
+			BTreeDatabaseConfig DBConfig =
+			    new BTreeDatabaseConfig();
+			DBConfig.Env = env;
+			DBConfig.Creation = CreatePolicy.IF_NEEDED;
+
+			string DBFileName = testName + ".db";
+			BTreeDatabase db = BTreeDatabase.Open(DBFileName, DBConfig);
+
+			// Confirm message file does not exist.
+			string messageCallFile = testHome + "/" + "MessageCallFile";
+			Assert.AreEqual(false, File.Exists(messageCallFile));
+
+			string messageInfo = "Message come from db.set_msgcall!";
+
+			// Call set_msgcall() of env.
+			db.messageFeedback = new MessageFeedbackDelegate(Msgcall_fcn);
+			db.messageFeedback(messageInfo);
+
+			// Unconfigures the callback interface.
+			db.messageFeedback = null;
+
+			// Confirm message file exists now.
+			Assert.AreEqual(true, File.Exists(messageCallFile));
+
+			// Read the first line of message file.
+			string line = null;
+			System.IO.StreamReader file = new System.IO.StreamReader(@"" + messageCallFile);
+			line = file.ReadLine();
+
+			// Confirm the message file is not empty.
+			Assert.AreEqual(line, messageInfo);
+			file.Close();
+
+			// Close database and environment.
+			db.Close();
+			env.Close();
+		}
+
+		public void Msgcall_fcn(string message)
+		{
+			string msgfile = testHome + "/" + "MessageCallFile";
+			FileStream fs = new FileStream(msgfile, FileMode.OpenOrCreate);
+			StreamWriter sw = new StreamWriter(fs);
+			sw.Write(message);
+			sw.Flush();
+			sw.Close();
+			fs.Close();
+		}
+
+		[Test]
+		public void TestMessageFile()
+		{
+			testName = "TestMessageFile";
+			SetUpTest(true);
+
+			// Configure and open an environment.
+			DatabaseEnvironmentConfig envConfig =
+			    new DatabaseEnvironmentConfig();
+			envConfig.Create = true;
+			envConfig.UseMPool = true;
+			DatabaseEnvironment env = DatabaseEnvironment.Open(
+			    testHome, envConfig);
+
+			// Configure and open a database.
+			BTreeDatabaseConfig DBConfig =
+			    new BTreeDatabaseConfig();
+			DBConfig.Env = env;
+			DBConfig.Creation = CreatePolicy.IF_NEEDED;
+
+			string DBFileName = testName + ".db";
+			BTreeDatabase db = BTreeDatabase.Open(DBFileName, DBConfig);
+
+			// Confirm message file does not exist.
+			string messageFile = testHome + "/" + "msgfile";
+			Assert.AreEqual(false, File.Exists(messageFile));
+
+			// Call set_msgfile() of db.
+			db.Msgfile = messageFile;
+
+			// Print db statistic to message file.
+			db.PrintStats(true);
+
+			// Confirm message file exists now.
+			Assert.AreEqual(true, File.Exists(messageFile));
+
+			db.Msgfile = "";
+			string line = null;
+
+			// Read the third line of message file.
+			System.IO.StreamReader file = new System.IO.StreamReader(@"" + messageFile);
+			line = file.ReadLine();
+			line = file.ReadLine();
+			line = file.ReadLine();
+
+			// Confirm the message file is not empty.
+			Assert.AreEqual(line, "DB handle information:");
+			file.Close();
+
+			// Close database and environment.
+			db.Close();
+			env.Close();
+		}
+
+		[Test]
 		public void TestNoWaitDbExclusiveLock()
 		{
 			testName = "TestNoWaitDbExclusiveLock";
@@ -2801,6 +2919,7 @@ ASCIIEncoding.ASCII.GetBytes(Configuration.RandomString(100)));
 			byte[] bigArray = new byte[10240];
 			db.Delete(new DatabaseEntry(bigArray));
 
+			db.Msgfile = testHome + "/" + testName+ ".log";
 			db.PrintStats();
 			db.PrintFastStats();
 
@@ -2906,6 +3025,7 @@ ASCIIEncoding.ASCII.GetBytes(Configuration.RandomString(100)));
 				stats = db.Stats(statsTxn, Isolation.DEGREE_THREE);
 			ConfirmStatsPart3Case1(stats);
 
+			db.Msgfile = home + "/" + name+ ".log";
 			db.PrintStats(true);
 			Assert.AreEqual(0, stats.EmptyPages);
 

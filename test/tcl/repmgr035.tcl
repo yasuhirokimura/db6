@@ -259,7 +259,7 @@ proc repmgr035_sub { iter mv nsites slist } {
 proc repmgr035_method_version { } {
 
 	set mv {}
-	set versions {db-5.0.32 db-5.1.29 db-5.2.42 db-5.3.21}
+	set versions {db-5.0.32 db-5.1.29 db-5.2.42 db-5.3.28 db-6.0.30}
 	set versions_len [expr [llength $versions] - 1]
 
 	# Walk through the list of versions and pair each with btree method.

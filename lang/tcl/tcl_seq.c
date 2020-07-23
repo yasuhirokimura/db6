@@ -204,14 +204,18 @@ tcl_SeqStat(interp, objc, objv, seq)
 	flag = 0;
 
 	if (objc > 3) {
-		Tcl_WrongNumArgs(interp, 2, objv, "?-clear?");
+		Tcl_WrongNumArgs(interp, 2, objv, "?-all? ?-clear?");
 		return (TCL_ERROR);
 	}
 
 	if (objc == 3) {
 		arg = Tcl_GetStringFromObj(objv[2], NULL);
-		if (strcmp(arg, "-clear") == 0)
+		if (strcmp(arg, "-all") == 0) {
+			flag = DB_STAT_ALL;
+		}
+		else if (strcmp(arg, "-clear") == 0) {
 			flag = DB_STAT_CLEAR;
+		}
 		else {
 			Tcl_SetResult(interp,
 			    "db stat: unknown arg", TCL_STATIC);
@@ -267,10 +271,12 @@ tcl_SeqStatPrint(interp, objc, objv, seq)
 	DB_SEQUENCE *seq;		/* Environment pointer */
 {	
 	static const char *seqstatprtopts[] = {
+		"-all",
 		"-clear",
 		 NULL
 	};
 	enum seqstatprtopts {
+		SEQSTATPRTALL,
 		SEQSTATPRTCLEAR
 	};
 	u_int32_t flag;
@@ -288,6 +294,9 @@ tcl_SeqStatPrint(interp, objc, objv, seq)
 		}
 		i++;
 		switch ((enum seqstatprtopts)optindex) {
+		case SEQSTATPRTALL:
+			flag |= DB_STAT_ALL;
+			break;
 		case SEQSTATPRTCLEAR:
 			flag |= DB_STAT_CLEAR;
 			break;

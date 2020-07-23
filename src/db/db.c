@@ -837,6 +837,21 @@ __db_refresh(dbp, txn, flags, deferred_closep, reuse)
 	if (dbp->mpf == NULL)
 		LF_SET(DB_NOSYNC);
 
+#ifdef HAVE_64BIT_TYPES
+	/* Close the blob meta data databases. */
+	if (dbp->blob_seq != NULL) {
+		if ((t_ret = __seq_close(dbp->blob_seq, 0)) != 0 && ret == 0)
+			ret = t_ret;
+		dbp->blob_seq = NULL;
+	}
+	if (dbp->blob_meta_db != NULL) {
+		if ((t_ret = __db_close(
+		    dbp->blob_meta_db, NULL, 0)) != 0 && ret == 0)
+			ret = t_ret;
+		dbp->blob_meta_db = NULL;
+	}
+#endif
+
 	/* If never opened, or not currently open, it's easy. */
 	if (!F_ISSET(dbp, DB_AM_OPEN_CALLED))
 		goto never_opened;
@@ -874,20 +889,7 @@ __db_refresh(dbp, txn, flags, deferred_closep, reuse)
 	if (dbp->s_foreign != NULL &&
 	    (t_ret = __db_disassociate_foreign(dbp)) != 0 && ret == 0)
 		ret = t_ret;
-#ifdef HAVE_64BIT_TYPES
-	/* Close the blob meta data databases. */
-	if (dbp->blob_seq != NULL) {
-		if ((t_ret = __seq_close(dbp->blob_seq, 0)) != 0 && ret == 0)
-			ret = t_ret;
-		dbp->blob_seq = NULL;
-	}
-	if (dbp->blob_meta_db != NULL) {
-		if ((t_ret = __db_close(
-		    dbp->blob_meta_db, NULL, 0)) != 0 && ret == 0)
-			ret = t_ret;
-		dbp->blob_meta_db = NULL;
-	}
-#endif
+
 	/*
 	 * Sync the underlying access method.  Do before closing the cursors
 	 * because DB->sync allocates cursors in order to write Recno backing

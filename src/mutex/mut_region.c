@@ -124,7 +124,7 @@ __mutex_open(env, create_ok)
 
 	return (0);
 
-err:	__mutex_region_detach(env, mtxmgr);
+err:	(void)__mutex_region_detach(env, mtxmgr);
 	return (ret);
 }
 
@@ -149,7 +149,6 @@ __mutex_region_detach(env, mtxmgr)
 	}
 	return (ret);
 }
-
 
 /*
  * __mutex_region_init --

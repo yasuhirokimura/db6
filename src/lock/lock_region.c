@@ -425,7 +425,6 @@ __lock_region_detach(env, lt)
 	return (ret);
 }
 
-
 /*
  * __lock_region_mutex_count --
  *	Return the number of mutexes the lock region will need.

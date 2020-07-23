@@ -395,11 +395,9 @@ tcl_MpStat(interp, objc, objv, dbenv)
 	flag = 0;
 	result = TCL_OK;
 	savefsp = NULL;
-	/*
-	 * No args for this.  Error if there are some.
-	 */
+
 	if (objc > 3) {
-		Tcl_WrongNumArgs(interp, 2, objv, NULL);
+		Tcl_WrongNumArgs(interp, 2, objv, "?-clear?");
 		return (TCL_ERROR);
 	}
 
@@ -448,7 +446,9 @@ tcl_MpStat(interp, objc, objv, dbenv)
 	MAKE_WSTAT_LIST("Clean page evictions", sp->st_ro_evict);
 	MAKE_WSTAT_LIST("Dirty page evictions", sp->st_rw_evict);
 	MAKE_WSTAT_LIST("Dirty pages trickled", sp->st_page_trickle);
+	/* Undocumented field used by tests only. */
 	MAKE_STAT_LIST("Odd file size detected", sp->st_oddfsize_detect);
+	/* Undocumented field used by tests only. */
 	MAKE_STAT_LIST("Odd file size resolved", sp->st_oddfsize_resolve);
 	MAKE_STAT_LIST("Cached pages", sp->st_pages);
 	MAKE_WSTAT_LIST("Cached clean pages", sp->st_page_clean);
@@ -534,12 +534,14 @@ tcl_MpStatPrint(interp, objc, objv, dbenv)
 {
 	static const char *mpstatprtopts[] = {
 		"-all",
+		"-alloc",
 		"-clear",
 		"-hash",
 		 NULL
 	};
 	enum mpstatprtopts {
 		MPSTATPRTALL,
+		MPSTATPRTALLOC,
 		MPSTATPRTCLEAR,
 		MPSTATPRTHASH
 	};
@@ -560,6 +562,9 @@ tcl_MpStatPrint(interp, objc, objv, dbenv)
 		switch ((enum mpstatprtopts)optindex) {
 		case MPSTATPRTALL:
 			flag |= DB_STAT_ALL;
+			break;
+		case MPSTATPRTALLOC:
+			flag |= DB_STAT_ALLOC;
 			break;
 		case MPSTATPRTCLEAR:
 			flag |= DB_STAT_CLEAR;

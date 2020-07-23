@@ -1176,7 +1176,11 @@ __dbc_iget(dbc, key, data, flags)
 	 * we acquire a write lock in the primary tree and no locks in the
 	 * off-page dup tree.  If the DB_RMW flag was specified and the get
 	 * operation is done in an off-page duplicate tree, call the primary
-	 * cursor's upgrade routine first.
+	 * cursor's upgrade routine first.  We fetch the primary tree's data
+	 * page to follow the buffer latching order rules for btrees: latch from
+	 * the top of the main tree down, even when also searching OPD trees.
+	 * Deadlocks could otherwise occur if we need to fetch the main page
+	 * while an OPD page is latched. [#22532]
 	 */
 	cp = dbc->internal;
 	if (cp->opd != NULL &&
@@ -1185,6 +1189,10 @@ __dbc_iget(dbc, key, data, flags)
 	    flags == DB_PREV || flags == DB_PREV_DUP)) {
 		if (tmp_rmw && (ret = dbc->am_writelock(dbc)) != 0)
 			goto err;
+		if (cp->page == NULL && (ret = __memp_fget(mpf, &cp->pgno,
+		    dbc->thread_info, dbc->txn, 0, &cp->page)) != 0)
+			goto err;
+
 		if (F_ISSET(dbc, DBC_TRANSIENT))
 			opd = cp->opd;
 		else if ((ret = __dbc_idup(cp->opd, &opd, DB_POSITION)) != 0)
@@ -2185,7 +2193,7 @@ __dbc_put_primary(dbc, key, data, flags)
 		olddata.flags = DB_DBT_PARTIAL | DB_DBT_USERMEM;
 		ret = __dbc_get(dbc, key, &olddata, DB_SET);
 		if (ret == 0) {
-			ret = DB_KEYEXIST;
+			ret = DBC_ERR(dbc, DB_KEYEXIST);
 			goto done;
 		} else if (ret != DB_NOTFOUND && ret != DB_KEYEMPTY)
 			goto err;
@@ -2417,7 +2425,7 @@ __dbc_iput(dbc, key, data, flags)
 		if (dbc->dbtype == DB_HASH && F_ISSET(
 		    ((BTREE_CURSOR *)(dbc->internal->opd->internal)),
 		    C_DELETED)) {
-			ret = DB_NOTFOUND;
+			ret = DBC_ERR(dbc, DB_NOTFOUND);
 			goto err;
 		}
 
@@ -3821,5 +3829,31 @@ __db_check_skeyset(sdbp, skeyp)
 			DB_ASSERT(env,
 			    ((BTREE *)sdbp->bt_internal)->bt_compare(sdbp,
 			    key1, key2, NULL) != 0);
+}
+#endif
+
+#ifdef HAVE_ERROR_HISTORY
+/*
+ * __dbc_diags
+ *	Save the context which triggers the "first notice" of an error code;
+ *	i.e., its creation. It doesn't touch anything when err == 0.
+ *
+ * PUBLIC: int __dbc_diags __P((DBC *, int));
+ */
+ int
+ __dbc_diags(dbc, err)
+	DBC *dbc;
+	int err;
+{
+	DB_MSGBUF *mb;
+
+	if (err != 0 && dbc->env != NULL &&
+	    (mb = __db_deferred_get()) != NULL) {
+		(void)__db_remember_context(dbc->env, mb, err);
+		__db_msgadd(dbc->env, mb, "DB: %s:%s\n" ,
+			dbc->dbp->fname == NULL ? "in-mem" : dbc->dbp->fname,
+			dbc->dbp->dname == NULL ? "" : dbc->dbp->fname);
+	}
+	return (err);
 }
 #endif

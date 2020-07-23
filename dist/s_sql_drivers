@@ -51,7 +51,7 @@ do
 	shift
 done
 
-DB_ADDONS_REPO=$PKG_ROOT/db_addons-6.0
+DB_ADDONS_REPO=$PKG_ROOT/db_addons-6.1
 update_repo()
 {
 	if [ ! -d $DB_ADDONS_REPO ]; then
@@ -85,11 +85,13 @@ mv $dir/* $ODBC_DIR || exit $?
 rm -r $dir
 
 # Apply patches
-PATCH='odbc/odbc.patch'
-( cd $ODBC_DIR && patch -p1 -i $START_DIR/$PATCH )
-if [ $? -ne 0 ]; then
-	die "Can not apply patch $PATCH"
-fi
+for PATCH in 'odbc/odbc.patch' 'odbc/sqlite3odbc.patch' 
+do 
+	( cd $ODBC_DIR && patch -p1 -i $START_DIR/$PATCH ) 
+	if [ $? -ne 0 ]; then 
+	    die "Can not apply patch $PATCH" 
+    fi 
+done 
 
 # Remove unnecessary files from packages.
 
@@ -132,12 +134,14 @@ gzip -c -d $JDBC_PACKAGE | tar xf -
 mv $dir/* $JDBC_DIR || exit $?
 rm -r $dir
 
-# Apply patches
-PATCH='jdbc/jdbc.patch'
-( cd $JDBC_DIR && patch -p1 -i $START_DIR/$PATCH )
-if [ $? -ne 0 ]; then
-	die "Can not apply patch $PATCH"
-fi
+# Apply patches. 
+# The change in jdbc.patch was accepted back into javasqlite-20131124, 
+# so we don't need to apply this patch any more. 
+#PATCH='jdbc/jdbc.patch'
+#( cd $JDBC_DIR && patch -p1 -i $START_DIR/$PATCH )
+#if [ $? -ne 0 ]; then
+#	die "Can not apply patch $PATCH"
+#fi
 
 PATCH='jdbc/jdbc.patch2'
 ( cd $JDBC_DIR && patch -p1 -i $START_DIR/$PATCH )
@@ -360,12 +364,25 @@ sed -e "s/@DB_VERSION_MAJOR@/$DB_VERSION_MAJOR/g" \
     < $XQ_IN >> $XQ
 
 # Change File list for vcproject file
-for proj in 2010 2012 Static.2010 Static.2012
+for proj in 2010 Static.2010 2012 Static.2012 2013 Static.2013 CE.2012
 do
 	xqilla -u -i SQLite.Interop/SQLite.Interop.$proj.vcxproj $XQ
 done
 rm -f $XQ
 rm -f $XQ_IN
+
+# Add BDB files into  SQLite.Interop.CE.2012.vcxproj using sed, since
+# xqilla can not handle that.
+sed -n -e '/File.*RelativePath/p' $BDB_ROOT/build_wince/VS8/db.vcproj | \
+    sed -e 's/File/ClCompile/g' -e 's/RelativePath/Include/g' \
+    -e "s#\\.\\.\\\\\\.\\.\\\\src#..\\\\$BDB_ROOT\\\\src#g" >ce.tmp
+sed -e '$d' SQLite.Interop/SQLite.Interop.CE.2012.vcxproj >prj.tmp
+echo '<ItemGroup>' >> prj.tmp
+cat ce.tmp >> prj.tmp
+echo '</ItemGroup>' >> prj.tmp
+echo '</Project>' >> prj.tmp
+mv prj.tmp SQLite.Interop/SQLite.Interop.CE.2012.vcxproj
+rm -f ce.tmp
 
 #
 # Change SQLite.Interop.[CE.]2005/2008.vcproj for Win32/x64/WinCE.

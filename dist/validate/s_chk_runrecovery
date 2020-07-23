@@ -25,7 +25,7 @@ egrep DB_RUNRECOVERY $s/*/*.c |
         -e '/mut_fcntl.c:.*return (DB_RUNRECOVERY);/d' \
         -e '/mut_pthread.c:.*return (DB_RUNRECOVERY);/d' \
         -e '/mut_pthread.c:.*ret = DB_RUNRECOVERY;/d' \
-	-e '/mut_tas.c:.*return (DB_RUNRECOVERY);/d' \
+	-e '/mut_tas.c:.*DB_RUNRECOVERY)));/d' \
         -e '/mut_tas.c:.*Possibly DB_RUNRECOVERY if/d' \
         -e '/mut_win32.c:.*return (DB_RUNRECOVERY);/d' \
         -e '/mut_win32.c:.*ret = DB_RUNRECOVERY;/d' \

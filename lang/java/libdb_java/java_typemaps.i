@@ -471,13 +471,13 @@ JAVA_TYPEMAP(DB_TXN_TOKEN *, byte[], jobject)
                $1 = NULL;
        } else {
                $1 = &token;
-               (*jenv)->GetByteArrayRegion(jenv, (jbyteArray)$input, 0, DB_TXN_TOKEN_SIZE, $1->buf);
+               (*jenv)->GetByteArrayRegion(jenv, (jbyteArray)$input, 0, DB_TXN_TOKEN_SIZE, (jbyte *)$1->buf);
        }
 %}
 
 %typemap(out) DB_TXN_TOKEN * %{
        if ($input != NULL) {
-               (*jenv)->SetByteArrayRegion(jenv, (jbyteArray)$input, 0, DB_TXN_TOKEN_SIZE, $1->buf);
+               (*jenv)->SetByteArrayRegion(jenv, (jbyteArray)$input, 0, DB_TXN_TOKEN_SIZE, (jbyte *)$1->buf);
        }
 %}
 
@@ -532,7 +532,7 @@ JAVA_TYPEMAP(u_int *, long, jlong)
 %}
 
 %typemap(in) u_int %{
-        $1 = $input;
+        $1 = (u_int)$input;
 %}
 
 JAVA_TYPEMAP(DB_KEY_RANGE *, com.sleepycat.db.KeyRange, jobject)
@@ -619,6 +619,48 @@ JAVA_TYPEMAP(char **, String[], jobjectArray)
 		STRING_ARRAY_OUT
 		__os_ufree(NULL, $1);
 	}
+}
+
+%define STRING_ARRAY_IN
+	int i, ret;
+	size_t sz;
+
+	size = (*jenv)->GetArrayLength(jenv, $input);
+	sz = (size_t)(size + 1) * sizeof(char *); 
+	if ((ret = __os_malloc(NULL, sz, &$1)) != 0) {
+		__dbj_throw(jenv, ret, NULL, NULL, NULL);
+		return $null;
+	}
+	/* Make a copy of each string. */
+	for (i = 0; i < size; i++) {
+		jstring j_string = (jstring)(*jenv)->GetObjectArrayElement(jenv, $input, i);
+		const char * c_string = (*jenv)->GetStringUTFChars(jenv, j_string, 0);
+		sz = strlen(c_string) + 1;
+		if ((ret = __os_malloc(NULL, sz, &$1[i])) != 0) {
+			__dbj_throw(jenv, ret, NULL, NULL, NULL);
+			return $null;
+		}
+		strcpy($1[i], c_string);
+		(*jenv)->ReleaseStringUTFChars(jenv, j_string, c_string);
+		(*jenv)->DeleteLocalRef(jenv, j_string);
+	}
+	$1[i] = 0;
+%enddef
+
+/* This cleans up the memory we malloc'd before the function call. */
+%typemap(freearg) char ** {
+	int i;
+	for (i = 0; i < size$argnum-1; i++)
+		__os_free(NULL, $1[i]);
+	__os_free(NULL, $1);
+}
+
+%typemap(in) char ** (jint size) {
+        STRING_ARRAY_IN
+}
+
+%typemap(in) const char ** (jint size) {
+        STRING_ARRAY_IN
 }
 
 JAVA_TYPEMAP(char **hostp, String, jobjectArray)

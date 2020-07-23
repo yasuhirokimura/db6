@@ -96,6 +96,7 @@ static void db_seq_create_func(
 		    "create_sequence()");
 		return;
 	}
+	log_msg(LOG_NORMAL, "db_seq_create_func(%s)", sqlite3_value_text(argv[0]));
 	/*
 	 * Ensure that the sequence name is OK with our static buffer
 	 * size. We need extra characters for "seq_" and "_db".
@@ -128,6 +129,7 @@ static void db_seq_create_func(
 
 	sqlite3_snprintf(BT_MAX_SEQ_NAME, cookie.name, "seq_%s",
 	    sqlite3_value_text(argv[0]));
+	log_msg(LOG_NORMAL, "db_seq_drop_func(%s)", cookie.name);
 	cookie.name_len = (int)strlen(cookie.name);
 	if (pBt->dbStorage == DB_STORE_NAMED && btreeSeqExists(context, p,
 	    cookie.name) == 1) {
@@ -292,6 +294,7 @@ static void db_seq_drop_func(
 
 	sqlite3_snprintf(BT_MAX_SEQ_NAME, cookie.name, "seq_%s",
 	    sqlite3_value_text(argv[0]));
+	log_msg(LOG_NORMAL, "db_seq_drop_func(%s)", cookie.name);
 	cookie.name_len = (int)strlen(cookie.name);
 	rc = btreeSeqGetHandle(context, p, SEQ_HANDLE_OPEN, &cookie);
 	
@@ -370,6 +373,8 @@ static void btreeSeqGetVal(
 	p = db->aDb[0].pBt;
 	pBt = p->pBt;
 	memset(&cookie, 0, sizeof(cookie));
+	log_msg(LOG_NORMAL, "btreeSeqGetVal(%s, %s)", name,
+		mode == DB_SEQ_NEXT ? "next" : "current");
 
 	if (!p->connected &&
 	    (rc = btreeOpenEnvironment(p, 1)) != SQLITE_OK) {
@@ -514,6 +519,18 @@ static int btreeSeqGetHandle(sqlite3_context *context, Btree *p,
 		    "Sequences do not support in-memory or "
 		    "temporary databases.");
 		return (SQLITE_ERROR);
+	}
+
+	/* Tell sqlite3VdbeHalt() that this step has a transaction to end. */
+	if (p->db->pVdbe->bIsReader == 0) {
+		p->db->pVdbe->bIsReader = 1;
+		p->db->nVdbeRead++;
+	}
+
+	/* Tell sqlite3VdbeHalt() that this step has a transaction to end. */
+	if (p->db->pVdbe->bIsReader == 0) {
+		p->db->pVdbe->bIsReader = 1;
+		p->db->nVdbeRead++;
 	}
 
 	/*
@@ -874,7 +891,7 @@ static int btreeSeqPutCookie(
  *   write operations, and thus we need a valid statement_txn.
  * - In an explicit transaction, and the first statement. Start a txn and a
      statement txn.
- * - In an explicit transaction and not the first statemetn. Start a statement
+ * - In an explicit transaction and not the first statement. Start a statement
  *   transaction.
  *
  * The SQLite vdbe will take care of closing the statement transaction for us,

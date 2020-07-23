@@ -40,7 +40,7 @@ namespace BerkeleyDB {
 
         /// <summary>
         /// Release the resources held by this object, and close the channel if
-        /// it's still open.
+        /// it is still open.
         /// </summary>
         public void Dispose() {
             if (isOpen)
@@ -67,8 +67,8 @@ namespace BerkeleyDB {
         /// <para>
         /// The sent message is received and handled at remote sites using a
         /// message dispatch callback, which is configured using
-        /// <see cref="DatabaseEnvironment.RepMessageDispatch"/>. Note that this
-        /// method may be used within the the message dispatch callback on the
+        /// <see cref="DatabaseEnvironment.RepMessageDispatch"/>. This
+        /// method may be used within the message dispatch callback on the
         /// remote site to send a reply or acknowledgement for messages that it
         /// receives and is handling.
         /// </para>

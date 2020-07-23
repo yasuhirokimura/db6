@@ -912,3 +912,52 @@ too_few:
 	return (EINVAL);
 }
 
+/*
+ * PUBLIC: void __repmgr_lsnhist_match_marshal __P((ENV *,
+ * PUBLIC:	 __repmgr_lsnhist_match_args *, u_int8_t *));
+ */
+void
+__repmgr_lsnhist_match_marshal(env, argp, bp)
+	ENV *env;
+	__repmgr_lsnhist_match_args *argp;
+	u_int8_t *bp;
+{
+	DB_HTONL_COPYOUT(env, bp, argp->lsn.file);
+	DB_HTONL_COPYOUT(env, bp, argp->lsn.offset);
+	DB_HTONL_COPYOUT(env, bp, argp->hist_sec);
+	DB_HTONL_COPYOUT(env, bp, argp->hist_nsec);
+	DB_HTONL_COPYOUT(env, bp, argp->next_gen_lsn.file);
+	DB_HTONL_COPYOUT(env, bp, argp->next_gen_lsn.offset);
+}
+
+/*
+ * PUBLIC: int __repmgr_lsnhist_match_unmarshal __P((ENV *,
+ * PUBLIC:	 __repmgr_lsnhist_match_args *, u_int8_t *, size_t, u_int8_t **));
+ */
+int
+__repmgr_lsnhist_match_unmarshal(env, argp, bp, max, nextp)
+	ENV *env;
+	__repmgr_lsnhist_match_args *argp;
+	u_int8_t *bp;
+	size_t max;
+	u_int8_t **nextp;
+{
+	if (max < __REPMGR_LSNHIST_MATCH_SIZE)
+		goto too_few;
+	DB_NTOHL_COPYIN(env, argp->lsn.file, bp);
+	DB_NTOHL_COPYIN(env, argp->lsn.offset, bp);
+	DB_NTOHL_COPYIN(env, argp->hist_sec, bp);
+	DB_NTOHL_COPYIN(env, argp->hist_nsec, bp);
+	DB_NTOHL_COPYIN(env, argp->next_gen_lsn.file, bp);
+	DB_NTOHL_COPYIN(env, argp->next_gen_lsn.offset, bp);
+
+	if (nextp != NULL)
+		*nextp = bp;
+	return (0);
+
+too_few:
+	__db_errx(env, DB_STR("3675",
+	    "Not enough input bytes to fill a __repmgr_lsnhist_match message"));
+	return (EINVAL);
+}
+

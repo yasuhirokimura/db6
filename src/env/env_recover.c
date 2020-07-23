@@ -26,6 +26,7 @@ static int	__env_init_rec_47 __P((ENV *));
 static int	__env_init_rec_48 __P((ENV *));
 static int	__env_init_rec_53 __P((ENV *));
 static int	__env_init_rec_60 __P((ENV *));
+static int	__env_init_rec_60p1 __P((ENV *));
 static int	__log_earliest __P((ENV *, DB_LOGC *, int32_t *, DB_LSN *));
 
 static double	__lsn_diff __P((DB_LSN *, DB_LSN *, DB_LSN *, u_int32_t, int));
@@ -726,7 +727,7 @@ __log_backup(env, logc, max_lsn, start_lsn)
 		 * done.  Break with DB_NOTFOUND.
 		 */
 		if (IS_ZERO_LSN(lsn)) {
-			ret = DB_NOTFOUND;
+			ret = USR_ERR(env, DB_NOTFOUND);
 			break;
 		}
 		__os_free(env, ckp_args);
@@ -928,6 +929,12 @@ __env_init_rec(env, version)
 	 */
 	if (version == DB_LOGVERSION)
 		goto done;
+
+	/* DB_LOGVERSION_61 add the blob file id to the dbreg logs. */
+	if (version > DB_LOGVERSION_60p1)
+		goto done;
+	if ((ret = __env_init_rec_60p1(env)) != 0)
+		goto err;
 
 	/*
 	 * DB_LOGVERSION_60p1 changed the two u_int32_t offset fields in the
@@ -1141,6 +1148,24 @@ __env_init_rec_60(env)
 	if ((ret = __db_add_recovery_int(env, &env->recover_dtab,
 	    __fop_write_file_60_recover, DB___fop_write_file_60)) != 0)
 		goto err;
+err:
+	return (ret);
+}
+
+static int
+__env_init_rec_60p1(env)
+	ENV *env;
+{
+	int ret;
+
+	if ((ret = __db_add_recovery_int(env, &env->recover_dtab,
+	    __dbreg_register_42_recover, DB___dbreg_register_42)) != 0)
+		goto err;
+#ifdef HAVE_HEAP
+	if ((ret = __db_add_recovery_int(env, &env->recover_dtab,
+	    __heap_addrem_60_recover, DB___heap_addrem_60)) != 0)
+		goto err;
+#endif
 err:
 	return (ret);
 }

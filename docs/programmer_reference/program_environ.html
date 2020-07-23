@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.0</p>
+        <p>Library Version 12.1.6.1</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -22,9 +22,7 @@
         </tr>
         <tr>
           <td width="20%" align="left"><a accesskey="p" href="program_i18n.html">Prev</a> </td>
-          <th width="60%" align="center">Chapter 15. 
-		Programmer Notes
-        </th>
+          <th width="60%" align="center">Chapter 15.  Programmer Notes </th>
           <td width="20%" align="right"> <a accesskey="n" href="program_mt.html">Next</a></td>
         </tr>
       </table>
@@ -38,23 +36,31 @@
           </div>
         </div>
       </div>
-      <p>The Berkeley DB library uses the following environment variables:</p>
+      <p>
+        The Berkeley DB library uses the following environment
+        variables:
+    </p>
       <div class="variablelist">
         <dl>
           <dt>
             <span class="term">DB_HOME</span>
           </dt>
-          <dd>If the environment variable DB_HOME is set, it is used as part of
-<a class="xref" href="env_naming.html" title="File naming">File naming</a>.
-Note: For the DB_HOME variable to take effect, either the
-<a href="../api_reference/C/envopen.html#envopen_DB_USE_ENVIRON" class="olink">DB_USE_ENVIRON</a> or <a href="../api_reference/C/envopen.html#envopen_DB_USE_ENVIRON_ROOT" class="olink">DB_USE_ENVIRON_ROOT</a> flags must be
-specified to <a href="../api_reference/C/envopen.html" class="olink">DB_ENV-&gt;open()</a>.</dd>
+          <dd>
+                If the environment variable DB_HOME is set, it
+                is used as part of <a class="xref" href="env_naming.html" title="File naming">File naming</a>. Note: For the
+                DB_HOME variable to take effect, either the
+                <a href="../api_reference/C/envopen.html#envopen_DB_USE_ENVIRON" class="olink">DB_USE_ENVIRON</a> or <a href="../api_reference/C/envopen.html#envopen_DB_USE_ENVIRON_ROOT" class="olink">DB_USE_ENVIRON_ROOT</a> flags must
+                be specified to <a href="../api_reference/C/envopen.html" class="olink">DB_ENV-&gt;open()</a>.
+            </dd>
           <dt>
             <span class="term">TMPDIR, TEMP, TMP, TempFolder</span>
           </dt>
-          <dd>The TMPDIR, TEMP, TMP, and TempFolder environment variables are all
-checked as locations in which to create temporary files.  See
-<a href="../api_reference/C/envset_tmp_dir.html" class="olink">DB_ENV-&gt;set_tmp_dir()</a> for more information.</dd>
+          <dd>
+                The TMPDIR, TEMP, TMP, and TempFolder
+                environment variables are all checked as locations in
+                which to create temporary files. See <a href="../api_reference/C/envset_tmp_dir.html" class="olink">DB_ENV-&gt;set_tmp_dir()</a>
+                for more information.
+            </dd>
         </dl>
       </div>
     </div>

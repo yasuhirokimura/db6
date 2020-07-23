@@ -110,7 +110,7 @@ __rep_allreq(env, rp, eid)
 	 */
 	if (ret == 0 && repth.lsn.file != 1 && flags == DB_FIRST) {
 		if (F_ISSET(rep, REP_F_CLIENT))
-			ret = DB_NOTFOUND;
+			ret = USR_ERR(env, DB_NOTFOUND);
 		else
 			(void)__rep_send_message(env, eid,
 			    REP_VERIFY_FAIL, &repth.lsn, NULL, 0, 0);
@@ -650,7 +650,7 @@ __rep_logreq(env, rp, rec, eid)
 		if (LOG_COMPARE(&firstlsn, &rp->lsn) > 0) {
 			/* Case 3 */
 			if (F_ISSET(rep, REP_F_CLIENT)) {
-				ret = DB_NOTFOUND;
+				ret = USR_ERR(env, DB_NOTFOUND);
 				goto err;
 			}
 			(void)__rep_send_message(env, eid,
@@ -675,7 +675,7 @@ __rep_logreq(env, rp, rec, eid)
 				ret = 0;
 				goto err;
 			} else
-				ret = DB_NOTFOUND;
+				ret = USR_ERR(env, DB_NOTFOUND);
 		}
 	}
 
@@ -1051,7 +1051,7 @@ __rep_chk_newfile(env, logc, rep, rp, eid)
 				    REP_VERIFY_FAIL, &rp->lsn,
 				    NULL, 0, 0);
 			} else
-				ret = DB_NOTFOUND;
+				ret = USR_ERR(env, DB_NOTFOUND);
 		} else {
 			endlsn.offset += logc->len;
 			if ((ret = __logc_version(logc,
@@ -1075,7 +1075,7 @@ __rep_chk_newfile(env, logc, rep, rp, eid)
 			}
 		}
 	} else
-		ret = DB_NOTFOUND;
+		ret = USR_ERR(env, DB_NOTFOUND);
 
 	return (ret);
 }

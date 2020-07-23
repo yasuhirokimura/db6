@@ -14,13 +14,11 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.0</p>
+        <p>Library Version 12.1.6.1</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
-          <th colspan="3" align="center">Chapter 13. 
-		Distributed Transactions
-        </th>
+          <th colspan="3" align="center">Chapter 13.  Distributed Transactions </th>
         </tr>
         <tr>
           <td width="20%" align="left"><a accesskey="p" href="rep_ex_chan.html">Prev</a> </td>
@@ -34,9 +32,7 @@
       <div class="titlepage">
         <div>
           <div>
-            <h2 class="title"><a id="xa"></a>Chapter 13. 
-		Distributed Transactions
-        </h2>
+            <h2 class="title"><a id="xa"></a>Chapter 13.  Distributed Transactions </h2>
           </div>
         </div>
       </div>
@@ -64,32 +60,27 @@
             <dl>
               <dt>
                 <span class="sect2">
-                  <a href="xa_build.html#idp2338192">Communicating with multiple Berkeley DB environments</a>
+                  <a href="xa_build.html#idp2497336">Communicating with multiple Berkeley DB environments</a>
                 </span>
               </dt>
               <dt>
                 <span class="sect2">
-                  <a href="xa_build.html#idp2339136">Recovering from GTM failure</a>
+                  <a href="xa_build.html#idp2498408">Managing the Global Transaction ID (GID) name space</a>
                 </span>
               </dt>
               <dt>
                 <span class="sect2">
-                  <a href="xa_build.html#idp2272528">Managing the Global Transaction ID (GID) name space</a>
+                  <a href="xa_build.html#idp2480984">Maintaining state for each distributed transaction.</a>
                 </span>
               </dt>
               <dt>
                 <span class="sect2">
-                  <a href="xa_build.html#idp2291232">Maintaining state for each distributed transaction.</a>
+                  <a href="xa_build.html#idp2427336">Recovering from the failure of a single environment</a>
                 </span>
               </dt>
               <dt>
                 <span class="sect2">
-                  <a href="xa_build.html#idp2336712">Recovering from the failure of a single environment</a>
-                </span>
-              </dt>
-              <dt>
-                <span class="sect2">
-                  <a href="xa_build.html#idp2339600">Recovering from GTM failure</a>
+                  <a href="xa_build.html#idp2475632">Recovering from GTM failure</a>
                 </span>
               </dt>
             </dl>
@@ -108,17 +99,17 @@
             <dl>
               <dt>
                 <span class="sect2">
-                  <a href="xa_xa_config.html#idp2346992">Update the Resource Manager File in Tuxedo</a>
+                  <a href="xa_xa_config.html#idp2500040">Update the Resource Manager File in Tuxedo</a>
                 </span>
               </dt>
               <dt>
                 <span class="sect2">
-                  <a href="xa_xa_config.html#idp2372504">Build the Transaction Manager Server</a>
+                  <a href="xa_xa_config.html#idp2528904">Build the Transaction Manager Server</a>
                 </span>
               </dt>
               <dt>
                 <span class="sect2">
-                  <a href="xa_xa_config.html#idp2318584">Update the UBBCONFIG File</a>
+                  <a href="xa_xa_config.html#idp1889208">Update the UBBCONFIG File</a>
                 </span>
               </dt>
             </dl>
@@ -143,19 +134,25 @@
             </div>
           </div>
         </div>
-        <p>An application must use distributed transactions whenever it wants transactional semantics either
-across operations in multiple Berkeley DB environments (even if they are on the same machine) 
-or across operations in Berkeley DB and some other database systems (for example, Oracle server).
-Berkeley DB provides support for distributed transactions using a two-phase
-commit protocol. In order to use the two-phase commit feature of Berkeley DB, an application
-must either implement its own global transaction manager or use an
-XA-compliant transaction manager such as Oracle Tuxedo (as Berkeley DB can act as an XA-compliant
-resource manager). 
-</p>
-        <p>This chapter explains Berkeley DB's XA-compliant resource manager, which can be used in any X/Open
-distributed transaction processing system, and explains how to configure 
-Oracle Tuxedo to use the Berkeley DB resource manager.
-</p>
+        <p>
+        An application must use distributed transactions whenever 
+        it wants transactional semantics either across operations in
+        multiple Berkeley DB environments (even if they are on the 
+        same machine) or across operations in Berkeley DB and some 
+        other database systems (for example, Oracle server). Berkeley DB 
+        provides support for distributed transactions using a
+        two-phase commit protocol. In order to use the two-phase 
+        commit feature of Berkeley DB, an application must either 
+        implement its own global transaction manager or use an
+        XA-compliant transaction manager such as Oracle Tuxedo 
+        (as Berkeley DB can act as an XA-compliant resource manager). 
+    </p>
+        <p>
+        This chapter explains Berkeley DB's XA-compliant resource manager,
+        which can be used in any X/Open distributed transaction
+        processing  system, and explains how to configure Oracle Tuxedo
+        to use the Berkeley DB resource manager.
+    </p>
       </div>
     </div>
     <div class="navfooter">
@@ -167,8 +164,7 @@ Oracle Tuxedo to use the Berkeley DB resource manager.
           <td width="40%" align="right"> <a accesskey="n" href="ch13s02.html">Next</a></td>
         </tr>
         <tr>
-          <td width="40%" align="left" valign="top">Ex_rep_chan: a Replication Manager
-channel example </td>
+          <td width="40%" align="left" valign="top">Ex_rep_chan: a Replication Manager channel example </td>
           <td width="20%" align="center">
             <a accesskey="h" href="index.html">Home</a>
           </td>

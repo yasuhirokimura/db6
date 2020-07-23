@@ -119,8 +119,15 @@ __rep_verify(env, rp, rec, eid, savetime)
 					goto out;
 			}
 		}
+		/*
+		 * Search for a matching perm record.  If none is found,
+		 * or a database or file delete is encountered before the
+		 * perm record, begin internal init.  Database and blob file
+		 * deletes cannot be undone once committed, so internal init
+		 * must be used to re-create the files.
+		 */
 		if ((ret = __rep_log_backup(env, logc, &lsn,
-		    REP_REC_PERM)) == 0) {
+		    REP_REC_PERM_DEL)) == 0) {
 			MUTEX_LOCK(env, rep->mtx_clientdb);
 			lp->verify_lsn = lsn;
 			__os_gettime(env, &lp->rcvd_ts, 1);
@@ -655,8 +662,10 @@ __rep_verify_match(env, reclsnp, savetime)
 	/*
 	 * Lockout the API and wait for operations to complete.
 	 */
-	if ((ret = __rep_lockout_api(env, rep)) != 0)
+	if ((ret = __rep_lockout_api(env, rep)) != 0) {
+		FLD_CLR(rep->lockout_flags, REP_LOCKOUT_MSG);
 		goto errunlock;
+	}
 
 	/* OK, everyone is out, we can now run recovery. */
 	REP_SYSTEM_UNLOCK(env);
@@ -692,6 +701,10 @@ __rep_verify_match(env, reclsnp, savetime)
 	 */
 	if (db_rep->rep_db == NULL &&
 	    (ret = __rep_client_dbinit(env, 0, REP_DB)) != 0) {
+		REP_SYSTEM_LOCK(env);
+		FLD_CLR(rep->lockout_flags,
+		    REP_LOCKOUT_API | REP_LOCKOUT_MSG | REP_LOCKOUT_OP);
+		REP_SYSTEM_UNLOCK(env);
 		MUTEX_UNLOCK(env, rep->mtx_clientdb);
 		goto out;
 	}

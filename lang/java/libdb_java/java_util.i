@@ -87,7 +87,7 @@ static jclass seq_stat_class, txn_stat_class;
 static jclass txn_active_class;
 static jclass lock_class, lockreq_class;
 static jclass dbex_class, deadex_class, heapfullex_class, lockex_class, memex_class;
-static jclass repdupmasterex_class, rephandledeadex_class;
+static jclass metachkfailex_class, repdupmasterex_class, rephandledeadex_class;
 static jclass repholdelectionex_class, repjoinfailex_class;
 static jclass repleaseexpiredex_class;
 static jclass replockoutex_class, repunavailex_class;
@@ -390,6 +390,9 @@ static jfieldID rep_stat_st_max_lease_usec_fid;
 static jfieldID repmgr_stat_st_perm_failed_fid;
 static jfieldID repmgr_stat_st_msgs_queued_fid;
 static jfieldID repmgr_stat_st_msgs_dropped_fid;
+static jfieldID repmgr_stat_st_incoming_queue_gbytes_fid;
+static jfieldID repmgr_stat_st_incoming_queue_bytes_fid;
+static jfieldID repmgr_stat_st_incoming_msgs_dropped_fid;
 static jfieldID repmgr_stat_st_connection_drop_fid;
 static jfieldID repmgr_stat_st_connect_fail_fid;
 static jfieldID repmgr_stat_st_elect_threads_fid;
@@ -398,7 +401,6 @@ static jfieldID repmgr_stat_st_site_participants_fid;
 static jfieldID repmgr_stat_st_site_total_fid;
 static jfieldID repmgr_stat_st_site_views_fid;
 static jfieldID repmgr_stat_st_takeovers_fid;
-static jfieldID repmgr_stat_st_incoming_queue_size_fid;
 static jfieldID seq_stat_st_wait_fid;
 static jfieldID seq_stat_st_nowait_fid;
 static jfieldID seq_stat_st_current_fid;
@@ -446,7 +448,8 @@ static jmethodID rep_stat_construct, repmgr_stat_construct, seq_stat_construct;
 static jmethodID txn_stat_construct, txn_active_construct;
 static jmethodID dbex_construct, deadex_construct, lockex_construct;
 static jmethodID heapfullex_construct, memex_construct, memex_update_method;
-static jmethodID repdupmasterex_construct, rephandledeadex_construct;
+static jmethodID metachkfailex_construct, repdupmasterex_construct;
+static jmethodID rephandledeadex_construct;
 static jmethodID repholdelectionex_construct, repjoinfailex_construct;
 static jmethodID repmgr_siteinfo_construct, rephost_construct, repleaseexpiredex_construct;
 static jmethodID replockoutex_construct;
@@ -468,6 +471,7 @@ static jmethodID rep_dupmaster_event_notify_method;
 static jmethodID rep_elected_event_notify_method;
 static jmethodID rep_election_failed_event_notify_method;
 static jmethodID rep_init_done_event_notify_method;
+static jmethodID rep_inqueue_full_event_notify_method;
 static jmethodID rep_join_failure_event_notify_method;
 static jmethodID rep_local_site_removed_notify_method;
 static jmethodID rep_master_event_notify_method;
@@ -527,6 +531,7 @@ const struct {
 	{ &heapfullex_class, DB_PKG "HeapFullException" },
 	{ &lockex_class, DB_PKG "LockNotGrantedException" },
 	{ &memex_class, DB_PKG "MemoryException" },
+	{ &metachkfailex_class, DB_PKG "MetaCheckSumFailException" },
 	{ &repdupmasterex_class, DB_PKG "ReplicationDuplicateMasterException" },
 	{ &rephandledeadex_class, DB_PKG "ReplicationHandleDeadException" },
 	{ &repholdelectionex_class, DB_PKG "ReplicationHoldElectionException" },
@@ -867,6 +872,9 @@ const struct {
 	{ &repmgr_stat_st_perm_failed_fid, &repmgr_stat_class, "st_perm_failed", "J" },
 	{ &repmgr_stat_st_msgs_queued_fid, &repmgr_stat_class, "st_msgs_queued", "J" },
 	{ &repmgr_stat_st_msgs_dropped_fid, &repmgr_stat_class, "st_msgs_dropped", "J" },
+	{ &repmgr_stat_st_incoming_queue_gbytes_fid, &repmgr_stat_class, "st_incoming_queue_gbytes", "I" },
+	{ &repmgr_stat_st_incoming_queue_bytes_fid, &repmgr_stat_class, "st_incoming_queue_bytes", "I" },
+	{ &repmgr_stat_st_incoming_msgs_dropped_fid, &repmgr_stat_class, "st_incoming_msgs_dropped", "J" },
 	{ &repmgr_stat_st_connection_drop_fid, &repmgr_stat_class, "st_connection_drop", "J" },
 	{ &repmgr_stat_st_connect_fail_fid, &repmgr_stat_class, "st_connect_fail", "J" },
 	{ &repmgr_stat_st_elect_threads_fid, &repmgr_stat_class, "st_elect_threads", "I" },
@@ -875,7 +883,6 @@ const struct {
 	{ &repmgr_stat_st_site_total_fid, &repmgr_stat_class, "st_site_total", "I" },
 	{ &repmgr_stat_st_site_views_fid, &repmgr_stat_class, "st_site_views", "I" },
 	{ &repmgr_stat_st_takeovers_fid, &repmgr_stat_class, "st_takeovers", "J" },
-	{ &repmgr_stat_st_incoming_queue_size_fid, &repmgr_stat_class, "st_incoming_queue_size", "I" },
 	{ &seq_stat_st_wait_fid, &seq_stat_class, "st_wait", "J" },
 	{ &seq_stat_st_nowait_fid, &seq_stat_class, "st_nowait", "J" },
 	{ &seq_stat_st_current_fid, &seq_stat_class, "st_current", "J" },
@@ -964,6 +971,8 @@ const struct {
 	    DB_PKG "internal/DbEnv;)V" },
 	{ &memex_update_method, &memex_class, "updateDatabaseEntry",
 	    "(L" DB_PKG "DatabaseEntry;)V" },
+	{ &metachkfailex_construct, &metachkfailex_class, "<init>",
+	    "(Ljava/lang/String;IL" DB_PKG "internal/DbEnv;)V" },
 	{ &repdupmasterex_construct, &repdupmasterex_class, "<init>",
 	    "(Ljava/lang/String;IL" DB_PKG "internal/DbEnv;)V" },
 	{ &rephandledeadex_construct, &rephandledeadex_class, "<init>",
@@ -1019,6 +1028,8 @@ const struct {
 	    "handle_rep_election_failed_event_notify" ,"()V" },
 	{ &rep_init_done_event_notify_method, &dbenv_class,
 	    "handle_rep_init_done_event_notify" , "()V" },
+	{ &rep_inqueue_full_event_notify_method, &dbenv_class,
+	    "handle_rep_inqueue_full_event_notify" , "()V" },
 	{ &rep_join_failure_event_notify_method, &dbenv_class, 
 	    "handle_rep_join_failure_event_notify" ,"()V" },
 	{ &rep_master_event_notify_method, &dbenv_class, 

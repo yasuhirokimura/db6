@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.0</p>
+        <p>Library Version 12.1.6.1</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -120,7 +120,8 @@ DB_ENV-&gt;repmgr_start(DB_ENV *env, int nthreads, u_int32_t flags);  </pre>
         incoming connections, and starting all necessary background threads. When multiple processes
         share a database environment, only one process can open the listening socket; the
         <code class="methodname">DB_ENV-&gt;repmgr_start()</code> method automatically opens the socket in the
-        first process to call it, and skips this step in the later calls from other processes.
+        first process to call it, and skips this step in the later calls from
+        other subordinate processes.
     </p>
       <p>
          The <code class="methodname">DB_ENV-&gt;repmgr_start()</code> method 
@@ -151,7 +152,7 @@ DB_ENV-&gt;repmgr_start(DB_ENV *env, int nthreads, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp54545624"></a>Parameters</h3>
+              <h3 class="title"><a id="idp4397552"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -159,7 +160,7 @@ DB_ENV-&gt;repmgr_start(DB_ENV *env, int nthreads, u_int32_t flags);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp54546272"></a>nthreads</h4>
+                <h4 class="title"><a id="idp4398200"></a>nthreads</h4>
               </div>
             </div>
           </div>
@@ -177,7 +178,7 @@ DB_ENV-&gt;repmgr_start(DB_ENV *env, int nthreads, u_int32_t flags);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp54538024"></a>flags</h4>
+                <h4 class="title"><a id="idp4389952"></a>flags</h4>
               </div>
             </div>
           </div>
@@ -204,8 +205,8 @@ DB_ENV-&gt;repmgr_start(DB_ENV *env, int nthreads, u_int32_t flags);  </pre>
                   <code class="literal">DB_REP_CLIENT</code>
             </p>
                 <p>
-                 Start as a client or view site, and do not call for an
-                 election.
+                 Start as a client, view, or preferred master site, and do not
+                 call for an election.
             </p>
               </li>
               <li>
@@ -222,7 +223,8 @@ DB_ENV-&gt;repmgr_start(DB_ENV *env, int nthreads, u_int32_t flags);  </pre>
                           If the Replication Manager is already started, a
                           <span class="bold"><strong>flags</strong></span> value of 0 can
                           be used when making a subsequent call to change the
-                          value of <span class="bold"><strong>nthreads</strong></span>.
+                          value of <span class="bold"><strong>nthreads</strong></span>
+                          or when starting a subordinate process.
                      </p>
         </div>
       </div>
@@ -230,7 +232,7 @@ DB_ENV-&gt;repmgr_start(DB_ENV *env, int nthreads, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp54542152"></a>Errors</h3>
+              <h3 class="title"><a id="idp4394296"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -246,7 +248,7 @@ DB_ENV-&gt;repmgr_start(DB_ENV *env, int nthreads, u_int32_t flags);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp54543360"></a>DB_REP_UNAVAIL</h4>
+                <h4 class="title"><a id="idp4390728"></a>DB_REP_UNAVAIL</h4>
               </div>
             </div>
           </div>
@@ -263,7 +265,7 @@ DB_ENV-&gt;repmgr_start(DB_ENV *env, int nthreads, u_int32_t flags);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp54546760"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp4399984"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -283,7 +285,7 @@ DB_ENV-&gt;repmgr_start(DB_ENV *env, int nthreads, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp54561304"></a>Class</h3>
+              <h3 class="title"><a id="idp4389688"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -295,7 +297,7 @@ DB_ENV-&gt;repmgr_start(DB_ENV *env, int nthreads, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp54556952"></a>See Also</h3>
+              <h3 class="title"><a id="idp4409280"></a>See Also</h3>
             </div>
           </div>
         </div>

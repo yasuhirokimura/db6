@@ -73,7 +73,7 @@ namespace BerkeleyDB {
         /// database and incremented (decremented) by enough to cover the delta
         /// and the next batch of cached values. 
         /// </para>
-	/// <para>
+        /// <para>
         /// By default, sequence ranges do not wrap; to cause the sequence to
         /// wrap around the beginning or end of its range, set
         /// <see cref="SequenceConfig.Wrap"/> to true.
@@ -223,7 +223,7 @@ namespace BerkeleyDB {
         /// sequence, the information returned by DB_SEQUENCE->stat() may be
         /// out-of-date.
         /// </para>
-		/// <para>
+        /// <para>
         /// The DB_SEQUENCE->stat() method cannot be transaction-protected. For
         /// this reason, it should be called in a thread of control that has no
         /// open cursors or active transactions. 
@@ -240,7 +240,7 @@ namespace BerkeleyDB {
 
         /// <summary>
         /// Release the resources held by this object, and close the sequence if
-        /// it's still open.
+        /// it is still open.
         /// </summary>
         public void Dispose() {
             if (isOpen)
@@ -297,7 +297,7 @@ namespace BerkeleyDB {
         }
 
         /// <summary>
-        /// If true, the sequence will be incremented. This is the default. 
+        /// If true, the sequence is incremented. This is the default. 
         /// </summary>
         public bool Increment {
             get {
@@ -308,7 +308,7 @@ namespace BerkeleyDB {
         }
 
         /// <summary>
-        /// If true, the sequence will be decremented.
+        /// If true, the sequence is decremented.
         /// </summary>
         public bool Decrement {
             get {

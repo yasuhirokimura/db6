@@ -105,9 +105,12 @@ __os_detach(env, infop, destroy)
 	int destroy;
 {
 	DB_ENV *dbenv;
+	REGION *rp;
 	int ret, t_ret;
 
 	dbenv = env->dbenv;
+	rp = infop->rp;
+	ret = 0;
 
 	if (infop->wnt_handle != NULL) {
 		(void)CloseHandle(infop->wnt_handle);
@@ -120,10 +123,19 @@ __os_detach(env, infop, destroy)
 			return (ret);
 	}
 
-	ret = !UnmapViewOfFile(infop->addr) ? __os_get_syserr() : 0;
-	if (ret != 0) {
-		__db_syserr(env, ret, DB_STR("0007", "UnmapViewOfFile"));
-		ret = __os_posix_err(ret);
+	if (F_ISSET(env, ENV_FORCESYNCENV))
+		if (!FlushViewOfFile(infop->addr, rp->max)) {
+			ret = __os_get_syserr();
+			__db_syserr(env, ret, DB_STR("0249",
+			    "FlushViewOfFile failed on closing environment"));
+			ret = __os_posix_err(ret);
+		}
+
+	t_ret = !UnmapViewOfFile(infop->addr) ? __os_get_syserr() : 0;
+	if (t_ret != 0) {
+		__db_syserr(env, t_ret, DB_STR("0007", "UnmapViewOfFile"));
+		if (ret == 0)
+			ret = __os_posix_err(t_ret);
 	}
 
 	if (!F_ISSET(env, ENV_SYSTEM_MEM) && destroy &&

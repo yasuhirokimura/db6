@@ -26,7 +26,7 @@ namespace BerkeleyDB {
         /// </summary>
         public ulong DroppedConnections { get { return st.st_connection_drop; } }
         /// <summary>
-        /// # msgs discarded due to excessive queue length.
+        /// Number of messages discarded due to excessive queue length.
         /// </summary>
         public ulong DroppedMessages { get { return st.st_msgs_dropped; } }
         /// <summary>
@@ -34,13 +34,25 @@ namespace BerkeleyDB {
         /// </summary>
         public ulong FailedConnections { get { return st.st_connect_fail; } }
         /// <summary>
-        /// # of insufficiently ack'ed msgs. 
+        /// Number of insufficiently acknowledged messages. 
         /// </summary>
         public ulong FailedMessages { get { return st.st_perm_failed; } }
         /// <summary>
-        /// # msgs queued for network delay. 
+        /// Number of messages queued for network delay. 
         /// </summary>
         public ulong QueuedMessages { get { return st.st_msgs_queued; } }
+        /// <summary>
+        /// Incoming queue size: Gigabytes.
+        /// </summary>
+        public ulong IncomingQueueGBytes { get { return st.st_incoming_queue_gbytes; } }
+        /// <summary>
+        /// Incoming queue size: Gytes.
+        /// </summary>
+        public ulong IncomingQueueBytes { get { return st.st_incoming_queue_bytes; } }
+        /// <summary>
+        /// Number of msgs discarded due to incoming queue full.
+        /// </summary>
+        public ulong IncomingDroppedMessages { get { return st.st_incoming_msgs_dropped; } }
         /// <summary>
         /// Number of currently active election threads
         /// </summary>

@@ -19,14 +19,14 @@ namespace BerkeleyDB {
         /// </summary>
         public Isolation IsolationDegree;
         /// <summary>
-        /// If true, acquire write locks instead of read locks when doing a
-        /// read, if locking is configured.
+        /// If true and if locking is configured, acquire write locks instead of
+        /// read locks when doing a read.
         /// </summary>
         /// <remarks>
         /// Setting ReadModifyWrite can eliminate deadlock during a
         /// read-modify-write cycle by acquiring the write lock during the read
         /// part of the cycle so that another thread of control acquiring a read
-        /// lock for the same item, in its own read-modify-write cycle, will not
+        /// lock for the same item, in its own read-modify-write cycle, does not
         /// result in deadlock.
         /// </remarks>
         public bool ReadModifyWrite;

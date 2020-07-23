@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.0</p>
+        <p>Library Version 12.1.6.1</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -36,42 +36,51 @@
           </div>
         </div>
       </div>
+      <p> 
+        Three algorithm functions of gcc's C++ STL test suite do
+        not work with dbstl. They are <code class="function">find_end()</code>,
+        <code class="function">inplace_merge()</code> and
+        <code class="function">stable_sort()</code>.
+    </p>
+      <p> 
+        The reason for the incompatibility of
+        <code class="function">find_end()</code> is that it assumes the
+        data an iterator refers to is located at a shared place (owned
+        by its container). This assumption is not correct in that it
+        is part of the C++ STL standards specification. However, this
+        assumption can not be true for dbstl because each dbstl
+        container iterator caches its referenced value. 
+    </p>
       <p>
-    Three algorithm functions of gcc's  C++ STL test suite do not work with dbstl.  They are
-    <code class="function">find_end()</code>, <code class="function">inplace_merge()</code> and
-    <code class="function">stable_sort()</code>.
-</p>
-      <p>
-    The reason for the incompatibility of <code class="function">find_end()</code> is that it assumes the
-    data an iterator refers to is located at a shared place (owned by its container). This
-    assumption is not correct in that it is part of the C++ STL standards specification.  However,
-    this assumption can not be true for dbstl because each dbstl container iterator caches its
-    referenced value.
-</p>
-      <p>
-    Consequently, please do not use <code class="function">find_end()</code> for dbstl container iterators if
-    you are using gcc's STL library.
-</p>
-      <p>
-    The reason for the incompatibility with <code class="function">inplace_merge()</code> and
-    <code class="function">stable_sort()</code> is that their implementation in gcc requires the
-    <span class="bold"><strong>value_type</strong></span> for a container to be default constructible. This
-    requirement is not a part of the the C++ STL standard specification. Dbstl's value type
-    wrappers (such as <code class="classname">ElementHolder</code>) do not support it.
-</p>
-      <p>
-    These issues do not exist for any function available with the Microsoft
-    Visual C++ 8 STL library. There are two algorithm functions of Microsoft
-    Visual C++ 10 STL library that do have an issue:
-    <code class="function">partial_sort()</code> and
-    <code class="function">partial_sort_copy()</code>.  These are not compatible because they
-    require the dbstl <code class="literal">vector</code> iterator to create a new
-    element when updating the current element. Dbstl
-    <code class="literal">vector</code> iterator can copy the new content to the
-    current element, but it cannot create a new one. This requirement is
-    not a part of the C++ STL standard specification, and so dbstl's
-    <code class="literal">vector</code> iterator does not support it.
-</p>
+        Consequently, please do not use
+        <code class="function">find_end()</code> for dbstl container
+        iterators if you are using gcc's STL library. 
+    </p>
+      <p> 
+        The reason for the incompatibility with
+        <code class="function">inplace_merge()</code> and
+        <code class="function">stable_sort()</code> is that their
+        implementation in gcc requires the <span class="bold"><strong>
+        value_type</strong></span> for a container to be default
+        constructible. This requirement is not a part of the the C++
+        STL standard specification. Dbstl's value type wrappers (such
+        as <code class="classname">ElementHolder</code>) do not support it.
+    </p>
+      <p> 
+        These issues do not exist for any function available with
+        the Microsoft Visual C++ 8 STL library. There are two
+        algorithm functions of Microsoft Visual C++ 10 STL library
+        that do have an issue: <code class="function">partial_sort()</code> and
+        <code class="function">partial_sort_copy()</code>. These are not
+        compatible because they require the dbstl
+        <code class="literal">vector</code> iterator to create a new element
+        when updating the current element. Dbstl
+        <code class="literal">vector</code> iterator can copy the new
+        content to the current element, but it cannot create a new
+        one. This requirement is not a part of the C++ STL standard
+        specification, and so dbstl's <code class="literal">vector</code>
+        iterator does not support it.
+    </p>
     </div>
     <div class="navfooter">
       <hr />
@@ -88,9 +97,7 @@
           <td width="20%" align="center">
             <a accesskey="h" href="index.html">Home</a>
           </td>
-          <td width="40%" align="right" valign="top"> Chapter 8. 
-		Berkeley DB Architecture
-        </td>
+          <td width="40%" align="right" valign="top"> Chapter 8.  Berkeley DB Architecture </td>
         </tr>
       </table>
     </div>

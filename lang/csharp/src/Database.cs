@@ -51,13 +51,13 @@ namespace BerkeleyDB {
         /// <remarks>
         /// <para>
         /// If <see cref="DatabaseConfig.AutoCommit"/> is set, the operation
-        /// will be implicitly transaction protected. Transactionally
+        /// is implicitly transaction protected. Transactionally
         /// protected operations on a database object requires the object itself
         /// be transactionally protected during its open.
         /// </para>
         /// </remarks>
         /// <param name="Filename">
-        /// The name of an underlying file that will be used to back the
+        /// The name of an underlying file used to back the
         /// database.
         /// </param>
         /// <param name="cfg">The database's configuration</param>
@@ -74,18 +74,18 @@ namespace BerkeleyDB {
         /// <para>
         /// If <paramref name="Filename"/> is null and 
         /// <paramref name="DatabaseName"/> is non-null, the database can be
-        /// opened by other threads of control and will be replicated to client
+        /// opened by other threads of control and be replicated to client
         /// sites in any replication group.
         /// </para>
         /// <para>
         /// If <see cref="DatabaseConfig.AutoCommit"/> is set, the operation
-        /// will be implicitly transaction protected. Transactionally
+        /// is implicitly transaction protected. Transactionally
         /// protected operations on a database object requires the object itself
         /// be transactionally protected during its open.
         /// </para>
         /// </remarks>
         /// <param name="Filename">
-        /// The name of an underlying file that will be used to back the
+        /// The name of an underlying file used to back the
         /// database. In-memory databases never intended to be preserved on disk
         /// may be created by setting this parameter to null.</param>
         /// <param name="DatabaseName">
@@ -114,15 +114,15 @@ namespace BerkeleyDB {
         /// </para>
         /// <para>
         /// If <paramref name="txn"/> is null, but
-        /// <see cref="DatabaseConfig.AutoCommit"/> is set, the operation will
-        /// be implicitly transaction protected. Transactionally
+        /// <see cref="DatabaseConfig.AutoCommit"/> is set, the operation
+        /// is implicitly transaction protected. Transactionally
         /// protected operations on a database object requires the object itself
         /// be transactionally protected during its open. The
         /// transaction must be committed before the object is closed.
         /// </para>
         /// </remarks>
         /// <param name="Filename">
-        /// The name of an underlying file that will be used to back the
+        /// The name of an underlying file used to back the
         /// database. In-memory databases never intended to be preserved on disk
         /// may be created by setting this parameter to null.
         /// </param>
@@ -154,20 +154,20 @@ namespace BerkeleyDB {
         /// object that created it, in circumstances where doing so is safe. If
         /// <paramref name="Filename"/> is null and
         /// <paramref name="DatabaseName"/> is non-null, the database can be
-        /// opened by other threads of control and will be replicated to client
+        /// opened by other threads of control and be replicated to client
         /// sites in any replication group.
         /// </para>
         /// <para>
         /// If <paramref name="txn"/> is null, but
-        /// <see cref="DatabaseConfig.AutoCommit"/> is set, the operation will
-        /// be implicitly transaction protected. Transactionally
+        /// <see cref="DatabaseConfig.AutoCommit"/> is set, the operation
+        /// is implicitly transaction protected. Transactionally
         /// protected operations on a database object requires the object itself
         /// be transactionally protected during its open. The
         /// transaction must be committed before the object is closed.
         /// </para>
         /// </remarks>
         /// <param name="Filename">
-        /// The name of an underlying file that will be used to back the
+        /// The name of an underlying file used to back the
         /// database. In-memory databases never intended to be preserved on disk
         /// may be created by setting this parameter to null.
         /// </param>
@@ -249,7 +249,7 @@ namespace BerkeleyDB {
             KeyValuePair<DatabaseEntry, MultipleDatabaseEntry> GetBothMultiple(
             DatabaseEntry key, DatabaseEntry data) {
             /*
-             * Make sure we pass a buffer that's big enough to hold data.Data
+             * Make sure we pass a buffer that is big enough to hold data.Data
              * and is a multiple of the page size.  Cache this.Pagesize to avoid
              * multiple P/Invoke calls.
              */
@@ -266,7 +266,7 @@ namespace BerkeleyDB {
         /// <param name="data">The data to search for</param>
         /// <param name="BufferSize">
         /// The initial size of the buffer to fill with duplicate data items. If
-        /// the buffer is not large enough, it will be automatically resized.
+        /// the buffer is not large enough, it is automatically resized.
         /// </param>
         /// <exception cref="NotFoundException">
         /// A NotFoundException is thrown if <paramref name="key"/> and
@@ -297,7 +297,7 @@ namespace BerkeleyDB {
         /// <param name="data">The data to search for</param>
         /// <param name="BufferSize">
         /// The initial size of the buffer to fill with duplicate data items. If
-        /// the buffer is not large enough, it will be automatically resized.
+        /// the buffer is not large enough, it is automatically resized.
         /// </param>
         /// <param name="txn">
         /// <paramref name="txn"/> is a Transaction object returned from
@@ -336,7 +336,7 @@ namespace BerkeleyDB {
         /// <param name="data">The data to search for</param>
         /// <param name="BufferSize">
         /// The initial size of the buffer to fill with duplicate data items. If
-        /// the buffer is not large enough, it will be automatically resized.
+        /// the buffer is not large enough, it is automatically resized.
         /// </param>
         /// <param name="txn">
         /// <paramref name="txn"/> is a Transaction object returned from
@@ -419,7 +419,7 @@ namespace BerkeleyDB {
         /// <param name="key">The key to search for</param>
         /// <param name="BufferSize">
         /// The initial size of the buffer to fill with duplicate data items. If
-        /// the buffer is not large enough, it will be automatically resized.
+        /// the buffer is not large enough, it is automatically resized.
         /// </param>
         /// <exception cref="NotFoundException">
         /// A NotFoundException is thrown if <paramref name="key"/> is not in
@@ -446,7 +446,7 @@ namespace BerkeleyDB {
         /// <param name="key">The key to search for</param>
         /// <param name="BufferSize">
         /// The initial size of the buffer to fill with duplicate data items. If
-        /// the buffer is not large enough, it will be automatically resized.
+        /// the buffer is not large enough, it is automatically resized.
         /// </param>
         /// <param name="txn">
         /// <paramref name="txn"/> is a Transaction object returned from
@@ -470,7 +470,7 @@ namespace BerkeleyDB {
         /// <param name="key">The key to search for</param>
         /// <param name="BufferSize">
         /// The initial size of the buffer to fill with duplicate data items. If
-        /// the buffer is not large enough, it will be automatically resized.
+        /// the buffer is not large enough, it is automatically resized.
         /// </param>
         /// <param name="txn">
         /// <paramref name="txn"/> is a Transaction object returned from
@@ -539,9 +539,9 @@ namespace BerkeleyDB {
         /// <param name="sortCursors">
         /// If true, sort the cursors from the one that refers to the least
         /// number of data items to the one that refers to the most.  If the
-        /// data are structured so that cursors with many data items also share
-        /// many common elements, higher performance will result from listing
-        /// those cursors before cursors with fewer data items; that is, a sort
+        /// data is structured so that cursors with many data items also share
+        /// many common elements, higher performance results from listing
+        /// those cursors before cursors with fewer data items; a sort
         /// order other than the default. A setting of false permits
         /// applications to perform join optimization prior to calling Join.
         /// </param>
@@ -787,7 +787,7 @@ namespace BerkeleyDB {
         /// </param>
         /// <param name="OutputStream">
         /// The TextWriter to which the databases' key/data pairs are written.
-        /// If null, <see cref="Console.Out"/> will be used.
+        /// If null, <see cref="Console.Out"/> is used.
         /// </param>
         public static void Salvage(
             string file, DatabaseConfig cfg, TextWriter OutputStream) {
@@ -813,7 +813,7 @@ namespace BerkeleyDB {
         /// </param>
         /// <param name="OutputStream">
         /// The TextWriter to which the databases' key/data pairs are written.
-        /// If null, <see cref="Console.Out"/> will be used.
+        /// If null, <see cref="Console.Out"/> is used.
         /// </param>
         public static void Salvage(string file,
             DatabaseConfig cfg, bool Printable, TextWriter OutputStream) {
@@ -838,12 +838,11 @@ namespace BerkeleyDB {
         /// remove data from salvager output. 
         /// </param>
         /// <param name="Aggressive">
-        /// If true, output all the key/data pairs in the file that can be
-        /// found.  Corruption will be assumed and key/data pairs that are
-        /// corrupted or have been deleted may appear in the output (even if the
-        /// file being salvaged is in no way corrupt), and the output will
-        /// almost certainly require editing before being loaded into a
-        /// database.
+        /// If true, output all the key/data pairs found in the file.
+        /// Corruption of these data pairs is assumed, and corrupted or deleted
+        /// data pairs may appear in the output (even if the salvaged file is in no
+        /// way corrupt). This output almost certainly requires editing before being
+        /// loaded into a database.
         /// </param>
         public static void Salvage(string file,
             DatabaseConfig cfg, bool Printable, bool Aggressive) {
@@ -868,16 +867,15 @@ namespace BerkeleyDB {
         /// remove data from salvager output. 
         /// </param>
         /// <param name="Aggressive">
-        /// If true, output all the key/data pairs in the file that can be
-        /// found.  Corruption will be assumed and key/data pairs that are
-        /// corrupted or have been deleted may appear in the output (even if the
-        /// file being salvaged is in no way corrupt), and the output will
-        /// almost certainly require editing before being loaded into a
-        /// database.
+        /// If true, output all the key/data pairs found in the file.
+        /// Corruption of these data pairs is assumed, and corrupted or deleted
+        /// data pairs may appear in the output (even if the salvaged file is in no
+        /// way corrupt). This output almost certainly requires editing before being
+        /// loaded into a database.
         /// </param>
         /// <param name="OutputStream">
         /// The TextWriter to which the databases' key/data pairs are written.
-        /// If null, <see cref="Console.Out"/> will be used.
+        /// If null, <see cref="Console.Out"/> is used.
         /// </param>
         public static void Salvage(string file, DatabaseConfig cfg,
             bool Printable, bool Aggressive, TextWriter OutputStream) {
@@ -939,7 +937,7 @@ namespace BerkeleyDB {
         /// single database, if the databases do not support duplicate data
         /// items, or if all of the databases that support duplicate data items
         /// support the same style of duplicates (either sorted or unsorted), 
-        /// Upgrade will work correctly as long as
+        /// Upgrade works correctly as long as
         /// <paramref name="dupSortUpgraded"/> is correctly specified.
         /// Otherwise, the file cannot be upgraded using Upgrade it must be
         /// upgraded manually by dumping and reloading the databases.

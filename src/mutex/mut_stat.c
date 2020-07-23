@@ -19,6 +19,17 @@ static int __mutex_print_stats __P((ENV *, u_int32_t));
 static void __mutex_print_summary __P((ENV *));
 static int __mutex_stat __P((ENV *, DB_MUTEX_STAT **, u_int32_t));
 
+static const FN MutexFlagNames[] = {
+	{ DB_MUTEX_ALLOCATED,		"alloc" },
+	{ DB_MUTEX_LOCKED,		"locked" },
+	{ DB_MUTEX_LOGICAL_LOCK,	"logical" },
+	{ DB_MUTEX_OWNER_DEAD,		"ower-dead" },
+	{ DB_MUTEX_PROCESS_ONLY,	"process-private" },
+	{ DB_MUTEX_SELF_BLOCK,		"self-block" },
+	{ DB_MUTEX_SHARED,		"shared" },
+	{ 0,				NULL }
+};
+
 /*
  * __mutex_stat_pp --
  *	ENV->mutex_stat pre/post processing.
@@ -255,14 +266,6 @@ __mutex_print_all(env, flags)
 	ENV *env;
 	u_int32_t flags;
 {
-	static const FN fn[] = {
-		{ DB_MUTEX_ALLOCATED,		"alloc" },
-		{ DB_MUTEX_LOCKED,		"locked" },
-		{ DB_MUTEX_LOGICAL_LOCK,	"logical" },
-		{ DB_MUTEX_PROCESS_ONLY,	"process-private" },
-		{ DB_MUTEX_SELF_BLOCK,		"self-block" },
-		{ 0,				NULL }
-	};
 	DB_MSGBUF mb, *mbp;
 	DB_MUTEX *mutexp;
 	DB_MUTEXMGR *mtxmgr;
@@ -308,17 +311,9 @@ __mutex_print_all(env, flags)
 	for (i = 1; i <= mtxregion->stat.st_mutex_cnt; ++i) {
 		if (F_ISSET(mutexp, DB_MUTEX_ALLOCATED)) {
 			__db_msgadd(env, mbp, "%5lu\t", (u_long)i);
-
 			__mutex_print_debug_stats(env, mbp,
 			    F_ISSET(env, ENV_PRIVATE) ?
 			    (db_mutex_t)mutexp : i, flags);
-
-			if (mutexp->alloc_id != 0)
-				__db_msgadd(env, mbp,
-				    ", %s", __mutex_print_id(mutexp->alloc_id));
-
-			__db_prflags(env, mbp, mutexp->flags, fn, " (", ")");
-
 			DB_MSGBUF_FLUSH(env, mbp);
 		}
 
@@ -338,8 +333,7 @@ __mutex_print_all(env, flags)
 
 /*
  * __mutex_print_debug_single --
- *	Print mutex internal debugging statistics for a single mutex on a
- *	single output line.
+ *	Print mutex internal debugging statistics for a single mutex.
  *
  * PUBLIC: void __mutex_print_debug_single
  * PUBLIC:          __P((ENV *, const char *, db_mutex_t, u_int32_t));
@@ -365,8 +359,9 @@ __mutex_print_debug_single(env, tag, mutex, flags)
 
 /*
  * __mutex_print_debug_stats --
- *	Print mutex internal debugging statistics, that is, the statistics
- *	in the [] square brackets.
+ *	Print the mutex internal debugging statistics in square bracket,s on a
+ *	followed by the allocation id and flags, on single line. When MUTEX_DIAG
+ *	is on and the mutex is held, append the owner's stack trace.
  *
  * PUBLIC: void __mutex_print_debug_stats
  * PUBLIC:          __P((ENV *, DB_MSGBUF *, db_mutex_t, u_int32_t));
@@ -385,6 +380,9 @@ __mutex_print_debug_stats(env, mbp, mutex, flags)
 #if defined(HAVE_SHARED_LATCHES) && (defined(HAVE_MUTEX_HYBRID) || \
     !defined(HAVE_MUTEX_PTHREADS))
 	int sharecount;
+#endif
+#ifdef MUTEX_DIAG
+	char timestr[CTIME_BUFLEN];
 #endif
 
 	if (mutex == MUTEX_INVALID) {
@@ -454,6 +452,22 @@ __mutex_print_debug_stats(env, mbp, mutex, flags)
 		    mutexp->hybrid_wait, mutexp->hybrid_wakeup);
 #endif
 
+	if (mutexp->alloc_id != 0)
+		__db_msgadd(env,
+		    mbp, ", %s", __mutex_print_id(mutexp->alloc_id));
+
+	__db_prflags(env, mbp, mutexp->flags, MutexFlagNames, " (", ")");
+#ifdef MUTEX_DIAG
+	if (mutexp->alloc_id != MTX_LOGICAL_LOCK &&
+	    timespecisset(&mutexp->mutex_history.when)) {
+		__db_ctimespec(&mutexp->mutex_history.when, timestr);
+		__db_msgadd(env, mbp, "\nLocked %s", timestr);
+		if (mutexp->mutex_history.stacktext[0] != '\0')
+			__db_msgadd(env, mbp, "\n%.*s",
+			    (int)sizeof(mutexp->mutex_history.stacktext) - 1,
+			    mutexp->mutex_history.stacktext);
+	}
+#endif
 	if (LF_ISSET(DB_STAT_CLEAR))
 		__mutex_clear(env, mutex);
 }
@@ -501,7 +515,8 @@ __mutex_print_id(alloc_id)
 	case MTX_TXN_COMMIT:		return ("txn commit");
 	case MTX_TXN_MVCC:		return ("txn mvcc");
 	case MTX_TXN_REGION:		return ("txn region");
-	default:			return ("unknown mutex type");
+	case 0:				return ("invalid 0 mutex type");
+	default:			return ("unknown non-zero mutex type");
 	/* NOTREACHED */
 	}
 }
@@ -583,3 +598,39 @@ __mutex_stat_print_pp(dbenv, flags)
 	return (__db_stat_not_built(dbenv->env));
 }
 #endif
+
+/*
+ * __mutex_describe
+ *	Fill in a buffer with the mutex #, alloc_id, and any other
+ *	characteristics which are likely to be useful for diagnostics. The
+ *	destination buffer must hold at least DB_MUTEX_DESCRIBE_STRLEN bytes.
+ *
+ * PUBLIC: char *__mutex_describe __P((ENV *, db_mutex_t, char *));
+ */
+char *
+__mutex_describe(env, mutex, dest)
+	ENV *env;
+	db_mutex_t mutex;
+	char *dest;
+{
+	DB_MUTEX *mutexp;
+	DB_MSGBUF mb, *mbp;
+	const char *type;
+
+	DB_MSGBUF_INIT(&mb);
+	mbp = &mb;
+	mutexp = MUTEXP_SET(env, mutex);
+	type = F_ISSET(mutexp, DB_MUTEX_SHARED) ? "latch" : "mutex";
+#ifdef HAVE_STATISTICS
+	__db_msgadd(env, mbp, "%s %s id %ld ",
+	    __mutex_print_id(mutexp->alloc_id), type, (long)mutex);
+	__db_prflags(env, mbp, mutexp->flags, MutexFlagNames, " (", ")");
+#else
+	__db_msgadd(env, mbp, "%s flags %x id %ld ",
+	    type, mutexp->flags, (long)mutex);
+#endif
+	(void)snprintf(dest, DB_MUTEX_DESCRIBE_STRLEN - 1,
+	    "%.*s", (int)(mbp->cur - mbp->buf), mbp->buf);
+	dest[DB_MUTEX_DESCRIBE_STRLEN - 1] = '\0';
+	return (dest);
+}

@@ -17,4 +17,8 @@ void sqlite3PCacheSetDefault(void);
 #ifdef SQLITE_TEST
 void sqlite3PcacheStats(int *a,int *b,int *c,int *d);
 #endif
+#ifdef SQLITE_ENABLE_MEMORY_MANAGEMENT
+int sqlite3PcacheReleaseMemory(int nReq);
+#endif
+
 

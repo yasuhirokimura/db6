@@ -70,6 +70,7 @@ struct __machtab {
 	int current;
 	int max;
 	int nsites;
+	socket_t listenfd;
 };
 
 /* Data structure that describes each entry in the machtab. */
@@ -113,6 +114,7 @@ machtab_init(machtabp, nsites)
 	machtab->timeout_time = 2 * 1000000;		/* 2 seconds. */
 	machtab->current = machtab->max = 0;
 	machtab->nsites = nsites;
+	machtab->listenfd = SOCKET_CREATION_FAILURE;
 
 	ret = mutex_init(&machtab->mtmutex, NULL);
 	*machtabp = machtab;
@@ -265,6 +267,47 @@ machtab_rem(machtab, eid, lock)
 	return (ret);
 }
 
+/*
+ * machtab_destroy --
+ *	Close the listening socket and all connecting sockets,
+ * So that all threads blocked on 'accept' and 'read' will be
+ * unblocked.
+ */
+int machtab_destroy(machtab)
+	machtab_t *machtab;
+{
+	int ret;
+	socket_t listenfd;
+	member_t *member;
+
+	if ((ret = mutex_lock(&machtab->mtmutex)) != 0) {
+		fprintf(stderr, "can't lock mutex\n");
+		return (ret);
+	}
+
+	listenfd = machtab->listenfd;
+	machtab->listenfd = SOCKET_CREATION_FAILURE;
+	for (member = LIST_FIRST(&machtab->machlist);
+	    member != NULL;
+	    member = LIST_FIRST(&machtab->machlist)) {
+		LIST_REMOVE(member, links);
+		shutdown(member->fd, SHUT_RDWR);
+		(void)closesocket(member->fd);
+		free(member);
+		machtab->current--;
+	}
+	shutdown(listenfd, SHUT_RDWR);
+	(void)closesocket(listenfd);
+	machtab->nextid = 2;
+	machtab->current = machtab->max = 0;
+
+	if ((ret = mutex_unlock(&machtab->mtmutex)) != 0) {
+		fprintf(stderr, "can't unlock mutex\n");
+		return (ret);
+	}
+	return (ret);
+}
+
 void
 machtab_parm(machtab, nump, timeoutp)
 	machtab_t *machtab;
@@ -310,9 +353,10 @@ machtab_print(machtab)
  *	in a thread that we're happy to let block.
  */
 socket_t
-listen_socket_init(progname, port)
+listen_socket_init(progname, port, machtab)
 	const char *progname;
 	int port;
+	machtab_t *machtab;
 {
 	socket_t s;
 	int sockopt;
@@ -349,6 +393,7 @@ listen_socket_init(progname, port)
 		goto err;
 	}
 
+	machtab->listenfd = s;
 	return (s);
 
 err:	closesocket(s);
@@ -380,7 +425,8 @@ accept_wait:
 	si_len = sizeof(si);
 	ns = accept(s, (struct sockaddr *)&si, &si_len);
 	if (ns == SOCKET_CREATION_FAILURE) {
-		fprintf(stderr, "can't accept incoming connection\n");
+		if (machtab->listenfd != SOCKET_CREATION_FAILURE)
+			fprintf(stderr, "can't accept incoming connection\n");
 		return ns;
 	}
 	host = ntohl(si.sin_addr.s_addr);

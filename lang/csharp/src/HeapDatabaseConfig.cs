@@ -29,18 +29,18 @@ namespace BerkeleyDB {
         internal bool blobThresholdIsSet;
         private uint blobThreshold;
         /// <summary>
-        /// The size in bytes which is used to determine when a data item will
-        /// be stored as a blob.
+        /// The size in bytes which is used to determine when a data item 
+        /// will be stored as a blob.
         /// <para>
         /// Any data item that is equal to or larger in size than the
-        /// threshold value will automatically be stored as a blob.
+        /// threshold value is automatically stored as a blob.
         /// </para>
         /// <para>
-        /// If the threshold value is 0, blobs will never be used by the
+        /// If the threshold value is 0, blobs are never used by the
         /// database.
         /// </para>
         /// <para>
-        /// It is illegal to enable blob in the database which is configured
+        /// It is illegal to enable blob support in the database which is configured
         /// as in-memory database or with chksum, encryption, duplicates,
         /// sorted duplicates, compression, multiversion concurrency control
         /// and transactional read operations with degree 1 isolation.
@@ -60,7 +60,7 @@ namespace BerkeleyDB {
         /// <remarks>
         /// If the database does not already exist and
         /// <see cref="CreatePolicy.NEVER"/> is set,
-        /// <see cref="HeapDatabase.Open"/> will fail.
+        /// <see cref="HeapDatabase.Open"/> fails.
         /// </remarks>
         public CreatePolicy Creation;
         internal new uint openFlags {
@@ -83,23 +83,20 @@ namespace BerkeleyDB {
         /// </summary>
         public uint MaxSizeBytes { get { return _bytes; } }
         /// <summary>
-        /// Set the maximum on-disk database file size used by the database. If
-        /// this value is never set, the database's file size can grow without
-        /// bound. If this value is set, then the heap file can never grow
-        /// larger than the limit defined by this method. In that case, attempts
-        /// to update or create records in a database that has reached its
-        /// maximum size will throw a <see cref="HeapFullException"/>.
+        /// Set the maximum on-disk database file size used by the database. Attempts
+        /// to update or create records in a database that have reached this file size
+        /// limit throw a <see cref="HeapFullException"/>. If this value is not set,
+        /// the database file size can grow infinitely. 
         /// </summary>
         ///<remarks>
-        /// The size specified to this method must be at least three times the
-        /// database page size. That is, the database must contain at least 
+        /// The size specified must be at least three times the
+        /// database page size. The database must contain at least 
         /// three database pages. You can set the database page size using 
         /// <see cref="DatabaseConfig.PageSize"/>.
         ///
         /// If this value is set for an existing database, the size specified
-        /// here must match the size used to create the database. Note, however,
-        /// that specifying an incorrect size will not result in an error 
-        /// until the database is opened. 
+        /// here must match the size used to create the database. Specifying an
+        /// incorrect size does not result in an error until the database is opened. 
         /// </remarks>
         /// <param name="GBytes">The size of the database is set to GBytes
         /// gigabytes plus Bytes.</param>
@@ -115,15 +112,15 @@ namespace BerkeleyDB {
         internal bool regionszIsSet;
         /// <summary>
         /// The number of pages in a region of the database. If this value is
-        /// never set, the default region size for the database's page size will
-        /// be used. You can set the database page size using 
+        /// never set, the default region size for the database's page size is
+        /// used. You can set the database page size using 
         /// <see cref="DatabaseConfig.PageSize"/>.
         ///
-        /// If the database already exists, this value will be ignored. If the
+        /// If the database already exists, this value is ignored. If the
         /// specified region size is larger than the maximum region size for the
-        /// database's page size, an error will be returned when
+        /// database's page size, an error is returned when
         /// <see cref="Database.Open"/> is called. The maximum allowable region 
-        /// size will be included in the error message. 
+        /// size is included in the error message. 
         /// </summary>
         public uint RegionSize {
             get { return _regionsz; }

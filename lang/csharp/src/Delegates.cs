@@ -53,8 +53,8 @@ namespace BerkeleyDB {
     /// </param>
     public delegate uint PartitionDelegate(DatabaseEntry key);
     /// <summary>
-    /// The application-specified feedback function called to report Berkeley DB
-    /// operation progress.
+    /// The application-specified feedback function called to report the operation 
+    /// progress of Berkeley DB.
     /// </summary>
     /// <param name="opcode">
     /// An operation code specifying the Berkley DB operation
@@ -118,7 +118,7 @@ namespace BerkeleyDB {
     /// <param name="event_info">
     /// Additional information describing an event. By default, event_info is
     /// null; specific events may pass non-null values, in which case the event
-    /// will also describe the information's structure.
+    /// also describes the information's structure.
     /// </param>
     public delegate void EventNotifyDelegate(
         NotificationEvent eventcode, byte[] event_info);
@@ -157,6 +157,11 @@ namespace BerkeleyDB {
     /// </param>
     public delegate void MessageDispatchDelegate(DbChannel channel,
         ref DatabaseEntry[] requests, out uint size, bool need_response);
+    /// <summary>
+    /// The application-specified reporting function.
+    /// </summary>
+    /// <param name="Message">The message string</param>
+    public delegate void MessageFeedbackDelegate(string Message);
     /// <summary>
     /// Application-specific function used by a replication view to determine
     /// whether a database file is replicated to the local site.

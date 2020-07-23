@@ -291,7 +291,7 @@ __bam_metachk(dbp, name, btm)
 		__db_errx(env, DB_STR_A("1199",
 		    "%s: blobs require 64 integer compiler support.", "%s"),
 		    name);
-		return (EINVAL);
+		return (DB_OPNOTSUP);
 	}
 #endif
 

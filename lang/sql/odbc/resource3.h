@@ -1,5 +1,5 @@
-#define VERSION				"0.992"
-#define VERSION_C			0,992
+#define VERSION				"0.996"
+#define VERSION_C			0,996
 #define DRIVERCONNECT                   104
 #define CONFIGDSN                       105
 #define IDC_DSNAME                      400
@@ -23,6 +23,7 @@
 #define IDC_FKSUPPORT			418
 #define IDC_OEMCP			419
 #define IDC_BIGINT			420
+#define IDC_JDCONV			421
 #define IDS_MSGTITLE                    500
 #define IDS_BADDSN                      501
 #define IDS_EXTTITLE			502

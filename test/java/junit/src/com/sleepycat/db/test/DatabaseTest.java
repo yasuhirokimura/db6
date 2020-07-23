@@ -942,6 +942,25 @@ public class DatabaseTest {
             assertEquals(3, dbs.size());
             sdbt = new DatabaseEntry("defg".getBytes());
             assertEquals(OperationStatus.SUCCESS, dbs.write(sdbt, dbs.size()));
+
+            // Verify datbase stream writing/reading with
+            // partial DatabaseEntry will fail.
+            try {
+                kdbt.setPartial(true);
+                assertEquals(true, kdbt.getPartial());
+                dbs.write(kdbt, 0);
+                throw new Exception("database stream write/read"
+                    + "with partial DatabaseEntry should fail");
+            } catch (IllegalArgumentException e) {
+            }
+
+            try {
+                dbs.read(kdbt, 0, (int)dbs.size());
+                throw new Exception("database stream read"
+                    + "with partial DatabaseEntry should fail");
+            } catch (IllegalArgumentException e) {
+            }
+
             dbs.close();
 
             // Verify the update and that database stream can not write when it

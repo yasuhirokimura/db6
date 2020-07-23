@@ -115,6 +115,10 @@ main(argc, argv)
 		dbenv->err(dbenv, ret,
 		    "Could not set heartbeat monitor timeout.\n");
 
+	/* Create thread-specific data key for PERM_FAILED structure. */
+	if ((ret = thread_key_create(&permfail_key)) != 0)
+		goto err;
+
 	/*
 	 * The following repmgr features may also be useful to your
 	 * application.  See Berkeley DB documentation for more details.
@@ -133,6 +137,7 @@ main(argc, argv)
 	/* Start checkpoint and log archive threads. */
 	sup_args.dbenv = dbenv;
 	sup_args.shared = &my_app_data.shared_data;
+	my_app_data.shared_data.is_repmgr = 1;
 	if ((ret = start_support_threads(dbenv, &sup_args, &ckp_thr,
 	    &lga_thr)) != 0)
 		goto err;
@@ -163,6 +168,10 @@ main(argc, argv)
 		goto err;
 	}
 
+	/* Delete thread-specific data key for PERM_FAILED structure. */
+	if ((ret = thread_key_delete(permfail_key)) != 0)
+		goto err;
+
 err:
 	if (dbenv != NULL &&
 	    (t_ret = dbenv->close(dbenv, 0)) != 0) {
@@ -183,8 +192,10 @@ event_callback(dbenv, which, info)
 {
 	APP_DATA *app = dbenv->app_private;
 	SHARED_DATA *shared = &app->shared_data;
+	permfail_t *pfinfo;
 	int err;
 
+	pfinfo = NULL;
 
 	switch (which) {
 	case DB_EVENT_PANIC:
@@ -213,8 +224,12 @@ event_callback(dbenv, which, info)
 		 * transaction will be flushed to the master site's
 		 * local disk storage for durability.
 		 */
+		/* Set this thread's PERM_FAILED indicator. */
+		pfinfo = (permfail_t *)thread_getspecific(permfail_key);
+		printf("%s Thread: ", pfinfo->thread_name);
+		pfinfo->flag = 1;
 		printf(
-    "Insufficient acknowledgements to guarantee transaction durability.\n");
+    "Insufficient acknowledgements for transaction durability.\n");
 		break;
 
 	case DB_EVENT_REP_STARTUPDONE:

@@ -18,11 +18,11 @@
  * non-zero, you might get time-of-day or you might get a non-decreasing number
  * which is unrelated to the time of day, such as the seconds since system boot.
  *
- * PUBLIC: void __os_gettime __P((ENV *, db_timespec *, int));
+ * PUBLIC: void __os_gettime __P((const ENV *, db_timespec *, int));
  */
 void
 __os_gettime(env, tp, monotonic)
-	ENV *env;
+	const ENV *env;
 	db_timespec *tp;
 	int monotonic;
 {
@@ -72,5 +72,5 @@ __os_gettime(env, tp, monotonic)
 	return;
 
 err:	__db_syserr(env, ret, "%s", sc);
-	(void)__env_panic(env, __os_posix_err(ret));
+	(void)__env_panic((ENV *) env, __os_posix_err(ret));
 }

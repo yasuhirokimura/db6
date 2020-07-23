@@ -55,6 +55,8 @@ struct __fname {
 			/* number of txn referencing + 1 for the db handle. */
 	u_int32_t txn_ref;
 
+	db_seq_t blob_file_id;		/* BLOB file directory id. */
+
 #define	DB_FNAME_CLOSED		0x01	/* DBP was closed. */
 #define	DB_FNAME_DURABLE	0x02	/* File is durable. */
 #define	DB_FNAME_INMEM		0x04	/* File is in memory. */
@@ -144,10 +146,11 @@ struct __db_log {
 #define	DBLOG_FORCE_OPEN	0x010	/* Force the DB open even if it appears
 					 * to be deleted. */
 #define	DBLOG_INMEMORY		0x020	/* Logging is in memory. */
-#define	DBLOG_OPENFILES		0x040	/* Prepared files need to be open. */
-#define	DBLOG_RECOVER		0x080	/* We are in recovery. */
-#define	DBLOG_ZERO		0x100	/* Zero fill the log. */
-#define	DBLOG_VERIFYING		0x200	/* The log is being verified. */
+#define	DBLOG_NOSYNC		0x040	/* Don't sync log files during flush. */
+#define	DBLOG_OPENFILES		0x080	/* Prepared files need to be open. */
+#define	DBLOG_RECOVER		0x100	/* We are in recovery. */
+#define	DBLOG_ZERO		0x200	/* Zero fill the log. */
+#define	DBLOG_VERIFYING		0x400	/* The log is being verified. */
 	u_int32_t flags;
 };
 
@@ -252,7 +255,8 @@ struct __log { /* SHARED */
 	 * rather than by the region mutex.
 	 */
 	db_mutex_t mtx_flush;		/* Mutex guarding flushing. */
-	int32_t	   in_flush;	/* Log flush in progress. */
+	int32_t	   in_flush;		/* Log flush in progress. */
+	int32_t	   nosync;		/* log_set_config(DB_LOG_NOSYNC) */
 	DB_LSN	   s_lsn;		/* LSN of the last sync. */
 
 	DB_LOG_STAT stat;		/* Log statistics. */

@@ -14,6 +14,9 @@
 # TEST	initializes the same subsystems as the original env.
 # TEST	Make sure that the attempt to change subsystems when
 # TEST	joining an env fails with the appropriate messages.
+# TEST
+# TEST  Make sure that full blob logging is enabled when replication
+# TEST  is enabled, and that it cannot be disabled.
 
 proc env014 { } {
 	source ./include.tcl
@@ -111,6 +114,19 @@ proc env014 { } {
 	error_check_good env_open [is_valid_env $env] TRUE
 	catch {set env2 [berkdb_env_noerr -home $testdir -txn]} ret
 	error_check_good ds+txn [is_substr $ret "incompatible"] 1
+
+	error_check_good env_close [$env close] 0
+	error_check_good env_remove [berkdb envremove -force -home $testdir] 0
+
+  	# Enabling replication enables DB_LOG_BLOB, and it cannot be disabled
+	puts "\tEnv$tnum.i: Replication enables DB_LOG_BLOB."
+	set env [berkdb_env_noerr -create -rep_master \
+	    -rep_transport [list 1 replsend]  -lock -txn -home $testdir]
+	error_check_good env_open [is_valid_env $env] TRUE
+	error_check_good log_blob_on [$env log_get_config blob] 1
+	catch {$env log_config blob off} ret
+	error_check_good log_blob_enable \
+	    [is_substr $ret "DB_LOG_BLOB must be enabled"] 1
 
 	error_check_good env_close [$env close] 0
 	error_check_good env_remove [berkdb envremove -force -home $testdir] 0

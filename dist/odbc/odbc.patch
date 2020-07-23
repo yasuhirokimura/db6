@@ -38,7 +38,7 @@
  /**
 --- a/zipfile.c	Fri May 10 17:26:39 2013 +0800
 +++ b/zipfile.c	Fri May 10 18:22:18 2013 +0800
-@@ -233,7 +233,10 @@
+@@ -226,7 +226,10 @@
  	goto error;
      }
      data = (unsigned char *) mmap(0, length, PROT_READ,
@@ -50,7 +50,7 @@
      if (data == MAP_FAILED) {
  	goto error;
      }
-@@ -1288,7 +1291,12 @@
+@@ -1303,7 +1306,12 @@
  #else
      size = sizeof (mem_blk) + psize + length + 1;
      mb = (mem_blk *) mmap(0, size, PROT_READ | PROT_WRITE,

@@ -112,6 +112,11 @@ proc rep037_sub { method niter tnum logset recargs config largs } {
 		set privargs " -private "
 	}
 
+	set blobargs ""
+    	if { [can_support_blobs $method $largs] == 1 } {
+		set blobargs "-blob_threshold 1024"
+	}
+
 	env_cleanup $testdir
 
 	replsetup $testdir/MSGQUEUEDIR
@@ -162,7 +167,7 @@ proc rep037_sub { method niter tnum logset recargs config largs } {
 	repladd 1
 	set ma_envcmd "berkdb_env_noerr -create $m_txnargs $repmemargs \
 	    $m_logargs -log_max $log_max -errpfx MASTER $verbargs \
-	    $privargs \
+	    $privargs $blobargs \
 	    -home $masterdir -rep_transport \[list 1 replsend\]"
 	set masterenv [eval $ma_envcmd $recargs -rep_master]
 	$masterenv rep_limit 0 [expr 32 * 1024]
@@ -171,7 +176,7 @@ proc rep037_sub { method niter tnum logset recargs config largs } {
 	repladd 2
 	set cl_envcmd "berkdb_env_noerr -create $c_txnargs $repmemargs \
 	    $c_logargs -log_max $log_max -errpfx CLIENT $verbargs \
-	    $privargs \
+	    $privargs $blobargs \
 	    -home $clientdir -rep_transport \[list 2 replsend\]"
 	set clientenv [eval $cl_envcmd $recargs -rep_client]
 	error_check_good client_env [is_valid_env $clientenv] TRUE

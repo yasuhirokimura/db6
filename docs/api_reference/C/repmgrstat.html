@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.0</p>
+        <p>Library Version 12.1.6.1</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -88,6 +88,35 @@ DB_ENV-&gt;repmgr_stat(DB_ENV *env, DB_REPMGR_STAT **statp,
                 </p>
             <p>
                     The number of currently active election threads.
+                </p>
+          </li>
+          <li>
+            <p>
+                    <span class="bold"><strong>uintmax_t st_incoming_msgs_dropped;</strong></span>
+                </p>
+            <p>
+                    The number of incoming messages that were dropped because the incoming
+                    queue was full. (Berkeley DB replication is tolerant of dropped
+                    messages, and will automatically request retransmission of any missing
+                    messages as needed.)
+                </p>
+          </li>
+          <li>
+            <p>
+                    <span class="bold"><strong>u_int32_t st_incoming_queue_bytes;</strong></span>
+                </p>
+            <p>
+                    Bytes component of the memory consumption for the messages currently
+                    in the incoming queue.
+                </p>
+          </li>
+          <li>
+            <p>
+                    <span class="bold"><strong>u_int32_t st_incoming_queue_gbytes;</strong></span>
+                </p>
+            <p>
+                    Gigabytes component of the memory consumption for the messages currently
+                    in the incoming queue.
                 </p>
           </li>
           <li>
@@ -183,7 +212,7 @@ DB_ENV-&gt;repmgr_stat(DB_ENV *env, DB_REPMGR_STAT **statp,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp54558312"></a>Parameters</h3>
+              <h3 class="title"><a id="idp4418616"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -191,7 +220,7 @@ DB_ENV-&gt;repmgr_stat(DB_ENV *env, DB_REPMGR_STAT **statp,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp54556152"></a>statp</h4>
+                <h4 class="title"><a id="idp4371944"></a>statp</h4>
               </div>
             </div>
           </div>
@@ -204,7 +233,7 @@ DB_ENV-&gt;repmgr_stat(DB_ENV *env, DB_REPMGR_STAT **statp,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp54567464"></a>flags</h4>
+                <h4 class="title"><a id="idp4423512"></a>flags</h4>
               </div>
             </div>
           </div>
@@ -230,7 +259,7 @@ DB_ENV-&gt;repmgr_stat(DB_ENV *env, DB_REPMGR_STAT **statp,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp54582576"></a>Errors</h3>
+              <h3 class="title"><a id="idp4437584"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -246,7 +275,7 @@ DB_ENV-&gt;repmgr_stat(DB_ENV *env, DB_REPMGR_STAT **statp,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp54587048"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp4442072"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -260,7 +289,7 @@ DB_ENV-&gt;repmgr_stat(DB_ENV *env, DB_REPMGR_STAT **statp,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp54588128"></a>Class</h3>
+              <h3 class="title"><a id="idp4422160"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -272,7 +301,7 @@ DB_ENV-&gt;repmgr_stat(DB_ENV *env, DB_REPMGR_STAT **statp,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp54589336"></a>See Also</h3>
+              <h3 class="title"><a id="idp4444360"></a>See Also</h3>
             </div>
           </div>
         </div>

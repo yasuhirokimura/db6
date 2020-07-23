@@ -75,7 +75,8 @@ __repmgr_stat(env, statp, flags)
 		memset(stats, 0, sizeof(DB_REPMGR_STAT));
 		stats->st_max_elect_threads = tmp;
 	}
-	stats->st_incoming_queue_size = (u_int32_t)db_rep->input_queue.size;
+	stats->st_incoming_queue_gbytes = db_rep->input_queue.gbytes;
+	stats->st_incoming_queue_bytes = db_rep->input_queue.bytes;
 	LOCK_MUTEX(db_rep->mutex);
 	for (i = 0; i < db_rep->site_cnt; i++) {
 		site = SITE_FROM_EID(i);
@@ -163,6 +164,11 @@ __repmgr_print_stats(env, flags)
 	    (u_long)sp->st_msgs_queued);
 	__db_dl(env, "Number of messages discarded due to queue length",
 	    (u_long)sp->st_msgs_dropped);
+	__db_dlbytes(env, "Incoming message size in queue",
+	    (u_long)sp->st_incoming_queue_gbytes, (u_long)0,
+	    (u_long)sp->st_incoming_queue_bytes);
+	__db_dl(env, "Number of messages discarded due to incoming queue full",
+	    (u_long)sp->st_incoming_msgs_dropped);
 	__db_dl(env, "Number of existing connections dropped",
 	    (u_long)sp->st_connection_drop);
 	__db_dl(env, "Number of failed new connection attempts",
@@ -179,8 +185,6 @@ __repmgr_print_stats(env, flags)
 	    (u_long)sp->st_site_views);
 	__db_dl(env, "Number of automatic replication process takeovers",
 	    (u_long)sp->st_takeovers);
-	__db_dl(env, "Size of incoming message queue",
-	    (u_long)sp->st_incoming_queue_size);
 
 	__os_ufree(env, sp);
 

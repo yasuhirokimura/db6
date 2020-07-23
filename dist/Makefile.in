@@ -107,6 +107,7 @@ libxso_major=	$(libcxx_base)-$(LIBMAJOR)@SOSUFFIX@
 ##################################################
 SQLFLAGS=	-I$(builddir) -I$(builddir)/sql -I$(langdir)/sql/generated \
 		-D_HAVE_SQLITE_CONFIG_H @SQL_FLAGS@
+LIBSQLSO_LIBS=  @LIBSQLSO_LIBS@ @LIBCSO_LIBS@ @LIBSO_LIBS@
 
 libsql_base=	libdb_sql
 libsql=		$(libsql_base).a
@@ -463,6 +464,7 @@ JAVA_DBSRCS=\
 	$(JAVA_SLEEPYCAT)/db/LogVerifyConfig.java \
 	$(JAVA_SLEEPYCAT)/db/MemoryException.java \
 	$(JAVA_SLEEPYCAT)/db/MessageHandler.java \
+	$(JAVA_SLEEPYCAT)/db/MetaCheckSumFailException.java \
 	$(JAVA_SLEEPYCAT)/db/MultipleNIODataEntry.java \
 	$(JAVA_SLEEPYCAT)/db/MultipleKeyNIODataEntry.java \
 	$(JAVA_SLEEPYCAT)/db/MultipleRecnoNIODataEntry.java \
@@ -898,7 +900,7 @@ $(libsql_version): $(SQL_OBJS)
 
 # Shared SQL library.
 $(libsqlso_target): $(SQL_OBJS)
-	$(SOLINK) $(SOFLAGS) $(LDFLAGS) -o $@ $(SQL_OBJS) $(LIBCSO_LIBS)
+	$(SOLINK) $(SOFLAGS) $(LDFLAGS) -o $@ $(SQL_OBJS) $(LIBSQLSO_LIBS)
 	$(RM) $(libsql)
 	$(LN) -s .libs/$(libsql_version) $(libsql)
 
@@ -1355,6 +1357,13 @@ cutest: $(CUTEST_OBJS) $(DEF_LIB) db_tuner.lo
 	$(CCLINK) -o $@ \
 	    $(LDFLAGS) $(CUTEST_OBJS) $(DEF_LIB) $(TEST_LIBS) $(LIBS)
 	$(POSTLINK) $@
+
+TEST_FAILOBJS=test_failchk@o@
+test_failchk@o@: $(testdir)/c/test_failchk.c
+	$(CC) $(CUTEST_FLAGS) $?
+test_failchk: $(TEST_FAILOBJS) $(DEF_LIB)
+	$(CCLINK) -o $@ \
+	    $(LDFLAGS) $(TEST_FAILOBJS) $(DEF_LIB) $(TEST_LIBS) $(LIBS)
 
 db_repsite@o@: $(testdir)/repmgr/db_repsite.cpp
 	$(CXX) $(CXXFLAGS) $?
@@ -2231,8 +2240,6 @@ mt19937db@o@: $(srcdir)/crypto/mersenne/mt19937db.c
 mut_alloc@o@: $(srcdir)/mutex/mut_alloc.c
 	 $(CC) $(CFLAGS) $?
 mut_failchk@o@: $(srcdir)/mutex/mut_failchk.c
-	 $(CC) $(CFLAGS) $?
-mut_fcntl@o@: $(srcdir)/mutex/mut_fcntl.c
 	 $(CC) $(CFLAGS) $?
 mut_method@o@: $(srcdir)/mutex/mut_method.c
 	 $(CC) $(CFLAGS) $?

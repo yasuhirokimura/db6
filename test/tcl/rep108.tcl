@@ -101,6 +101,11 @@ proc rep108_sub { method niter tnum logset view create largs } {
 		set privargs " -private "
 	}
 
+    	set blobargs ""
+    	if { [can_support_blobs $method $largs] == 1 } {
+		set blobargs "-blob_threshold 100"
+    	}
+
 	env_cleanup $testdir
 
 	set qdir $testdir/MSGQUEUEDIR
@@ -227,7 +232,7 @@ proc rep108_sub { method niter tnum logset view create largs } {
 		set testfile "test.$i.db"
 		puts "\t\tRep$tnum.$i: Creating $testfile with $dbtxn."
 		set db [eval {berkdb_open_noerr} -env $masterenv $dbtxn \
-		    -create -mode 0644 $omethod $largs $testfile]
+		    -create -mode 0644 $blobargs $omethod $largs $testfile]
 		error_check_good reptest_db [is_valid_db $db] TRUE
 		error_check_good dbclose [$db close] 0
 	}
@@ -348,7 +353,7 @@ proc rep108_sub { method niter tnum logset view create largs } {
 		set testfile "test.$i.db"
 		puts "\t\tRep$tnum.$verify_letter.$i: Running rep_test for $testfile."
 		set db [eval {berkdb_open_noerr} -env $masterenv -auto_commit\
-		    -create -mode 0644 $omethod $largs $testfile]
+		    -create -mode 0644 $blobargs $omethod $largs $testfile]
 		error_check_good reptest_db [is_valid_db $db] TRUE
 
 		eval rep_test $method $masterenv $db $nentries $start $mult \
@@ -439,6 +444,13 @@ proc rep108_sub { method niter tnum logset view create largs } {
 		} elseif { $view == "none" } {
 			puts "\t\tRep$tnum: $viewdir ($dbname) should not exist"
 			error_check_good db$i [file exists $viewdir/$dbname] 0
+		    	if { $blobargs != "" } {
+				set blobdirid [expr $i + 1]
+				puts \
+		"\t\tRep$tnum: $viewdir/__db_bl/__db$blobdirid should not exist"
+				error_check_good blob_dir_db$i [file exists \
+	 			    "$viewdir/__db_bl/__db$blobdirid"] 0
+		    	}
 		} else {
 			# odd digit case
 			set replicated [string match "*\[13579\]*" $dbname]
@@ -450,6 +462,14 @@ proc rep108_sub { method niter tnum logset view create largs } {
 			"\t\tRep$tnum: $viewdir ($dbname) should not exist"
 				error_check_good db$i \
 				    [file exists $viewdir/$dbname] 0
+		    		if { $blobargs != "" } {
+					set blobdirid [expr $i + 1]
+					puts \
+		"\t\tRep$tnum: $viewdir/__db_bl/__db$blobdirid should not exist"
+					error_check_good blob_dir_db$i \
+					    [file exists \
+	 			    	    "$viewdir/__db_bl/__db$blobdirid"] 0
+		    		}
 			}
 		}
 	}

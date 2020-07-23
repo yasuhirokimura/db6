@@ -27,13 +27,13 @@ namespace BerkeleyDB {
 
         #region Config Flags
         /// <summary>
-        /// If true, the replication master will send groups of records to the
+        /// If true, the replication master sends groups of records to the
         /// clients in a single network transfer
         /// </summary>
         public bool BulkTransfer;
         /// <summary>
-        /// If true, the client will delay synchronizing to a newly declared
-        /// master (defaults to false). Clients configured in this way will
+        /// If true, the client delays synchronizing to a newly declared
+        /// master (defaults to false). Clients configured in this way
         /// remain unsynchronized until the application calls
         /// <see cref="DatabaseEnvironment.RepSync"/>. 
         /// </summary>
@@ -48,7 +48,7 @@ namespace BerkeleyDB {
         /// </summary>
         public bool InMemory;
         /// <summary>
-        /// If true, master leases will be used for this site (defaults to
+        /// If true, master leases are used for this site (defaults to
         /// false). 
         /// </summary>
         /// <remarks>
@@ -58,7 +58,7 @@ namespace BerkeleyDB {
         /// </remarks>
         public bool UseMasterLeases;
         /// <summary>
-        /// If true, the replication master will automatically re-initialize
+        /// If true, the replication master automatically re-initializes
         /// outdated clients (defaults to true). 
         /// </summary>
         public bool AutoInit;
@@ -69,9 +69,9 @@ namespace BerkeleyDB {
         /// </summary>
         public bool NoBlocking;
         /// <summary>
-        /// If true, the Replication Manager will observe the strict "majority"
+        /// If true, the Replication Manager observes the strict "majority"
         /// rule in managing elections, even in a group with only 2 sites. This
-        /// means the client in a 2-site group will be unable to take over as
+        /// means the client in a 2-site group is unable to take over as
         /// master if the original master fails or becomes disconnected. (See
         /// the Elections section in the Berkeley DB Reference Guide for more
         /// information.) Both sites in the replication group should have the
@@ -84,6 +84,25 @@ namespace BerkeleyDB {
         /// have become disconnected (defaults to true).
         /// </summary>
         public bool Elections;
+        /// <summary>
+        /// This flag is used to specify the preferred master site in a
+        /// replication group operating in preferred master mode. A preferred
+        /// master replication group must contain only two sites, with one site
+        /// specified as the preferred master site and the other site specified
+        /// as the client site. The preferred master site operates as the
+        /// master site whenever possible.
+        /// </summary>
+        public bool PrefmasMaster;
+        /// <summary>
+        /// This flag is used to specify the client site in a replication group
+        /// operating in preferred master mode. A preferred master replication
+        /// group must contain only two sites, with one site specified as the
+        /// preferred master site and the other site specified as the client
+        /// site. The client site in a preferred master replication group takes
+        /// over temporarily as master when the preferred master site is
+        /// unavailable.
+        /// </summary>
+        public bool PrefmasClient;
         #endregion Config Flags
 
         #region Timeout Values
@@ -106,14 +125,14 @@ namespace BerkeleyDB {
         private uint _checkpointDelay;
         internal bool checkpointDelayIsSet;
         /// <summary>
-        /// The amount of time a master site will delay between completing a
+        /// The amount of time a master site delays between completing a
         /// checkpoint and writing a checkpoint record into the log.
         /// </summary>
         /// <remarks>
         /// This delay allows clients to complete their own checkpoints before
         /// the master requires completion of them. The default is 30 seconds.
         /// If all databases in the environment, and the environment's
-        /// transaction log, are configured to reside in memory (never preserved
+        /// transaction log, are configured to reside in-memory (never preserved
         /// to disk), then, although checkpoints are still necessary, the delay
         /// is not useful and should be set to 0.
         /// </remarks>
@@ -128,7 +147,7 @@ namespace BerkeleyDB {
         private uint _connectionRetry;
         internal bool connectionRetryIsSet;
         /// <summary>
-        /// The amount of time the replication manager will wait before trying
+        /// The amount of time the replication manager waits before trying
         /// to re-establish a connection to another site after a communication
         /// failure. The default wait time is 30 seconds.
         /// </summary>
@@ -157,7 +176,7 @@ namespace BerkeleyDB {
         private uint _electionRetry;
         internal bool electionRetryIsSet;
         /// <summary>
-        /// Configure the amount of time the replication manager will wait
+        /// Configure the amount of time the replication manager waits
         /// before retrying a failed election. The default wait time is 10
         /// seconds. 
         /// </summary>
@@ -208,7 +227,7 @@ namespace BerkeleyDB {
         /// <summary>
         /// The frequency at which the replication manager, running at a master
         /// site, broadcasts a heartbeat message in an otherwise idle system.
-        /// When 0 (the default), no heartbeat messages will be sent. 
+        /// When 0 (the default), no heartbeat messages are sent. 
         /// </summary>
         public uint HeartbeatSend {
             get { return _heartbeatSend; }
@@ -368,9 +387,9 @@ namespace BerkeleyDB {
         /// <remarks>
         /// <para>
         /// If the client detects a gap in the sequence of incoming log records
-        /// or database pages, Berkeley DB will wait for at least
+        /// or database pages, Berkeley DB waits for at least
         /// <paramref name="min"/> microseconds before requesting retransmission
-        /// of the missing record. Berkeley DB will double that amount before
+        /// of the missing record. Berkeley DB doubles that amount before
         /// requesting the same missing record again, and so on, up to a
         /// maximum threshold of <paramref name="max"/> microseconds.
         /// </para>
@@ -412,20 +431,20 @@ namespace BerkeleyDB {
         internal bool transmitLimitIsSet;
         /// <summary>
         /// The gigabytes component of the byte-count limit on the amount of
-        /// data that will be transmitted from a site in response to a single
+        /// data that is transmitted from a site in response to a single
         /// message processed by
         /// <see cref="DatabaseEnvironment.RepProcessMessage"/>.
         /// </summary>
         public uint TransmitLimitGBytes { get { return _gbytes; } }
         /// <summary>
         /// The bytes component of the byte-count limit on the amount of data
-        /// that will be transmitted from a site in response to a single
+        /// that is transmitted from a site in response to a single
         /// message processed by
         /// <see cref="DatabaseEnvironment.RepProcessMessage"/>.
         /// </summary>
         public uint TransmitLimitBytes { get { return _bytes; } }
         /// <summary>
-        /// Set a byte-count limit on the amount of data that will be
+        /// Set a byte-count limit on the amount of data that is 
         /// transmitted from a site in response to a single message processed by
         /// <see cref="DatabaseEnvironment.RepProcessMessage"/>. The limit is
         /// not a hard limit, and the record that exceeds the limit is the last
@@ -444,19 +463,63 @@ namespace BerkeleyDB {
         /// <param name="GBytes">
         /// The number of gigabytes which, when added to
         /// <paramref name="Bytes"/>, specifies the maximum number of bytes that
-        /// will be sent in a single call to 
+        /// are sent in a single call to 
         /// <see cref="DatabaseEnvironment.RepProcessMessage"/>.
         /// </param>
         /// <param name="Bytes">
         /// The number of bytes which, when added to 
         /// <paramref name="GBytes"/>, specifies the maximum number of bytes
-        /// that will be sent in a single call to
+        /// that are sent in a single call to
         /// <see cref="DatabaseEnvironment.RepProcessMessage"/>.
         /// </param>
         public void TransmitLimit(uint GBytes, uint Bytes) {
             transmitLimitIsSet = true;
             _gbytes = GBytes;
             _bytes = Bytes;
+        }
+
+        private uint _inqmaxgbytes;
+        private uint _inqmaxbytes;
+        internal bool repmgrIncomingQueueMaxIsSet;
+        /// <summary>
+        /// The gigabytes component of the maximum amount of dynamic memory
+        /// used by the Replication Manager incoming queue.
+        /// </summary>
+        public uint RepmgrIncomingQueueMaxGBytes { get { return _inqmaxgbytes; } }
+        /// <summary>
+        /// The bytes component of the maximum amount of dynamic memory
+        /// used by the Replication Manager incoming queue.
+        /// </summary>
+        public uint RepmgrIncomingQueueMaxBytes { get { return _inqmaxbytes; } }
+        /// <summary>
+        /// Set a byte-count limit on the maximum amount of dynamic memory
+        /// used by the Replication Manager incoming queue.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// By default, the Replication Manager incoming queue size has a
+        /// limit of 100MB.
+        /// </para>
+        /// <para>
+        /// If both <paramref name="GBytes"/> and <paramref name="Bytes"/> are
+        /// zero, then the Replication Manager incoming queue size is limited
+        /// by available heap memory.
+        /// </para>
+        /// </remarks>
+        /// <param name="GBytes">
+        /// The number of gigabytes which, when added to
+        /// <paramref name="Bytes"/>, specifies the maximum amount of dynamic
+        /// memory used by the Replication Manager incoming queue.
+        /// </param>
+        /// <param name="Bytes">
+        /// The number of bytes which, when added to 
+        /// <paramref name="GBytes"/>, specifies the maximum amount of dynamic
+        /// memory used by the Replication Manager incoming queue.
+        /// </param>
+        public void RepmgrIncomingQueueMax(uint GBytes, uint Bytes) {
+            repmgrIncomingQueueMaxIsSet = true;
+            _inqmaxgbytes = GBytes;
+            _inqmaxbytes = Bytes;
         }
 
         /// <summary>
@@ -466,10 +529,10 @@ namespace BerkeleyDB {
         public ReplicationTransportDelegate Transport;
 
         /// <summary>
-        /// Specify how master and client sites will handle acknowledgment of
-        /// replication messages which are necessary for "permanent" records.
+        /// Specify how master and client sites handle the acknowledgment of
+        /// replication messages which is necessary for "permanent" records.
         /// The current implementation requires all sites in a replication group
-        /// configure the same acknowledgement policy. 
+        /// to configure the same acknowledgement policy. 
         /// </summary>
         /// <seealso cref="AckTimeout"/>
         public AckPolicy RepMgrAckPolicy;

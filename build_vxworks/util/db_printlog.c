@@ -32,6 +32,7 @@ int db_printlog_env_init_print_47 __P((ENV *, DB_DISTAB *));
 int db_printlog_env_init_print_48 __P((ENV *, DB_DISTAB *));
 int db_printlog_env_init_print_53 __P((ENV *, DB_DISTAB *));
 int db_printlog_env_init_print_60 __P((ENV *, DB_DISTAB *));
+int db_printlog_env_init_print_61 __P((ENV *, DB_DISTAB *));
 int db_printlog_lsn_arg __P((char *, DB_LSN *));
 int db_printlog_main __P((int, char *[]));
 int db_printlog_open_rep_db __P((DB_ENV *, DB **, DBC **));
@@ -222,7 +223,7 @@ db_printlog_main(argc, argv)
 	}
 
 	/*
-	 * Set data_len after environment opens. We want the value passed
+	 * Set data_len after environment opens.  The value passed
 	 * by -D takes priority.
 	 */
 	if (data_len != NULL && (ret = dbenv->set_data_len(dbenv,
@@ -623,6 +624,19 @@ db_printlog_env_init_print_60(env, dtabp)
 
 	ret = __db_add_recovery_int(env,
 	     dtabp,__fop_write_file_60_print, DB___fop_write_file_60);
+
+	return (ret);
+}
+
+int
+db_printlog_env_init_print_61(env, dtabp)
+	ENV *env;
+	DB_DISTAB *dtabp;
+{
+	int ret;
+
+	ret = __db_add_recovery_int(env,
+	     dtabp,__dbreg_register_42_print, DB___dbreg_register_42);
 
 	return (ret);
 }

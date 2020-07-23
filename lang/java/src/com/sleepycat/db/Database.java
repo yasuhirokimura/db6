@@ -1319,6 +1319,28 @@ from the {@link com.sleepycat.db.Environment#beginCDSGroup Environment.beginCDSG
     }
 
     /**
+    Print database statistics to a specified output channel (see the
+    setMsgfile() method for more information), or passed to an application
+    callback function (see the setMsgcall() method for more information).
+    <p>
+    @param config
+    The statistics returned; if null, default statistics are returned.
+    <p>
+    @return
+    A non-zero error value on failure and 0 on success.
+    <p>
+    @throws DeadlockException if the operation was selected to resolve a
+    deadlock.
+    <p>
+    @throws DatabaseException if a failure occurs.
+    */
+    public int printStats(StatsConfig config)
+        throws DatabaseException {
+
+        return db.stat_print(StatsConfig.checkNull(config).getFlags());
+    }
+
+    /**
     <p>
 Remove the database specified by the file and database parameters.
 <p>
@@ -1650,5 +1672,22 @@ or failure.
         dbConfig.configureDatabase(db, DatabaseConfig.DEFAULT);
         return db.verify(fileName, databaseName, dumpStream,
             VerifyConfig.checkNull(verifyConfig).getFlags());
+    }
+
+    /**
+    Sets the path of a file to store statistical information.
+    <p>
+    @param file
+    The path of a file to store statistical information.
+    <p>
+    @throws DatabaseException if a failure occurs.
+    */
+    public void setMsgfile(java.io.File file) throws DatabaseException {
+        if (file != null) {
+            db.set_msgfile(file.toString());
+        }
+        else {
+            db.set_msgfile(null);
+        }
     }
 }

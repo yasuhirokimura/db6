@@ -105,6 +105,11 @@ proc rep060_sub { method niter tnum logset recargs opt largs } {
 		set repmemargs "-rep_inmem_files "
 	}
 
+	set blobargs ""
+    	if { [can_support_blobs $method $largs] == 1 } {
+		set blobargs "-blob_threshold 100"
+	}
+
 	env_cleanup $testdir
 
 	replsetup $testdir/MSGQUEUEDIR
@@ -120,7 +125,11 @@ proc rep060_sub { method niter tnum logset recargs opt largs } {
 	# four times the size of the in-memory log buffer.
 	set pagesize 4096
 	append largs " -pagesize $pagesize "
-	set log_max [expr $pagesize * 4]
+	# The blob metadb uses the default page size for a given platform.
+	# On some platforms, this is the same size as pagesize*4.  We
+	# must set log_max to a larger value to avoid failures logging
+	# blob metadb operations.
+	set log_max [expr $pagesize * 8]
 
 	set m_logtype [lindex $logset 0]
 	set c_logtype [lindex $logset 1]
@@ -134,7 +143,7 @@ proc rep060_sub { method niter tnum logset recargs opt largs } {
 	# Open a master.
 	repladd 1
 	set ma_envcmd "berkdb_env_noerr -create $m_txnargs \
-	    $repmemargs \
+	    $repmemargs $blobargs \
 	    $m_logargs -log_max $log_max -errpfx MASTER $verbargs \
 	    -home $masterdir -rep_transport \[list 1 replsend\]"
 	set masterenv [eval $ma_envcmd $recargs -rep_master]
@@ -143,7 +152,7 @@ proc rep060_sub { method niter tnum logset recargs opt largs } {
 	puts "\tRep$tnum.a: Open client."
 	repladd 2
 	set cl_envcmd "berkdb_env_noerr -create $c_txnargs \
-	    $repmemargs \
+	    $repmemargs $blobargs \
 	    $c_logargs -log_max $log_max -errpfx CLIENT $verbargs \
 	    -home $clientdir -rep_transport \[list 2 replsend\]"
 	set clientenv [eval $cl_envcmd $recargs -rep_client]

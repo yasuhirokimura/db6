@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.0</p>
+        <p>Library Version 12.1.6.1</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -41,7 +41,7 @@
             for information on sites from which you can download Tcl
             and which Tcl versions are compatible with Berkeley DB.
             These notes assume that Tcl is installed as
-                <code class="filename">d:\tcl</code>, but you can change that
+            <code class="filename">d:\tcl</code>, but you can change that
             if you want.
         </p>
       <p>
@@ -63,21 +63,21 @@
                 <div class="itemizedlist"><ul type="disc"><li>
                         In Visual Studio 2005/Visual Studio
                         2008 - Choose <span class="emphasis"><em>Tools -&gt; Options
-                            -&gt; Projects -&gt; VC++
-                            Directories</em></span>. Under the "Show
+                        -&gt; Projects -&gt; VC++
+                        Directories</em></span>. Under the "Show
                         directories for" pull-down, select "Include
                         files". Add the full pathname for
-                            <code class="filename">d:\tcl\include</code>, then
+                        <code class="filename">d:\tcl\include</code>, then
                         click OK. 
                     </li><li>
-                        In Visual Studio 2010 - Right-click
+                        In Visual Studio 2010/Visual Studio 2012 - Right-click
                         db_tcl project, choose
-                            <span class="emphasis"><em>Properties-&gt;Configuration
-                            Properties-&gt; VC++
-                            Directories-&gt;Include
-                            Directories</em></span>. Add the full
+                        <span class="emphasis"><em>Properties-&gt;Configuration
+                        Properties-&gt; VC++
+                        Directories-&gt;Include
+                        Directories</em></span>. Add the full
                         pathnames for
-                            <code class="filename">d:\tcl\include</code>, then
+                       <code class="filename">d:\tcl\include</code>, then
                         click OK. 
                     </li></ul></div>
                 This is the directory that contains
@@ -88,27 +88,29 @@
                 <div class="itemizedlist"><ul type="disc"><li>
                         In Visual Studio 2005/Visual Studio
                         2008 - Choose <span class="emphasis"><em>Tools -&gt; Options
-                            -&gt; Projects -&gt; VC++
-                            Directories</em></span>. Under the "Show
+                        -&gt; Projects -&gt; VC++
+                        Directories</em></span>. Under the "Show
                         directories for" pull-down, select "Library
                         files". Add the full pathname for the
-                            <code class="filename">d:\tcl\lib</code> directory,
+                       <code class="filename">d:\tcl\lib</code> directory,
                         then click OK. 
                     </li><li>
                         In Visual Studio 2010 - Right-click
                         db_tcl project, choose
-                            <span class="emphasis"><em>Properties-&gt;Configuration
-                            Properties-&gt; VC++
-                            Directories-&gt;Library
-                            Directories</em></span>. Add the full
+                        <span class="emphasis"><em>Properties-&gt;Configuration
+                        Properties-&gt; VC++
+                        Directories-&gt;Library
+                        Directories</em></span>. Add the full
                         pathname for the
-                            <code class="filename">d:\tcl\lib</code> directory,
+                        <code class="filename">d:\tcl\lib</code> directory,
                         then click OK. 
                     </li></ul></div>
                 This is the directory needed to find
                     <code class="filename">tcl85.lib</code> (or whatever the
-                library is named in your distribution).</li>
-          <li>Set the build type to Release or Debug in the
+                library is named in your distribution).
+            </li>
+          <li>
+                Set the build type to Release or Debug in the
                 drop-down on the tool bar.
             </li>
           <li>
@@ -122,12 +124,12 @@
             <table class="simplelist" border="0" summary="Simple list">
               <tr>
                 <td>
-                  <code class="filename">build_windows\Win32\Debug\libdb_tcl60d.dll</code>
+                  <code class="filename">build_windows\Win32\Debug\libdb_tcl61d.dll</code>
                 </td>
               </tr>
               <tr>
                 <td>
-                  <code class="filename">build_windows\Win32\Release\libdb_tcl60.dll</code>
+                  <code class="filename">build_windows\Win32\Release\libdb_tcl61.dll</code>
                 </td>
               </tr>
             </table>
@@ -139,10 +141,10 @@
             need to change the name of the Tcl library used in the
             build (for example, <code class="filename">tcl85.lib</code>) to the
             appropriate name. To do this, right click on
-                <span class="emphasis"><em>db_tcl</em></span>, go to
-                <span class="emphasis"><em>Properties -&gt; Linker -&gt; Input -&gt;
-                Additional dependencies</em></span> and change
-                <code class="filename">tcl85.lib</code> to match the Tcl
+            <span class="emphasis"><em>db_tcl</em></span>, go to
+            <span class="emphasis"><em>Properties -&gt; Linker -&gt; Input -&gt;
+            Additional dependencies</em></span> and change
+            <code class="filename">tcl85.lib</code> to match the Tcl
             version you are using.
         </p>
     </div>

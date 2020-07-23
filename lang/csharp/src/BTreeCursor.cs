@@ -32,7 +32,7 @@ namespace BerkeleyDB {
         /// same position in the database as the original cursor (if any) and
         /// hold the same locks (if any). If false, or if the original cursor does
         /// not hold a database position and locks, the created cursor is
-        /// uninitialized and will behave like a cursor newly created by
+        /// uninitialized and behaves like a cursor newly created by
         /// <see cref="BTreeDatabase.Cursor"/>.</param>
         /// <returns>A newly created cursor</returns>
         public new BTreeCursor Duplicate(bool keepPosition) {

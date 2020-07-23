@@ -38,7 +38,7 @@ __heap_vrfy_meta(dbp, vdp, meta, pgno, flags)
 	HEAP *h;
 	VRFY_PAGEINFO *pip;
 	db_pgno_t last_pgno, max_pgno, npgs;
-	int isbad, ret;
+	int isbad, ret, t_ret;
 	db_seq_t blob_id;
 
 	if ((ret = __db_vrfy_getpageinfo(vdp, pgno, &pip)) != 0)
@@ -107,24 +107,29 @@ __heap_vrfy_meta(dbp, vdp, meta, pgno, flags)
  * Where 64-bit integer support is not available,
  * return an error if the file has any blobs.
  */
+	t_ret = 0;
 #ifdef HAVE_64BIT_TYPES
-	GET_BLOB_FILE_ID(dbp->env, meta, blob_id, ret);
-	if (ret != 0) {
+	GET_BLOB_FILE_ID(dbp->env, meta, blob_id, t_ret);
+	if (t_ret != 0) {
 		isbad = 1;
 		EPRINT((dbp->env, DB_STR_A("1173",
 		    "Page %lu: blob file id overflow.", "%lu"), (u_long)pgno));
+		if (ret == 0)
+			ret = t_ret;
 	}
 #else /* HAVE_64BIT_TYPES */
 	/*
 	 * db_seq_t is an int on systems that do not have 64 integers types, so
 	 * this will compile and run.
 	 */
-	GET_BLOB_FILE_ID(env, meta, blob_id, ret);
-	if (ret != 0 || blob_id != 0) {
+	GET_BLOB_FILE_ID(env, meta, blob_id, t_ret);
+	if (t_ret != 0 || blob_id != 0) {
 		isbad = 1;
 		EPRINT((env, DB_STR_A("1206",
 		    "Page %lu: blobs require 64 integer compiler support.",
 		    "%lu"), (u_long)pgno));
+		if (ret == 0)
+			ret = t_ret;
 	}
 #endif
 
@@ -151,13 +156,14 @@ __heap_vrfy(dbp, vdp, h, pgno, flags)
 {
 	HEAPBLOBHDR bhdr;
 	HEAPHDR *hdr;
-	int cnt, i, j, ret;
+	int i, j, ret;
 	off_t blob_size;
 	db_seq_t blob_id, file_id;
 	db_indx_t *offsets, *offtbl, end;
+	u_int32_t cnt;
 
 	if ((ret = __db_vrfy_datapage(dbp, vdp, h, pgno, flags)) != 0)
-		goto err;
+		return (ret);
 
 	if (TYPE(h) == P_IHEAP)
 		/* Nothing to verify on a region page. */
@@ -202,7 +208,7 @@ __heap_vrfy(dbp, vdp, h, pgno, flags)
 			 * file size as is stored in the database record.
 			 */
 			memcpy(&bhdr, hdr, sizeof(HEAPBLOBHDR));
-			blob_id = bhdr.id;
+			blob_id = (db_seq_t)bhdr.id;
 			GET_BLOB_SIZE(dbp->env, bhdr, blob_size, ret);
 			if (ret != 0 || blob_size < 0) {
 				EPRINT((dbp->env, DB_STR_A("1175",
@@ -211,7 +217,7 @@ __heap_vrfy(dbp, vdp, h, pgno, flags)
 				ret = DB_VERIFY_BAD;
 				goto err;
 			}
-			file_id = bhdr.file_id;
+			file_id = (db_seq_t)bhdr.file_id;
 			if (file_id == 0) {
 				EPRINT((dbp->env, DB_STR_A("1177",
 			"Page %lu: invalid blob dir id %llu at item %lu",
@@ -242,7 +248,7 @@ __heap_vrfy(dbp, vdp, h, pgno, flags)
 	 * record.  We can't use the P_ENTRY macro because we've kept track of
 	 * the offsets, not the indexes.
 	 */
-	for (i = 0; i < cnt - 1; i++) {
+	for (i = 0; i < (int)cnt - 1; i++) {
 		hdr = (HEAPHDR *)((u_int8_t *)h + offsets[i]);
 		end = offsets[i] + HEAP_HDRSIZE(hdr) + hdr->size;
 		if (end > offsets[i+1]) {
@@ -431,14 +437,19 @@ __heap_salvage(dbp, vdp, pgno, h, handle, callback, flags)
 			if ((ret =
 			    __os_malloc(env, dbt.size, &dbt.data)) != 0)
 				goto err;
-			__heap_safe_gsplit(dbp, vdp, h, i, &dbt);
+			if ((ret = __heap_safe_gsplit
+			    (dbp, vdp, h, i, &dbt)) != 0) {
+				err_ret = ret;
+				__os_free(env, dbt.data);
+				continue;
+			}
 		} else if (F_ISSET(hdr, HEAP_RECBLOB)) {
 			memcpy(&bhdr, hdr, HEAPBLOBREC_SIZE);
-			blob_id = bhdr.id;
+			blob_id = (db_seq_t)bhdr.id;
 			GET_BLOB_SIZE(env, bhdr, blob_size, ret);
 			if (ret != 0 || blob_size < 0)
 				goto err;
-			file_id = bhdr.file_id;
+			file_id = (db_seq_t)bhdr.file_id;
 			/* Read the blob, in pieces if it is too large.*/
 			blob_offset = 0;
 			if (blob_size > MEGABYTE) {
@@ -567,7 +578,7 @@ __heap_safe_gsplit(dbp, vdp, h, i, dbt)
 
 err:	if (gotpg && (t_ret = __memp_fput(
 	    mpf, vdp->thread_info, h, DB_PRIORITY_UNCHANGED)) != 0 && ret == 0)
-		t_ret = ret;
+		ret = t_ret;
 	return (ret);
 }
 

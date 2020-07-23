@@ -299,36 +299,36 @@ public class LockStats {
 
     private long st_part_wait;
     /** 
-     The number of times that a thread of control was forced to wait before 
-     obtaining a lock partition mutex.
-     * */
+    The number of times that a thread of control was forced to wait before
+    obtaining a lock partition mutex.
+    */
     public long getPartWait() {
         return st_part_wait;
     }
 
     private long st_part_nowait;
     /** 
-     The number of times that a thread of control was able to obtain a lock 
-     partition mutex without waiting.
-     * */
+    The number of times that a thread of control was able to obtain a lock
+    partition mutex without waiting.
+    */
     public long getPartNowait() {
         return st_part_nowait;
     }
 
     private long st_part_max_wait;
     /** 
-     The maximum number of times that a thread of control was forced to wait 
-     before obtaining any one lock partition mutex.
-     * */
+    The maximum number of times that a thread of control was forced to wait 
+    before obtaining any one lock partition mutex.
+    */
     public long getPartMaxWait() {
         return st_part_max_wait;
     }
 
     private long st_part_max_nowait;
     /** 
-     The number of times that a thread of control was able to obtain any one 
-     lock partition mutex without waiting.
-     * */
+    The number of times that a thread of control was able to obtain any one 
+    lock partition mutex without waiting.
+    */
     public long getPartMaxNowait() {
         return st_part_max_nowait;
     }
@@ -371,8 +371,8 @@ public class LockStats {
 
     private long st_region_wait;
     /**
-    The number of times that a thread of control was forced to wait
-    before obtaining the region lock.
+    The number of times that a thread of control was forced to wait before
+    obtaining the lock region mutex.
     */
     public long getRegionWait() {
         return st_region_wait;
@@ -380,8 +380,8 @@ public class LockStats {
 
     private long st_region_nowait;
     /**
-    The number of times that a thread of control was able to obtain the
-    region lock without waiting.
+    The number of times that a thread of control was able to obtain the lock
+    region mutex without waiting.
     */
     public long getRegionNowait() {
         return st_region_nowait;

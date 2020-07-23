@@ -1369,6 +1369,10 @@ int DbEnv::rep_set_view(int (*arg)(DbEnv *, const char *, int *, u_int32_t))
 
 DBENV_METHOD(repmgr_get_ack_policy, (int *policy), (dbenv, policy))
 DBENV_METHOD(repmgr_set_ack_policy, (int policy), (dbenv, policy))
+DBENV_METHOD(repmgr_get_incoming_queue_max, 
+    (u_int32_t *gbytesp, u_int32_t *bytesp), (dbenv, gbytesp, bytesp));
+DBENV_METHOD(repmgr_set_incoming_queue_max,
+    (u_int32_t gbytes, u_int32_t bytes), (dbenv, gbytes, bytes));
 
 int DbEnv::repmgr_channel(int eid, DbChannel **dbchannel, u_int32_t flags)
 {

@@ -49,7 +49,7 @@ for i in $DIR; do
 		    -v header_file=$header \
 		    -v print_file=$print\
 		    -v source_file=$source \
-		    -v template_file=$template < $f
+		    -v template_file=$template $f
 
 		f=../src/dbinc_auto/${subsystem}_auto.h
 		cmp $header $f > /dev/null 2>&1 ||

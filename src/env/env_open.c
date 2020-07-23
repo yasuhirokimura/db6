@@ -107,9 +107,15 @@ __env_open_pp(dbenv, db_home, flags, mode)
 		__db_errx(env, DB_STR("1589", "DB_PRIVATE is not "
 			    "supported by 64-bit applications in "
 			    "mixed-size-addressing mode"));
-			return (EINVAL);
-		}
+		return (EINVAL);
+	}
 #endif
+
+	if (LF_ISSET(DB_PRIVATE) && PREFMAS_IS_SET(env)) {
+		__db_errx(env, DB_STR("1594", "DB_PRIVATE is not "
+		    "supported in Replication Manager preferred master mode"));
+		return (EINVAL);
+	}
 
 	return (__env_open(dbenv, db_home, flags, mode));
 }
@@ -129,12 +135,14 @@ __env_open(dbenv, db_home, flags, mode)
 {
 	DB_THREAD_INFO *ip;
 	ENV *env;
-	u_int32_t orig_flags;
-	int register_recovery, ret, t_ret;
+	u_int32_t orig_flags, retry_flags;
+	int recovery_failed, register_recovery, ret, t_ret;
 
 	ip = NULL;
 	env = dbenv->env;
+	recovery_failed = 1;
 	register_recovery = 0;
+	retry_flags = 0;
 
 	/* Initial configuration. */
 	if ((ret = __env_config(dbenv, db_home, &flags, mode)) != 0)
@@ -180,6 +188,7 @@ __env_open(dbenv, db_home, flags, mode)
 			if (!LF_ISSET(DB_RECOVER)) {
 				__db_errx(env, DB_STR("1567",
 	    "The DB_RECOVER flag was not specified, and recovery is needed"));
+				recovery_failed = 0;
 				ret = DB_RUNRECOVERY;
 				goto err;
 			}
@@ -199,16 +208,18 @@ __env_open(dbenv, db_home, flags, mode)
 	 * want to remove files left over for any reason, from any session.
 	 */
 retry:	if (LF_ISSET(DB_RECOVER | DB_RECOVER_FATAL))
+		if (
 #ifdef HAVE_REPLICATION
-		if ((ret = __rep_reset_init(env)) != 0 ||
-		    (ret = __env_remove_env(env)) != 0 ||
-#else
-		if ((ret = __env_remove_env(env)) != 0 ||
+		    (ret = __rep_reset_init(env)) != 0 ||
 #endif
-		    (ret = __env_refresh(dbenv, orig_flags, 0)) != 0)
+		    (ret = __env_remove_env(env)) != 0 ||
+		    (ret = __env_refresh(dbenv,
+		    orig_flags | retry_flags, 0)) != 0)
 			goto err;
 
-	if ((ret = __env_attach_regions(dbenv, flags, orig_flags, 1)) != 0)
+	DB_ASSERT(env, ret == 0);
+	if ((ret = __env_attach_regions(dbenv,
+	    flags, orig_flags | retry_flags, 1)) != 0)
 		goto err;
 
 	/*
@@ -218,9 +229,19 @@ retry:	if (LF_ISSET(DB_RECOVER | DB_RECOVER_FATAL))
 	 */
 	if (LF_ISSET(DB_FAILCHK) && !register_recovery) {
 		ENV_ENTER(env, ip);
-		if ((ret = __env_failchk_int(dbenv)) != 0)
-			goto err;
+		/*
+		 * Set the thread state so that any waiting for a potentially
+		 * dead thread will call is_alive() in order to avoid hanging.
+		 */
+		FAILCHK_THREAD(env, ip);
+		ret = __env_failchk_int(dbenv);
 		ENV_LEAVE(env, ip);
+		if (ret != 0) {
+			__db_err(env, ret,
+			    DB_STR("1595",
+			    "failchk crash after clean registry"));
+			goto err;
+		}
 	}
 
 err:	if (ret != 0)
@@ -232,12 +253,12 @@ err:	if (ret != 0)
 		 * processes can now proceed.
 		 *
 		 * If recovery failed, unregister now and let another process
-		 * clean up.
+		 * clean up and run recovery.
 		 */
 		if (ret == 0 && (t_ret = __envreg_xunlock(env)) != 0)
 			ret = t_ret;
 		if (ret != 0)
-			(void)__envreg_unregister(env, 1);
+			(void)__envreg_unregister(env, recovery_failed);
 	}
 
 	/*
@@ -249,7 +270,11 @@ err:	if (ret != 0)
 	 */
 	if (ret == DB_RUNRECOVERY && !register_recovery &&
 	    !LF_ISSET(DB_RECOVER) && LF_ISSET(DB_REGISTER)) {
+		if (FLD_ISSET(dbenv->verbose, DB_VERB_REGISTER))
+			__db_msg(env, DB_STR("1596",
+		"env_open DB_REGISTER w/o RECOVER panic: trying w/recovery"));
 		LF_SET(DB_RECOVER);
+		retry_flags = DB_ENV_NOPANIC;
 		goto retry;
 	}
 
@@ -306,6 +331,9 @@ __env_open_arg(dbenv, flags)
 			    "replication requires transaction support"));
 			return (EINVAL);
 		}
+		if ((ret =
+		    __log_set_config_int(dbenv, DB_LOG_BLOB, 1, 1)) != 0)
+			return (ret);
 	}
 	if (LF_ISSET(DB_RECOVER | DB_RECOVER_FATAL)) {
 		if ((ret = __db_fcchk(env,
@@ -351,30 +379,6 @@ __env_open_arg(dbenv, flags)
 	}
 #endif
 
-#ifdef HAVE_MUTEX_FCNTL
-	/*
-	 * !!!
-	 * We need a file descriptor for fcntl(2) locking.  We use the file
-	 * handle from the REGENV file for this purpose.
-	 *
-	 * Since we may be using shared memory regions, e.g., shmget(2), and
-	 * not a mapped-in regular file, the backing file may be only a few
-	 * bytes in length.  So, this depends on the ability to call fcntl to
-	 * lock file offsets much larger than the actual physical file.  I
-	 * think that's safe -- besides, very few systems actually need this
-	 * kind of support, SunOS is the only one still in wide use of which
-	 * I'm aware.
-	 *
-	 * The error case is if an application lacks spinlocks and wants to be
-	 * threaded.  That doesn't work because fcntl will lock the underlying
-	 * process, including all its threads.
-	 */
-	if (F_ISSET(env, ENV_THREAD)) {
-		__db_errx(env, DB_STR("1578",
-    "architecture lacks fast mutexes: applications cannot be threaded"));
-		return (EINVAL);
-	}
-#endif
 	return (ret);
 }
 
@@ -519,33 +523,41 @@ __env_close_pp(dbenv, flags)
 	 * Validate arguments, but as a DB_ENV handle destructor, we can't
 	 * fail.
 	 */
-	if (flags != 0 && flags != DB_FORCESYNC &&
-	    (t_ret = __db_ferr(env, "DB_ENV->close", 0)) != 0 && ret == 0)
-		ret = t_ret;
+#undef	OKFLAGS
+#define	OKFLAGS	(DB_FORCESYNC | DB_FORCESYNCENV)
+
+	ret = __db_fchk(env, "DB_ENV->close", flags, OKFLAGS);
 
 #define	DBENV_FORCESYNC		0x00000001
 #define	DBENV_CLOSE_REPCHECK	0x00000010
-	if (flags == DB_FORCESYNC)
+	if (LF_ISSET(DB_FORCESYNC))
 		close_flags |= DBENV_FORCESYNC;
+	if (LF_ISSET(DB_FORCESYNCENV))
+		F_SET(env, ENV_FORCESYNCENV);
+
+	/* 
+	 * Call __env_close() to clean up resources even though the open
+	 * didn't fully succeed.
+	 * */
+	if (!F_ISSET(env, ENV_OPEN_CALLED))
+		goto do_close;
 
 	/*
 	 * If the environment has panic'd, all we do is try and discard
 	 * the important resources.
 	 */
 	if (PANIC_ISSET(env)) {
+		/*
+		 * Temporarily set no panic so we do not trigger the
+		 * LAST_PANIC_CHECK_BEFORE_IO check in __os_physwrite thus
+		 * allowing the unregister to happen correctly.
+		 */
 		flags_orig = dbenv->flags;
 		F_SET(dbenv, DB_ENV_NOPANIC);
 		ENV_ENTER(env, ip);
 		/* clean up from registry file */
-		if (dbenv->registry != NULL) {
-			/*
-			 * Temporarily set no panic so we do not trigger the
-			 * LAST_PANIC_CHECK_BEFORE_IO check in __os_physwrite
-			 * thus allowing the unregister to happen correctly.
-			 */
+		if (dbenv->registry != NULL)
 			(void)__envreg_unregister(env, 0);
-			dbenv->registry = NULL;
-		}
 
 		/* Close all underlying threads and sockets. */
 		(void)__repmgr_close(env);
@@ -578,6 +590,7 @@ __env_close_pp(dbenv, flags)
 			close_flags |= DBENV_CLOSE_REPCHECK;
 	}
 
+do_close:
 	if ((t_ret = __env_close(dbenv, close_flags)) != 0 && ret == 0)
 		ret = t_ret;
 
@@ -663,10 +676,8 @@ __env_close(dbenv, flags)
 #endif
 
 	/* If we're registered, clean up. */
-	if (dbenv->registry != NULL) {
+	if (dbenv->registry != NULL)
 		(void)__envreg_unregister(env, 0);
-		dbenv->registry = NULL;
-	}
 
 	/* Check we've closed all underlying file handles. */
 	if ((t_ret = __file_handle_cleanup(env)) != 0 && ret == 0)
@@ -766,9 +777,7 @@ __env_refresh(dbenv, orig_flags, rep_check)
 			ret = t_ret;
 	}
 
-	/* Discard the DB_ENV, ENV handle mutexes. */
-	if ((t_ret = __mutex_free(env, &dbenv->mtx_db_env)) != 0 && ret == 0)
-		ret = t_ret;
+	/* Discard the ENV handle mutex. */
 	if ((t_ret = __mutex_free(env, &env->mtx_env)) != 0 && ret == 0)
 		ret = t_ret;
 
@@ -963,8 +972,10 @@ __file_handle_cleanup(env)
 		env->lg_handle->reginfo.fhp = NULL;
 	if (env->lk_handle != NULL)
 		env->lk_handle->reginfo.fhp = NULL;
+#ifdef HAVE_MUTEX_SUPPORT
 	if (env->mutex_handle != NULL)
 		env->mutex_handle->reginfo.fhp = NULL;
+#endif
 	if (env->tx_handle != NULL)
 		env->tx_handle->reginfo.fhp = NULL;
 	if ((dbmp = env->mp_handle) != NULL && dbmp->reginfo != NULL)
@@ -1132,11 +1143,9 @@ __env_attach_regions(dbenv, flags, orig_flags, retry_ok)
 		goto err;
 
 	/*
-	 * Initialize the handle mutexes.
+	 * Initialize the handle mutex.
 	 */
 	if ((ret = __mutex_alloc(env,
-	    MTX_ENV_HANDLE, DB_MUTEX_PROCESS_ONLY, &dbenv->mtx_db_env)) != 0 ||
-	    (ret = __mutex_alloc(env,
 	    MTX_ENV_HANDLE, DB_MUTEX_PROCESS_ONLY, &env->mtx_env)) != 0)
 		goto err;
 

@@ -7,14 +7,14 @@
     <link rel="stylesheet" href="gettingStarted.css" type="text/css" />
     <meta name="generator" content="DocBook XSL Stylesheets V1.73.2" />
     <link rel="start" href="index.html" title="Berkeley DB Installation and Build Guide" />
-    <link rel="up" href="upgrade_60_toc.html" title="Chapter 9.  Upgrading Berkeley DB 11.2.5.3 applications to Berkeley DB 12.1.6.0" />
+    <link rel="up" href="upgrade_60_toc.html" title="Chapter 10.  Upgrading Berkeley DB 11.2.5.3 applications to Berkeley DB 12.1.6.0" />
     <link rel="prev" href="drop_sup60.html" title="Dropped Support" />
-    <link rel="next" href="upgrade_53_toc.html" title="Chapter 10.  Upgrading Berkeley DB 11.2.5.2 applications to Berkeley DB 11.2.5.3" />
+    <link rel="next" href="upgrade_53_toc.html" title="Chapter 11.  Upgrading Berkeley DB 11.2.5.2 applications to Berkeley DB 11.2.5.3" />
   </head>
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.0</p>
+        <p>Library Version 12.1.6.1</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -22,9 +22,7 @@
         </tr>
         <tr>
           <td width="20%" align="left"><a accesskey="p" href="drop_sup60.html">Prev</a> </td>
-          <th width="60%" align="center">Chapter 9. 
-        Upgrading Berkeley DB 11.2.5.3 applications to Berkeley DB 12.1.6.0
-    </th>
+          <th width="60%" align="center">Chapter 10.  Upgrading Berkeley DB 11.2.5.3 applications to Berkeley DB 12.1.6.0 </th>
           <td width="20%" align="right"> <a accesskey="n" href="upgrade_53_toc.html">Next</a></td>
         </tr>
       </table>
@@ -42,132 +40,117 @@
         <dl>
           <dt>
             <span class="sect2">
-              <a href="changelog_6_0.html#idp51000872">Changes between 12.1.6.0.21 and 12.1.6.0.30</a>
+              <a href="changelog_6_0.html#idp646760">Database or Log File On-Disk Format Changes</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="changelog_6_0.html#idp51001256">Changes between 12.1.6.0.20 and 12.1.6.0.21</a>
+              <a href="changelog_6_0.html#idp628520">New Features</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="changelog_6_0.html#idp51002560">Changes between 12.1.6.0.19 and 12.1.6.0.20</a>
+              <a href="changelog_6_0.html#idp635200">Database Environment Changes</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="changelog_6_0.html#idp51006944">New Features in 6.0.19</a>
+              <a href="changelog_6_0.html#idp652800">Concurrent Data Store Changes</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="changelog_6_0.html#idp51005648">Database or Log File On-Disk Format Changes</a>
+              <a href="changelog_6_0.html#idp642912">Access Method Changes</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="changelog_6_0.html#idp51000432">Database Environment Changes</a>
+              <a href="changelog_6_0.html#idp646048">API Changes</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="changelog_6_0.html#idp51002776">Concurrent Data Store Changes</a>
+              <a href="changelog_6_0.html#idp648632">SQL-specific API Changes</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="changelog_6_0.html#idp51013176">Access Method Changes</a>
+              <a href="changelog_6_0.html#idp642728">Tcl-specific API Changes</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="changelog_6_0.html#idp51013584">API Changes</a>
+              <a href="changelog_6_0.html#idp658824">Java-specific API Changes</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="changelog_6_0.html#idp51005216">SQL-specific API Changes</a>
+              <a href="changelog_6_0.html#idp651504">C#-specific API Changes</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="changelog_6_0.html#idp51020728">Tcl-specific API Changes</a>
+              <a href="changelog_6_0.html#idp653400">Replication Changes</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="changelog_6_0.html#idp51021192">Java-specific API Changes</a>
+              <a href="changelog_6_0.html#idp661224">Locking Subsystem Changes</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="changelog_6_0.html#idp51023064">C#-specific API Changes</a>
+              <a href="changelog_6_0.html#idp660840">Logging Subsystem Changes</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="changelog_6_0.html#idp51024344">Replication Changes</a>
+              <a href="changelog_6_0.html#idp669888">Memory Pool Subsystem Changes</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="changelog_6_0.html#idp51024032">Locking Subsystem Changes</a>
+              <a href="changelog_6_0.html#idp670336">Mutex Subsystem Changes</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="changelog_6_0.html#idp51023480">Logging Subsystem Changes</a>
+              <a href="changelog_6_0.html#idp660544">Transaction Subsystem Changes</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="changelog_6_0.html#idp51024120">Memory Pool Subsystem Changes</a>
+              <a href="changelog_6_0.html#idp673536">Test Suite Changes</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="changelog_6_0.html#idp51041800">Mutex Subsystem Changes</a>
+              <a href="changelog_6_0.html#idp659096">Utility Changes</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="changelog_6_0.html#idp51034872">Transaction Subsystem Changes</a>
+              <a href="changelog_6_0.html#idp679488">Configuration, Documentation, Sample Apps, Portability and Build Changes</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="changelog_6_0.html#idp51035592">Test Suite Changes</a>
+              <a href="changelog_6_0.html#idp681808">Example Changes</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="changelog_6_0.html#idp51026784">Utility Changes</a>
+              <a href="changelog_6_0.html#idp683728">Miscellaneous Bug Fixes</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="changelog_6_0.html#idp51033040">Configuration, Documentation, Sample Apps, Portability and Build Changes</a>
+              <a href="changelog_6_0.html#idp685624">Deprecated Features</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="changelog_6_0.html#idp51035976">Example Changes</a>
-            </span>
-          </dt>
-          <dt>
-            <span class="sect2">
-              <a href="changelog_6_0.html#idp51046152">Miscellaneous Bug Fixes</a>
-            </span>
-          </dt>
-          <dt>
-            <span class="sect2">
-              <a href="changelog_6_0.html#idp51043432">Deprecated Features</a>
-            </span>
-          </dt>
-          <dt>
-            <span class="sect2">
-              <a href="changelog_6_0.html#idp51049232">Known Bugs</a>
+              <a href="changelog_6_0.html#idp686384">Known Bugs</a>
             </span>
           </dt>
         </dl>
@@ -181,7 +164,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp51000872"></a>Changes between 12.1.6.0.21 and 12.1.6.0.30</h3>
+              <h3 class="title"><a id="idp646760"></a>Database or Log File On-Disk Format Changes</h3>
             </div>
           </div>
         </div>
@@ -189,82 +172,7 @@
           <ol type="1">
             <li>
               <p>
- The database record format for databases containing BLOBs has changed in 12.1.6.0.30.  Any database from version 12.1.6.0.21 or earlier that contains BLOBs must be upgraded before it can be opened by this or any later version of Berkeley DB. Databases without BLOBs do not require upgrading.
-            </p>
-            </li>
-            <li>
-              <p>
- Correct a problem with DB_LOCKDOWN which would cause an mlock error ENOMEM on some operating systems. [#21379]
-            </p>
-            </li>
-            <li>
-              <p>
- Fixed an error which prevented encrypted databases from being upgraded correctly.  [#22215]
-            </p>
-            </li>
-            <li>
-              <p>
- Fixed a bug where opening a partition database would fail if the range keys did not fit within a single database page. [#22280]
-            </p>
-            </li>
-            <li>
-              <p>
- Fixed several build failures for different configurations on QNX. [#22310]
-            </p>
-            </li>
-            <li>
-              <p>
- Databases containing BLOBs are now portable between machines of opposite endianness. [#22455]
-            </p>
-            </li>
-            <li>
-              <p>
- Fixed a bug that would prevent a client from rejoining the group when it had been deleted from the replication group earlier. [#22460]
-            </p>
-            </li>
-            <li>
-              <p>
- Update the db_dump and db_printlog utilities to use a -D option to control the amount of data printed. [#22485]
-            </p>
-            </li>
-            <li>
-              <p>
- Old log files will once again be automatically removed in the SQL API. [#22521]
-            </p>
-            </li>
-            <li>
-              <p>
- When a removed site rejoins a two-site replication group with DB_REPMGR_CONF_2SITE_STRICT turned off, defer its election so that the rejoining site does not prematurely elect itself master with only its own vote when the other site is already master. [#22683]
-            </p>
-            </li>
-            <li>
-              <p>
- DB_ENV-&gt;close() now detaches from the environment's mmap and shared memory regions even when a panic error (DB_RUNRECOVERY) has been returned. [#22805]
-            </p>
-            </li>
-            <li>
-              <p>
- Fixed a bug the would cause an environment panick when creating in-memory heap databases on certain endian machines. [#22929]
-            </p>
-            </li>
-            <li>
-              <p>
- Empty directories in the BLOB directory will now be deleted after executing a non-transaction protected remove operation on a BLOB enabled database. [#22935]
-            </p>
-            </li>
-            <li>
-              <p>
- All BLOB files will now be deleted when removing a BLOB enabled database that contains subdatabases. [#22938]
-            </p>
-            </li>
-            <li>
-              <p>
- Fixed a bug where a Replication Manager subordinate process could fail its automatic takeover as the replication process because it is unnecessarily waiting for acknowledgements from other sites before the connections to these sites are properly established. [#22998]
-            </p>
-            </li>
-            <li>
-              <p>
- Aborting the creation of a BLOB-enabled database will no longer leave various support files in the environment. [#23000]
+ The log file format changed in 12.1.6.0.
             </p>
             </li>
           </ol>
@@ -274,43 +182,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp51001256"></a>Changes between 12.1.6.0.20 and 12.1.6.0.21</h3>
-            </div>
-          </div>
-        </div>
-        <div class="orderedlist">
-          <ol type="1">
-            <li>
-              <p>
- Updated the PHP API to work with PHP 5.4 and above. [#22594]
-            </p>
-            </li>
-          </ol>
-        </div>
-      </div>
-      <div class="sect2" lang="en" xml:lang="en">
-        <div class="titlepage">
-          <div>
-            <div>
-              <h3 class="title"><a id="idp51002560"></a>Changes between 12.1.6.0.19 and 12.1.6.0.20</h3>
-            </div>
-          </div>
-        </div>
-        <div class="orderedlist">
-          <ol type="1">
-            <li>
-              <p>
- Updated LICENSE file to reflect change to AGPL. [#22590]
-            </p>
-            </li>
-          </ol>
-        </div>
-      </div>
-      <div class="sect2" lang="en" xml:lang="en">
-        <div class="titlepage">
-          <div>
-            <div>
-              <h3 class="title"><a id="idp51006944"></a>New Features in 6.0.19</h3>
+              <h3 class="title"><a id="idp628520"></a>New Features</h3>
             </div>
           </div>
         </div>
@@ -393,25 +265,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp51005648"></a>Database or Log File On-Disk Format Changes</h3>
-            </div>
-          </div>
-        </div>
-        <div class="orderedlist">
-          <ol type="1">
-            <li>
-              <p>
- The log file format changed between 12.1.5.3 and 12.1.6.0.
-            </p>
-            </li>
-          </ol>
-        </div>
-      </div>
-      <div class="sect2" lang="en" xml:lang="en">
-        <div class="titlepage">
-          <div>
-            <div>
-              <h3 class="title"><a id="idp51000432"></a>Database Environment Changes</h3>
+              <h3 class="title"><a id="idp635200"></a>Database Environment Changes</h3>
             </div>
           </div>
         </div>
@@ -427,11 +281,6 @@
  Fixed bugs when attempting to open non-DB files as if they were databases. If encryption was active, an assertion failure would occur. If encryption was not active, the error message "BDB0178 Encrypted database: no encryption flag" would incorrectly imply that a password was required.  [#21408]
             </p>
             </li>
-            <li>
-              <p>
- DB_ENV-&gt;open(DB_REGISTER) now detects whether a panic has occurred in the environment. If so it returns DB_RUNRECOVERY. Prior to this, the panic state was not detected, which might have caused a hang. [#22805]
-            </p>
-            </li>
           </ol>
         </div>
       </div>
@@ -439,7 +288,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp51002776"></a>Concurrent Data Store Changes</h3>
+              <h3 class="title"><a id="idp652800"></a>Concurrent Data Store Changes</h3>
             </div>
           </div>
         </div>
@@ -457,7 +306,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp51013176"></a>Access Method Changes</h3>
+              <h3 class="title"><a id="idp642912"></a>Access Method Changes</h3>
             </div>
           </div>
         </div>
@@ -505,7 +354,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp51013584"></a>API Changes</h3>
+              <h3 class="title"><a id="idp646048"></a>API Changes</h3>
             </div>
           </div>
         </div>
@@ -533,7 +382,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp51005216"></a>SQL-specific API Changes</h3>
+              <h3 class="title"><a id="idp648632"></a>SQL-specific API Changes</h3>
             </div>
           </div>
         </div>
@@ -596,7 +445,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp51020728"></a>Tcl-specific API Changes</h3>
+              <h3 class="title"><a id="idp642728"></a>Tcl-specific API Changes</h3>
             </div>
           </div>
         </div>
@@ -614,7 +463,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp51021192"></a>Java-specific API Changes</h3>
+              <h3 class="title"><a id="idp658824"></a>Java-specific API Changes</h3>
             </div>
           </div>
         </div>
@@ -642,7 +491,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp51023064"></a>C#-specific API Changes</h3>
+              <h3 class="title"><a id="idp651504"></a>C#-specific API Changes</h3>
             </div>
           </div>
         </div>
@@ -665,7 +514,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp51024344"></a>Replication Changes</h3>
+              <h3 class="title"><a id="idp653400"></a>Replication Changes</h3>
             </div>
           </div>
         </div>
@@ -753,7 +602,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp51024032"></a>Locking Subsystem Changes</h3>
+              <h3 class="title"><a id="idp661224"></a>Locking Subsystem Changes</h3>
             </div>
           </div>
         </div>
@@ -781,7 +630,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp51023480"></a>Logging Subsystem Changes</h3>
+              <h3 class="title"><a id="idp660840"></a>Logging Subsystem Changes</h3>
             </div>
           </div>
         </div>
@@ -799,7 +648,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp51024120"></a>Memory Pool Subsystem Changes</h3>
+              <h3 class="title"><a id="idp669888"></a>Memory Pool Subsystem Changes</h3>
             </div>
           </div>
         </div>
@@ -832,7 +681,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp51041800"></a>Mutex Subsystem Changes</h3>
+              <h3 class="title"><a id="idp670336"></a>Mutex Subsystem Changes</h3>
             </div>
           </div>
         </div>
@@ -865,7 +714,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp51034872"></a>Transaction Subsystem Changes</h3>
+              <h3 class="title"><a id="idp660544"></a>Transaction Subsystem Changes</h3>
             </div>
           </div>
         </div>
@@ -883,7 +732,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp51035592"></a>Test Suite Changes</h3>
+              <h3 class="title"><a id="idp673536"></a>Test Suite Changes</h3>
             </div>
           </div>
         </div>
@@ -901,7 +750,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp51026784"></a>Utility Changes</h3>
+              <h3 class="title"><a id="idp659096"></a>Utility Changes</h3>
             </div>
           </div>
         </div>
@@ -969,7 +818,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp51033040"></a>Configuration, Documentation, Sample Apps, Portability and Build Changes</h3>
+              <h3 class="title"><a id="idp679488"></a>Configuration, Documentation, Sample Apps, Portability and Build Changes</h3>
             </div>
           </div>
         </div>
@@ -1012,7 +861,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp51035976"></a>Example Changes</h3>
+              <h3 class="title"><a id="idp681808"></a>Example Changes</h3>
             </div>
           </div>
         </div>
@@ -1030,7 +879,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp51046152"></a>Miscellaneous Bug Fixes</h3>
+              <h3 class="title"><a id="idp683728"></a>Miscellaneous Bug Fixes</h3>
             </div>
           </div>
         </div>
@@ -1093,7 +942,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp51043432"></a>Deprecated Features</h3>
+              <h3 class="title"><a id="idp685624"></a>Deprecated Features</h3>
             </div>
           </div>
         </div>
@@ -1111,7 +960,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp51049232"></a>Known Bugs</h3>
+              <h3 class="title"><a id="idp686384"></a>Known Bugs</h3>
             </div>
           </div>
         </div>
@@ -1120,6 +969,11 @@
             <li>
               <p>
  Prepared transactions may not remove databases. An error EINVAL message will be returned by TXN-&gt;prepare() if the transaction removed any databases.
+            </p>
+            </li>
+            <li>
+              <p>
+ Databases containing BLOBs are not portable between machines of opposite endianness.
             </p>
             </li>
             <li>
@@ -1166,9 +1020,7 @@
           <td width="20%" align="center">
             <a accesskey="h" href="index.html">Home</a>
           </td>
-          <td width="40%" align="right" valign="top"> Chapter 10. 
-        Upgrading Berkeley DB 11.2.5.2 applications to Berkeley DB 11.2.5.3
-    </td>
+          <td width="40%" align="right" valign="top"> Chapter 11.  Upgrading Berkeley DB 11.2.5.2 applications to Berkeley DB 11.2.5.3 </td>
         </tr>
       </table>
     </div>

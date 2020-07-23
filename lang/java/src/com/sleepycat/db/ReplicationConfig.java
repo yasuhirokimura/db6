@@ -78,7 +78,28 @@ public final class ReplicationConfig implements Cloneable {
     Once this option is turned on, it may never be turned off.
     */
     public static final ReplicationConfig LEASE =
-	new ReplicationConfig("LEASE", DbConstants.DB_REP_CONF_LEASE);
+        new ReplicationConfig("LEASE", DbConstants.DB_REP_CONF_LEASE);
+ 
+    /**
+    This flag is used to specify the preferred master site in a replication
+    group operating in preferred master mode. A preferred master replication
+    group must contain only two sites, with one site specified as the preferred
+    master site and the other site specified as the client site. The preferred
+    master site operates as the master site whenever possible.
+    **/
+    public static final ReplicationConfig PREFMAS_MASTER =
+        new ReplicationConfig("PREFMAS_MASTER", DbConstants.DB_REPMGR_CONF_PREFMAS_MASTER);
+
+    /**
+    This flag is used to specify the client site in a replication group
+    operating in preferred master mode. A preferred master replication group
+    must contain only two sites, with one site specified as the preferred
+    master site and the other site specified as the client site. The client
+    site in a preferred master replication group takes over temporarily as
+    master when the preferred master site is unavailable.
+    **/
+    public static final ReplicationConfig PREFMAS_CLIENT =
+        new ReplicationConfig("PREFMAS_CLIENT", DbConstants.DB_REPMGR_CONF_PREFMAS_CLIENT);
 
     /* package */
     static ReplicationConfig fromInt(int which) {
@@ -95,8 +116,12 @@ public final class ReplicationConfig implements Cloneable {
             return STRICT_2SITE;
         case DbConstants.DB_REPMGR_CONF_ELECTIONS:
             return ELECTIONS;
-	case DbConstants.DB_REP_CONF_LEASE:
-	    return LEASE;
+        case DbConstants.DB_REP_CONF_LEASE:
+            return LEASE;
+        case DbConstants.DB_REPMGR_CONF_PREFMAS_MASTER:
+            return PREFMAS_MASTER;
+        case DbConstants.DB_REPMGR_CONF_PREFMAS_CLIENT:
+            return PREFMAS_CLIENT;
         default:
             throw new IllegalArgumentException(
                 "Unknown replication config: " + which);

@@ -334,6 +334,9 @@ static int __dbj_fill_repmgr_stat(JNIEnv *jnienv,
 	JAVADB_STAT_LONG(jnienv, jobj, repmgr_stat_st_perm_failed_fid, statp, st_perm_failed);
 	JAVADB_STAT_LONG(jnienv, jobj, repmgr_stat_st_msgs_queued_fid, statp, st_msgs_queued);
 	JAVADB_STAT_LONG(jnienv, jobj, repmgr_stat_st_msgs_dropped_fid, statp, st_msgs_dropped);
+	JAVADB_STAT_INT(jnienv, jobj, repmgr_stat_st_incoming_queue_gbytes_fid, statp, st_incoming_queue_gbytes);
+	JAVADB_STAT_INT(jnienv, jobj, repmgr_stat_st_incoming_queue_bytes_fid, statp, st_incoming_queue_bytes);
+	JAVADB_STAT_LONG(jnienv, jobj, repmgr_stat_st_incoming_msgs_dropped_fid, statp, st_incoming_msgs_dropped);
 	JAVADB_STAT_LONG(jnienv, jobj, repmgr_stat_st_connection_drop_fid, statp, st_connection_drop);
 	JAVADB_STAT_LONG(jnienv, jobj, repmgr_stat_st_connect_fail_fid, statp, st_connect_fail);
 	JAVADB_STAT_INT(jnienv, jobj, repmgr_stat_st_elect_threads_fid, statp, st_elect_threads);
@@ -342,7 +345,6 @@ static int __dbj_fill_repmgr_stat(JNIEnv *jnienv,
 	JAVADB_STAT_INT(jnienv, jobj, repmgr_stat_st_site_total_fid, statp, st_site_total);
 	JAVADB_STAT_INT(jnienv, jobj, repmgr_stat_st_site_views_fid, statp, st_site_views);
 	JAVADB_STAT_LONG(jnienv, jobj, repmgr_stat_st_takeovers_fid, statp, st_takeovers);
-	JAVADB_STAT_INT(jnienv, jobj, repmgr_stat_st_incoming_queue_size_fid, statp, st_incoming_queue_size);
 	return (0);
 }
 static int __dbj_fill_seq_stat(JNIEnv *jnienv,

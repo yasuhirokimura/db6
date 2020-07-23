@@ -383,6 +383,60 @@ namespace CsharpAPITest {
         }
 
         [Test]
+        public void TestMessageFile()
+        {
+            testName = "TestMessageFile";
+            SetUpTest(true);
+
+            // Configure and open an environment.
+            DatabaseEnvironmentConfig envConfig =
+                new DatabaseEnvironmentConfig();
+            envConfig.Create = true;
+            envConfig.UseMPool = true;
+            DatabaseEnvironment env = DatabaseEnvironment.Open(
+                testHome, envConfig);
+
+            // Configure and open a database.
+            HeapDatabaseConfig DBConfig =
+                new HeapDatabaseConfig();
+            DBConfig.Env = env;
+            DBConfig.Creation = CreatePolicy.IF_NEEDED;
+
+            string DBFileName = testName + ".db";
+            HeapDatabase db = HeapDatabase.Open(DBFileName, DBConfig);
+
+            // Confirm message file does not exist.
+            string messageFile = testHome + "/" + "msgfile";
+            Assert.AreEqual(false, File.Exists(messageFile));
+
+            // Call set_msgfile() of db.
+            db.Msgfile = messageFile;
+
+            // Print db statistic to message file.
+            db.PrintStats(true);
+
+            // Confirm message file exists now.
+            Assert.AreEqual(true, File.Exists(messageFile));
+
+            db.Msgfile = "";
+            string line = null;
+
+            // Read the third line of message file.
+            System.IO.StreamReader file = new System.IO.StreamReader(@"" + messageFile);
+            line = file.ReadLine();
+            line = file.ReadLine();
+            line = file.ReadLine();
+
+            // Confirm the message file is not empty.
+            Assert.AreEqual(line, "DB handle information:");
+            file.Close();
+
+            // Close database and environment.
+            db.Close();
+            env.Close();
+        }
+
+        [Test]
         public void TestOpenExistingHeapDB() {
             testName = "TestOpenExistingHeapDB";
             SetUpTest(true);
@@ -469,6 +523,7 @@ namespace CsharpAPITest {
 
             HeapStats stats = db.Stats();
             ConfirmStatsPart1Case1(stats);
+	    db.Msgfile = testHome + "/" + testName+ ".log";
             db.PrintFastStats(true);
 
             // Put 500 records into the database.
@@ -554,6 +609,7 @@ namespace CsharpAPITest {
                 stats = db.Stats(statsTxn, Isolation.DEGREE_ONE);
 
             ConfirmStatsPart1Case1(stats);
+	    db.Msgfile = home + "/" + name+ ".log";
             db.PrintStats(true);
 
             // Put 500 records into the database.

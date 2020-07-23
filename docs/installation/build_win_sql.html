@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.0</p>
+        <p>Library Version 12.1.6.1</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -40,28 +40,27 @@
         <dl>
           <dt>
             <span class="sect2">
-              <a href="build_win_sql.html#idp50407728">Binary Compatibility With SQLite</a>
+              <a href="build_win_sql.html#idm707688">Binary Compatibility With SQLite</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="build_win_sql.html#idp50380592">Setting Encryption</a>
+              <a href="build_win_sql.html#idm762048">Setting Encryption</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="build_win_sql.html#idp50382040">Changing Compile Options</a>
+              <a href="build_win_sql.html#idm595344">Changing Compile Options</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="build_win_sql.html#idp50330000">Enabling Extensions</a>
+              <a href="build_win_sql.html#idm1553008">Enabling Extensions</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="build_win_sql.html#win-disablechecksums">Disabling Log
-                Checksums</a>
+              <a href="build_win_sql.html#win-disablechecksums">Disabling Log Checksums</a>
             </span>
           </dt>
           <dt>
@@ -71,17 +70,22 @@
           </dt>
           <dt>
             <span class="sect2">
-              <a href="build_win_sql.html#idp50431536">Using the JDBC Driver</a>
+              <a href="build_win_sql.html#idm1940752">Using the JDBC Driver</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="build_win_sql.html#idp50437400">Building the ODBC Driver</a>
+              <a href="build_win_sql.html#idm201464">Using the JDBC Driver in ADF/JDeveloper</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="build_win_sql.html#idp50452776"> Using the ADO.NET Driver </a>
+              <a href="build_win_sql.html#idm598344">Building the ODBC Driver</a>
+            </span>
+          </dt>
+          <dt>
+            <span class="sect2">
+              <a href="build_win_sql.html#idm1664040"> Using the ADO.NET Driver </a>
             </span>
           </dt>
         </dl>
@@ -89,27 +93,27 @@
       <p>
             SQL support is built as part of the default build on
             Windows. For information on the build instructions, see
-                <a class="xref" href="build_win.html" title="Chapter 5.  Building Berkeley DB for Windows"> Building Berkeley DB for Windows </a>.
+            <a class="xref" href="build_win.html" title="Chapter 5.  Building Berkeley DB for Windows"> Building Berkeley DB for Windows </a>.
         </p>
       <p>
             The SQL library is built as
-                <code class="literal">libdb_sql60.dll</code> in the Release mode
-            or <code class="literal">libdb_sql60d.dll</code> in the Debug mode.
+            <code class="literal">libdb_sql61.dll</code> in the Release mode
+            or <code class="literal">libdb_sql61d.dll</code> in the Debug mode.
             An SQL command line interpreter called
-                <code class="literal">dbsql.exe</code> is also built.
+            <code class="literal">dbsql.exe</code> is also built.
         </p>
       <div class="sect2" lang="en" xml:lang="en">
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp50407728"></a>Binary Compatibility With SQLite</h3>
+              <h3 class="title"><a id="idm707688"></a>Binary Compatibility With SQLite</h3>
             </div>
           </div>
         </div>
         <p>
-                <code class="literal">libdb_sql60.dll</code> is compatible with
+                <code class="literal">libdb_sql61.dll</code> is compatible with
                     <code class="literal">sqlite3.dll</code>. You can copy
-                    <code class="literal">libdb_sql60.dll</code> to
+                    <code class="literal">libdb_sql61.dll</code> to
                     <code class="literal">sqlite3.dll</code> and
                     <code class="literal">dbsql.exe</code> to
                     <code class="literal">sqlite3.exe</code>, and use these
@@ -122,24 +126,24 @@
                 with the Berkeley DB equivalent. For information on
                 migrating data from standard SQLite databases to a
                 Berkeley DB SQL database, see the
-                    <em class="citetitle">Berkeley DB Getting Started with the SQL APIs</em> guide. 
+                <em class="citetitle">Berkeley DB Getting Started with the SQL APIs</em> guide. 
             </p>
         <div class="warning" style="margin-left: 0.5in; margin-right: 0.5in;">
           <h3 class="title">Warning</h3>
           <p>
                     Rename your dlls and executables to the
                     standard SQLite names with
-                        <span class="emphasis"><em>extreme</em></span> care. Doing this
+                    <span class="emphasis"><em>extreme</em></span> care. Doing this
                     will cause all existing tools to break that
                     currently have data stored in a standard SQLite
                     database. 
                 </p>
           <p>
                     <span class="emphasis"><em> For best results, rename your dlls and
-                        command line tool to use the standard SQLite
-                        names only if you know there are no other
-                        tools on your production platform that rely on
-                        standard SQLite. </em></span>
+                    command line tool to use the standard SQLite
+                    names only if you know there are no other
+                    tools on your production platform that rely on
+                    standard SQLite. </em></span>
                 </p>
         </div>
       </div>
@@ -147,17 +151,17 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp50380592"></a>Setting Encryption</h3>
+              <h3 class="title"><a id="idm762048"></a>Setting Encryption</h3>
             </div>
           </div>
         </div>
         <p>
                 To enable encryption in the Berkeley DB SQL API,
                 specify <span class="emphasis"><em>SQLITE_HAS_CODEC</em></span> in
-                    <span class="emphasis"><em>Preprocessor Definitions </em></span>of
+                <span class="emphasis"><em>Preprocessor Definitions </em></span>of
                 the <code class="literal">db_sql</code> project. See
                 <a href="../bdb-sql/sql_encryption.html" class="olink">SQL Encryption</a> in the
-                    <em class="citetitle">Berkeley DB Getting Started with the SQL APIs</em> guide for
+                <em class="citetitle">Berkeley DB Getting Started with the SQL APIs</em> guide for
                 usage details. 
             </p>
       </div>
@@ -165,7 +169,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp50382040"></a>Changing Compile Options</h3>
+              <h3 class="title"><a id="idm595344"></a>Changing Compile Options</h3>
             </div>
           </div>
         </div>
@@ -175,8 +179,8 @@
                 </em></span>of the <code class="literal">db_sql</code> project.
                 For example, to enable the option
                 BDBSQL_FILE_PER_TABLE, add
-                    <code class="literal">BDBSQL_FILE_PER_TABLE=1;</code> to the
-                    <span class="emphasis"><em>Preprocessor Definitions </em></span>of
+                <code class="literal">BDBSQL_FILE_PER_TABLE=1;</code> to the
+                <span class="emphasis"><em>Preprocessor Definitions </em></span>of
                 the <code class="literal">db_sql</code> project.
             </p>
         <div class="variablelist">
@@ -212,8 +216,8 @@
                         files from the database directory may corrupt
                         your database. To backup the metadata
                         (schema), make a copy of the
-                            <code class="literal">metadata</code> and
-                            <code class="literal">table00001</code> files from
+                        <code class="literal">metadata</code> and
+                        <code class="literal">table00001</code> files from
                         the database directory. Make a new copy
                         whenever the schema is changed. 
                     </dd>
@@ -284,7 +288,8 @@
                         specify the SQLITE_DEFAULT_CACHE_SIZE flag.
                         Default value is 2000 pages. For more
                         information, see the SQLite documentation on
-                            <a class="ulink" href="http://www.sqlite.org/pragma.html#pragma_default_cache_size" target="_top">PRAGMA default_cache_size</a>.
+                        <a class="ulink" href="http://www.sqlite.org/pragma.html#pragma_default_cache_size" target="_top">
+                        PRAGMA default_cache_size</a>.
                     </dd>
             <dt>
               <span class="term">SQLITE_DEFAULT_JOURNAL_SIZE_LIMIT</span>
@@ -308,7 +313,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp50330000"></a>Enabling Extensions</h3>
+              <h3 class="title"><a id="idm1553008"></a>Enabling Extensions</h3>
             </div>
           </div>
         </div>
@@ -325,11 +330,12 @@
                 </li>
             <li> 
                     Specify
-                        <span class="emphasis"><em>SQLITE_ENABLE_FTS3</em></span> or
-                        <span class="emphasis"><em>SQLITE_ENABLE_RTREE</em></span> in
-                        <span class="emphasis"><em>Preprocessor Definitions</em></span>
+                    <span class="emphasis"><em>SQLITE_ENABLE_FTS3</em></span> or
+                    <span class="emphasis"><em>SQLITE_ENABLE_RTREE</em></span> in
+                    <span class="emphasis"><em>Preprocessor Definitions</em></span>
                     of the <code class="literal">db_sql</code> project. </li>
-            <li> Re-build the <code class="literal">db_sql</code>
+            <li> 
+                    Re-build the <code class="literal">db_sql</code>
                     project.
                 </li>
           </ol>
@@ -337,15 +343,15 @@
         <p> 
                 See the SQLite Documentation for more information
                 on <a class="ulink" href="http://www.sqlite.org/fts3.html" target="_top">full
-                    text search</a> and <a class="ulink" href="http://www.sqlite.org/rtree.html" target="_top">R-Tree</a>. 
+                text search</a> and <a class="ulink" href="http://www.sqlite.org/rtree.html" target="_top">
+                R-Tree</a>. 
             </p>
       </div>
       <div class="sect2" lang="en" xml:lang="en">
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="win-disablechecksums"></a>Disabling Log
-                Checksums</h3>
+              <h3 class="title"><a id="win-disablechecksums"></a>Disabling Log Checksums</h3>
             </div>
           </div>
         </div>
@@ -369,7 +375,7 @@
         <p>
                 To disable log checksums, before you build the
                 library edit the
-                    <code class="literal">build_windows/db_config.h</code> file,
+                <code class="literal">build_windows/db_config.h</code> file,
                 and delete the following line:
             </p>
         <pre class="programlisting">#define HAVE_LOG_CHECKSUM 1</pre>
@@ -412,18 +418,18 @@
                     <p> 
                                 In the Solution Explorer,
                                 right-click the
-                                   <code class="literal">db_sql_jdbc</code>
+                                <code class="literal">db_sql_jdbc</code>
                                 project and select
-                                   <span class="emphasis"><em>properties</em></span>.
+                               <span class="emphasis"><em>properties</em></span>.
                             </p>
                   </li>
                   <li>
                     <p>
                                 In the <span class="emphasis"><em>Configuration
-                                   Properties -&gt; Build Events -&gt;
-                                   Pre-Build Event</em></span> section,
+                                Properties -&gt; Build Events -&gt;
+                                Pre-Build Event</em></span> section,
                                 alter the command to refer to
-                                   <code class="literal">JDBC2z</code> instead
+                                <code class="literal">JDBC2z</code> instead
                                 of <code class="literal">JDBC2x</code>. 
                             </p>
                   </li>
@@ -439,18 +445,18 @@
                     <p>
                                 In the Solution Explorer,
                                 right-click the
-                                   <code class="literal">db_sql_jdbc</code>
+                                <code class="literal">db_sql_jdbc</code>
                                 project and select
-                                   <span class="emphasis"><em>properties</em></span>.
+                                <span class="emphasis"><em>properties</em></span>.
                             </p>
                   </li>
                   <li>
                     <p>
                                 In the <span class="emphasis"><em>Configuration
-                                   Properties -&gt; Build Events -&gt;
-                                   Pre-Build Event</em></span> section,
+                                Properties -&gt; Build Events -&gt;
+                                Pre-Build Event</em></span> section,
                                 alter the command to refer to
-                                   <code class="literal">JDBC2z1</code> instead
+                                <code class="literal">JDBC2z1</code> instead
                                 of <code class="literal">JDBC2x</code>. Also,
                                 remove the option of "-target 1.5".
                             </p>
@@ -458,15 +464,15 @@
                   <li>
                     <p>
                                 Go to
-                                   <code class="literal">db\lang\sql\jdbc\SQLite</code>,
+                                <code class="literal">db\lang\sql\jdbc\SQLite</code>,
                                 and replace
-                                   <code class="literal">JDBCDriver.java</code>
+                                <code class="literal">JDBCDriver.java</code>
                                 with
-                                   <code class="literal">JDBCDriver.java17</code>,
+                                <code class="literal">JDBCDriver.java17</code>,
                                 and replace
-                                   <code class="literal">JDBCDataSource.java</code>
+                                <code class="literal">JDBCDataSource.java</code>
                                 with
-                                   <code class="literal">JDBCDataSource.java17</code>.
+                                <code class="literal">JDBCDataSource.java17</code>.
                             </p>
                   </li>
                 </ul>
@@ -475,13 +481,15 @@
             <li>
               <p>
                         To enable encryption in the Berkeley DB SQL
-                        JDBC driver, specify
-                            <code class="literal">HAVE_SQLITE3_KEY</code> in
-                            <code class="literal">Preprocessor
-                            Definitions</code> of the
-                            <code class="filename">db_sql_jdbc</code> project.
+                        JDBC driver, make sure the 
+                        <code class="literal">db_dql</code> project is built
+                        with encryption enabled and specify
+                        <code class="literal">HAVE_SQLITE3_KEY</code> in
+                        <code class="literal">Preprocessor
+                        Definitions</code> of the
+                        <code class="filename">db_sql_jdbc</code> project.
                         See <a href="../bdb-sql/sql_encryption.html" class="olink">SQL Encryption</a> in the
-                            <em class="citetitle">Berkeley DB Getting Started with the SQL APIs</em> guide
+                        <em class="citetitle">Berkeley DB Getting Started with the SQL APIs</em> guide
                         for usage details.
                     </p>
             </li>
@@ -496,7 +504,7 @@
         <p> 
                 You can test the build by entering
                 the following commands from the
-                    <code class="literal">db\build_windows\Win32\Debug</code>
+                <code class="literal">db\build_windows\Win32\Debug</code>
                 directory: 
             </p>
         <table class="simplelist" border="0" summary="Simple list">
@@ -513,7 +521,7 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp50431536"></a>Using the JDBC Driver</h3>
+              <h3 class="title"><a id="idm1940752"></a>Using the JDBC Driver</h3>
             </div>
           </div>
         </div>
@@ -526,13 +534,14 @@
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp50408312"></a>Downloading JDBC Sample Code</h4>
+                <h4 class="title"><a id="idm70640"></a>Downloading JDBC Sample Code</h4>
               </div>
             </div>
           </div>
           <p>
                     The download link for JDBC sample code is
-                    available on the <a class="ulink" href="http://www.oracle.com/technetwork/java/index-139949.html" target="_top"> Oracle Technology Network (OTN) </a>.
+                    available on the <a class="ulink" href="http://www.oracle.com/technetwork/java/index-139949.html" target="_top">
+                    Oracle Technology Network (OTN) </a>.
                     You can identify the link by the "JDBC programming
                     examples from all three editions (ZIP format)"
                     text beside it.
@@ -542,7 +551,7 @@
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp50457760"></a>Modifying Sample Code</h4>
+                <h4 class="title"><a id="idm76792"></a>Modifying Sample Code</h4>
               </div>
             </div>
           </div>
@@ -559,22 +568,22 @@
                     </li>
               <li>
                         Substitute
-                            <code class="literal">jdbc:sqlite:/&lt;db-file-name&gt;</code>
+                        <code class="literal">jdbc:sqlite:/&lt;db-file-name&gt;</code>
                         for the generic JDBC URL that appears in the
                         code. That is, put
-                            <code class="literal">jdbc:sqlite:/&lt;db-file-name&gt;</code>
+                        <code class="literal">jdbc:sqlite:/&lt;db-file-name&gt;</code>
                         between the quotation marks in the line:
-                                <p>
-                                    <code class="literal"> String url =
-                                "jdbc:mySubprotocol:myDataSource";</code>
-                                </p><p>
+                        <p>
+                            <code class="literal"> String url =
+                            "jdbc:mySubprotocol:myDataSource";</code>
+                        </p><p>
                             Note: The &lt;db-file-name&gt; can
                             either be an absolute path name like
-                                <code class="literal">"jdbc:sqlite:/D:\\jdbc_ex_db\\myDataSource"</code>,
+                            <code class="literal">"jdbc:sqlite:/D:\\jdbc_ex_db\\myDataSource"</code>,
                             or a relative path-file-name like
-                                <code class="literal">"jdbc:sqlite:/..\\jdbc_ex_db\myDataSource"</code>,
+                            <code class="literal">"jdbc:sqlite:/..\\jdbc_ex_db\myDataSource"</code>,
                             or a file name, like
-                                <code class="literal">"jdbc:sqlite:/myDataSource"</code>,
+                            <code class="literal">"jdbc:sqlite:/myDataSource"</code>,
                             in which the database file will be stored
                             at the current directory. Note that all
                             path arguments require a leading slash,
@@ -584,20 +593,20 @@
                         </p></li>
               <li>
                         Substitute
-                            <code class="literal">SQLite.JDBCDriver</code> for
-                            <code class="literal">myDriver.ClassName</code> in
+                        <code class="literal">SQLite.JDBCDriver</code> for
+                        <code class="literal">myDriver.ClassName</code> in
                         the line:
-                            <code class="literal">Class.forName("myDriver.ClassName");</code></li>
+                       <code class="literal">Class.forName("myDriver.ClassName");</code></li>
               <li>
                         Substitute the username and password you
                         use for your database in the following:
-                            <code class="literal">"myLogin",
+                        <code class="literal">"myLogin",
                         "myPassword"</code>. <p>This is
-                            optional.</p></li>
+                        optional.</p></li>
               <li>
                         If your JDK version is above 1.5, change
                         the variable name <code class="literal">enum</code> in
-                            <code class="literal">OutputApplet.java</code> to
+                        <code class="literal">OutputApplet.java</code> to
                         some other variable name because, as of JDK
                         release 5 <code class="literal">enum</code> is a keyword
                         and can not be used as an
@@ -610,7 +619,7 @@
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp50452472"></a>Building and Running the JDBC Sample code</h4>
+                <h4 class="title"><a id="idm312944"></a>Building and Running the JDBC Sample code</h4>
               </div>
             </div>
           </div>
@@ -626,18 +635,17 @@
             <ol type="1">
               <li>
                         In the
-                            <code class="literal">db\build_windows\Win32\Debug</code>
+                        <code class="literal">db\build_windows\Win32\Debug</code>
                         directory, run following commands:
                         <pre class="programlisting">
     $ javac -classpath ".;jdbc.jar" -d . \path\to\jdbc_ex\*.java
-    $ java  -classpath ".;jdbc.jar" &lt;ClassName, eg. CreateCoffees&gt;
-    </pre></li>
+    $ java  -classpath ".;jdbc.jar" &lt;ClassName, eg. CreateCoffees&gt;</pre></li>
               <li>
                         After you run the CreateCoffees example,
                         use the <code class="literal">dbsql</code> executable to
                         open the <code class="literal">myDataSource</code>
                         database file and check if the table
-                            <code class="literal">COFFEES</code> has been
+                        <code class="literal">COFFEES</code> has been
                         successfully created in the database.
                         <pre class="programlisting">
     $ dbsql myDataSourcedbsql&gt; .tables
@@ -648,16 +656,17 @@
     CREATE TABLE COFFEES (COF_NAME varchar(32),/
     SUP_ID int, PRICE float, SALES int, TOTAL int);
     COMMIT;
-    dbsql&gt;
-    </pre></li>
+    dbsql&gt;</pre></li>
               <li>
                         Repeat step 2 to run other examples.
-                            <p>Note: Some examples like AutoGenKeys
+                        <p>
+                            Note: Some examples like AutoGenKeys
                             are not yet supported by BDB JDBC driver.
                             The
-                                <code class="literal">SQLFeatureNotSupportedException</code>
+                            <code class="literal">SQLFeatureNotSupportedException</code>
                             is displayed for those unsupported
-                            examples.</p></li>
+                            examples.
+                        </p></li>
             </ol>
           </div>
         </div>
@@ -666,7 +675,124 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp50437400"></a>Building the ODBC Driver</h3>
+              <h3 class="title"><a id="idm201464"></a>Using the JDBC Driver in ADF/JDeveloper</h3>
+            </div>
+          </div>
+        </div>
+        <p>
+                This section describes steps to use BDB JDBC driver in the integrated
+                development environment ADF/JDeveloper.
+            </p>
+        <div class="orderedlist">
+          <ol type="1">
+            <li>
+              <p>
+                        Build the JDBC driver. For more information, see <a class="xref" href="build_win_sql.html#build_jdbc" title="Building the JDBC Driver">Building the JDBC Driver</a> .
+                        </p>
+              <p>
+                        Ensure that the Java environment used to build the JDBC driver is
+                        same as used in ADF/JDeveloper.
+                        </p>
+              <p>
+                         Include JDBC driver path in the system <code class="literal">CLASSPATH</code> 
+                         and <code class="literal">LD_LIBRARY_PATH</code>.
+                        </p>
+            </li>
+            <li>
+              <p>
+                        Create BDB JDBC Database Connection in JDeveloper. 
+                        ADF accesses the database by Database Connection. As long as the
+                        database file exists and has tables, you can see all tables located
+                        by the database connection in the project application resources panel.
+                        </p>
+              <div class="itemizedlist">
+                <ul type="disc">
+                  <li>
+                    <p>
+                            Select <span class="emphasis"><em>File</em></span> -&gt; <span class="emphasis"><em>New</em></span> -&gt;
+                            <span class="emphasis"><em>General</em></span> -&gt; <span class="emphasis"><em>Connections</em></span> -&gt; 
+                            <span class="emphasis"><em>Database Connection</em></span>.
+                            </p>
+                    <div class="orderedlist">
+                      <ol type="a">
+                        <li>
+                            In the panel of <code class="literal">"Create Database Connection",</code> choose 
+                            <code class="literal">"Generic JDBC"</code> as <code class="literal">"Connection Type"</code>.
+                            </li>
+                        <li>
+                            In the <code class="literal">"Generic JDBC Settings"</code> section, select <code class="literal">
+                            "New"</code> to register a JDBC driver.
+                            </li>
+                      </ol>
+                    </div>
+                  </li>
+                  <li>
+                    <p>
+                            In the registration form, enter <code class="literal">"SQLite.JDBCDriver"</code>
+                            for Driver Class.
+                            </p>
+                    <div class="orderedlist">
+                      <ol type="a">
+                        <li>
+                            Select <code class="literal">"Browse"</code> to locate the library.
+                            </li>
+                        <li>
+                            In the library information form, select <span class="emphasis"><em>User</em></span> -&gt;
+                             <span class="emphasis"><em>New</em></span> to create a library.
+                            </li>
+                        <li>
+                            Enter <code class="literal">"DBSQL_JDBC"</code> for <code class="literal">"Library Name,"</code> and add the path of the JDBC driver
+                            to the Class Path.
+                            </li>
+                        <li>
+                            Select <code class="literal">"OK"</code> to save.
+                            </li>
+                      </ol>
+                    </div>
+                  </li>
+                  <li>
+                    <p>
+                            Test the connection in the panel of Create Database Connection.
+                            </p>
+                    <div class="orderedlist">
+                      <ol type="a">
+                        <li>
+                            Configure the JDBC URL with <code class="literal">jdbc:sqlite:/&lt;db-file-name&gt;</code>. The 
+                            <code class="literal">&lt;db-file-name&gt;</code> should include the database file path which must be 
+                            absolute.
+                            </li>
+                        <li>
+                            Select Test Connection. If the connection is proved to be 
+                            working, a <code class="literal">"Success"</code> message is displayed.
+                            </li>
+                      </ol>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </li>
+            <li>
+              <p>
+                            Apply BDB JDBC Database Connection in the ADF application.
+                            After successfully creating the database connection, you can create
+                            and initialize ADF BC component with it. During initialization, choose
+                            <code class="literal">"SQL92"</code> as SQL Platform and <code class="literal">"Java"</code>
+                            as Data Type Map for the connection. 
+                            </p>
+              <p>
+                            You can define the ADF BC component by adding entity objects, view objects
+                            etc. and the database connection takes charge of accessing the database.
+                            For more information, see the example <code class="literal">lang/sql/adf/EX_ADF</code>.
+                            </p>
+            </li>
+          </ol>
+        </div>
+      </div>
+      <div class="sect2" lang="en" xml:lang="en">
+        <div class="titlepage">
+          <div>
+            <div>
+              <h3 class="title"><a id="idm598344"></a>Building the ODBC Driver</h3>
             </div>
           </div>
         </div>
@@ -678,7 +804,7 @@
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp50440304"></a>Configuring Your System</h4>
+                <h4 class="title"><a id="idm1621640"></a>Configuring Your System</h4>
               </div>
             </div>
           </div>
@@ -691,13 +817,15 @@
               <li> 
                         Download and install the latest SQLite
                         ODBC driver Windows installer package for
-                            <a class="ulink" href="http://www.ch-werner.de/sqliteodbc/sqliteodbc.exe" target="_top">32 bit Windows</a> or <a class="ulink" href="http://www.ch-werner.de/sqliteodbc/sqliteodbc_w64.exe" target="_top">64 bit Windows</a>.
+                            <a class="ulink" href="http://www.ch-werner.de/sqliteodbc/sqliteodbc.exe" target="_top">32 bit Windows</a>
+                            or <a class="ulink" href="http://www.ch-werner.de/sqliteodbc/sqliteodbc_w64.exe" target="_top">
+                            64 bit Windows</a>.
                         </li>
-              <li> Download and install the latest 
+              <li> 
+                            Download and install the latest 
                             <a class="ulink" href="http://www.microsoft.com/en-us/download/details.aspx?id=21995" target="_top">
-                                Microsoft Data Access Components (MDAC) SDK 
-                            </a>. The MDAC SDK is only required for
-                            testing the installation.
+                            Microsoft Data Access Components (MDAC) SDK </a>. The MDAC SDK is 
+                            only required for testing the installation.
                     </li>
             </ol>
           </div>
@@ -706,7 +834,7 @@
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp50477512"></a>Building the Library</h4>
+                <h4 class="title"><a id="idm204488"></a>Building the Library</h4>
               </div>
             </div>
           </div>
@@ -731,8 +859,8 @@
                     </li>
               <li>
                         Select <span class="emphasis"><em>File</em></span> -&gt;
-                            <span class="emphasis"><em>Add</em></span> -&gt;
-                            <span class="emphasis"><em>Existing Project</em></span>. 
+                        <span class="emphasis"><em>Add</em></span> -&gt;
+                        <span class="emphasis"><em>Existing Project</em></span>. 
                     </li>
               <li>
                         Select
@@ -741,11 +869,11 @@
               <li>
                         Select the appropriate directory for
                         your compiler: <code class="filename">VS8</code> or
-                            <code class="filename">VS10</code>.
+                        <code class="filename">VS10</code>.
                     </li>
               <li>
                         Select
-                            <code class="filename">db_sql_odbc.vcproj</code>
+                        <code class="filename">db_sql_odbc.vcproj</code>
                         and add it to the Berkeley_DB solution. This
                         adds the <code class="filename">db_sql_odbc</code>
                         Visual Studio project to the Berkeley_DB
@@ -753,18 +881,18 @@
                     </li>
               <li>
                         Build the
-                            <code class="filename">db_sql_odbc</code> project.
+                        <code class="filename">db_sql_odbc</code> project.
                         This can be done by right-clicking the
-                            <code class="filename">db_sql_odbc</code> project
+                        <code class="filename">db_sql_odbc</code> project
                         in the project explorer panel, and selecting
-                            <code class="literal">build</code>.
+                        <code class="literal">build</code>.
                     </li>
             </ol>
           </div>
           <p>
-                    The <code class="literal">sqlite3odbc.dll</code>,
-                        <code class="literal">libdb_sql60.dll</code> and
-                        <code class="literal">libdb60.dll</code> files are now
+                    The <code class="literal">db_sql_odbc61.dll</code>,
+                    <code class="literal">libdb_sql61.dll</code> and
+                    <code class="literal">libdb61.dll</code> files are now
                     built.
                 </p>
         </div>
@@ -772,61 +900,66 @@
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp50464624"></a>Installing the Library</h4>
+                <h4 class="title"><a id="idm508832"></a>Installing the Library</h4>
               </div>
             </div>
           </div>
           <p>
-                    Copy the dll files built in the
-                        <span class="emphasis"><em>Building the Library</em></span>
+                    Rename <code class="literal">db_sql_odbc61.dll</code>
+                    to <code class="literal">sqlite3odbc.dll</code>
+                    and copy the dll files built in the
+                    <span class="emphasis"><em>Building the Library</em></span>
                     section to the Windows system folder.
                 </p>
-          <p>The Windows system folder is different on
+          <p>
+                    The Windows system folder is different on
                     different systems, but is often
-                        <code class="literal">C:\WINDOWS\System32</code>.
+                    <code class="literal">C:\WINDOWS\System32</code>.
                 </p>
         </div>
         <div class="sect3" lang="en" xml:lang="en">
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp50468192"></a>Testing the ODBC Install</h4>
+                <h4 class="title"><a id="idm720912"></a>Testing the ODBC Install</h4>
               </div>
             </div>
           </div>
-          <p>The steps to verify that the installed driver
+          <p>
+                    The steps to verify that the installed driver
                     works are as follows:
                 </p>
           <div class="orderedlist">
             <ol type="1">
               <li>
                         Open the Unicode ODBCTest application.
-                        On Windows XP: <span class="emphasis"><em>Windows
-                            start</em></span> -&gt; <span class="emphasis"><em>Microsoft
-                            Data Access SDK 2.8</em></span> -&gt;
-                            <span class="emphasis"><em>ODBCTest (Unicode,
-                            x86).</em></span></li>
+                        On Windows: <span class="emphasis"><em>Windows
+                        start</em></span> -&gt; <span class="emphasis"><em>Microsoft
+                        Data Access SDK 2.8</em></span> -&gt;
+                        <span class="emphasis"><em>ODBCTest (Unicode,
+                        x86).</em></span></li>
               <li>
                         Select the <span class="emphasis"><em>Conn</em></span> -&gt;
-                            <span class="emphasis"><em>Full Connect...</em></span> menu
+                        <span class="emphasis"><em>Full Connect...</em></span> menu
                         item.
                     </li>
               <li>
                         Select <code class="literal">SQLite3
-                            Datasource</code> and click
-                            <code class="literal">OK</code>.</li>
+                        Datasource</code> and click
+                        <code class="literal">OK</code>.</li>
               <li>
                         Select the <span class="emphasis"><em>Stmt</em></span> -&gt;
-                            <span class="emphasis"><em>SQLExecDirect...</em></span> menu
+                        <span class="emphasis"><em>SQLExecDirect...</em></span> menu
                         item.
                     </li>
               <li>
                         Enter <code class="literal">CREATE TABLE
-                            t1(x);</code> in the
-                            <code class="literal">Statement</code> text box and
+                        t1(x);</code> in the
+                        <code class="literal">Statement</code> text box and
                         click <code class="literal">OK</code>.
                     </li>
-              <li>Verify that no error messages were
+              <li>
+                        Verify that no error messages were
                         output to the error window.
                     </li>
             </ol>
@@ -837,15 +970,16 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp50452776"></a> Using the ADO.NET Driver </h3>
+              <h3 class="title"><a id="idm1664040"></a> Using the ADO.NET Driver </h3>
             </div>
           </div>
         </div>
         <p>
-                Go to the <a class="ulink" href="http://www.oracle.com/technetwork/database/berkeleydb/downloads/index.html" target="_top">Oracle
-                    Berkeley DB download page</a>, and download
+                Go to the <a class="ulink" href="http://www.oracle.com/technetwork/database/database-technologies/berkeleydb/downloads/index.html" target="_top">Oracle
+                Berkeley DB download page</a>, and download
                 the ADO.NET package. Build the package by following
-                the <a href="../bdb-sql/buildinstall.html#ado_net" class="olink">instructions</a> included in the package.
+                the <a href="../bdb-sql/buildinstall.html#ado_net" class="olink">
+                instructions</a> included in the package.
             </p>
       </div>
     </div>

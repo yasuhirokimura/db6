@@ -1,7 +1,7 @@
 diff -r 4ce6bb090c10 configure
 --- a/configure	Tue Feb 19 11:51:39 2013 -0500
 +++ b/configure	Wed Feb 20 12:03:37 2013 +0800
-@@ -10197,6 +10197,29 @@
+@@ -10205,6 +10205,29 @@
  
  
  
@@ -31,7 +31,7 @@ diff -r 4ce6bb090c10 configure
  ##########
  # Find SQLite3 header file and library
  #
-@@ -10319,28 +10342,6 @@
+@@ -10327,28 +10350,6 @@
  fi
  
  test "x$enable_load_extension" = "xyes" || enable_load_extension=no

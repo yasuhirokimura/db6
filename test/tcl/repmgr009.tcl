@@ -57,7 +57,7 @@ proc repmgr009_sub { method niter tnum largs } {
 
 	puts "\tRepmgr$tnum.a: Set up environment without repmgr."
 	set ma_envcmd "berkdb_env_noerr -create $verbargs \
-	    -errpfx MASTER -home $masterdir -txn -rep -thread"
+	    -home $masterdir -txn -rep -thread"
 	set masterenv [eval $ma_envcmd]
 	error_check_good masterenv_close [$masterenv close] 0
 
@@ -71,13 +71,20 @@ proc repmgr009_sub { method niter tnum largs } {
 	catch {[stat_field $masterenv repmgr_stat "Connections dropped"]} res
 	error_check_good errchk [is_substr $res "invalid command"] 1
 
-	puts "\tRepmgr$tnum.d: Call repmgr with 0 msgth (error)."
+	puts "\tRepmgr$tnum.d1: Call repmgr with 0 msgth (error)."
 	set masterenv [eval $ma_envcmd]
-	set ret [catch {$masterenv repmgr -start master -msgth 0 \
-	    -local [list 127.0.0.1 [lindex $ports 0]]}]
-	error_check_bad disallow_msgth_0 [is_substr $ret "invalid argument"] 1
+	catch {$masterenv repmgr -start master -msgth 0 \
+	    -local [list 127.0.0.1 [lindex $ports 0]]} res
+	error_check_good no_threads [is_substr $res "nthreads parameter"] 1
 	error_check_good allow_msgth_nonzero [$masterenv repmgr \
 	    -start master -local [list 127.0.0.1 [lindex $ports 0]]] 0
+	error_check_good masterenv_close [$masterenv close] 0
+
+	puts "\tRepmgr$tnum.d2: Call repmgr with no startup flags (error)."
+	set masterenv [eval $ma_envcmd]
+	catch {$masterenv repmgr -start none \
+	    -local [list 127.0.0.1 [lindex $ports 0]]} res
+	error_check_good no_flags [is_substr $res "non-zero flags value"] 1
 	error_check_good masterenv_close [$masterenv close] 0
 
 	puts "\tRepmgr$tnum.e: Start a master with repmgr."
@@ -146,19 +153,24 @@ proc repmgr009_sub { method niter tnum largs } {
 	error_check_good errchk [is_substr $res \
 	    "cannot call from Replication Manager application"] 1
 
-	puts "\tRepmgr$tnum.n: Verifying client database contents."
+	puts "\tRepmgr$tnum.n: Change elect_loglength after rep_start (error)."
+	catch {$clientenv rep_config {electloglength on}} res
+	error_check_good elerrchk [is_substr $res \
+	    "ELECT_LOGLENGTH must be configured"] 1
+
+	puts "\tRepmgr$tnum.o: Verifying client database contents."
 	rep_verify $masterdir $masterenv $clientdir $clientenv 1 1 1
 
 	error_check_good client_close [$clientenv close] 0
 	error_check_good masterenv_close [$masterenv close] 0
 
-	puts "\tRepmgr$tnum.o: Start a master with base API rep_start."
+	puts "\tRepmgr$tnum.p: Start a master with base API rep_start."
 	set ma_envcmd2 "berkdb_env_noerr -create $verbargs \
 	    -home $masterdir2 -errpfx MASTER -txn -thread -rep_master \
 	    -rep_transport \[list 1 replsend\]"
 	set masterenv2 [eval $ma_envcmd2]
 
-	puts "\tRepmgr$tnum.p: Call repmgr after rep_start (error)."
+	puts "\tRepmgr$tnum.q: Call repmgr after rep_start (error)."
 	catch {$masterenv2 repmgr -ack all \
 	    -local [list 127.0.0.1 [lindex $ports 0]] \
 	    -start master} res
@@ -168,13 +180,13 @@ proc repmgr009_sub { method niter tnum largs } {
 
 	error_check_good masterenv_close [$masterenv2 close] 0
 
-	puts "\tRepmgr$tnum.q: Start an env without starting rep or repmgr."
+	puts "\tRepmgr$tnum.r: Start an env without starting rep or repmgr."
 	set norep_envcmd "berkdb_env_noerr -create $verbargs \
 	    -home $norepdir -errpfx NOREP -txn -thread \
 	    -rep_transport \[list 1 replsend\]"
 	set norepenv [eval $norep_envcmd]
 
-	puts "\tRepmgr$tnum.r: Call rep_elect before rep_start (error)."
+	puts "\tRepmgr$tnum.s: Call rep_elect before rep_start (error)."
 	catch {$norepenv rep_elect 2 2 2 5000000} res
 	# Internal rep_elect call returns EINVAL if rep_start has not 
 	# been called first.

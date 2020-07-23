@@ -24,6 +24,7 @@ static int backup_read_data_dir
     __P((DB_ENV *, DB_THREAD_INFO *, const char *, const char *, u_int32_t));
 static int backup_dir_clean
     __P((DB_ENV *, const char *, const char *, int *, u_int32_t));
+static int backup_lgconf_chk __P((DB_ENV *));
 static int __db_backup
     __P((DB_ENV *, const char *, DB_THREAD_INFO *, int, u_int32_t));
 
@@ -93,6 +94,11 @@ retry:	if ((ret = __db_create_internal(&dbp, dbenv->env, 0)) == 0 &&
 		}
 	}
 
+	/* Hot backup requires DB_LOG_BLOB. */
+	if (ret == 0 && dbp->blob_threshold != 0 &&
+	    (ret = backup_lgconf_chk(dbenv)) != 0)
+		goto err;
+
 	if (full_path == NULL)
 		full_path = dbfile;
 	if (ret == 0) {
@@ -120,7 +126,7 @@ retry:	if ((ret = __db_create_internal(&dbp, dbenv->env, 0)) == 0 &&
 	 * blob files.
 	 */
 	if (ret == 0 && dbp->blob_threshold != 0 &&
-	    (t_ret = __blob_copy_all(dbp, target)) != 0)
+	    (t_ret = __blob_copy_all(dbp, target, flags)) != 0)
 		ret= t_ret;
 
 #ifdef HAVE_QUEUE
@@ -132,7 +138,7 @@ retry:	if ((ret = __db_create_internal(&dbp, dbenv->env, 0)) == 0 &&
 		ret = __qam_backup_extents(dbp, ip, target, flags);
 #endif
 
-	if (dbp != NULL &&
+err:	if (dbp != NULL &&
 	    (t_ret = __db_close(dbp, NULL, DB_NOSYNC)) != 0 && ret == 0)
 		ret = t_ret;
 
@@ -370,13 +376,16 @@ backup_read_data_dir(dbenv, ip, dir, backup_dir, flags)
 	ENV *env;
 	FILE *savefile;
 	int fcnt, ret;
-	size_t cnt;
+	size_t cnt, len;
 	const char *bd;
 	char **names, buf[DB_MAXPATHLEN], bbuf[DB_MAXPATHLEN];
+	char fullpath[DB_MAXPATHLEN];
 	void (*savecall) (const DB_ENV *, const char *, const char *);
 
 	env = dbenv->env;
 	memset(bbuf, 0, sizeof(bbuf));
+	memset(fullpath, 0, sizeof(fullpath));
+	len = 0;
 
 	bd = backup_dir;
 	if (!LF_ISSET(DB_BACKUP_SINGLE_DIR) && dir != env->db_home) {
@@ -418,6 +427,12 @@ backup_read_data_dir(dbenv, ip, dir, backup_dir, flags)
 			__db_errx(env, DB_STR_A("0722",
 			    "%s: path too long", "%s"), buf);
 			return (EINVAL);
+		}
+		/* Save the original dir. */
+		if (!LF_ISSET(DB_BACKUP_SINGLE_DIR)) {
+			(void)snprintf(fullpath, sizeof(fullpath),
+			    "%s%c%c", dir, PATH_SEPARATOR[0], '\0');
+			len = strlen(fullpath);
 		}
 		dir = buf;
 	}
@@ -467,7 +482,16 @@ backup_read_data_dir(dbenv, ip, dir, backup_dir, flags)
 		savefile = dbenv->db_errfile;
 		dbenv->db_errfile = NULL;
 
-		ret = __db_dbbackup(dbenv, ip, names[cnt], bd, flags, 0, NULL);
+		/*
+		 * If it is not backing up to a single directory, prefix
+		 * the file with 'dir' so that the file and directory structure
+		 * in the source and backup location will be the same.
+		 */
+		if (len != 0)
+			(void)snprintf(fullpath + len,
+			    sizeof(fullpath) - len, "%s%c", names[cnt], '\0');
+		ret = __db_dbbackup(dbenv, ip, names[cnt],
+		    backup_dir, flags, 0, len != 0 ? fullpath : NULL);
 
 		dbenv->db_errcall = savecall;
 		dbenv->db_errfile = savefile;
@@ -690,9 +714,11 @@ __db_backup_pp(dbenv, target, flags)
 {
 	DB_THREAD_INFO *ip;
 	ENV *env;
+	u_int32_t bytes;
 	int remove_max, ret;
 
 	env = dbenv->env;
+	bytes = 0;
 	remove_max = 0;
 
 #undef	OKFLAGS
@@ -708,6 +734,11 @@ __db_backup_pp(dbenv, target, flags)
 		    DB_STR("0716", "Target directory may not be null."));
 		return (EINVAL);
 	}
+
+	/* Hot backup requires DB_LOG_BLOB. */
+	if ((ret = __env_get_blob_threshold_int(env, &bytes)) != 0 ||
+	    (bytes != 0 && (ret = backup_lgconf_chk(dbenv)) != 0))
+		return (ret);
 
 	/*
 	 * If the target directory for the backup does not exist, create it
@@ -765,6 +796,19 @@ __db_backup(dbenv, target, ip, remove_max, flags)
 		goto end;
 	F_SET(dbenv, DB_ENV_HOTBACKUP);
 	if (!LF_ISSET(DB_BACKUP_UPDATE)) {
+		/*
+		 * Don't allow absolute path of blob directory when
+		 * it is not backing up to a single directory.
+		 */
+		if (!LF_ISSET(DB_BACKUP_SINGLE_DIR) &&
+		    dbenv->db_blob_dir != NULL &&
+		    __os_abspath(dbenv->db_blob_dir)) {
+			__db_errx(env, DB_STR_A("0780",
+"blob directory '%s' is absolute path, not permitted unless backup is to a single directory",
+			"%s"), dbenv->db_blob_dir);
+			ret = EINVAL;
+			goto err;
+		}
 		if ((ret = backup_read_data_dir(dbenv,
 		    ip, env->db_home, target, flags)) != 0)
 			goto err;
@@ -792,7 +836,17 @@ __db_backup(dbenv, target, ip, remove_max, flags)
 	/*
 	 * Copy all log files found in the log directory.
 	 * The log directory defaults to the home directory.
+	 * Don't allow absolute path of log directory when
+	 * it is not backing up to a single directory.
 	 */
+	if (!LF_ISSET(DB_BACKUP_SINGLE_DIR) &&
+	    dbenv->db_log_dir != NULL && __os_abspath(dbenv->db_log_dir)) {
+		__db_errx(env, DB_STR_A("0781",
+"log directory '%s' is absolute path, not permitted unless backup is to a single directory",
+		    "%s"), dbenv->db_log_dir);
+		ret = EINVAL;
+		goto err;
+	}
 	if ((ret = backup_read_log_dir(dbenv, target, &copy_min, flags)) != 0)
 		goto err;
 	/*
@@ -812,4 +866,27 @@ __db_backup(dbenv, target, ip, remove_max, flags)
 err:	F_CLR(dbenv, DB_ENV_HOTBACKUP);
 	(void)__env_set_backup(env, 0);
 end:	return (ret);
+}
+
+/*
+ * __db_backup_fchk --
+ *	Log configure checking for backup when blob is enabled.
+ */
+static int
+backup_lgconf_chk(dbenv)
+	DB_ENV *dbenv;
+{
+	int lgconf, ret;
+
+	ret = 0;
+
+	if (LOGGING_ON(dbenv->env) && ((ret = __log_get_config(dbenv,
+	    DB_LOG_BLOB, &lgconf)) != 0 || lgconf == 0)) {
+		__db_errx(dbenv->env, DB_STR("0782",
+		    "Hot backup requires DB_LOG_BLOB"));
+		if (ret == 0)
+			ret = EINVAL;
+	}
+
+	return (ret);
 }

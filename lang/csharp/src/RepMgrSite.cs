@@ -11,7 +11,7 @@ using BerkeleyDB.Internal;
 
 namespace BerkeleyDB {
     /// <summary>
-    /// A class representing a replication site used by Replication Manager
+    /// A class representing a replication site used by Replication Manager.
     /// </summary>
     public class RepMgrSite {
         
@@ -23,7 +23,7 @@ namespace BerkeleyDB {
         /// </summary>
         public int EId;
         /// <summary>
-        /// The address of the site
+        /// The address of the site.
         /// </summary>
         public ReplicationHostAddress Address;
         /// <summary>

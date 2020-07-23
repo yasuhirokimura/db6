@@ -33,7 +33,7 @@ namespace BerkeleyDB {
         /// </remarks>
         public Isolation IsolationDegree;
         /// <summary>
-        /// If true, specify that the cursor will be used to update the
+        /// If true, specify that the cursor is used to update the
         /// database. The underlying database environment must have been opened
         /// with <see cref="DatabaseEnvironmentConfig.UseCDB"/> set. 
         /// </summary>
@@ -42,7 +42,7 @@ namespace BerkeleyDB {
         /// <para>
         /// Configure a transactional cursor to operate with read-only snapshot
         /// isolation. For databases with <see cref="DatabaseConfig.UseMVCC"/>
-        /// set, data values will be read as they are when the cursor is opened,
+        /// set, data values are read as they are when the cursor is opened,
         /// without taking read locks.
         /// </para>
         /// <para>
@@ -63,7 +63,7 @@ namespace BerkeleyDB {
         /// <remarks>
         /// The priority of a page biases the replacement algorithm to be more
         /// or less likely to discard a page when space is needed in the buffer
-        /// pool. The bias is temporary, and pages will eventually be discarded
+        /// pool. The bias is temporary, and pages are eventually discarded
         /// if they are not referenced again. The setting is only advisory, and
         /// does not guarantee pages will be treated in a specific way.
         /// </remarks>

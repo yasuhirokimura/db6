@@ -1792,7 +1792,8 @@ fits:	memset(&bi, 0, sizeof(bi));
 		if ((ret = __db_pitem(dbc, pg, pind, size, &hdr, &data)) != 0)
 			goto err;
 		pind++;
-		if (fip != NULL) {
+		/* add bip test so fortify does not complain */
+		if (fip != NULL && bip != NULL) {
 			if (B_TYPE(bip->type) == B_OVERFLOW &&
 			    (ret = __db_doff(dbc,
 			    ((BOVERFLOW *)bip->data)->pgno)) != 0)
@@ -1981,8 +1982,6 @@ __bam_compact_dups(dbc, ppg, factor, have_lock, c_data, pgs_donep)
 				goto err;
 			/* Just in case it should move.  Could it? */
 			bo = GET_BOVERFLOW(dbp, *ppg, i);
-			/* if (bo->pgno != pgno)
-				(*pgs_donep)++; */
 		}
 
 		if (B_TYPE(bo->type) == B_OVERFLOW) {
@@ -2384,7 +2383,7 @@ __bam_savekey(dbc, next, start)
 			if (len == 0) {
 no_key:				__db_errx(env, DB_STR("1023",
 				    "Compact cannot handle zero length key"));
-				ret = DB_NOTFOUND;
+				ret = DBC_ERR(dbc, DB_NOTFOUND);
 				goto err;
 			}
 		} else {

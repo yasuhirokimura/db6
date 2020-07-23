@@ -73,6 +73,11 @@ public abstract class EventHandlerAdapter implements EventHandler {
     */
     public void handleRepInitDoneEvent() {}
     /**
+    see {@link com.sleepycat.db.EventHandler#handleRepInQueueFullEvent EventHandler.handleRepInQueueFullEvent}for details of this
+    callback.
+    */
+    public void handleRepInQueueFullEvent() {}
+    /**
     See {@link com.sleepycat.db.EventHandler#handleRepJoinFailureEvent EventHandler.handleRepJoinFailureEvent} for details of this
     callback.
     */

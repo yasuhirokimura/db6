@@ -117,6 +117,21 @@ public class RepmgrStartupTest extends EventHandlerAdapter
         try {
             // start replication manager
             dbenv.replicationManagerStart(3, ReplicationManagerStartPolicy.REP_MASTER);
+            EnvironmentConfig cfg = dbenv.getConfig();
+            assertEquals(cfg.getReplicationManagerIncomingQueueMax(), 100L * 1024L * 1024L);
+            long gigabyte = 1024L * 1024L * 1024L;
+            long megabyte = 1024L * 1024L;
+            // Test setting repmgr incoming queue size > 1GB.
+            cfg.setReplicationManagerIncomingQueueMax(123456L * gigabyte + 654321L);
+            dbenv.setConfig(cfg);
+            cfg = dbenv.getConfig();
+            assertEquals(cfg.getReplicationManagerIncomingQueueMax(), 123456L * gigabyte + 654321L);
+            // Test setting repmgr incoming queue size < 1GB.
+            cfg.setReplicationManagerIncomingQueueMax(10L * megabyte);
+            dbenv.setConfig(cfg);
+            cfg = dbenv.getConfig();
+            assertEquals(cfg.getReplicationManagerIncomingQueueMax(), 10L * megabyte);
+
         } catch(DatabaseException dbe) {
             fail("Unexpected database exception came from replicationManagerStart." + dbe);
         }

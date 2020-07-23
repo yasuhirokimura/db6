@@ -231,20 +231,28 @@ proc _upgrade_test { temp_dir version method file endianness } {
 
 	puts "Upgrade: $version $method $file $endianness"
 
+	# Set up flags for finding blobs.
+	set dumpflags " -b $testdir/__db_bl" 
+	set bflags " -blob_dir $testdir/__db_bl" 
+
+	# Get the endianness of the machine that created 
+	# the database.
+	set generated_on [string range $version 0 1]
+
 	# Check whether we're working with an encrypted file.
 	if { [string match c-* $file] } {
 		set encrypt 1
+		append dumpflags " -P $passwd "
 	}
-
-	# Open the database prior to upgrading.  If it fails,
-	# it should fail with the DB_OLDVERSION message.
 	set encargs ""
 	set upgradeargs ""
 	if { $encrypt == 1 } {
 		set encargs " -encryptany $passwd "
 		set upgradeargs " -P $passwd "
 	}
-	set bflags " -blob_dir $testdir/__db_bl" 
+
+	# Open the database prior to upgrading.  If it fails,
+	# it should fail with the DB_OLDVERSION message.
 	if { [catch \
 	    { set db [eval {berkdb open} $encargs $bflags \
 	    $temp_dir/$file-$endianness.db] } res] } {
@@ -264,26 +272,49 @@ proc _upgrade_test { temp_dir version method file endianness } {
 		error_check_good db_close [$db close] 0
 	}
 
-	# Now upgrade the database.  Use the Tcl API upgrade 
-	# for heap because this will upgrade the auxiliary heap
-	# files (.db1, .db2) as well as the primary file and 
-	# reassociate the files properly.
-	if { $method == "heap" } {
-		set ret [catch {eval berkdb upgrade \
-		    $upgradeargs "$temp_dir/$file-$endianness.db"} message]
-	} else {
-		set ret [catch {eval exec {$util_path/db_upgrade} \
-		    $upgradeargs "$temp_dir/$file-$endianness.db"} message]
+	# Upgrade the database.  Skip the upgrade for cross-endian 
+	# files; upgrade does not work across endianness.  
+	# Use the Tcl API upgrade for heap because this will upgrade 
+	# the auxiliary heap files (.db1, .db2) as well as the primary 
+	# file and properly reassociate the files.
+	if { $generated_on == $endianness } {
+		if { $method == "heap" } {
+			set ret [catch {eval berkdb upgrade $upgradeargs \
+			    "$temp_dir/$file-$endianness.db"} message]
+		} else {
+			set ret [catch {eval exec {$util_path/db_upgrade} \
+			    $upgradeargs \
+			    "$temp_dir/$file-$endianness.db"} message]
+		}
+		error_check_good dbupgrade $ret 0
 	}
-
-	error_check_good dbupgrade $ret 0
 
 	error_check_good dbupgrade_verify [verify_dir $temp_dir "" 0 0 1] 0
 
-	upgrade_dump "$temp_dir/$file-$endianness.db" "$temp_dir/temp.dump"
-
-	error_check_good "Upgrade diff.$endianness: $version $method $file" \
-	    [filecmp "$temp_dir/$file.tcldump" "$temp_dir/temp.dump"] 0
+	# Normally we check pre- and post-upgrade databases by opening 
+	# a handle through the Tcl API, writing out the contents, and 
+	# comparing that file to one created the same way on an older version. 
+	# This doesn't work for cross-endian heap because of the way we
+	# implemented heap databases in the Tcl API.
+	# However, since we test cross-endian files only when there is 
+	# no version change, it is safe to use db_dump for this case.
+	#
+	if { $method == "heap" && $generated_on != $endianness } {
+		if { [catch {eval exec $util_path/db_dump $dumpflags \
+		    "$temp_dir/$file-$endianness.db" > $temp_dir/temp.dump}\
+		     res] } {
+			puts "FAIL: $res"
+		}
+		error_check_good \
+		    "Upgrade diff.$endianness: $version $method $file" \
+		    [filecmp "$temp_dir/$file.dump" "$temp_dir/temp.dump"] 0
+	} else {
+		upgrade_tcldump \
+		    "$temp_dir/$file-$endianness.db" "$temp_dir/temp.tcldump"
+		error_check_good \
+		    "Upgrade diff.$endianness: $version $method $file" \
+		    [filecmp "$temp_dir/$file.tcldump" "$temp_dir/temp.tcldump"] 0
+	}
 }
 
 proc _db_load_test { temp_dir version method file } {
@@ -308,7 +339,7 @@ proc _db_load_test { temp_dir version method file } {
 	error_check_good \
 	    "Upgrade load: $version $method $file $message" $ret 0
 
-	upgrade_dump "$temp_dir/upgrade.db" "$temp_dir/temp.dump"
+	upgrade_tcldump "$temp_dir/upgrade.db" "$temp_dir/temp.dump"
 
 	error_check_good "Upgrade diff.1.1: $version $method $file" \
 	    [filecmp "$temp_dir/$file.tcldump" "$temp_dir/temp.dump"] 0
@@ -674,7 +705,7 @@ proc save_upgrade_files { dir } {
 			}
 
 			# tcl_dump file
-			upgrade_dump $dbfile $dir/$newbasename.tcldump
+			upgrade_tcldump $dbfile $dir/$newbasename.tcldump
 
 			# Rename dbfile and any dbq files.  In some heap 
 			# runs there are supporting non-heap databases
@@ -784,7 +815,7 @@ proc save_upgrade_files { dir } {
 	}
 }
 
-proc upgrade_dump { database file {stripnulls 0} } {
+proc upgrade_tcldump { database file {stripnulls 0} } {
 	global errorInfo
 	global encrypt
 	global passwd
@@ -868,8 +899,8 @@ proc upgrade_dump { database file {stripnulls 0} } {
 	}
 
 	close $f
-	error_check_good upgrade_dump_c_close [$dbc close] 0
-	error_check_good upgrade_dump_db_close [$db close] 0
+	error_check_good upgrade_tcldump_c_close [$dbc close] 0
+	error_check_good upgrade_tcldump_db_close [$db close] 0
 }
 
 proc _comp { a b } {

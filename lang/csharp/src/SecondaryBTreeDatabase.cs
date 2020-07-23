@@ -54,13 +54,13 @@ namespace BerkeleyDB {
         /// </para>
         /// <para>
         /// If <see cref="DatabaseConfig.AutoCommit"/> is set, the operation
-        /// will be implicitly transaction protected. Note that transactionally
-        /// protected operations on a datbase object requires the object itself
+        /// is implicitly transaction protected. Transactionally
+        /// protected operations on a database object requires the object itself
         /// be transactionally protected during its open.
         /// </para>
         /// </remarks>
         /// <param name="Filename">
-        /// The name of an underlying file that will be used to back the
+        /// The name of an underlying file used to back the
         /// database. In-memory databases never intended to be preserved on disk
         /// may be created by setting this parameter to null.
         /// </param>
@@ -85,18 +85,18 @@ namespace BerkeleyDB {
         /// object that created it, in circumstances where doing so is safe. If
         /// <paramref name="Filename"/> is null and
         /// <paramref name="DatabaseName"/> is non-null, the database can be
-        /// opened by other threads of control and will be replicated to client
+        /// opened by other threads of control and be replicated to client
         /// sites in any replication group.
         /// </para>
         /// <para>
         /// If <see cref="DatabaseConfig.AutoCommit"/> is set, the operation
-        /// will be implicitly transaction protected. Note that transactionally
-        /// protected operations on a datbase object requires the object itself
+        /// is implicitly transaction protected. Transactionally
+        /// protected operations on a database object requires the object itself
         /// be transactionally protected during its open.
         /// </para>
         /// </remarks>
         /// <param name="Filename">
-        /// The name of an underlying file that will be used to back the
+        /// The name of an underlying file used to back the
         /// database. In-memory databases never intended to be preserved on disk
         /// may be created by setting this parameter to null.
         /// </param>
@@ -127,15 +127,15 @@ namespace BerkeleyDB {
         /// </para>
         /// <para>
         /// If <paramref name="txn"/> is null, but
-        /// <see cref="DatabaseConfig.AutoCommit"/> is set, the operation will
-        /// be implicitly transaction protected. Note that transactionally
-        /// protected operations on a datbase object requires the object itself
-        /// be transactionally protected during its open. Also note that the
+        /// <see cref="DatabaseConfig.AutoCommit"/> is set, the operation 
+        /// is implicitly transaction protected. Transactionally
+        /// protected operations on a database object requires the object itself
+        /// be transactionally protected during its open. The
         /// transaction must be committed before the object is closed.
         /// </para>
         /// </remarks>
         /// <param name="Filename">
-        /// The name of an underlying file that will be used to back the
+        /// The name of an underlying file used to back the
         /// database. In-memory databases never intended to be preserved on disk
         /// may be created by setting this parameter to null.
         /// </param>
@@ -168,20 +168,20 @@ namespace BerkeleyDB {
         /// object that created it, in circumstances where doing so is safe. If
         /// <paramref name="Filename"/> is null and
         /// <paramref name="DatabaseName"/> is non-null, the database can be
-        /// opened by other threads of control and will be replicated to client
+        /// opened by other threads of control and be replicated to client
         /// sites in any replication group.
         /// </para>
         /// <para>
         /// If <paramref name="txn"/> is null, but
-        /// <see cref="DatabaseConfig.AutoCommit"/> is set, the operation will
-        /// be implicitly transaction protected. Note that transactionally
-        /// protected operations on a datbase object requires the object itself
-        /// be transactionally protected during its open. Also note that the
+        /// <see cref="DatabaseConfig.AutoCommit"/> is set, the operation 
+        /// is implicitly transaction protected. Transactionally
+        /// protected operations on a database object requires the object itself
+        /// be transactionally protected during its open. The
         /// transaction must be committed before the object is closed.
         /// </para>
         /// </remarks>
         /// <param name="Filename">
-        /// The name of an underlying file that will be used to back the
+        /// The name of an underlying file used to back the
         /// database. In-memory databases never intended to be preserved on disk
         /// may be created by setting this parameter to null.
         /// </param>
@@ -330,7 +330,7 @@ namespace BerkeleyDB {
         }
 
         /// <summary>
-        /// If false, empty pages will not be coalesced into higher-level pages.
+        /// If false, empty pages are not coalesced into higher-level pages.
         /// </summary>
         public bool ReverseSplit {
             get {

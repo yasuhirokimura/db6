@@ -79,12 +79,11 @@ typedef struct {
 #define	WINCE_ATOMIC_MAGIC(p)						\
 	/*								\
 	 * Memory mapped regions on Windows CE cause problems with	\
-	 * InterlockedXXX calls. Each page in a mapped region needs to	\
-	 * have been written to prior to an InterlockedXXX call, or the	\
-	 * InterlockedXXX call hangs. This does not seem to be		\
-	 * documented anywhere. For now, read/write a non-critical	\
-	 * piece of memory from the shared region prior to attempting	\
-	 * shared region prior to attempting an InterlockedExchange	\
+	 * InterlockedXXX calls. Each process making an InterlockedXXX	\
+	 * call must make sure that it has written to the page prior to	\
+	 * the call, or the InterlockedXXX call hangs. This does not	\
+	 * seem	to be documented anywhere. Write a non-critical piece	\
+	 * of memory from the shared region prior to attempting an	\
 	 * InterlockedXXX operation.					\
 	 */								\
 	(p)->dummy = 0

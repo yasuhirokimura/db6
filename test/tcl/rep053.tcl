@@ -96,6 +96,11 @@ proc rep053_sub { method niter tnum logset recargs throttle largs } {
 		set privargs " -private "
 	}
 
+	set blobargs ""
+    	if { [can_support_blobs $method $largs] == 1 } {
+		set blobargs "-blob_threshold 100"
+	}
+
 	env_cleanup $testdir
 	set orig_tdir $testdir
 
@@ -122,14 +127,14 @@ proc rep053_sub { method niter tnum logset recargs throttle largs } {
 
 	# Open a master.
 	repladd 1
-	set ma_envcmd "berkdb_env_noerr -create $m_txnargs \
+	set ma_envcmd "berkdb_env_noerr -create $m_txnargs $blobargs \
 	    $m_logargs -errpfx MASTER $verbargs $repmemargs $privargs \
 	    -home $masterdir -rep_transport \[list 1 replsend\]"
 	set masterenv [eval $ma_envcmd $recargs -rep_master]
 
 	# Open two clients
 	repladd 2
-	set cl_envcmd "berkdb_env_noerr -create $c_txnargs \
+	set cl_envcmd "berkdb_env_noerr -create $c_txnargs $blobargs \
 	    $c_logargs -errpfx CLIENT $verbargs $repmemargs $privargs \
 	    -home $clientdir -rep_transport \[list 2 replsend\]"
 	set clientenv [eval $cl_envcmd $recargs -rep_client]
@@ -147,7 +152,7 @@ proc rep053_sub { method niter tnum logset recargs throttle largs } {
 	# want this client to already have the backlog of records
 	# when it starts.
 	#
-	set dc1_envcmd "berkdb_env_noerr -create $c2_txnargs \
+	set dc1_envcmd "berkdb_env_noerr -create $c2_txnargs $blobargs \
 	    $c2_logargs -errpfx DELAYCL $verbargs $repmemargs $privargs \
 	    -home $delaycldir1 -rep_transport \[list 3 replsend\]"
 
@@ -197,6 +202,11 @@ proc rep053_sub { method niter tnum logset recargs throttle largs } {
 		incr expected_msgs
 	}
 
+	# Blobs require two more messages
+    	if { [can_support_blobs $method $largs] == 1 } {
+	    	set expected_msgs [expr $expected_msgs + 1]
+	}
+
 	if { $throttle == "throttle" } {
 		error_check_good req [expr $req > $expected_msgs] 1
 	} else {
@@ -235,5 +245,6 @@ proc rep053_sub { method niter tnum logset recargs throttle largs } {
 	replclose $testdir/MSGQUEUEDIR
 	set testdir $orig_tdir
 	set anywhere 0
+	puts "\tRep$tnum.f: Return"
 	return
 }

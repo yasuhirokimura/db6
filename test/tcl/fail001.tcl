@@ -86,4 +86,5 @@ proc fail001 { } {
 		error_check_good compact_err [is_substr $res $emsg] 1
 		error_check_good db_close [$db close] 0
 	}
+	error_check_good env_close [$env close] 0
 }

@@ -46,7 +46,7 @@ namespace BerkeleyDB {
         /// </summary>
         public bool Update;
         /// <summary>
-        /// Specify whether the target directory will be created if it does not
+        /// Specify whether the target directory is created if it does not
         /// already exist.
         /// </summary>
         public CreatePolicy Creation = CreatePolicy.NEVER;

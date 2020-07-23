@@ -26,8 +26,16 @@ int db_hotbackup_main __P((int, char *[]));
 int db_hotbackup_usage __P((void));
 int db_hotbackup_version_check __P((void));
 void __db_util_msg __P((const DB_ENV *, const char *));
+void handle_event __P((DB_ENV *, u_int32_t, void *));
 
 const char *progname;
+/*
+ * Hot backup returns DB_EXIT_FAILCHK (3) if it detects that a panic was due to
+ * another process having crashed or exited from the environment uncleanly. That
+ * value can be used to indicate that the error is "expected", or at least, not
+ * due to a problem with db_hotbackup itself.
+ */
+int failchk_count;
 
 void __db_util_msg(dbenv, msgstr)
 	const DB_ENV *dbenv;
@@ -35,6 +43,35 @@ void __db_util_msg(dbenv, msgstr)
 {
 	COMPQUIET(dbenv, NULL);
 	printf("%s: %s\n", progname, msgstr);
+}
+
+void handle_event(dbenv, event, info)
+	DB_ENV *dbenv;
+	u_int32_t event;
+	void *info;
+{
+	DB_EVENT_MUTEX_DIED_INFO *mtxdied;
+	DB_EVENT_FAILCHK_INFO *crash;
+
+	switch (event) {
+	case DB_EVENT_MUTEX_DIED:
+		mtxdied = info;
+		dbenv->errx(dbenv, "DB_EVENT_MUTEX_DIED %.*s",
+		    sizeof(mtxdied->desc), mtxdied->desc);
+		failchk_count++;
+		break;
+
+	case DB_EVENT_FAILCHK_PANIC:
+		crash = info;
+		dbenv->errx(dbenv, "DB_EVENT_FAILCHK_PANIC %s %.*s",
+		    db_strerror(crash->error),
+		    sizeof(crash->symptom), crash->symptom);
+		failchk_count++;
+		break;
+	default:
+		break;
+	}
+	COMPQUIET(dbenv, NULL);
 }
 
 int
@@ -84,6 +121,7 @@ db_hotbackup_main(argc, argv)
 		progname = argv[0];
 	else
 		++progname;
+	failchk_count = 0;
 
 	if ((ret = db_hotbackup_version_check()) != 0)
 		return (ret);
@@ -354,7 +392,7 @@ db_hotbackup_main(argc, argv)
 err:		exitval = 1;
 	}
 
-	if (dbenv != NULL && (ret = dbenv->close(dbenv, 0)) != 0) {
+	if (dbenv != NULL && ret == 0 && (ret = dbenv->close(dbenv, 0)) != 0) {
 		exitval = 1;
 		fprintf(stderr,
 		    "%s: dbenv->close: %s\n", progname, db_strerror(ret));
@@ -382,7 +420,8 @@ clean:
 	if (passwd != NULL)
 		free(passwd);
 
-	return (exitval == 0 ? EXIT_SUCCESS : EXIT_FAILURE);
+	return (failchk_count != 0 ? DB_EXIT_FAILCHK :
+	    exitval == 0 ? EXIT_SUCCESS : EXIT_FAILURE);
 }
 
 /*
@@ -412,6 +451,11 @@ db_hotbackup_env_init(dbenvp, home, blob_dir, log_dirp, data_dirp, passwd, which
 		return (1);
 	}
 
+	if ((ret = dbenv->set_event_notify(dbenv, handle_event)) != 0) {
+		fprintf(stderr, "%s: DB_ENV->set_event_notify: %s\n",
+		    progname, db_strerror(ret));
+		return (1);
+	}
 	if (verbose) {
 		(void)dbenv->set_verbose(dbenv, DB_VERB_BACKUP, 1);
 		dbenv->set_msgcall(dbenv, __db_util_msg);
@@ -419,6 +463,12 @@ db_hotbackup_env_init(dbenvp, home, blob_dir, log_dirp, data_dirp, passwd, which
 	dbenv->set_errfile(dbenv, stderr);
 	(void)setvbuf(stderr, NULL, _IONBF, 0);
 	dbenv->set_errpfx(dbenv, progname);
+
+	/* Always enable logging blobs. */
+	if ((ret = dbenv->log_set_config(dbenv, DB_LOG_BLOB, 1)) != 0) {
+		dbenv->err(dbenv, ret, "DB_ENV->log_set_config");
+		return (1);
+	}
 
 	/* Any created intermediate directories are created private. */
 	if ((ret = dbenv->set_intermediate_dir_mode(dbenv, "rwx------")) != 0) {
@@ -461,7 +511,8 @@ db_hotbackup_env_init(dbenvp, home, blob_dir, log_dirp, data_dirp, passwd, which
 			 * trim the home directory from the data directory
 			 * passed in.
 			 */
-			(void) sprintf(buf, "%s/%s", home, home);
+			(void) snprintf(buf, sizeof(buf), "%s/%s", 
+			    home, home);
 			homehome = 0;
 			(void)__os_exists(dbenv->env, buf, &homehome);
 				
@@ -561,7 +612,8 @@ int
 db_hotbackup_usage()
 {
 	(void)fprintf(stderr, "usage: %s [-cDuVv]\n\t%s\n", progname,
-"[-d data_dir ...] [-i home_blob_dir] [-h home] [-l log_dir] [-P password] -b backup_dir");
+	    "[-d data_dir ...] [-i home_blob_dir] [-h home] [-l log_dir] "
+	    "[-P password] -b backup_dir");
 	return (EXIT_FAILURE);
 }
 

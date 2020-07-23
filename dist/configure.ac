@@ -70,6 +70,7 @@ AC_SUBST(LIBTSO_LIBS)
 AC_SUBST(LIBTSO_MODSUFFIX)
 AC_SUBST(LIBTSO_MODULE)
 AC_SUBST(LIBXSO_LIBS)
+AC_SUBST(LIBSQLSO_LIBS)
 AC_SUBST(MAKEFILE_CC)
 AC_SUBST(MAKEFILE_CCLINK)
 AC_SUBST(MAKEFILE_CXX)
@@ -503,7 +504,10 @@ if test "$db_cv_sql" = "yes"; then
 
 	# Link against libdl, if found. It is only needed for the load
 	# extension, but shouldn't hurt.
-	AC_HAVE_LIBRARY(dl, SQL_LIBS="$SQL_LIBS -ldl")
+	AC_HAVE_LIBRARY(dl, [
+		SQL_LIBS="$SQL_LIBS -ldl"
+		LIBSQLSO_LIBS=" -ldl"
+	])
 
 	# Link against libedit or readline for command-line editing.
 	if test x"$with_readline" != xno; then
@@ -694,9 +698,12 @@ AC_HAVE_LIBRARY(socket, TEST_LIBS="$TEST_LIBS -lsocket")
 # deleted getwd().
 AC_REPLACE_FUNCS(\
 	abort atoi atol bsearch getcwd getenv getopt isalpha isdigit isprint\
-	isspace memcmp memcpy memmove printf qsort raise rand strcasecmp\
+	isspace memcmp memcpy memmove printf qsort raise rand\
 	strcat strchr strdup strerror strncat strncmp strrchr strsep\
 	strtol strtoul)
+AH_TEMPLATE(HAVE_STRCASECMP,
+    [Define to 1 if you have the strcasecmp symbol.])
+AC_CHECK_DECL(strcasecmp, [AC_DEFINE(HAVE_STRCASECMP)], [AC_LIBOBJ(strcasecmp)])
 
 # Check for system functions we optionally use.
 AC_CHECK_FUNCS(\
@@ -705,6 +712,22 @@ AC_CHECK_FUNCS(\
 	getrusage getuid hstrerror mprotect pstat_getdynamic\
 	pthread_self pthread_yield random sched_yield select setgid setuid\
 	sigaction snprintf stat sysconf vsnprintf yield)
+
+if test "$db_cv_error_history" = "yes"; then
+	# Check for pthread thread local storage support
+	AC_CHECK_FUNCS(pthread_getspecific pthread_setspecific)
+	AC_CHECK_FUNCS(pthread_key_create pthread_once)
+	if test "x$ac_cv_func_pthread_getspecific" = "xyes" -a \
+		"x$ac_cv_func_pthread_setspecific" = "xyes" -a \
+		"x$ac_cv_func_pthread_key_create" = "xyes" -a \
+		"x$ac_cv_func_pthread_once" = "xyes"; then
+		AC_DEFINE(HAVE_ERROR_HISTORY)
+	else
+		AC_MSG_ERROR([--enable-error_history requires pthread thread local storage])
+	fi
+	AH_TEMPLATE(HAVE_ERROR_HISTORY,
+    [Define to 1 if you want a version that records extra information about errors.])
+fi
 
 AC_TIMERS
 

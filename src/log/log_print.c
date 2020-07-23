@@ -154,7 +154,8 @@ __log_print_record(env, recbuf, lsnp, name, spec, info)
 		case LOGREC_LONGARG:
 			LOGCOPY_64(env, &ulltmp, bp);
 			__db_msgadd(env, &msgbuf,  "\t%s: ", sp->name);
-			__db_msgadd(env, &msgbuf,  "%llu", ulltmp);
+			__db_msgadd(env,
+			    &msgbuf,  "%llu", (unsigned long long)ulltmp);
 			__db_msgadd(env, &msgbuf,  "\n");
 			bp += sizeof(ulltmp);
 			break;

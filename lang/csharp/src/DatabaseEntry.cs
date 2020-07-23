@@ -131,7 +131,7 @@ namespace BerkeleyDB {
         }
 
     /// <summary>
-    /// Set this DatabaseEntry as read only - that is Berkeley DB will not
+    /// Set this DatabaseEntry as read only - Berkeley DB cannot
     /// alter the entry.
     /// </summary>
         public bool ReadOnly {

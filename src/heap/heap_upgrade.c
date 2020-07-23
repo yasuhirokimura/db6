@@ -44,7 +44,6 @@ __heap_60_heapmeta(dbp, real_name, flags, fhp, h, dirtyp)
 	return (0);
 }
 
-
 /*
  * __heap_60_heap --
  *	Upgrade the blob records on the database heap pages.

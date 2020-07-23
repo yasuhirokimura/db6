@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.0</p>
+        <p>Library Version 12.1.6.1</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -22,9 +22,7 @@
         </tr>
         <tr>
           <td width="20%" align="left"><a accesskey="p" href="rep_mgr_meth.html">Prev</a> </td>
-          <th width="60%" align="center">Chapter 12. 
-		Berkeley DB Replication
-        </th>
+          <th width="60%" align="center">Chapter 12.  Berkeley DB Replication </th>
           <td width="20%" align="right"> <a accesskey="n" href="rep_comm.html">Next</a></td>
         </tr>
       </table>
@@ -38,8 +36,10 @@
           </div>
         </div>
       </div>
-      <p>Base API applications use the following
-Berkeley DB methods.</p>
+      <p>
+        Base API applications use the following Berkeley DB
+        methods.
+    </p>
       <div class="variablelist">
         <dl>
           <dt>
@@ -49,9 +49,10 @@ Berkeley DB methods.</p>
           </dt>
           <dd>
             <p>
-                The <a href="../api_reference/C/reptransport.html" class="olink">DB_ENV-&gt;rep_set_transport()</a> method configures the replication system's
-                communications infrastructure.
-            </p>
+                    The <a href="../api_reference/C/reptransport.html" class="olink">DB_ENV-&gt;rep_set_transport()</a> method configures the
+                    replication system's communications
+                    infrastructure. 
+                </p>
           </dd>
           <dt>
             <span class="term">
@@ -59,10 +60,11 @@ Berkeley DB methods.</p>
             </span>
           </dt>
           <dd>
-            <p>
-            The <a href="../api_reference/C/repstart.html" class="olink">DB_ENV-&gt;rep_start()</a> method configures (or reconfigures) an existing database
-            environment to be a replication master or client.
-        </p>
+            <p> 
+                    The <a href="../api_reference/C/repstart.html" class="olink">DB_ENV-&gt;rep_start()</a> method configures (or
+                    reconfigures) an existing database environment to
+                    be a replication master or client.
+                </p>
           </dd>
           <dt>
             <span class="term">
@@ -70,18 +72,21 @@ Berkeley DB methods.</p>
             </span>
           </dt>
           <dd>
-            <p>
-            The <a href="../api_reference/C/repmessage.html" class="olink">DB_ENV-&gt;rep_process_message()</a> method is used to process incoming messages
-            from other environments in the replication group.  For clients,
-            it is responsible for accepting log records and updating the
-            local databases based on messages from the master.  For both
-            the master and the clients, it is responsible for handling
-            administrative functions (for example, the protocol for dealing
-            with lost messages), and permitting new clients to join an
-            active replication group.  This method should only be called
-            after the replication system's communications infrastructure
- has been configured via <a href="../api_reference/C/reptransport.html" class="olink">DB_ENV-&gt;rep_set_transport()</a>.
-        </p>
+            <p> 
+                    The <a href="../api_reference/C/repmessage.html" class="olink">DB_ENV-&gt;rep_process_message()</a> method is used to process
+                    incoming messages from other environments in the
+                    replication group. For clients, it is responsible
+                    for accepting log records and updating the local
+                    databases based on messages from the master. For
+                    both the master and the clients, it is responsible
+                    for handling administrative functions (for
+                    example, the protocol for dealing with lost
+                    messages), and permitting new clients to join an
+                    active replication group. This method should only
+                    be called after the replication system's
+                    communications infrastructure has been configured
+                    via <a href="../api_reference/C/reptransport.html" class="olink">DB_ENV-&gt;rep_set_transport()</a>.
+                </p>
           </dd>
           <dt>
             <span class="term">
@@ -89,12 +94,13 @@ Berkeley DB methods.</p>
             </span>
           </dt>
           <dd>
-            <p>
-            The <a href="../api_reference/C/repelect.html" class="olink">DB_ENV-&gt;rep_elect()</a> method causes the replication group to elect a
-            new master; it is called whenever contact with the master is
-            lost and the application wants the remaining sites to select a
-            new master.
-        </p>
+            <p> 
+                    The <a href="../api_reference/C/repelect.html" class="olink">DB_ENV-&gt;rep_elect()</a> method causes the replication
+                    group to elect a new master; it is called whenever
+                    contact with the master is lost and the
+                    application wants the remaining sites to select a
+                    new master. 
+                </p>
           </dd>
           <dt>
             <span class="term">
@@ -102,11 +108,12 @@ Berkeley DB methods.</p>
             </span>
           </dt>
           <dd>
-            <p>
-            The <a href="../api_reference/C/envevent_notify.html" class="olink">DB_ENV-&gt;set_event_notify()</a> method is needed for applications to
-            discover important replication-related events, such as the
-            result of an election and appointment of a new master.
-        </p>
+            <p> 
+                    The <a href="../api_reference/C/envevent_notify.html" class="olink">DB_ENV-&gt;set_event_notify()</a> method is needed for
+                    applications to discover important
+                    replication-related events, such as the result of
+                    an election and appointment of a new master.
+                </p>
           </dd>
           <dt>
             <span class="term">
@@ -115,9 +122,9 @@ Berkeley DB methods.</p>
           </dt>
           <dd>
             <p>
-            The <a href="../api_reference/C/reppriority.html" class="olink">DB_ENV-&gt;rep_set_priority()</a> method configures the local site's priority for
-            the purpose of elections.
-        </p>
+                    The <a href="../api_reference/C/reppriority.html" class="olink">DB_ENV-&gt;rep_set_priority()</a> method configures the local
+                    site's priority for the purpose of elections.
+                </p>
           </dd>
           <dt>
             <span class="term">
@@ -125,11 +132,11 @@ Berkeley DB methods.</p>
             </span>
           </dt>
           <dd>
-            <p>
-            This method optionally configures various timeout values.  Otherwise
-            default timeout values as specified in <a href="../api_reference/C/repset_timeout.html" class="olink">DB_ENV-&gt;rep_set_timeout()</a> are
-            used.
-        </p>
+            <p> 
+                    This method optionally configures various
+                    timeout values. Otherwise default timeout values
+                    as specified in <a href="../api_reference/C/repset_timeout.html" class="olink">DB_ENV-&gt;rep_set_timeout()</a> are used. 
+                </p>
           </dd>
           <dt>
             <span class="term">
@@ -137,18 +144,21 @@ Berkeley DB methods.</p>
             </span>
           </dt>
           <dd>
-            <p>
-            The <a href="../api_reference/C/repset_limit.html" class="olink">DB_ENV-&gt;rep_set_limit()</a> method imposes an upper bound on the amount of
-            data that will be sent in response to a single call to
-            <a href="../api_reference/C/repmessage.html" class="olink">DB_ENV-&gt;rep_process_message()</a>.  During client recovery, that is, when a replica
-            site is trying to synchronize with the master, clients may ask
-            the master for a large number of log records.  If it is going
-            to harm an application for the master message loop to remain
-            busy for an extended period transmitting records to the
-            replica, then the application will want to use <a href="../api_reference/C/repset_limit.html" class="olink">DB_ENV-&gt;rep_set_limit()</a> to
-            limit the amount of data the master will send before
-            relinquishing control and accepting other messages.
-        </p>
+            <p> 
+                    The <a href="../api_reference/C/repset_limit.html" class="olink">DB_ENV-&gt;rep_set_limit()</a> method imposes an upper bound on
+                    the amount of data that will be sent in response
+                    to a single call to <a href="../api_reference/C/repmessage.html" class="olink">DB_ENV-&gt;rep_process_message()</a>. During client
+                    recovery, that is, when a replica site is trying
+                    to synchronize with the master, clients may ask
+                    the master for a large number of log records. If
+                    it is going to harm an application for the master
+                    message loop to remain busy for an extended period
+                    transmitting records to the replica, then the
+                    application will want to use <a href="../api_reference/C/repset_limit.html" class="olink">DB_ENV-&gt;rep_set_limit()</a> to limit
+                    the amount of data the master will send before
+                    relinquishing control and accepting other
+                    messages. 
+                </p>
           </dd>
           <dt>
             <span class="term">
@@ -157,20 +167,24 @@ Berkeley DB methods.</p>
           </dt>
           <dd>
             <p>
-            This method sets a threshold for the minimum and maximum time that
-            a client waits before requesting retransmission of a missing
-            message.
-        </p>
+                    This method sets a threshold for the minimum
+                    and maximum time that a client waits before
+                    requesting retransmission of a missing message.
+                </p>
           </dd>
         </dl>
       </div>
-      <p>Base API applications may configure one or more view sites.
-A view is a full or partial copy of the replicated data that does not
-otherwise participate in the replication group.  For more information,
-see <a class="xref" href="rep_partview.html" title="Replication views">Replication views</a>.</p>
-      <p>In addition to the methods previously described, Base API applications 
-may also call the following methods, as needed:
-<a href="../api_reference/C/repstat.html" class="olink">DB_ENV-&gt;rep_stat()</a>, <a href="../api_reference/C/repsync.html" class="olink">DB_ENV-&gt;rep_sync()</a> and <a href="../api_reference/C/repconfig.html" class="olink">DB_ENV-&gt;rep_set_config()</a>.</p>
+      <p>
+        Base API applications may configure one or more view sites.
+        A view is a full or partial copy of the replicated data that
+        does not otherwise participate in the replication group. For
+        more information, see <a class="xref" href="rep_partview.html" title="Replication views">Replication views</a>.
+    </p>
+      <p>
+        In addition to the methods previously described, Base API
+        applications may also call the following methods, as needed:
+        <a href="../api_reference/C/repstat.html" class="olink">DB_ENV-&gt;rep_stat()</a>, <a href="../api_reference/C/repsync.html" class="olink">DB_ENV-&gt;rep_sync()</a> and <a href="../api_reference/C/repconfig.html" class="olink">DB_ENV-&gt;rep_set_config()</a>
+    </p>
     </div>
     <div class="navfooter">
       <hr />

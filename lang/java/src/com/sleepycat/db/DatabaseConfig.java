@@ -50,6 +50,8 @@ public class DatabaseConfig implements Cloneable {
     private long heapSize = 0L;
     private int heapRegionSize = 0;
     private java.io.OutputStream messageStream = null;
+    private java.io.File msgfile = null;
+    private String msgfileStr = null;
     private Boolean noWaitDbExclusiveLock = null;
     private int pageSize = 0;
     private java.io.File[] partitionDirs = null;
@@ -1107,6 +1109,22 @@ The function to be called with an informational message.
     */
     public MessageHandler getMessageHandler() {
         return messageHandler;
+    }
+
+    /**
+Sets the path of a file to store statistical information.
+<p>
+This method may be called at any time during the life of the application.
+<p>
+@param file
+The path of a file to store statistical information.
+    */
+    public void setMsgfile(java.io.File file) {
+        this.msgfile = file;
+        if (file != null)
+            this.msgfileStr = file.toString();
+        else
+            this.msgfileStr = null;
     }
 
     /**
@@ -2379,6 +2397,8 @@ database has been opened.
             db.set_heap_regionsize(heapRegionSize);
         if (messageStream != oldConfig.messageStream)
             db.set_message_stream(messageStream);
+        if (msgfile != oldConfig.msgfile)
+            db.set_msgfile(msgfile.toString());
         if (pageSize != oldConfig.pageSize)
             db.set_pagesize(pageSize);
 
@@ -2485,6 +2505,9 @@ database has been opened.
 	    heapRegionSize = db.get_heap_regionsize();
 	}
         messageStream = db.get_message_stream();
+        if (msgfileStr != null)
+            msgfile = new java.io.File(msgfileStr);
+
         pageSize = db.get_pagesize();
         // Not available by design
         password = ((dbFlags & DbConstants.DB_ENCRYPT) != 0) ? "" : null;

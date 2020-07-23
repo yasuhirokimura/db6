@@ -1420,6 +1420,8 @@ __fop_inmem_read_meta(dbp, txn, name, flags, chkflags)
 	} else
 		ret = __db_meta_setup(
 		    dbp->env, dbp, name, metap, flags, chkflags);
+	if (ret == DB_CHKSUM_FAIL)
+		ret = DB_META_CHKSUM_FAIL;
 
 	if ((t_ret =
 	    __memp_fput(dbp->mpf, ip, metap, dbp->priority)) && ret == 0)

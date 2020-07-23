@@ -137,7 +137,7 @@ __envreg_register(env, need_recoveryp, flags)
 
 	if (FLD_ISSET(dbenv->verbose, DB_VERB_REGISTER))
 		__db_msg(env, DB_STR_A("1524",
-	"%lu: register environment", "%lu"), (u_long)pid);
+		    "%lu: register environment", "%lu"), (u_long)pid);
 
 	/* Build the path name and open the registry file. */
 	if ((ret = __db_appname(env,
@@ -176,7 +176,6 @@ __envreg_register(env, need_recoveryp, flags)
 	/* Register this process. */
 	if ((ret = __envreg_add(env, need_recoveryp, flags)) != 0)
 		goto err;
-
 	/*
 	 * Release our exclusive lock if we don't need to run recovery.  If
 	 * we need to run recovery, ENV->open will call back into register
@@ -186,8 +185,7 @@ __envreg_register(env, need_recoveryp, flags)
 		goto err;
 
 	if (0) {
-err:		*need_recoveryp = 0;
-
+err:
 		/*
 		 * !!!
 		 * Closing the file handle must release all of our locks.
@@ -196,7 +194,6 @@ err:		*need_recoveryp = 0;
 			(void)__os_closehandle(env, dbenv->registry);
 		dbenv->registry = NULL;
 	}
-
 	if (pp != NULL)
 		__os_free(env, pp);
 
@@ -226,7 +223,7 @@ __envreg_add(env, need_recoveryp, flags)
 	char *p, buf[PID_LEN + 10], pid_buf[PID_LEN + 10];
 
 	dbenv = env->dbenv;
-	need_failchk = 0;
+	need_failchk = t_ret = 0;
 	COMPQUIET(dead, 0);
 	COMPQUIET(p, NULL);
 	ip = NULL;
@@ -330,17 +327,16 @@ kill_all:	/*
 				__db_msg(env, DB_STR_A("1531",
 				    "%02u: %s: LOCKED", "%02u %s"), lcnt, p);
 	}
-	
+
 	/* Check for a panic; if so there's no need to call failchk. */
 	if (__env_attach(env, NULL, 0, 0) != 0)
 		goto sig_proc;
 	infop = env->reginfo;
 	renv = infop->primary;
-	if (renv->panic) {
-		*need_recoveryp = 1;
-		need_failchk = 1;
-	}
+	*need_recoveryp = renv->panic != 0;
 	(void)__env_detach(env, 0);
+	if (*need_recoveryp)
+		return (0);
 
 	/*
 	 * If we have to perform failchk...
@@ -351,7 +347,8 @@ kill_all:	/*
 	 */
 	if (need_failchk) {
 		if (FLD_ISSET(dbenv->verbose, DB_VERB_REGISTER))
-			__db_msg(env, "%lu: recovery required", (u_long)pid);
+			__db_msg(env,
+			    "%lu: failchk recovery required", (u_long)pid);
 
 		if (LF_ISSET(DB_FAILCHK) || LF_ISSET(DB_FAILCHK_ISALIVE)) {
 			if (FLD_ISSET(dbenv->verbose, DB_VERB_REGISTER))
@@ -363,7 +360,8 @@ kill_all:	/*
 				    env, pid_buf)) != 0)
 					goto sig_proc;
 
-			/* The environment will already exist, so we do not
+			/*
+			 * The environment will already exist, so we do not
 			 * want DB_CREATE set, nor do we want any recovery at
 			 * this point.  No need to put values back as flags is
 			 * passed in by value.  Save original dbenv flags in
@@ -378,28 +376,30 @@ kill_all:	/*
 			if ((ret = __env_attach_regions(
 			    dbenv, flags, orig_flags, 0)) != 0)
 				goto sig_proc;
-			if ((t_ret =
-			    __env_set_state(env, &ip, THREAD_FAILCHK)) != 0 &&
-			    ret == 0)
+			if ((t_ret = __env_set_state(env,
+			   &ip, THREAD_FAILCHK)) != 0 && ret == 0)
 				ret = t_ret;
 			if (ret == 0 && (t_ret = __env_failchk_int(dbenv)) != 0)
 				ret = t_ret;
+			if (FLD_ISSET(dbenv->verbose, DB_VERB_REGISTER))
+				__db_msg(env,
+				    "%lu: failchk returned %d, ret is %d",
+				    (u_long)pid, t_ret, ret);
 
 			/* Free active pid array if used. */
 			if (LF_ISSET(DB_FAILCHK_ISALIVE)) {
 				DB_GLOBAL(num_active_pids) = 0;
 				DB_GLOBAL(size_active_pids) = 0;
-				__os_free( env, DB_GLOBAL(active_pids));
+				__os_free(env, DB_GLOBAL(active_pids));
 			}
 
 			/* Detach from environment and deregister thread. */
-			if ((t_ret =
-			    __env_refresh(dbenv, orig_flags, 0)) != 0 &&
-			    ret == 0)
+			if ((t_ret = __env_refresh(dbenv,
+			    orig_flags, 0)) != 0 && ret == 0)
 				ret = t_ret;
 			if (ret == 0) {
 				if ((ret = __os_seek(env, dbenv->registry,
-				    0, 0,(u_int32_t)dead)) != 0 ||
+				    0, 0, (u_int32_t)dead)) != 0 ||
 				    (ret = __os_write(env, dbenv->registry,
 				    PID_EMPTY, PID_LEN, &nw)) != 0)
 					return (ret);
@@ -409,7 +409,11 @@ kill_all:	/*
 
 		}
 		/* If we can't attach, then we cannot set DB_REGISTER panic. */
-sig_proc:	if (__env_attach(env, NULL, 0, 0) == 0) {
+sig_proc:
+		if (FLD_ISSET(dbenv->verbose, DB_VERB_REGISTER))
+			__db_msg(env, "%lu: sig_proc attaching errs %s/ret %s",
+			    (u_long)pid, db_strerror(t_ret), db_strerror(ret));
+		if (__env_attach(env, NULL, 0, 0) == 0) {
 			infop = env->reginfo;
 			renv = infop->primary;
 			/*
@@ -554,8 +558,9 @@ __envreg_unregister(env, recovery_failed)
 	 * also releasing our slot lock, we could race.  That can't happen, I
 	 * don't think.
 	 */
-err:	if ((t_ret =
-	    __os_closehandle(env, dbenv->registry)) != 0 && ret == 0)
+err:
+	if (dbenv->registry != NULL &&
+	    (t_ret = __os_closehandle(env, dbenv->registry)) != 0 && ret == 0)
 		ret = t_ret;
 
 	dbenv->registry = NULL;
@@ -696,14 +701,14 @@ __envreg_create_active_pid(env, my_pid)
 				   DB_GLOBAL(size_active_pids) * sizeof(pid_t);
 
 				/* start with 512, then double if must grow */
-				tmpsize = tmpsize>0 ? tmpsize*2 : 512;
+				tmpsize = tmpsize > 0 ? tmpsize * 2 : 512;
 				if ((ret = __os_malloc
 				    (env, tmpsize, &tmparray )) != 0)
 					return (ret);
 
 				/* if array exists, then copy and free */
-				if (DB_GLOBAL(active_pids)) {
-					memcpy( tmparray,
+				if (DB_GLOBAL(active_pids) != NULL) {
+					memcpy(tmparray,
 					    DB_GLOBAL(active_pids),
 					    DB_GLOBAL(num_active_pids) *
 					    sizeof(pid_t));

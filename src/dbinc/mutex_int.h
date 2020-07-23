@@ -73,6 +73,14 @@ extern "C" {
 	else								\
 		RET_SET((pthread_mutex_lock(&(mutexp)->u.m.mutex)), ret); \
 } while (0)
+#define	RET_SET_PTHREAD_TIMEDLOCK(mutexp, timespec, ret) do {		\
+	if (F_ISSET(mutexp, DB_MUTEX_SHARED))				\
+		RET_SET(pthread_rwlock_timedwrlock(&(mutexp)->u.rwlock, \
+		    (timespec)), ret);					\
+	else								\
+		RET_SET(pthread_mutex_timedlock(&(mutexp)->u.m.mutex,	\
+		    (timespec)), ret); 					\
+} while (0)
 #define	RET_SET_PTHREAD_TRYLOCK(mutexp, ret) do {			\
 	if (F_ISSET(mutexp, DB_MUTEX_SHARED))				\
 		RET_SET((pthread_rwlock_trywrlock(&(mutexp)->u.rwlock)), \
@@ -84,6 +92,9 @@ extern "C" {
 #else
 #define	RET_SET_PTHREAD_LOCK(mutexp, ret)				\
 		RET_SET(pthread_mutex_lock(&(mutexp)->u.m.mutex), ret);
+#define	RET_SET_PTHREAD_TIMEDLOCK(mutexp, timespec, ret)		\
+		RET_SET(pthread_mutex_timedlock(&(mutexp)->u.m.mutex,	\
+		    (timespec)), ret);
 #define	RET_SET_PTHREAD_TRYLOCK(mutexp, ret)				\
 		RET_SET(pthread_mutex_trylock(&(mutexp)->u.m.mutex), ret);
 #endif
@@ -266,6 +277,11 @@ typedef abilock_t tsl_t;
 #define	MEMBAR_EXIT()	membar_exit()
 #include <sys/machlock.h>
 typedef lock_t tsl_t;
+
+/* 
+ * Solaris requires 8 byte alignment for pthread_mutex_t values.
+ */
+#define MUTEX_ALIGN 8
 
 /*
  * The functions are declared in <sys/machlock.h>, but under #ifdef KERNEL.
@@ -893,15 +909,22 @@ struct __db_mutexmgr {
 	REGINFO	 reginfo;		/* Region information */
 
 	void	*mutex_array;		/* Base of the mutex array */
+#ifdef HAVE_FAILCHK_BROADCAST
+	/*
+	 * The mutex lock functions wait for at most this long between checks
+	 * for DB_MUTEX_OWNER_DEAD. This field needs no mutex protection.
+	 */
+	db_timeout_t	failchk_polltime;
+#endif
 };
 
 /* Macros to lock/unlock the mutex region as a whole. */
-#define	MUTEX_SYSTEM_LOCK(dbenv)					\
-	MUTEX_LOCK(dbenv, ((DB_MUTEXREGION *)				\
-	    (dbenv)->mutex_handle->reginfo.primary)->mtx_region)
-#define	MUTEX_SYSTEM_UNLOCK(dbenv)					\
-	MUTEX_UNLOCK(dbenv, ((DB_MUTEXREGION *)				\
-	    (dbenv)->mutex_handle->reginfo.primary)->mtx_region)
+#define	MUTEX_SYSTEM_LOCK(env)						\
+	MUTEX_LOCK(env, ((DB_MUTEXREGION *)				\
+	    (env)->mutex_handle->reginfo.primary)->mtx_region)
+#define	MUTEX_SYSTEM_UNLOCK(env)					\
+	MUTEX_UNLOCK(env, ((DB_MUTEXREGION *)				\
+	    (env)->mutex_handle->reginfo.primary)->mtx_region)
 
 /*
  * DB_MUTEXREGION --
@@ -928,6 +951,16 @@ typedef struct __db_mutexregion { /* SHARED */
 } DB_MUTEXREGION;
 
 #ifdef HAVE_MUTEX_SUPPORT
+/*
+ * MTX_DIAG turns on the recording of when and where a mutex was locked. It has
+ * a large impact, and should only be turned on when debugging mutexes.
+ */
+#define MUTEX_STACK_TEXT_SIZE	600
+typedef struct __mutex_history { /* SHARED */
+	db_timespec when;
+	char	stacktext[MUTEX_STACK_TEXT_SIZE];
+} MUTEX_HISTORY;
+
 struct __db_mutex_t { /* SHARED */	/* Mutex. */
 #ifdef MUTEX_FIELDS
 	MUTEX_FIELDS			/* Opaque thread mutex structures. */
@@ -960,9 +993,9 @@ struct __db_mutex_t { /* SHARED */	/* Mutex. */
 
 	db_mutex_t mutex_next_link;	/* Linked list of free mutexes. */
 
-#ifdef HAVE_STATISTICS
 	int	  alloc_id;		/* Allocation ID. */
 
+#ifdef HAVE_STATISTICS
 	u_int32_t mutex_set_wait;	/* Granted after wait. */
 	u_int32_t mutex_set_nowait;	/* Granted without waiting. */
 #ifdef HAVE_SHARED_LATCHES
@@ -974,7 +1007,9 @@ struct __db_mutex_t { /* SHARED */	/* Mutex. */
 	u_int32_t hybrid_wakeup;	/* for counting spurious wakeups */
 #endif
 #endif
-
+#ifdef MUTEX_DIAG
+	MUTEX_HISTORY	mutex_history;
+#endif
 	/*
 	 * A subset of the flag arguments for __mutex_alloc().
 	 *

@@ -69,7 +69,7 @@ namespace BerkeleyDB {
         /// </summary>
         /// <remarks>
         /// Specify the site in a legacy group. It would be considered as part
-        /// of an existing group, upgrading from a previous version of BDB. All
+        /// of an existing group, upgrading from a previous version of Berkeley DB. All
         /// sites in the legacy group must specify this for themselves (the 
         /// local site) and for all other sites initially in the group. 
         /// </remarks>

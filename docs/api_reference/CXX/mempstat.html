@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.0</p>
+        <p>Library Version 12.1.6.1</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -116,6 +116,14 @@ DbEnv::memp_stat(DB_MPOOL_STAT **gsp,
           </li>
           <li>
             <p>
+                         <span class="bold"><strong>roff_t st_regmax;</strong></span>
+                </p>
+            <p>
+                        The maximum size, in bytes, of the mutex region.
+                </p>
+          </li>
+          <li>
+            <p>
                          <span class="bold"><strong>size_t st_mmapsize;</strong></span>
                 </p>
             <p>
@@ -127,7 +135,7 @@ DbEnv::memp_stat(DB_MPOOL_STAT **gsp,
                          <span class="bold"><strong>int st_maxopenfd;</strong></span>
                 </p>
             <p>
-                        Maximum open file descriptors.
+                        Maximum number of open file descriptors.
                 </p>
           </li>
           <li>
@@ -135,7 +143,8 @@ DbEnv::memp_stat(DB_MPOOL_STAT **gsp,
                          <span class="bold"><strong>int st_maxwrite;</strong></span>
                 </p>
             <p>
-                        Maximum sequential buffer writes.
+                        The maximum number of sequential write operations scheduled by the
+                        library when flushing dirty pages from the cache. 
                 </p>
           </li>
           <li>
@@ -143,7 +152,8 @@ DbEnv::memp_stat(DB_MPOOL_STAT **gsp,
                          <span class="bold"><strong>db_timeout_t st_maxwrite_sleep;</strong></span>
                 </p>
             <p>
-                         Microseconds to pause after writing maximum sequential buffers.
+                        The number of microseconds the thread of control should pause
+                        before scheduling further write operations.
                 </p>
           </li>
           <li>
@@ -229,6 +239,14 @@ DbEnv::memp_stat(DB_MPOOL_STAT **gsp,
                 </p>
             <p>
                         Pages in the cache.
+                </p>
+          </li>
+          <li>
+            <p>
+                         <span class="bold"><strong>size_t st_pagesize;</strong></span>
+                </p>
+            <p>
+                        Page size in bytes.
                 </p>
           </li>
           <li>
@@ -329,7 +347,7 @@ DbEnv::memp_stat(DB_MPOOL_STAT **gsp,
                          <span class="bold"><strong>uintmax_t st_region_wait;</strong></span>
                 </p>
             <p>
-                         Number of times that a thread of control was forced to wait before
+                         The number of times that a thread of control was forced to wait before
                          obtaining a cache region mutex.
                 </p>
           </li>
@@ -338,8 +356,8 @@ DbEnv::memp_stat(DB_MPOOL_STAT **gsp,
                          <span class="bold"><strong>uintmax_t st_region_nowait;</strong></span>
                 </p>
             <p>
-                         Number of times that a thread of control was able to obtain a cache
-                         region mutex without waiting.
+                         The number of times that a thread of control was able to obtain a
+                         cache region mutex without waiting.
                 </p>
           </li>
           <li>
@@ -539,7 +557,7 @@ DbEnv::memp_stat(DB_MPOOL_STAT **gsp,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp3322824"></a>Parameters</h3>
+              <h3 class="title"><a id="idp61890408"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -547,7 +565,7 @@ DbEnv::memp_stat(DB_MPOOL_STAT **gsp,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp3312256"></a>gsp</h4>
+                <h4 class="title"><a id="idp61916888"></a>gsp</h4>
               </div>
             </div>
           </div>
@@ -561,7 +579,7 @@ DbEnv::memp_stat(DB_MPOOL_STAT **gsp,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp3327312"></a>fsp</h4>
+                <h4 class="title"><a id="idp61916080"></a>fsp</h4>
               </div>
             </div>
           </div>
@@ -575,7 +593,7 @@ DbEnv::memp_stat(DB_MPOOL_STAT **gsp,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp3328248"></a>flags</h4>
+                <h4 class="title"><a id="idp61916952"></a>flags</h4>
               </div>
             </div>
           </div>
@@ -601,7 +619,7 @@ DbEnv::memp_stat(DB_MPOOL_STAT **gsp,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp3333056"></a>Errors</h3>
+              <h3 class="title"><a id="idp61921936"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -619,7 +637,7 @@ DbEnv::memp_stat(DB_MPOOL_STAT **gsp,
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp3341096"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp61930024"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -632,7 +650,7 @@ DbEnv::memp_stat(DB_MPOOL_STAT **gsp,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp3339800"></a>Class</h3>
+              <h3 class="title"><a id="idp61928728"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -644,7 +662,7 @@ DbEnv::memp_stat(DB_MPOOL_STAT **gsp,
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp3335664"></a>See Also</h3>
+              <h3 class="title"><a id="idp61923896"></a>See Also</h3>
             </div>
           </div>
         </div>

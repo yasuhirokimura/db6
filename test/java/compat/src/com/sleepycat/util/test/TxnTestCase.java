@@ -52,7 +52,15 @@ public abstract class TxnTestCase extends DualTestCase {
     protected String txnType;
     protected boolean isTransactional;
 
-    public static List<Object[]> getTxnTypes(String[] txnTypes, boolean rep) {
+    public static List<Object[]> getTxnParams(String[] txnTypes, boolean rep) {
+        final List<Object[]> list = new ArrayList<Object[]>();
+        for (final String type : getTxnTypes(txnTypes, rep)) {
+            list.add(new Object[] {type});
+        }
+        return list;
+    }
+
+    public static String[] getTxnTypes(String[] txnTypes, boolean rep) {
         if (txnTypes == null) {
             if (rep) {
                 txnTypes = new String[] { // Skip non-transactional tests
@@ -71,18 +79,14 @@ public abstract class TxnTestCase extends DualTestCase {
         } else {
             if (!DbCompat.CDB) {
                 /* Remove TxnTestCase.TXN_CDB, if there is any. */
-                ArrayList<String> tmp = new ArrayList<String> 
-                                            (Arrays.asList(txnTypes));
+                final ArrayList<String> tmp =
+                    new ArrayList<String>(Arrays.asList(txnTypes));
                 tmp.remove(TxnTestCase.TXN_CDB);
                 txnTypes = new String[tmp.size()];
                 tmp.toArray(txnTypes);
             }
         }
-        List<Object[]> list = new ArrayList<Object[]>();
-        for (String type : txnTypes) {
-            list.add(new Object[] {type});
-        }
-        return list;
+        return txnTypes;
     }
 
     @Before

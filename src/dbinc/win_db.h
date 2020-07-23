@@ -73,8 +73,10 @@
 #endif
 #define	getpid			GetCurrentProcessId
 #define	snprintf		_snprintf
+#ifndef strcasecmp
 #define	strcasecmp		_stricmp
 #define	strncasecmp		_strnicmp
+#endif
 #define	vsnprintf		_vsnprintf
 
 #define	h_errno			WSAGetLastError()

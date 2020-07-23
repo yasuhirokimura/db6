@@ -31,7 +31,7 @@ if { $argc >= 2 } {
 #
 # Account in args for SKIP command, or not.
 #
-if { $skip != "SKIP" && $argc >= 2 } {
+if { $skip != "SKIP" && $skip != "ALLOW_PIPE_CLOSE_ERROR" && $argc >= 2 } {
 	set args [lrange $argv 2 end]
 }
 
@@ -96,6 +96,8 @@ close $f
 set f [open $testdir/end.$parentpid w]
 close $f
 
-error_check_good "Pipe close ($childpid: $script $argv: logfile $logfile)"\
-    $ret 0
+if { $skip != "ALLOW_PIPE_CLOSE_ERROR" } {
+	error_check_good "Pipe close ($childpid: $script $argv: logfile\
+	    $logfile)" $ret 0
+}
 exit $ret

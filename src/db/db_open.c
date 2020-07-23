@@ -119,6 +119,15 @@ __db_open(dbp, ip, txn, fname, dname, type, flags, mode, meta_pgno)
 		goto err;
 
 	/*
+	 * Silently disabled blobs in databases that cannot support them.
+	 * Most illegal configurations will have already been caught, this
+	 * is to allow a user to set an environment wide blob threshold, but
+	 * not have to explicitly turn it off for in-memory or queue databases.
+	 */
+	if (!__db_blobs_enabled(dbp))
+		dbp->blob_threshold = 0;
+
+	/*
 	 * If both fname and subname are NULL, it's always a create, so make
 	 * sure that we have both DB_CREATE and a type specified.  It would
 	 * be nice if this checking were done in __db_open where most of the
@@ -233,15 +242,6 @@ __db_open(dbp, ip, txn, fname, dname, type, flags, mode, meta_pgno)
 	if (F2_ISSET(dbp, DB2_AM_INTEXCL) &&
 	    (ret = __db_handle_lock(dbp)) != 0)
 			goto err;
-
-	/*
-	 * Silently disabled blobs in databases that cannot support them.
-	 * Most illegal configurations will have already been caught, this
-	 * is to allow a user to set an environment wide blob threshold, but
-	 * not have to explicitly turn it off for in-memory or queue databases.
-	 */
-	if (!__db_blobs_enabled(dbp))
-		dbp->blob_threshold = 0;
 
 	switch (dbp->type) {
 		case DB_BTREE:
@@ -446,9 +446,9 @@ err:	return (ret);
 
 /*
  * __db_chk_meta --
- *	Validate a buffer containing a possible meta-data page. It is 
- *      byte-swapped as necessary and checked for having a valid magic number. 
- *      If it does, then it can validate the LSN, checksum (if necessary), 
+ *	Validate a buffer containing a possible meta-data page. It is
+ *      byte-swapped as necessary and checked for having a valid magic number.
+ *      If it does, then it can validate the LSN, checksum (if necessary),
  *      and possibly decrypt it.
  *
  *	Return 0 on success, >0 (errno).

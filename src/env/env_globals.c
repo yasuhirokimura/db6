@@ -39,6 +39,11 @@ DB_GLOBALS __db_global_values = {
 	0,				/* size_active_pids */
 	NULL,                           /* active_pids */
 	NULL,                           /* saved_errstr */
+	"%m/%d %H:%M:%S",		/* strftime format for dates */
+#if defined(HAVE_ERROR_HISTORY)
+	0,				/* thread local msgs_key */
+	PTHREAD_ONCE_INIT,		/* pthread_once initializer */
+#endif
 	NULL,				/* j_assert */
 	NULL,				/* j_close */
 	NULL,				/* j_dirfree */

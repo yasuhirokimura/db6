@@ -125,6 +125,15 @@ proc repmgr024_sub { method niter tnum testopt largs } {
 		puts "\tRepmgr$tnum.c: Running rep_test in replicated env."
 		eval rep_test $method $enva NULL $niter $start 0 0 $largs
 		incr start $niter
+		#
+		# On some platforms, views can process new log records from
+		# the master faster than they can apply them because views
+		# don't send acks.  Allow a little extra time for the view
+		# apply to catch up in this tight loop.
+		#
+		if { $testopt == "view" } {
+			tclsleep 2
+		}
 
 		set res [eval exec $util_path/db_archive -h $dira]
 		if { [llength $res] != 0 } {
@@ -172,6 +181,16 @@ proc repmgr024_sub { method niter tnum testopt largs } {
 		puts "\tRepmgr$tnum.e: Running rep_test in replicated env."
 		eval rep_test $method $enva NULL $niter $start 0 0 $largs
 		incr start $niter
+		#
+		# After liverem removes its client, it is possible on some
+		# platforms for the master to blast the remaining client with
+		# log records faster than the client can apply them because
+		# the master is only sending to one site now.  Allow extra
+		# time for the client to catch up.
+		#
+		if { $testopt == "view" || $testopt == "liverem" } {
+			tclsleep 2
+		}
 
 		# We use log_archive when we want to remove log files so
 		# that if we are running verbose, we get all of the output

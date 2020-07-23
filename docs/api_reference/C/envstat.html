@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.0</p>
+        <p>Library Version 12.1.6.1</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -67,7 +67,7 @@ DB_ENV-&gt;stat_print(DB_ENV *dbenv, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp52374352"></a>Parameters</h3>
+              <h3 class="title"><a id="idp2212752"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -75,7 +75,7 @@ DB_ENV-&gt;stat_print(DB_ENV *dbenv, u_int32_t flags);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp52374544"></a>flags</h4>
+                <h4 class="title"><a id="idp2212944"></a>flags</h4>
               </div>
             </div>
           </div>
@@ -92,6 +92,15 @@ DB_ENV-&gt;stat_print(DB_ENV *dbenv, u_int32_t flags);  </pre>
             </p>
                 <p>
                 Display all available information.
+            </p>
+              </li>
+              <li>
+                <p><a id="envstat_DB_STAT_ALLOC"></a>
+                  <code class="literal">DB_STAT_ALLOC</code>
+            </p>
+                <p>
+                Display allocation information. To display allocation information, both
+                DB_STAT_ALLOC and DB_STAT_ALL need to be set.
             </p>
               </li>
               <li>
@@ -118,7 +127,7 @@ DB_ENV-&gt;stat_print(DB_ENV *dbenv, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp52412136"></a>Class</h3>
+              <h3 class="title"><a id="idp2219064"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -130,7 +139,7 @@ DB_ENV-&gt;stat_print(DB_ENV *dbenv, u_int32_t flags);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp52378568"></a>See Also</h3>
+              <h3 class="title"><a id="idp2182968"></a>See Also</h3>
             </div>
           </div>
         </div>

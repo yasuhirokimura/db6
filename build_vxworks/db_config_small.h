@@ -93,6 +93,10 @@
 /* Define to 1 if building the DBM API. */
 /* #undef HAVE_DBM */
 
+/* Define to 1 if you want a version that records extra information about
+   errors. */
+/* #undef HAVE_ERROR_HISTORY */
+
 /* Define to 1 if you have the `directio' function. */
 /* #undef HAVE_DIRECTIO */
 
@@ -111,6 +115,9 @@
 
 /* Define to 1 if you have EXIT_SUCCESS/EXIT_FAILURE #defines. */
 #define HAVE_EXIT_SUCCESS 1
+
+/* Define to 1 for failchk to inform all waiting threads about crashes. */
+/* #undef HAVE_FAILCHK_BROADCAST */
 
 /* Define to 1 if you have the `fchmod' function. */
 /* #undef HAVE_FCHMOD */
@@ -201,6 +208,9 @@
 
 /* Define to 1 if you have the `localtime' function. */
 #define HAVE_LOCALTIME 1
+
+/* Define to 1 if you have the `localtime_r' function. */
+/* #undef HAVE_LOCALTIME_R */
 
 /* Define to 1 if you want to enable log checksums. */
 #define HAVE_LOG_CHECKSUM 1
@@ -375,12 +385,24 @@
    pthread_cond_t. */
 /* #undef HAVE_PTHREAD_COND_REINIT_OKAY */
 
+/* Define to 1 if you have the `pthread_getspecific' function. */
+/* #undef HAVE_PTHREAD_GETSPECIFIC */
+
+/* Define to 1 if you have the `pthread_key_create' function. */
+/* #undef HAVE_PTHREAD_KEY_CREATE */
+
+/* Define to 1 if you have the `pthread_once' function. */
+/* #undef HAVE_PTHREAD_ONCE */
+
 /* Define to 1 if it is OK to initialize an already initialized
    pthread_rwlock_t. */
 /* #undef HAVE_PTHREAD_RWLOCK_REINIT_OKAY */
 
 /* Define to 1 if you have the `pthread_self' function. */
 /* #undef HAVE_PTHREAD_SELF */
+
+/* Define to 1 if you have the `pthread_setspecific' function. */
+/* #undef HAVE_PTHREAD_SETSPECIFIC */
 
 /* Define to 1 if you have the `pthread_yield' function. */
 /* #undef HAVE_PTHREAD_YIELD */
@@ -571,16 +593,16 @@
 #define PACKAGE_NAME "Berkeley DB"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "Berkeley DB 6.0.30"
+#define PACKAGE_STRING "Berkeley DB 6.1.19"
 
 /* Define to the one symbol short name of this package. */
-#define PACKAGE_TARNAME "db-6.0.30"
+#define PACKAGE_TARNAME "db-6.1.19"
 
 /* Define to the home page for this package. */
 #define PACKAGE_URL "http://www.oracle.com/technology/software/products/berkeley-db/index.html"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "6.0.30"
+#define PACKAGE_VERSION "6.1.19"
 
 /* The size of a `char', as computed by sizeof. */
 /* #undef SIZEOF_CHAR */

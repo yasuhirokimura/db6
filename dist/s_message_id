@@ -17,18 +17,19 @@ for i in $GREP_CMDS; do
 	if [ "`which $i`" = "" ]; then
 		continue
 	fi
-	echo "s_message_id test" > s_message_id.tmp
-	$i "s_message_id test"  s_message_id.tmp -o --include=*.tmp | \
-	    $i -v "s_message_id.txt" > s_message_id.tmp.out 2>&1
-	if [ `$i "unrecognized option" s_message_id.tmp.out | wc -l` \
-	    -eq 0 ] && [ `$i "invalid option" s_message_id.tmp.out | \
-	    wc -l` -eq 0 ] && [ `$i "can't open" s_message_id.tmp.out | \
+	echo "s_message_id test" > /tmp/s_message_id.tmp
+	$i "s_message_id test"  /tmp/s_message_id.tmp -o --include=*.tmp | \
+	    $i -v "s_message_id.txt" > /tmp/s_message_id.tmp.out 2>&1
+	if [ `$i "unrecognized option" /tmp/s_message_id.tmp.out | wc -l` \
+	    -eq 0 ] && [ `$i "invalid option" /tmp/s_message_id.tmp.out | \
+	    wc -l` -eq 0 ] && [ `$i "can't open" /tmp/s_message_id.tmp.out | \
 	    wc -l` -eq 0 ]; then
 		GREP_CMD=$i
 		break
 	fi
 done
-rm -f s_message_id.tmp s_message_id.tmp.out
+trap 'rm -f /tmp/s_message_id.tmp /tmp/s_message_id.tmp.out; exit 1' 1 2 3 13 15
+trap 'rm -f /tmp/s_message_id.tmp /tmp/s_message_id.tmp.out; exit 0' 0
 if [ "$GREP_CMD" = "" ]; then
 	echo "UNSUPPORTED COMMAND: (g)grep -o --include"
 	echo "Please try other platform"
@@ -180,9 +181,10 @@ for i in $MSG_DIRS; do
 done
 
 # Check if there is any remaining "BDB####". 
-# NOTE: If "BDB####" is not .c, .h, .in files, they won't be updated with the 
-# real message id.
+# NOTE: If "BDB####" is not .c, .h, .in, .awk files, they won't be updated with 
+# the real message id.
 if [ `$GREP_CMD "BDB####" -r $MSG_DIRS | wc -l` -gt 0 ]; then
 	echo "WARNING: There is remaining BDB####. Please check:"
-	$GREP_CMD "BDB####" -r $MSG_DIRS
+	$GREP_CMD "BDB####" -r $MSG_DIRS -wl --include=*.c --include=*.h \
+	    --include=*.in --include=*.awk 
 fi

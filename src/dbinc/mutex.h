@@ -167,13 +167,6 @@ static inline int __db_pthread_mutex_tryreadlock(ENV *env, db_mutex_t mutex)
 #define	__mutex_rdlock(a, b)		__db_win32_mutex_readlock(a, b)
 #define	__mutex_tryrdlock(a, b)		__db_win32_mutex_tryreadlock(a, b)
 #endif
-#elif defined(HAVE_MUTEX_FCNTL)
-#define	__mutex_init(a, b, c)		__db_fcntl_mutex_init(a, b, c)
-#define	__mutex_lock(a, b)		__db_fcntl_mutex_lock(a, b, 0)
-#define	__mutex_timedlock(a, b, c)	__db_fcntl_lock(a, b, c)
-#define	__mutex_trylock(a, b)		__db_fcntl_mutex_trylock(a, b)
-#define	__mutex_unlock(a, b)		__db_fcntl_mutex_unlock(a, b)
-#define	__mutex_destroy(a, b)		__db_fcntl_mutex_destroy(a, b)
 #else
 #define	__mutex_init(a, b, c)		__db_tas_mutex_init(a, b, c)
 #define	__mutex_lock(a, b)		__db_tas_mutex_lock(a, b, 0)
@@ -188,9 +181,8 @@ static inline int __db_pthread_mutex_tryreadlock(ENV *env, db_mutex_t mutex)
 #endif
 
 /*
- * When there is no method to get a shared latch, fall back to
- * implementing __mutex_rdlock() as getting an exclusive one.
- * This occurs either when !HAVE_SHARED_LATCHES or HAVE_MUTEX_FCNTL.
+ * When there is no method to get a shared latch, fall back to implementing
+ * __mutex_rdlock() as an exclusive one. This may no longer be supported?
  */
 #ifndef __mutex_rdlock
 #define	__mutex_rdlock(a, b)		__mutex_lock(a, b)
@@ -203,16 +195,24 @@ static inline int __db_pthread_mutex_tryreadlock(ENV *env, db_mutex_t mutex)
  * Lock/unlock a mutex.  If the mutex was never required, the thread of
  * control can proceed without it.
  *
- * We never fail to acquire or release a mutex without panicing.  Simplify
+ * We rarely fail to acquire or release a mutex without panicing.  Simplify
  * the macros to always return a panic value rather than saving the actual
- * return value of the mutex routine.
+ * return value of the mutex routine. Use MUTEX_LOCK_RET() when the caller has
+ * a code path for a mutex failure, e.g., when cleaning up after a panic.
  */
 #ifdef HAVE_MUTEX_SUPPORT
 #define	MUTEX_LOCK(env, mutex) do {					\
-	if ((mutex) != MUTEX_INVALID &&					\
-	    __mutex_lock(env, mutex) != 0)				\
+	if ((mutex) != MUTEX_INVALID &&	__mutex_lock(env, mutex) != 0)	\
 		return (DB_RUNRECOVERY);				\
 } while (0)
+
+#define MUTEX_LOCK_RET(env, mutex) 					\
+	((mutex) == MUTEX_INVALID ? 0 : __mutex_lock(env, mutex))
+
+/*
+ * Always check the return value of MUTEX_TRYLOCK()!  Expect 0 on success,
+ * or possibly DB_RUNRECOVERY for failchk.
+ */
 
 /*
  * Always check the return value of MUTEX_TRYLOCK()!  Expect 0 on success,
@@ -221,9 +221,7 @@ static inline int __db_pthread_mutex_tryreadlock(ENV *env, db_mutex_t mutex)
 #define	MUTEX_TRYLOCK(env, mutex)					\
 	(((mutex) == MUTEX_INVALID) ? 0 : __mutex_trylock(env, mutex))
 
-/*
- * Acquire a DB_MUTEX_SHARED "mutex" in shared mode.
- */
+/* Acquire a latch (a DB_MUTEX_SHARED "mutex") in shared mode. */
 #define	MUTEX_READLOCK(env, mutex) do {					\
 	if ((mutex) != MUTEX_INVALID &&					\
 	    __mutex_rdlock(env, mutex) != 0)				\
@@ -238,12 +236,12 @@ static inline int __db_pthread_mutex_tryreadlock(ENV *env, db_mutex_t mutex)
 		return (DB_RUNRECOVERY);				\
 } while (0)
 
-#define	MUTEX_WAIT(env, mutex, duration) do {			      \
-	int __ret;						      \
-	if ((mutex) != MUTEX_INVALID &&				      \
-	    (__ret = __mutex_timedlock(env, mutex, duration)) != 0 && \
-	    __ret != DB_TIMEOUT)				      \
-		return (DB_RUNRECOVERY);			      \
+#define	MUTEX_WAIT(env, mutex, duration) do {				\
+	int __ret;							\
+	if ((mutex) != MUTEX_INVALID &&					\
+	    (__ret = __mutex_timedlock(env, mutex, duration)) != 0 &&	\
+	    __ret != DB_TIMEOUT)					\
+		return (DB_RUNRECOVERY);				\
 } while (0)
 
 /*
@@ -261,6 +259,7 @@ static inline int __db_pthread_mutex_tryreadlock(ENV *env, db_mutex_t mutex)
  * if-then-else blocks work correctly, and suppress unused variable messages.
  */
 #define	MUTEX_LOCK(env, mutex)		{ env = (env); mutex = (mutex); }
+#define	MUTEX_LOCK_RET(env, mutex)	( env = (env), mutex = (mutex), 0)
 #define	MUTEX_TRYLOCK(env, mutex)	( env = (env), mutex = (mutex), 0)
 #define	MUTEX_READLOCK(env, mutex)	{ env = (env); mutex = (mutex); }
 #define	MUTEX_TRY_READLOCK(env, mutex)	( env = (env), mutex = (mutex), 0 )

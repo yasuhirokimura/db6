@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.0</p>
+        <p>Library Version 12.1.6.1</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -69,7 +69,8 @@ DbEnv::rep_set_config(u_int32_t which, int onoff); </pre>
          called to set in-memory replication after the environment is
          opened using the 
          <a class="xref" href="envopen.html" title="DbEnv::open()">DbEnv::open()</a> method. 
-         This method may also not be called to set master leases after the
+         This method should not be called to set preferred master mode or
+         master leases after the
          <a class="xref" href="repstart.html" title="DbEnv::rep_start()">DbEnv::rep_start()</a> or 
          <a class="xref" href="repmgrstart.html" title="DbEnv::repmgr_start()">DbEnv::repmgr_start()</a> methods
          are called.  For all other <span class="bold"><strong>which</strong></span>
@@ -90,7 +91,7 @@ DbEnv::rep_set_config(u_int32_t which, int onoff); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp4164680"></a>Parameters</h3>
+              <h3 class="title"><a id="idp62754440"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -98,7 +99,7 @@ DbEnv::rep_set_config(u_int32_t which, int onoff); </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp4164944"></a>which</h4>
+                <h4 class="title"><a id="idp62754608"></a>which</h4>
               </div>
             </div>
           </div>
@@ -247,7 +248,8 @@ DbEnv::rep_set_config(u_int32_t which, int onoff); </pre>
                         Replication Manager automatically runs elections to
                         choose a new master when the old master fails or
                         becomes disconnected.  This option is turned on
-                        by default.
+                        by default. In preferred master mode, this option
+                        cannot be turned off.
                     </p>
                 <p>
                         If this option is turned off, the application is
@@ -273,6 +275,62 @@ DbEnv::rep_set_config(u_int32_t which, int onoff); </pre>
                     </p>
               </li>
               <li>
+                <p><a id="config_DB_REPMGR_CONF_PREFMAS_CLIENT"></a>
+                        <code class="literal">DB_REPMGR_CONF_PREFMAS_CLIENT</code>
+                    </p>
+                <p>
+                        This is the client site in a two-site
+                        replication group running in preferred master
+                        mode. This site automatically takes over as
+                        temporary master when the preferred master
+                        site is unavailable. Transactions committed
+                        on this site when it is operating as the
+                        temporary master may be rolled back if they
+                        conflict with preferred master transactions.
+                        (See the 
+                        <a href="../../programmer_reference/rep_twosite.html#twosite_prefmas" class="olink">
+                        Preferred master mode </a>
+                        section in the <em class="citetitle">Berkeley DB Programmer's Reference Guide</em>
+                        for more information.) This configuration flag may
+                        not be set after the <a class="xref" href="repmgrstart.html" title="DbEnv::repmgr_start()">DbEnv::repmgr_start()</a> method is called.
+                    </p>
+                <p>
+                        The other site in the replication group should
+                        be specified as the preferred master site using the
+                        <code class="literal">DB_REPMGR_CONF_PREFMAS_MASTER</code>
+                        configuration flag.
+                    </p>
+              </li>
+              <li>
+                <p><a id="config_DB_REPMGR_CONF_PREFMAS_MASTER"></a>
+                        <code class="literal">DB_REPMGR_CONF_PREFMAS_MASTER</code>
+                    </p>
+                <p>
+                        This is the preferred master site in a two-site
+                        replication group running in preferred master
+                        mode. This site functions as the master
+                        whenever its availability permits.
+                        When this site returns to the replication
+                        group after having been unavailable, it
+                        synchronizes with the temporary master and
+                        then automatically takes over as master.
+                        Transactions committed on this site will
+                        not be rolled back. (See the 
+                        <a href="../../programmer_reference/rep_twosite.html#twosite_prefmas" class="olink">
+                        Preferred master mode </a>
+                        section in the <em class="citetitle">Berkeley DB Programmer's Reference Guide</em>
+                        for more information.) This configuration flag may not
+                        be set after the <a class="xref" href="repmgrstart.html" title="DbEnv::repmgr_start()">DbEnv::repmgr_start()</a> method is called.
+                    </p>
+                <p>
+                        The other site in the replication group should
+                        be specified as the preferred master client site
+                        using the
+                        <code class="literal">DB_REPMGR_CONF_PREFMAS_CLIENT</code>
+                        configuration flag.
+                   </p>
+              </li>
+              <li>
                 <p><a id="config_DB_REPMGR_CONF_2SITE_STRICT"></a>
                         <code class="literal">DB_REPMGR_CONF_2SITE_STRICT</code>
                     </p>
@@ -289,7 +347,8 @@ DbEnv::rep_set_config(u_int32_t which, int onoff); </pre>
                         section in the <em class="citetitle">Berkeley DB Programmer's Reference Guide</em> for more information.)  
                         Both sites in the replication group should have the same value for this 
                         configuration flag. This option is turned on by
-                        default.
+                        default. In preferred master mode, this option cannot
+                        be turned off.
                     </p>
               </li>
             </ul>
@@ -299,7 +358,7 @@ DbEnv::rep_set_config(u_int32_t which, int onoff); </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp4190736"></a>onoff</h4>
+                <h4 class="title"><a id="idp62785192"></a>onoff</h4>
               </div>
             </div>
           </div>
@@ -315,7 +374,7 @@ DbEnv::rep_set_config(u_int32_t which, int onoff); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp4169968"></a>Errors</h3>
+              <h3 class="title"><a id="idp62762840"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -333,15 +392,15 @@ DbEnv::rep_set_config(u_int32_t which, int onoff); </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp4188792"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp62765568"></a>EINVAL</h4>
               </div>
             </div>
           </div>
           <p>
                 If setting in-memory replication after the database environment is already
-                opened; if setting master leases after replication is started; if setting
-                the two-site strict majority rule or automatic elections for a
-                Base API application;
+                opened; if setting preferred master or master leases
+                after replication is started; if setting a Replication
+                Manager configuration flag for a Base API application;
                 or if an invalid flag value or parameter was specified.
             </p>
         </div>
@@ -350,7 +409,7 @@ DbEnv::rep_set_config(u_int32_t which, int onoff); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp4181960"></a>Class</h3>
+              <h3 class="title"><a id="idp62780920"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -362,7 +421,7 @@ DbEnv::rep_set_config(u_int32_t which, int onoff); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp4194376"></a>See Also</h3>
+              <h3 class="title"><a id="idp62760928"></a>See Also</h3>
             </div>
           </div>
         </div>

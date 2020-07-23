@@ -193,7 +193,8 @@ proc test006_body { method {nentries 10000} {reopen 0} {tnum "006"} \
 	error_check_good get_on_empty [string length $ret] 0
 	error_check_good dbc_close [$dbc close] 0
 	if { $txnenv == 1 } {
-	error_check_good txn [$t commit] 0
+		error_check_good txn [$t commit] 0
 	}
-error_check_good db_close [$db close] 0
+	puts "\t$tname.d: Close db."
+	error_check_good db_close [$db close] 0
 }

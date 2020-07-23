@@ -128,6 +128,11 @@ proc rep029_sub { method niter tnum envargs logset recargs opts largs } {
 		set privargs " -private "
 	}
 
+	set blobargs ""
+    	if { [can_support_blobs $method $largs] == 1 } {
+		set blobargs "-blob_threshold 100"
+	}
+
 	env_cleanup $testdir
 
 	replsetup $testdir/MSGQUEUEDIR
@@ -159,7 +164,7 @@ proc rep029_sub { method niter tnum envargs logset recargs opts largs } {
 	set ma_envcmd "berkdb_env_noerr -create $m_txnargs $repmemargs \
 	    $m_logargs -log_max $log_max $envargs $verbargs $privargs \
 	    -errpfx MASTER -home $masterdir \
-	    -rep_transport \[list 1 replsend\]"
+	    $blobargs -rep_transport \[list 1 replsend\]"
 	set masterenv [eval $ma_envcmd $recargs -rep_master]
 
 	# Open a client
@@ -167,7 +172,7 @@ proc rep029_sub { method niter tnum envargs logset recargs opts largs } {
 	set cl_envcmd "berkdb_env_noerr -create $c_txnargs $repmemargs \
 	    $c_logargs -log_max $log_max $envargs $verbargs $privargs \
 	    -errpfx CLIENT -home $clientdir \
-	    -rep_transport \[list 2 replsend\]"
+	    $blobargs -rep_transport \[list 2 replsend\]"
 	set clientenv [eval $cl_envcmd $recargs -rep_client]
 
 	# Bring the clients online by processing the startup messages.

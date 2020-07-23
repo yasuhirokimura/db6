@@ -169,6 +169,8 @@ main(argc, argv)
 		goto err;
 	}
 
+	machtab_destroy(machtab);
+
 	/* Finish checkpoint and log archive threads. */
 	if ((ret = finish_support_threads(&ckp_thr, &lga_thr)) != 0)
 		goto err;

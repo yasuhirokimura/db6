@@ -692,6 +692,8 @@ __db_byteswap(dbp, pg, h, pagesize, pgin)
 		for (i = 0; i <= HEAP_HIGHINDX(h); i++) {
 			if (pgin)
 				M_16_SWAP(inp[i]);
+			if (inp[i] == 0)
+				continue;
 
 			hh = (HEAPHDR *)P_ENTRY(dbp, h, i);
 			if ((u_int8_t *)hh >= pgend)
@@ -857,12 +859,13 @@ __db_recordswap(op, size, hdr, data, pgin)
 	BKEYDATA *bk;
 	BOVERFLOW *bo;
 	BINTERNAL *bi;
+	DBT *dbt;
 	HEAPHDR *hh;
-	HEAPBLOBHDR *bhdr;
+	HEAPBLOBHDR bhdr;
 	HEAPSPLITHDR *hsh;
 	RINTERNAL *ri;
 	db_indx_t tmp;
-	u_int8_t *p, *end;
+	u_int8_t buf[HEAPBLOBREC_SIZE], *end, *p;
 
 	if (size == 0)
 		return;
@@ -972,10 +975,37 @@ __db_recordswap(op, size, hdr, data, pgin)
 			M_32_SWAP(hsh->nextpg);
 			M_16_SWAP(hsh->nextindx);
 		}else if (F_ISSET(hh, HEAP_RECBLOB)) {
-			bhdr = (HEAPBLOBHDR *)hh;
-			M_64_SWAP(bhdr->id);		/* id */
-			M_64_SWAP(bhdr->size);		/* size */
-			M_64_SWAP(bhdr->file_id);	/* file id */
+			/*
+			 * Heap blob records are broken into two parts when
+			 * logged, the shared header and the part that is
+			 * unique to blob records, which is stored in the
+			 * log data field.
+			 */
+			if (data != NULL) {
+				dbt = NULL;
+				if (pgin) {
+					dbt = data;
+					memcpy(buf + sizeof(HEAPHDR),
+					    dbt->data, HEAPBLOBREC_DSIZE);
+				} else {
+					memcpy(buf + sizeof(HEAPHDR),
+					    data, HEAPBLOBREC_DSIZE);
+				}
+				memcpy(&bhdr, buf, HEAPBLOBREC_SIZE);
+				M_64_SWAP(bhdr.id);		/* id */
+				M_64_SWAP(bhdr.size);		/* size */
+				M_64_SWAP(bhdr.file_id);	/* file id */
+				memcpy(buf, &bhdr, HEAPBLOBREC_SIZE);
+				if (pgin) {
+					memcpy(dbt->data,
+					    HEAPBLOBREC_DATA(buf),
+					    HEAPBLOBREC_DSIZE);
+				} else {
+					memcpy(data,
+					    HEAPBLOBREC_DATA(buf),
+					    HEAPBLOBREC_DSIZE);
+				}
+			}
 			break;
 		}
 		break;

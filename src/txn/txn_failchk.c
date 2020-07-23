@@ -57,7 +57,7 @@ retry:	TXN_SYSTEM_LOCK(env);
 
 		if (F_ISSET(td, TXN_DTL_INMEMORY)) {
 			TXN_SYSTEM_UNLOCK(env);
-			return (__db_failed(env, DB_STR("4501",
+			return (__db_failed(env, DB_STR("4573",
 			    "Transaction has in memory logs"),
 			     td->pid, td->tid));
 		}

@@ -354,15 +354,6 @@ proc env012 { } {
 	}
 }
 
-# Check log file and report failures with FAIL.  Use this when
-# we don't expect failures.
-proc logcheck { logname } {
-	set errstrings [eval findfail $logname]
-	foreach errstring $errstrings {
-		puts "FAIL: error in $logname : $errstring"
-	}
-}
-
 # When we expect a failure, verify we find the one we expect.
 proc logcheckfails { logname message }  {
 	set f [open $logname r]

@@ -16,9 +16,9 @@
 proc test138 { method {nentries 1000} {start 0} {skip 0} args } {
 	source ./include.tcl
 
-	eval {test137 $method $nentries $start $skip 0 "138" "cds"} $args
-	eval {test137 $method $nentries $start $skip 0 "138" "tds"} $args
 	eval {test137 $method $nentries $start $skip 1 "138" "ds"} $args
 	eval {test137 $method $nentries $start $skip 1 "138" "cds"} $args
 	eval {test137 $method $nentries $start $skip 1 "138" "tds"} $args
+	eval {test137 $method $nentries $start $skip 0 "138" "cds"} $args
+	eval {test137 $method $nentries $start $skip 0 "138" "tds"} $args
 }

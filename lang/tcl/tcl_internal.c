@@ -615,6 +615,7 @@ _EventFunc(dbenv, event, info)
 	/* Record the fact that this event occurred. */
 	bit_flag = 1 << event;
 	ip->i_event_info->events |= bit_flag;
+	ip->i_event_info->count[event]++;
 
 	/*
 	 * For events that have associated "info" (currently most don't), save

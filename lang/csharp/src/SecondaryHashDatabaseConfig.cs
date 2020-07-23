@@ -16,9 +16,8 @@ namespace BerkeleyDB {
     public class SecondaryHashDatabaseConfig : SecondaryDatabaseConfig {
         /* Fields for db->set_flags() */
         /// <summary>
-        /// Policy for duplicate data items in the database; that is, insertion
-        /// when the key of the key/data pair being inserted already exists in
-        /// the database will be successful.
+        /// Policy for duplicate data items in the database. Allows a key/data 
+        /// pair to be inserted into the database even if the key already exists.
         /// </summary>
         /// <remarks>
         /// <para>
@@ -31,7 +30,7 @@ namespace BerkeleyDB {
         /// duplicate comparison function. If the application does not specify a
         /// comparison function using 
         /// <see cref="DuplicateCompare"/>, a default lexical
-        /// comparison will be used.
+        /// comparison is used.
         /// </para>
         /// <para>
         /// <see cref="DuplicatesPolicy.SORTED"/> is preferred to 
@@ -41,7 +40,7 @@ namespace BerkeleyDB {
         /// </para>
         /// <para>
         /// If the database already exists, the value of Duplicates must be the
-        /// same as the existing database or an error will be returned.
+        /// same as the existing database or an error is returned.
         /// </para>
         /// </remarks>
         public DuplicatesPolicy Duplicates;
@@ -59,7 +58,7 @@ namespace BerkeleyDB {
         /// <remarks>
         /// If the database does not already exist and
         /// <see cref="CreatePolicy.NEVER"/> is set,
-        /// <see cref="SecondaryHashDatabase.Open"/> will fail.
+        /// <see cref="SecondaryHashDatabase.Open"/> fails.
         /// </remarks>
         public CreatePolicy Creation;
         internal new uint openFlags {
@@ -95,7 +94,7 @@ namespace BerkeleyDB {
         private uint ffactor;
         /// <summary>
         /// The desired density within the hash table. If no value is specified,
-        /// the fill factor will be selected dynamically as pages are filled. 
+        /// the fill factor is selected dynamically as pages are filled. 
         /// </summary>
         /// <remarks>
         /// <para>
@@ -109,7 +108,7 @@ namespace BerkeleyDB {
         /// (pagesize - 32) / (average_key_size + average_data_size + 8)
         /// </para>
         /// <para>
-        /// If the database already exists, this setting will be ignored.
+        /// If the database already exists, this setting is ignored.
         /// </para>
         /// </remarks>
         public uint FillFactor {
@@ -171,12 +170,12 @@ namespace BerkeleyDB {
         /// <para>
         /// In order for the estimate to be used when creating the database,
         /// <see cref="FillFactor"/> must also be set. If the estimate or fill
-        /// factor are not set or are set too low, hash tables will still expand
+        /// factor are not set or are set too low, hash tables still expand
         /// gracefully as keys are entered, although a slight performance
         /// degradation may be noticed.
         /// </para>
         /// <para>
-        /// If the database already exists, this setting will be ignored.
+        /// If the database already exists, this setting is ignored.
         /// </para>
         /// </remarks>
         public uint TableSize {

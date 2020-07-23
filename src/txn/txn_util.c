@@ -330,10 +330,11 @@ __txn_doevents(env, txn, opcode, preprocess)
 				ret = t_ret;
 			break;
 		case TXN_REMOVE:
-			if (txn->parent != NULL)
+			if (txn->parent != NULL) {
 				TAILQ_INSERT_TAIL(
 				    &txn->parent->events, e, links);
-			else if (e->u.r.fileid != NULL) {
+				continue;
+			} else if (e->u.r.fileid != NULL) {
 				if ((t_ret = __memp_nameop(env,
 				    e->u.r.fileid, NULL, e->u.r.name,
 				    NULL, e->u.r.inmem)) != 0 && ret == 0)
@@ -388,8 +389,6 @@ dofree:
 		/* Free resources here. */
 		switch (e->op) {
 		case TXN_REMOVE:
-			if (txn->parent != NULL)
-				continue;
 			if (e->u.r.fileid != NULL)
 				__os_free(env, e->u.r.fileid);
 			__os_free(env, e->u.r.name);

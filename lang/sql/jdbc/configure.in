@@ -423,6 +423,12 @@ AC_TRY_RUN([
 #include <stdio.h>
 
 static int
+vatest2(va_list ap)
+{
+   return 0;
+}
+
+static int
 vatest(char **x, ...)
 {
    va_list ap;
@@ -437,14 +443,12 @@ vatest(char **x, ...)
    return ret;
 }
 
-static int vatest2(va_list ap) {
-	return 0;
-}
-
 int
 main(int argc, char **argv)
 {
-   vatest2((va_list)argv); /* Check whether we can convert "char *" to va_list */
+   /* Check if we can convert char ** to va_list. */
+   vatest2((va_list) argv);
+   /* Check if parameters are passed through stack. */
    exit(vatest(NULL, vatest, 0.0, 0, NULL));
 }
 ],[USE_VFUNCS=1],[USE_VFUNCS=0],[USE_VFUNCS=0])

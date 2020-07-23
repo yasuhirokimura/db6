@@ -472,7 +472,7 @@ nextrec:
 			/* If at start-of-file, move to the previous file. */
 			if (nlsn.offset == 0) {
 				if (nlsn.file == 1) {
-					ret = DB_NOTFOUND;
+					ret = USR_ERR(env, DB_NOTFOUND);
 					goto err;
 				}
 				if ((!lp->db_log_inmemory &&
@@ -480,7 +480,7 @@ nextrec:
 				    0, &status, NULL) != 0 ||
 				    (status != DB_LV_NORMAL &&
 				    status != DB_LV_OLD_READABLE)))) {
-					ret = DB_NOTFOUND;
+					ret = USR_ERR(env, DB_NOTFOUND);
 					goto err;
 				}
 
@@ -624,7 +624,7 @@ nohdr:		switch (flags) {
 			/* FALLTHROUGH */
 		case DB_SET:
 		default:
-			ret = DB_NOTFOUND;
+			ret = USR_ERR(env, DB_NOTFOUND);
 			goto err;
 		}
 	}
@@ -830,7 +830,7 @@ __logc_incursor(logc, lsn, hdr, pp)
 	if (LOG_SWAPPED(env))
 		__log_hdrswap(hdr, CRYPTO_ON(env));
 	if (__logc_hdrchk(logc, lsn, hdr, &eof))
-		return (DB_NOTFOUND);
+		return (USR_ERR(env, DB_NOTFOUND));
 	if (eof || logc->bp_lsn.offset + logc->bp_rlen < lsn->offset + hdr->len)
 		return (0);
 
@@ -914,7 +914,7 @@ __logc_inregion(logc, lsn, rlockp, last_lsn, hdr, pp, need_cksump)
 	if (IS_ZERO_LSN(lp->lsn))
 		return (0);
 	if (LOG_COMPARE(lsn, &lp->lsn) >= 0)
-		return (DB_NOTFOUND);
+		return (USR_ERR(env, DB_NOTFOUND));
 	else if (lp->db_log_inmemory) {
 		if ((ret = __log_inmem_lsnoff(dblp, lsn, &b_region)) != 0)
 			return (ret);
@@ -949,14 +949,14 @@ __logc_inregion(logc, lsn, rlockp, last_lsn, hdr, pp, need_cksump)
 		if (LOG_SWAPPED(env))
 			__log_hdrswap(hdr, CRYPTO_ON(env));
 		if (__logc_hdrchk(logc, lsn, hdr, &eof) != 0)
-			return (DB_NOTFOUND);
+			return (USR_ERR(env, DB_NOTFOUND));
 		if (eof)
 			return (0);
 		if (lp->db_log_inmemory) {
 			if (RINGBUF_LEN(lp, b_region, lp->b_off) < hdr->len)
-				return (DB_NOTFOUND);
+				return (USR_ERR(env, DB_NOTFOUND));
 		} else if (lsn->offset + hdr->len > lp->w_off + lp->buffer_size)
-			return (DB_NOTFOUND);
+			return (USR_ERR(env, DB_NOTFOUND));
 		if (logc->bp_size <= hdr->len) {
 			len = (size_t)DB_ALIGN((uintmax_t)hdr->len * 2, 128);
 			if ((ret =

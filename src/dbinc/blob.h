@@ -27,11 +27,16 @@ extern "C" {
 #define MAX_BLOB_PATH	"009/223/372/036/854/775/807/__db.bl009223372036854775807"
 #define	MAX_BLOB_PATH_SZ	sizeof(MAX_BLOB_PATH)
 #define	BLOB_DEFAULT_DIR	"__db_bl"
-#define	BLOB_META_FILE_NAME	"__db_blob_meta.db" 
+#define	BLOB_META_FILE_NAME	"__db_blob_meta.db"
 #define	BLOB_DIR_PREFIX		"__db"
 #define	BLOB_FILE_PREFIX	"__db.bl"
 
 #define	BLOB_DIR_ELEMS		1000
+
+#define IS_BLOB_META(name)						\
+    (name != NULL && strstr(name, BLOB_META_FILE_NAME) != NULL)
+#define IS_BLOB_FILE(name)						\
+    (name != NULL && strstr(name, BLOB_FILE_PREFIX) != NULL)
 
 /*
  * Combines two unsigned 32 bit integers into a 64 bit integer.
@@ -76,6 +81,14 @@ extern "C" {
 	tmp = (u_int32_t)(v);						\
 	memcpy(((u_int8_t *)p) + SSZ(type, field_lo),			\
 	    &tmp, sizeof(u_int32_t));					\
+} while (0);
+
+#define SET_LO_HI_VAR(v, field_lo, field_hi)	do {			\
+	if (sizeof((v)) == 8)						\
+		field_hi = (u_int32_t)((v) >> 32);			\
+	else								\
+		field_hi = 0;						\
+	field_lo = (u_int32_t)(v);					\
 } while (0);
 
 #define SET_BLOB_META_FILE_ID(p, v, type)					\

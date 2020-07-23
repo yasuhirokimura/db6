@@ -107,6 +107,35 @@ __repmgr_set_incoming_queue_max(dbenv, messages, bulk_messages)
 
 /*
  * PUBLIC: #ifndef HAVE_REPLICATION_THREADS
+ * PUBLIC: int __repmgr_get_incoming_queue_redzone __P((DB_ENV *,
+ * PUBLIC:     u_int32_t *, u_int32_t *));
+ * PUBLIC: #endif
+ */
+int __repmgr_get_incoming_queue_redzone(dbenv, gbytesp, bytesp)
+	DB_ENV *dbenv;
+	u_int32_t *gbytesp, *bytesp;
+{
+	COMPQUIET(gbytesp, NULL);
+	COMPQUIET(bytesp, NULL);
+	return (__db_norepmgr(dbenv));
+}
+
+/*
+ * PUBLIC: #ifndef HAVE_REPLICATION_THREADS
+ * PUBLIC: int __repmgr_get_incoming_queue_fullevent __P((DB_ENV *,
+ * PUBLIC:     int *));
+ * PUBLIC: #endif
+ */
+int __repmgr_get_incoming_queue_fullevent(dbenv, onoffp)
+	DB_ENV *dbenv;
+	int *onoffp;
+{
+	COMPQUIET(onoffp, NULL);
+	return (__db_norepmgr(dbenv));
+}
+
+/*
+ * PUBLIC: #ifndef HAVE_REPLICATION_THREADS
  * PUBLIC: int __repmgr_site
  * PUBLIC:     __P((DB_ENV *, const char *, u_int, DB_SITE **, u_int32_t));
  * PUBLIC: #endif

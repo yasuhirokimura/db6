@@ -292,6 +292,9 @@ namespace BerkeleyDB.Internal {
 	internal ulong st_perm_failed;
 	internal ulong st_msgs_queued;
 	internal ulong st_msgs_dropped;	
+	internal uint st_incoming_queue_gbytes;
+	internal uint st_incoming_queue_bytes;
+	internal ulong st_incoming_msgs_dropped;	
 	internal ulong st_connection_drop;
 	internal ulong st_connect_fail;
 	internal uint st_elect_threads;
@@ -300,7 +303,6 @@ namespace BerkeleyDB.Internal {
 	internal uint st_site_total;
 	internal uint st_site_views;
 	internal ulong st_takeovers;
-	internal uint st_incoming_queue_size;
     }
 
     [StructLayout(LayoutKind.Sequential)]

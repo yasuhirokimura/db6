@@ -224,7 +224,9 @@ proc db_reptest_int { cfgtype { restoredir NULL } } {
 	# after here depends on how many sites there are.
 	#
 	set use(nsites) [get_nsites $cfgtype $dirs(restore)]
-	set use(lease) [get_lease $cfgtype $dirs(restore)]
+	set use(twosite) [get_twosite $cfgtype $use(nsites)]
+	set use(pmkill) [get_pmkill $cfgtype $use(twosite)]
+	set use(lease) [get_lease $cfgtype $use(twosite) $dirs(restore)]
 	set use(peers) [get_peers $cfgtype]
 	set use(view) 0
 	set use(view_site) 0
@@ -248,6 +250,7 @@ proc db_reptest_int { cfgtype { restoredir NULL } } {
 	set kill_remover 0
 	set site_remove 0
 	set kill_self 0
+	set use(elect_loglength) 0
 	if { $use(nsites) > 2 } {
 		set use(kill) [get_kill $cfgtype \
 		    $dirs(restore) $use(nsites) baseport]
@@ -259,6 +262,7 @@ proc db_reptest_int { cfgtype { restoredir NULL } } {
 			if { $kill_type == "DIE" || $kill_type == "REMOVE" } {
 				set kill_self $kill_site
 			}
+			set use(elect_loglength) [get_electloglength]
 		} else {
 			# If we are not doing a kill test, determine if
 			# we are doing a remove test.
@@ -275,7 +279,7 @@ proc db_reptest_int { cfgtype { restoredir NULL } } {
 		if { $use(lease) } {
 			set use(master) 0
 		} else {
-			set use(master) [get_usemaster $cfgtype]
+			set use(master) [get_usemaster $cfgtype $use(twosite)]
 			if { $site_remove == $use(master) } {
 				set site_remove 0
 			}
@@ -288,10 +292,11 @@ proc db_reptest_int { cfgtype { restoredir NULL } } {
 		    $master2_site $use(nsites) $kill_self]
 		set use(view_site) [expr {abs($use(view))}]
 		set autotakeover_site [get_autotakeover $use(kill) \
-		    $site_remove $use(view) $use(view_site) $use(nsites)]
-		set workers [get_workers $cfgtype $use(lease)]
+		    $site_remove $use(view) $use(view_site) $use(nsites) \
+		    $use(pmkill)]
+		set workers [get_workers $cfgtype $use(lease) $use(twosite)]
 		set dbtype [get_dbtype $cfgtype]
-		set runtime [get_runtime $cfgtype]
+		set runtime [get_runtime $cfgtype $use(nsites) $use(lease)]
 		puts "Running: $use(nsites) sites, $runtime seconds."
 		puts -nonewline "Running: "
 		if { $use(createdir) } {
@@ -334,6 +339,12 @@ proc db_reptest_int { cfgtype { restoredir NULL } } {
 				    "secondary master site $master2_site"]
 			}
 			puts "$master_text."
+		} elseif { $use(twosite) == "PREFMAS" } {
+			if { $use(pmkill) > 0 } {
+				puts "preferred master kill site $use(pmkill)."
+			} else {
+				puts "preferred master."
+			}
 		} else {
 			puts "no master."
 		}
@@ -376,7 +387,12 @@ proc db_reptest_int { cfgtype { restoredir NULL } } {
 				puts "Runtime: $runtime"
 			}
 		} else {
-			set nmsg [berkdb random_int 1 [expr $use(nsites) * 2]]
+			set nmsg_min 1
+			if { $use(twosite) == "PREFMAS" } {
+				set nmsg_min 2
+			}
+			set nmsg [berkdb random_int $nmsg_min \
+			    [expr $use(nsites) * 2]]
 			set prog_args($i) \
 			    "-v -c $workers -t $dbtype -T $runtime -m $nmsg "
 			set prog_args($i) \
@@ -408,7 +424,14 @@ proc db_reptest_int { cfgtype { restoredir NULL } } {
 			#
 			# Add in if this site starts as master, client or view.
 			#
-			if { $i == $master_site } {
+			if { $use(twosite) == "PREFMAS" } {
+				set state($i) CLIENT
+				set prog_args($i) [concat $prog_args($i) "-P"]
+				if { $use(pmkill) == $i } {
+					set prog_args($i) \
+					    [concat $prog_args($i) "-k"]
+				}
+			} elseif { $i == $master_site } {
 				set state($i) MASTER
 				set prog_args($i) [concat $prog_args($i) "-M"]
 			} else {
@@ -510,18 +533,13 @@ proc reptest_make_config { cfgtype dirsarr starr usearr portlist baseptarr } {
 	# 2site strict and ack policy must be the same on all sites.
 	#
 	if { $cfgtype == "random" } {
-		if { $use(nsites) == 2 } {
-			set strict [berkdb random_int 0 1]
-		} else {
-			set strict 0
-		}
 		if { $use(lease) } {
 			#
 			# 2site strict with leases must have ack policy of
 			# one because quorum acks are ignored in this case,
 			# resulting in lease expired panics on some platforms.
 			#
-			if { $strict } {
+			if { $use(twosite) == "STRICT" } {
 				set ackpolicy db_repmgr_acks_one
 			} else {
 				set ackpolicy db_repmgr_acks_quorum
@@ -682,7 +700,7 @@ proc reptest_make_config { cfgtype dirsarr starr usearr portlist baseptarr } {
 			lappend cfglist $litem
 		}
 		#
-		# Others: limit size, bulk, 2site strict
+		# Others: limit size, bulk, 2site strict, preferred master
 		#
 		if { $cfgtype == "random" } {
 			set limit_sz [berkdb random_int 15000 1000000]
@@ -692,15 +710,30 @@ proc reptest_make_config { cfgtype dirsarr starr usearr portlist baseptarr } {
 				    { "rep_set_config" "db_rep_conf_bulk" }
 			}
 			#
-			# 2site strict was set above for all sites but
-			# should only be used for sites in random configs.
+			# Preferred master and 2site strict were set above
+			# for all sites but should only be used for sites in
+			# random configs.
 			#
-			if { $strict } {
+			if { $use(twosite) == "PREFMAS" } {
+				if { $i == $known_master } {
+					lappend cfglist { "rep_set_config" \
+					    "db_repmgr_conf_prefmas_master" }
+				} else {
+					lappend cfglist { "rep_set_config" \
+					    "db_repmgr_conf_prefmas_client" }
+				}
+			}
+			if { $use(twosite) == "STRICT" ||
+			    $use(twosite) == "PREFMAS" } {
 				lappend cfglist { "rep_set_config" \
 				    "db_repmgr_conf_2site_strict" }
 			} else {
 				lappend cfglist { "rep_set_config" \
 				    "db_repmgr_conf_2site_strict off" }
+			}
+			if { $use(elect_loglength) } {
+				lappend cfglist { "rep_set_config" \
+				"db_rep_conf_elect_loglength" }
 			}
 		} else {
 			set limit_sz 100000
@@ -951,7 +984,7 @@ puts "Getting random nsites between 2 and $maxsites.  Got $n, last_nsites $last_
 #
 # Run with master leases?  25%/75% (use a master lease 25% of the time).
 #
-proc get_lease { cfgtype restoredir } {
+proc get_lease { cfgtype twosite restoredir } {
 	#
 	# The number of sites must be the same for all.  Read the
 	# first site's saved DB_CONFIG file if we're restoring since
@@ -978,6 +1011,9 @@ proc get_lease { cfgtype restoredir } {
 		return $uselease
 	}
 	if { $cfgtype == "random" } {
+		if { $twosite == "PREFMAS" } {
+			return 0
+		}
 		set leases { 1 0 0 0 }
 		set len [expr [llength $leases] - 1]
 		set i [berkdb random_int 0 $len]
@@ -1187,12 +1223,16 @@ proc get_peers { cfgtype } {
 # Start with a master or all clients?  25%/75% (use a master 25%
 # of the time and have all clients 75%)
 #
-proc get_usemaster { cfgtype } {
+proc get_usemaster { cfgtype twosite } {
 	if { $cfgtype == "random" } {
-		set mst { 1 0 0 0 }
-		set len [expr [llength $mst] - 1]
-		set i [berkdb random_int 0 $len]
-		return [lindex $mst $i]
+		if { $twosite == "PREFMAS" } {
+			return 0
+		} else {
+			set mst { 1 0 0 0 }
+			set len [expr [llength $mst] - 1]
+			set i [berkdb random_int 0 $len]
+			return [lindex $mst $i]
+		}
 	}
 	if { $cfgtype == "basic0" } {
 		return 1
@@ -1235,6 +1275,58 @@ proc get_noelect { usemaster } {
 	} else {
 		return 0
 	}
+}
+
+#
+# For 2-site repgroups, we want to evenly divide the test
+# configurations based on the following return values:
+#     NONE    2site_strict=off
+#     STRICT  2site_strict=on
+#     PREFMAS preferred master
+#
+proc get_twosite { cfgtype nsites } {
+	if { $cfgtype == "random" && $nsites == 2 } {
+		set i [berkdb random_int 0 2]
+		if { $i == 1 } {
+			return "STRICT"
+		}
+		if { $i == 2 } {
+			return "PREFMAS"
+		}
+	}
+	return "NONE"
+}
+
+#
+# For preferred master 2-site repgroups, we want half of the test
+# configurations to have a site kill itself and later come back.
+# Make the kill cases equally likely to kill one site or the other.
+#
+proc get_pmkill { cfgtype twosite } {
+	if { $cfgtype == "random" && $twosite == "PREFMAS" } {
+		# Decide whether to kill a site.
+		set pmk { 0 1 0 1 1 0 0 1 0 1 }
+		set len [expr [llength $pmk] - 1]
+		set i [berkdb random_int 0 $len]
+		if { [lindex $pmk $i] == 1 } {
+			# Decide which site to kill.
+			return [berkdb random_int 1 2]
+		}
+	}
+	return 0
+}
+
+#
+# ELECT_LOGLENGTH is only significant in test cases where the master is killed.
+# The reason is that the repmgr group creator is automatically the master
+# without an election on initial startup.  Use ELECT_LOGLENGTH in 25% of the
+# cases of an election after the master is killed.
+#
+proc get_electloglength { } {
+	set electloglength { 0 0 1 0 }
+	set len [expr [llength $electloglength] - 1]
+	set i [berkdb random_int 0 $len]
+	return [lindex $electloglength $i]
 }
 
 #
@@ -1325,13 +1417,13 @@ proc get_view { cfgtype restoredir master_site second_master nsites kill_self} {
 #
 # Return a site number for autotakeover or 0 for no autotakeover.
 #
-proc get_autotakeover { kill remove view viewsite nsites } {
+proc get_autotakeover { kill remove view viewsite nsites pmkill } {
 	set autotakeover 0
 	#
 	# Do not combine autotakeover with a kill or remove test because that
 	# would be too much disruption during a possibly short test run.
 	#
-	if { [llength $kill] == 0 && $remove == 0 } {
+	if { [llength $kill] == 0 && $remove == 0 && $pmkill == 0 } {
 		set at { 0 1 0 1 1 0 0 1 0 1 }
 		set len [expr [llength $at] - 1]
 		set i [berkdb random_int 0 $len]
@@ -1361,9 +1453,14 @@ proc get_autotakeover { kill remove view viewsite nsites } {
 # the tests fail.  Rather than try to tweak timeouts, just reduce
 # the workloads a bit.
 #
-proc get_workers { cfgtype lease } {
+# Also scale back the number of worker threads for preferred master.
+# The timing can be sensitive when the preferred master takes over
+# after resyncing with the temporary master.  Too many workers
+# overwhelming the system can cause delays that make the test fail.
+#
+proc get_workers { cfgtype lease twosite} {
 	if { $cfgtype == "random" } {
-		if { $lease } {
+		if { $lease || $twosite == "PREFMAS"} {
 			return [berkdb random_int 2 4]
 		} else {
 			return [berkdb random_int 2 8]
@@ -1392,11 +1489,20 @@ proc get_dbtype { cfgtype } {
 	}
 }
 
-proc get_runtime { cfgtype } {
+proc get_runtime { cfgtype nsites useleases } {
 	global os_tbase
 
 	if { $cfgtype == "random" } {
-		return [expr [berkdb random_int 100 500] * $os_tbase]
+		set min 100
+		if { $nsites > 4 && $useleases} {
+			# Master leases really slow down the process of adding
+			# sites to the replication group.  With 5 sites it
+			# can take longer than the total test time when runtime
+			# is too small, causing the test to fail.  Set a higher
+			# minimum test time in this case.
+			set min 150
+		}
+		return [expr [berkdb random_int $min 500] * $os_tbase]
 	}
 	if { $cfgtype == "basic0" } {
 		return [expr 100 * $os_tbase]

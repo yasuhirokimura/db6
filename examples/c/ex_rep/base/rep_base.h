@@ -71,6 +71,8 @@ typedef SOCKET socket_t;
 #define	readsocket(s, buf, sz)	recv((s), (buf), (int)(sz), 0)
 #define	writesocket(s, buf, sz)	send((s), (const char *)(buf), (int)(sz), 0)
 #define	net_errno		WSAGetLastError()
+#undef SHUT_RDWR
+#define SHUT_RDWR		SD_BOTH
 
 #else /* !_WIN32 */
 
@@ -104,9 +106,10 @@ socket_t   get_accepted_socket __P((const char *, int));
 socket_t   get_connected_socket
 	__P((machtab_t *, const char *, const char *, int, int *, int *));
 int   get_next_message __P((socket_t, DBT *, DBT *));
-socket_t   listen_socket_init __P((const char *, int));
+socket_t   listen_socket_init __P((const char *, int, machtab_t *));
 socket_t   listen_socket_accept
 	__P((machtab_t *, const char *, socket_t, int *));
+int   machtab_destroy __P((machtab_t *));
 int   machtab_getinfo __P((machtab_t *, int, u_int32_t *, int *));
 int   machtab_init __P((machtab_t **, int));
 void  machtab_parm __P((machtab_t *, int *, u_int32_t *));

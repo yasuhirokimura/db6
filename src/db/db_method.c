@@ -39,14 +39,13 @@ static int  __db_get_append_recno __P((DB *,
 static int  __db_set_append_recno __P((DB *, int (*)(DB *, DBT *, db_recno_t)));
 static int  __db_get_blob_dir __P((DB *, const char **));
 static int  __db_set_blob_dir __P((DB *, const char *));
+static int  __db_get_blob_sub_dir __P((DB *, const char **));
 static int  __db_get_cachesize __P((DB *, u_int32_t *, u_int32_t *, int *));
 static int  __db_set_cachesize __P((DB *, u_int32_t, u_int32_t, int));
 static int  __db_get_create_dir __P((DB *, const char **));
 static int  __db_set_create_dir __P((DB *, const char *));
 static int  __db_get_dup_compare
 		__P((DB *, int (**)(DB *, const DBT *, const DBT *, size_t *)));
-static int  __db_set_dup_compare
-		__P((DB *, int (*)(DB *, const DBT *, const DBT *, size_t *)));
 static int  __db_get_encrypt_flags __P((DB *, u_int32_t *));
 static int  __db_set_encrypt __P((DB *, const char *, u_int32_t));
 static int  __db_get_feedback __P((DB *, void (**)(DB *, int, int)));
@@ -92,6 +91,12 @@ db_create(dbpp, dbenv, flags)
 
 	ip = NULL;
 	env = dbenv == NULL ? NULL : dbenv->env;
+
+#ifdef HAVE_ERROR_HISTORY
+	/* Call thread local storage initializer at least once per process. */
+	if (env == NULL)
+		__db_thread_init();
+#endif
 
 	/* Check for invalid function flags. */
 	switch (flags) {
@@ -209,11 +214,10 @@ __db_create_internal(dbpp, env, flags)
 err:	if (dbp != NULL) {
 		if (dbp->mpf != NULL)
 			(void)__memp_fclose(dbp->mpf, 0);
+		if (F_ISSET(env, ENV_DBLOCAL))
+			(void)__env_close(dbp->dbenv, 0);
 		__os_free(env, dbp);
 	}
-
-	if (dbp != NULL && F_ISSET(env, ENV_DBLOCAL))
-		(void)__env_close(dbp->dbenv, 0);
 
 	return (ret);
 }
@@ -597,11 +601,6 @@ __db_set_blob_threshold(dbp, bytes, flags)
 		return (EINVAL);
 	}
 #endif
-	if (REP_ON(dbp->env) && bytes != 0) {
-		__db_errx(dbp->env, DB_STR("0762",
-		    "Blobs are not supported with replication."));
-		return (EINVAL);
-	}
 
 	dbp->blob_threshold = bytes;
 
@@ -645,6 +644,11 @@ __db_blobs_enabled(dbp)
 	if (F_ISSET(dbp, (DB_AM_INMEM)))
 		return (0);
 
+	/* BDB managed databases should not support blobs. */
+	if ((dbp->fname != NULL && IS_DB_FILE(dbp->fname)) ||
+	    (dbp->dname != NULL && IS_DB_FILE(dbp->dname)))
+		return (0);
+
 	return (1);
 }
 
@@ -654,9 +658,8 @@ __db_blobs_enabled(dbp)
  * Returns the subdirectory of the blob directory in which the blob files
  * for the given db are stored, or NULL if there is none.
  *
- * PUBLIC: int __db_get_blob_sub_dir __P((DB *, const char **));
  */
-int
+static int
 __db_get_blob_sub_dir(dbp, dir)
 	DB *dbp;
 	const char **dir;
@@ -818,8 +821,11 @@ __db_get_dup_compare(dbp, funcp)
 /*
  * __db_set_dup_compare --
  *	Set duplicate comparison routine.
+ *
+ * PUBLIC: int __db_set_dup_compare __P((DB *,
+ * PUBLIC:     int (*)(DB *, const DBT *, const DBT *, size_t *)));
  */
-static int
+int
 __db_set_dup_compare(dbp, func)
 	DB *dbp;
 	int (*func) __P((DB *, const DBT *, const DBT *, size_t *));

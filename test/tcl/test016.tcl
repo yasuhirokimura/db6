@@ -17,6 +17,7 @@
 # TEST	Run the test with blob enabled and disabled.
 
 proc test016 { method {nentries 10000} args } {
+	global alphabet
 	global datastr
 	global dvals
 	global has_crypto
@@ -152,7 +153,7 @@ proc test016 { method {nentries 10000} args } {
 		}
 
 		# Here is the loop where we put and get each key/data pair
-		puts "\tTest016.a: put/get loop"
+		puts "\tTest016.a1: put/get loop"
 		set did [open $dict]
 		while { [gets $did str] != -1 && $count < $nentries } {
 			if { [is_record_based $method] == 1 } {
@@ -180,9 +181,49 @@ proc test016 { method {nentries 10000} args } {
 		}
 		close $did
 
+		if { $blob != "" } {
+			puts "\tTest016.a2:\
+			    put/get a new blob with -partial and offset > 0"
+			set key $count
+			set len [string length ${count}.abc]
+			if { $txnenv == 1 } {
+				set t [$env txn]
+				error_check_good txn \
+				    [is_valid_txn $t $env] TRUE
+				set txn "-txn $t"
+			}
+			# Make the partial put offset equal to the blob
+			# threshold, so that the value must be stored as a
+			# blob in the database.
+			if { [is_heap $method] == 1 } {
+				set ret [catch {eval {$db put} $txn -append \
+				    {-partial [list $threshold $len] \
+				    ${count}.abc}} key]
+			} else {
+				set ret [eval {$db put} $txn {-partial \
+				    [list $threshold $len] $key ${count}.abc}]
+			}
+			error_check_good put $ret 0
+
+			set ret [eval {$db get} $txn \
+			    {-partial [list $threshold $len] $key}]
+			error_check_good get \
+			    [lindex [lindex $ret 0] 1] ${count}.abc
+			set ret [eval {$db get} $txn {$key}]
+			error_check_good get [string length [lindex \
+			    [lindex $ret 0] 1]] [expr $threshold + $len]
+			if { $txnenv == 1 } {
+				error_check_good txn [$t commit] 0
+			}
+			# Delete this record since it does not work
+			# in the following test.
+			set ret [eval {$db del} $key]
+			error_check_good delete $ret 0
+		}
+
 		# Next we will do a partial put replacement, making the data
 		# shorter
-		puts "\tTest016.b: partial put loop"
+		puts "\tTest016.b1: partial put loop"
 		set did [open $dict]
 		set count 0
 		set len [string length $datastr]
@@ -221,6 +262,57 @@ proc test016 { method {nentries 10000} args } {
 			incr count
 		}
 		close $did
+
+		if { $blob != "" } {
+			puts "\tTest016.b2: partial put with > 1MB\
+			    of original data following the replaced data."
+			set key $count
+			set basestr [repeat [repeat $alphabet 40] 1024]
+			set len [string length $basestr]
+			if { $txnenv == 1 } {
+				set t [$env txn]
+				error_check_good txn \
+				    [is_valid_txn $t $env] TRUE
+				set txn "-txn $t"
+			}
+			if { [is_heap $method] == 1 } {
+				set ret [catch {eval {$db put} $txn \
+				    -append {$basestr}} key]
+			} else {
+				set ret [eval {$db put} $txn {$key $basestr}]
+			}
+			error_check_good put $ret 0
+			set ret [eval {$db get} $txn {$key}]
+			error_check_good get \
+			    [lindex [lindex $ret 0] 1] $basestr
+
+			set repl_str replaceXXX
+			set repl_len [string length $repl_str]
+			set off [berkdb random_int 1 \
+			    [expr $len - 1024 * 1024 - $repl_len]]
+
+			set ret [eval {$db put} $txn \
+			    {-partial [list $off $repl_len] $key $repl_str}]
+			error_check_good put $ret 0
+
+			set ret [eval {$db get} $txn $key]
+			error_check_bad get [llength $ret] 0
+
+			set data [lindex [lindex $ret 0] 1]
+			set expt_str1 [string range $basestr 0 [expr $off - 1]]
+			set expt_str2 [string range \
+			    $basestr [expr $off + $repl_len] $len]
+			set expt_str ${expt_str1}${repl_str}${expt_str2}
+			error_check_good get $data $expt_str
+
+			if { $txnenv == 1 } {
+				error_check_good txn [$t commit] 0
+			}
+			# Delete this record since it does not work
+			# in the following test.
+			set ret [eval {$db del} $key]
+			error_check_good delete $ret 0
+		}
 
 		# Now we will get each key from the DB and compare the results
 		# to the original.

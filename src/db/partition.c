@@ -165,7 +165,7 @@ __partition_set(dbp, parts, keys, callback)
 	} else if (parts > PART_MAXIMUM) {
 		__db_errx(env, DB_STR_A("0772",
 		    "Must not specify more than %u partitions.", "%u"),
-		    (unsigned)PART_MAXIMUM);
+		    (unsigned int)PART_MAXIMUM);
 		return (EINVAL);
 	}
 
@@ -463,10 +463,10 @@ __partition_chk_meta(dbp, ip, txn, flags)
 	env = dbp->env;
 	ret = 0;
 	set_keys = 0;
-	
-	/* 
+
+	/*
 	 * Just to fix the lint warning.
-	 * The real value will be set later, and we will 
+	 * The real value will be set later, and we will
 	 * only use the value after being set properly.
 	 */
 	pgsize = dbp->pgsize;
@@ -562,7 +562,7 @@ err:	/* Put the metadata page back. */
 	if ((t_ret = __LPUT(dbc, metalock)) != 0 && ret == 0)
 		ret = t_ret;
 
-	/* 
+	/*
 	 * We can only call __partition_setup_keys after putting
 	 * the meta page and releasing the meta lock, or self-deadlock
 	 * will occur.
@@ -665,7 +665,7 @@ __partition_setup_keys(dbc, part, pgsize, flags)
 	}
 
 	if (LF_ISSET(DB_CREATE) && have_keys == 0) {
-		/* 
+		/*
 		 * Insert the keys into the master database.  We will also
 		 * compute the total size of the keys for later use.
 		 */
@@ -694,7 +694,7 @@ done:	if (F_ISSET(part, PART_RANGE)) {
 		/*
 		 * If we just did the insert, we have known the total size of
 		 * the keys. Otherwise, the keys must have been in the database,
-		 * and we can calculate the size by checking the last pgno of 
+		 * and we can calculate the size by checking the last pgno of
 		 * the corresponding mpoolfile.
 		 *
 		 * We make the size aligned at 1024 for performance.

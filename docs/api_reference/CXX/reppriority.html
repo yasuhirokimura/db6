@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.0</p>
+        <p>Library Version 12.1.6.1</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -75,8 +75,10 @@ DbEnv::rep_set_priority(u_int32_t priority); </pre>
          configuration done before that time.
     </p>
       <p>
-        Note that if the application never explicitly sets a priority, then a default value of 100
-        is used.
+        Note that if the application never explicitly sets a priority, then
+        a default value of 100 is used. In preferred master mode, priority
+        values for each site are automatically set and any attempt to change
+        them results in an error.
     </p>
       <p>
          The <code class="methodname">DbEnv::rep_set_priority()</code> method configures a database
@@ -101,7 +103,7 @@ DbEnv::rep_set_priority(u_int32_t priority); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp4227480"></a>Parameters</h3>
+              <h3 class="title"><a id="idp62824776"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -109,7 +111,7 @@ DbEnv::rep_set_priority(u_int32_t priority); </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp4226832"></a>priority</h4>
+                <h4 class="title"><a id="idp62824128"></a>priority</h4>
               </div>
             </div>
           </div>
@@ -126,7 +128,39 @@ DbEnv::rep_set_priority(u_int32_t priority); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp4191256"></a>Class</h3>
+              <h3 class="title"><a id="idp62759720"></a>Errors</h3>
+            </div>
+          </div>
+        </div>
+        <p>
+             The <code class="methodname">DbEnv::rep_set_priority()</code> <span>
+            
+            <span>
+                method may fail and throw a <a class="link" href="dbexception.html" title="Chapter 6. The DbException Class">DbException</a> 
+                exception, encapsulating one of the following non-zero errors, or return one
+                of the following non-zero errors:
+            </span>
+        </span>
+        </p>
+        <div class="sect3" lang="en" xml:lang="en">
+          <div class="titlepage">
+            <div>
+              <div>
+                <h4 class="title"><a id="idp62834576"></a>EINVAL</h4>
+              </div>
+            </div>
+          </div>
+          <p>
+                If changing the automatically set priority value in
+                Replication Manager preferred master mode.
+            </p>
+        </div>
+      </div>
+      <div class="sect2" lang="en" xml:lang="en">
+        <div class="titlepage">
+          <div>
+            <div>
+              <h3 class="title"><a id="idp62833496"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -138,7 +172,7 @@ DbEnv::rep_set_priority(u_int32_t priority); </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp4208848"></a>See Also</h3>
+              <h3 class="title"><a id="idp62835872"></a>See Also</h3>
             </div>
           </div>
         </div>

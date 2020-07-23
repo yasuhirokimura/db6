@@ -13,7 +13,6 @@
 #include "db_int.h"
 
 #ifdef DB_WIN32
-#define	MUTEX_THREAD_TEST	1
 
 extern int getopt(int, char * const *, const char *);
 
@@ -33,25 +32,12 @@ typedef HANDLE os_thread_t;
 #include <sys/wait.h>
 
 typedef pid_t os_pid_t;
-
-/*
- * There's only one mutex implementation that can't support thread-level
- * locking: UNIX/fcntl mutexes.
- *
- * Use this to decide if we're going to build with or without threads.
- */
-#if !defined(HAVE_MUTEX_FCNTL)
-#define	MUTEX_THREAD_TEST	1
-
-#include <pthread.h>
-
 typedef pthread_t os_thread_t;
 
 #define	os_thread_create(thrp, attr, func, arg)				\
     pthread_create((thrp), (attr), (func), (arg))
 #define	os_thread_join(thr, statusp) pthread_join((thr), (statusp))
 #define	os_thread_self() pthread_self()
-#endif /* HAVE_MUTEX_FCNTL */
 
 #endif /* !DB_WIN32 */
 
@@ -83,20 +69,15 @@ u_int8_t *gm_addr;				/* Global mutex */
 u_int8_t *lm_addr;				/* Locker mutexes */
 u_int8_t *tm_addr;				/* Thread mutexes */
 
-#ifdef MUTEX_THREAD_TEST
 os_thread_t *kidsp;				/* Locker threads */
 os_thread_t  wakep;				/* Wakeup thread */
-#endif
 
 #ifndef	HAVE_MMAP
 u_int	nprocs = 1;				/* -p: Processes. */
 u_int	nthreads = 20;				/* -t: Threads. */
-#elif	MUTEX_THREAD_TEST
+#else
 u_int	nprocs = 5;				/* -p: Processes. */
 u_int	nthreads = 4;				/* -t: Threads. */
-#else
-u_int	nprocs = 20;				/* -p: Processes. */
-u_int	nthreads = 1;				/* -t: Threads. */
 #endif
 
 u_int	maxlocks = 20;				/* -l: Backing locks. */
@@ -163,14 +144,6 @@ main(argc, argv)
 		case 't':
 			if ((nthreads = (u_int)atoi(optarg)) == 0)
 				nthreads = 1;
-#if !defined(MUTEX_THREAD_TEST)
-			if (nthreads != 1) {
-				fprintf(stderr,
-    "%s: thread support not available or not compiled for this platform.\n",
-				    progname);
-				return (EXIT_FAILURE);
-			}
-#endif
 			break;
 		case 'T':
 			if (!memcmp(optarg, "locker", sizeof("locker") - 1))
@@ -363,7 +336,6 @@ int
 locker_start(id)
 	u_long id;
 {
-#if defined(MUTEX_THREAD_TEST)
 	u_int i;
 	int err;
 
@@ -384,15 +356,11 @@ locker_start(id)
 			return (1);
 		}
 	return (0);
-#else
-	return (run_lthread((void *)id) == NULL ? 0 : 1);
-#endif
 }
 
 int
 locker_wait()
 {
-#if defined(MUTEX_THREAD_TEST)
 	u_int i;
 	void *retp = NULL;
 
@@ -406,7 +374,6 @@ locker_wait()
 		}
 	}
 	free(kidsp);
-#endif
 	return (0);
 }
 
@@ -420,11 +387,7 @@ run_lthread(arg)
 	int err, i;
 
 	id = (u_long)arg;
-#if defined(MUTEX_THREAD_TEST)
 	tid = (u_long)os_thread_self();
-#else
-	tid = 0;
-#endif
 	printf("Locker: ID %03lu (PID: %lu; TID: %lx)\n",
 	    id, (u_long)getpid(), tid);
 
@@ -540,7 +503,6 @@ int
 wakeup_start(id)
 	u_long id;
 {
-#if defined(MUTEX_THREAD_TEST)
 	int err;
 
 	/*
@@ -553,15 +515,11 @@ wakeup_start(id)
 		return (1);
 	}
 	return (0);
-#else
-	return (run_wthread((void *)id) == NULL ? 0 : 1);
-#endif
 }
 
 int
 wakeup_wait()
 {
-#if defined(MUTEX_THREAD_TEST)
 	void *retp = NULL;
 
 	/*
@@ -573,7 +531,6 @@ wakeup_wait()
 		    "%s: wakeup thread exited with error\n", progname);
 		return (1);
 	}
-#endif
 	return (0);
 }
 
@@ -592,11 +549,7 @@ run_wthread(arg)
 
 	id = (u_long)arg;
 	quitcheck = 0;
-#if defined(MUTEX_THREAD_TEST)
 	tid = (u_long)os_thread_self();
-#else
-	tid = 0;
-#endif
 	printf("Wakeup: ID %03lu (PID: %lu; TID: %lx)\n",
 	    id, (u_long)getpid(), tid);
 

@@ -135,8 +135,10 @@ __memp_stat(env, gspp, fspp, flags)
 			sp->st_page_trickle += c_mp->stat.st_page_trickle;
 			sp->st_mvcc_reused += c_mp->stat.st_mvcc_reused;
 			sp->st_pages += c_mp->pages;
+			/* Undocumented field used by tests only. */
 			sp->st_oddfsize_detect +=
 			    c_mp->stat.st_oddfsize_detect;
+			/* Undocumented field used by tests only. */
 			sp->st_oddfsize_resolve +=
 			    c_mp->stat.st_oddfsize_resolve;
 			/*
@@ -200,7 +202,12 @@ __memp_stat(env, gspp, fspp, flags)
 
 		/* Count the MPOOLFILE structures. */
 		i = 0;
-		len = 0;
+		/*
+		 * Allow space for the first __memp_get_files() to align the
+		 * structure array to uintmax_t, DB_MPOOL_STAT's most
+		 * restrictive field.  [#23150]
+		 */
+		len = sizeof(uintmax_t);
 		if ((ret = __memp_walk_files(env,
 		     mp, __memp_count_files, &len, &i, flags)) != 0)
 			return (ret);
@@ -257,6 +264,11 @@ __memp_file_stats(env, mfp, argp, countp, flags)
 	return (0);
 }
 
+/*
+ * __memp_count_files --
+ *	This __memp_walk_files() iterator counts the number of files as well as
+ *	the space needed for their statistics, including file names.
+ */
 static int
 __memp_count_files(env, mfp, argp, countp, flags)
 	ENV *env;
@@ -282,13 +294,25 @@ __memp_count_files(env, mfp, argp, countp, flags)
 
 /*
  * __memp_get_files --
- *	get file specific statistics
+ *	get another file's specific statistics
  *
- * Build each individual entry.  We assume that an array of pointers are
- * aligned correctly to be followed by an array of structures, which should
- * be safe (in this particular case, the first element of the structure
- * is a pointer, so we're doubly safe).  The array is followed by space
- * for the text file names.
+ * Add a file statistics entry to the current list. The chunk of memory
+ * starts with an array of DB_MPOOL_FSTAT pointers, a null pointer to mark
+ * the last one, then an aligned array of DB_MPOOL_FSTAT structures, then
+ * characters space for the file names.
+ *	+-----------------------------------------------+
+ *	| count * DB_MPOOL_FSTAT pointers		|
+ *	+-----------------------------------------------+
+ *	| null pointer					+
+ *	+-----------------------------------------------|
+ *	| [space for aligning DB_MPOOL_FSTAT array]	|
+ *	+-----------------------------------------------+
+ *	| count * DB_MPOOL_FSTAT structs		|
+ *	+-----------------------------------------------+
+ *	| first file name | second file name | third... |
+ *	+-----------------------------------------------+
+ *	| file name | ...				|
+ *	+-----------------------------------------------+
  */
 static int
 __memp_get_files(env, mfp, argp, countp, flags)
@@ -310,11 +334,21 @@ __memp_get_files(env, mfp, argp, countp, flags)
 	tfsp = *(DB_MPOOL_FSTAT ***)argp;
 
 	if (*tfsp == NULL) {
-		/* Add 1 to count because we need to skip over the NULL. */
-		tstruct = (DB_MPOOL_FSTAT *)(tfsp + *countp + 1);
-		tname = (char *)(tstruct + *countp);
+		/*
+		 * Add 1 to count because to skip over the NULL end marker.
+		 * Align it further for DB_MPOOL_STAT's most restrictive field
+		 * because uintmax_t might require stricter alignment than
+		 * pointers; e.g., IP32 LL64 SPARC. [#23150]
+		 */
+		tstruct = (DB_MPOOL_FSTAT *)&tfsp[*countp + 1];
+		tstruct = ALIGNP_INC(tstruct, sizeof(uintmax_t));
+		tname = (char *)&tstruct[*countp];
 		*tfsp = tstruct;
 	} else {
+		/*
+		 * This stat struct follows the previous one; the file name
+		 * follows the previous entry's filename.
+		 */
 		tstruct = *tfsp + 1;
 		tname = (*tfsp)->file_name + strlen((*tfsp)->file_name) + 1;
 		*++tfsp = tstruct;

@@ -8,8 +8,8 @@
 +         db_sequence.lo db_shell.lo delete.lo expr.lo fault.lo fkey.lo \
           fts3.lo fts3_aux.lo fts3_expr.lo fts3_hash.lo fts3_icu.lo \
           fts3_porter.lo fts3_snippet.lo fts3_tokenizer.lo fts3_tokenizer1.lo \
-          fts3_unicode.lo fts3_unicode2.lo fts3_write.lo \
-@@ -210,6 +210,7 @@
+          fts3_tokenize_vtab.lo \
+@@ -211,6 +211,7 @@
    $(TOP)/src/date.c \
    $(TOP)/../adapter/db_encrypt.c \
    $(TOP)/../adapter/db_pragma.c \
@@ -17,7 +17,7 @@
    $(TOP)/../adapter/db_shell.c \
    $(TOP)/src/delete.c \
    $(TOP)/src/expr.c \
-@@ -396,6 +397,7 @@
+@@ -410,6 +411,7 @@
    $(TOP)/../adapter/backup.c \
    $(TOP)/src/bitvec.c \
    $(TOP)/../adapter/btree.c \
@@ -25,7 +25,7 @@
    $(TOP)/src/build.c \
    $(TOP)/src/ctime.c \
    $(TOP)/src/date.c \
-@@ -605,6 +607,10 @@
+@@ -626,6 +628,10 @@
  		$(TOP)/../adapter/btreeInt.h
  	$(LTCOMPILE) $(TEMP_STORE) -c $(TOP)/../adapter/db_pragma.c
  
@@ -47,7 +47,7 @@
  #if !defined(SQLITE_OMIT_TRACE) && defined(SQLITE_ENABLE_IOTRACE)
  /*
  ** If the following function pointer is not NULL and if
-@@ -2350,6 +2352,13 @@
+@@ -2532,6 +2534,13 @@
    db->pDfltColl = sqlite3FindCollSeq(db, SQLITE_UTF8, "BINARY", 0);
    assert( db->pDfltColl!=0 );
  
@@ -63,7 +63,7 @@
  
 --- tool/mksqlite3c.tcl
 +++ tool/mksqlite3c.tcl
-@@ -262,6 +262,7 @@
+@@ -271,6 +271,7 @@
     backup.c
     db_encrypt.c
     db_pragma.c

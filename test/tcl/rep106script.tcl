@@ -119,4 +119,4 @@ error_check_good master_db_close [$db close] 0
 error_check_good marker_db_close [$marker close] 0
 error_check_good markerenv_close [$markerenv close] 0
 error_check_good script_master_close [$masterenv close] 0
-
+replclose $testdir/MSGQUEUEDIR

@@ -289,4 +289,5 @@ proc rep052_sub { method niter tnum envargs logset recargs largs } {
 	error_check_good masterenv_close [$masterenv close] 0
 	error_check_good clientenv_close [$clientenv close] 0
 	replclose $testdir/MSGQUEUEDIR
+	puts "\tRep$tnum.j: All envs closed."
 }

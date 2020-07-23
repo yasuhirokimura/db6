@@ -9,9 +9,7 @@
 #include "db_int.h"
 #include "dbinc/db_page.h"
 #include "dbinc/db_am.h"
-#include "dbinc/blob.h"
 #include "dbinc/fop.h"
-#include "dbinc/mp.h"
 
 /*
  * Blob file data item code.
@@ -50,7 +48,7 @@ __blob_bulk(dbc, len, blob_id, dp)
 	dbt.data = (void *)dp;
 
 	if ((ret = __blob_file_open(
-	    dbc->dbp, &fhp, blob_id, DB_FOP_READONLY)) != 0)
+	    dbc->dbp, &fhp, blob_id, DB_FOP_READONLY, 1)) != 0)
 		goto err;
 
 	if ((ret = __blob_file_read(env, fhp, &dbt, 0, len)) != 0)
@@ -110,7 +108,7 @@ __blob_get(dbc, dbt, blob_id, file_size, bpp, bpsz)
 	dbt->size = needed;
 
 	if ((ret = __blob_file_open(
-	    dbc->dbp, &fhp, blob_id, DB_FOP_READONLY)) != 0)
+	    dbc->dbp, &fhp, blob_id, DB_FOP_READONLY, 1)) != 0)
 		goto err;
 
 	if ((ret = __blob_file_read(env, fhp, dbt, dbt->doff, needed)) != 0)
@@ -239,7 +237,7 @@ __blob_repl(dbc, nval, blob_id, new_blob_id, size)
 		    ((nval->doff == *size) || (nval->dlen == nval->size))) {
 			/* Open the file for appending. */
 			if ((ret = __blob_file_open(
-			    dbc->dbp, &fhp, blob_id, 0)) != 0)
+			    dbc->dbp, &fhp, blob_id, 0, 1)) != 0)
 				goto err;
 			*new_blob_id = blob_id;
 
@@ -268,7 +266,7 @@ __blob_repl(dbc, nval, blob_id, new_blob_id, size)
 		} else {
 			/* Open the old blob file. */
 			if ((ret = __blob_file_open(
-			    dbc->dbp, &fhp, blob_id, DB_FOP_READONLY)) != 0)
+			    dbc->dbp, &fhp, blob_id, DB_FOP_READONLY, 1)) != 0)
 				goto err;
 			/* Create the new blob file. */
 			if ((ret = __blob_file_create(

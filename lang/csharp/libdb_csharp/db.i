@@ -80,23 +80,6 @@ typedef enum {
 	DB_TXN_PRINT=7			/* Public. */
 } db_recops;
 
-struct __db;			typedef struct __db DB;
-struct __db_channel;		typedef struct __db_channel DB_CHANNEL;
-struct __db_compact;	typedef struct __db_compact DB_COMPACT;
-struct __db_lock_u;		typedef struct __db_lock_u DB_LOCK;
-struct __db_lsn;		typedef struct __db_lsn DB_LSN;
-struct __db_preplist;	typedef struct __db_preplist DB_PREPLIST;
-struct __db_repmgrsite; typedef struct __db_repmgrsite DB_REPMGR_SITE;
-struct __db_sequence;	typedef struct __db_sequence DB_SEQUENCE;
-struct __db_site;	typedef struct __db_site DB_SITE;
-struct __db_stream;	typedef struct __db_stream DB_STREAM;
-struct __dbc;			typedef struct __dbc DBC;
-struct __dbenv;			typedef struct __dbenv DB_ENV;
-struct __dbt;			typedef struct __dbt DBT;
-struct __dbtxn;			typedef struct __dbtxn DB_TXN;
-struct __key_range;		typedef struct __key_range DB_KEY_RANGE;
-struct __db_txn_token;	typedef struct __db_txn_token DB_TXN_TOKEN;
-
 %typemap(cstype) char ** "out IntPtr"
 %typemap(imtype) char ** "out IntPtr"
 %typemap(csin) char ** "out $csinput"
@@ -340,7 +323,7 @@ struct __db_txn_token;	typedef struct __db_txn_token DB_TXN_TOKEN;
 		return ret;
 }
 
-typedef struct __db_channel
+typedef struct
 {
 %extend {
 	int close(u_int32_t flags) {
@@ -371,7 +354,7 @@ typedef struct __db_channel
 }
 } DB_CHANNEL;
 
-typedef struct __db_compact {
+typedef struct {
 	/* Input Parameters. */
 	%typemap(csvarout) u_int32_t compact_fillpercent %{%}              
 	u_int32_t	compact_fillpercent;	/* Desired fillfactor: 1-100 */
@@ -394,7 +377,7 @@ typedef struct __db_compact {
 	db_pgno_t	compact_pages_truncated; /* Pages truncated to OS. */
 } DB_COMPACT;
 
-typedef struct __db_lsn {
+typedef struct {
 	u_int32_t file;
 	u_int32_t offset;
 } DB_LSN;
@@ -489,7 +472,7 @@ typedef struct __db_lsn {
 		return ret;
 	}
 %}
-typedef struct __db
+typedef struct
 {
 	%typemap(cstype) void *api_internal "BaseDatabase"
 	%typemap(imtype) void *api_internal "BaseDatabase"
@@ -778,7 +761,41 @@ typedef struct __db
 	int set_pagesize(u_int32_t pgsz) {
 		return self->set_pagesize(self, pgsz);
 	}
+		
+	%typemap(cstype) void (*)(const DB_ENV *, const char *) "BDB_MsgcallDelegate"
+	%typemap(imtype) void (*)(const DB_ENV *, const char *) "BDB_MsgcallDelegate"
+	%typemap(csin) void (*db_msgcall_fcn)(const DB_ENV *dbenv, const char *msg) "db_msgcall_fcn"
+	void set_msgcall(void (*db_msgcall_fcn)(const DB_ENV *dbenv, const char *msg)) {
+		self->set_msgcall(self, db_msgcall_fcn);
+	}
 
+	int set_msgfile(char *msgfile) {
+		int ret;
+		FILE *fmsg;
+		ret = 0;
+		fmsg = NULL;
+		self->get_msgfile(self, &fmsg);
+		if (fmsg != NULL && fmsg != stdout && fmsg != stderr) {
+			fclose(fmsg);
+			fmsg = NULL;
+		}
+		if (strcmp(msgfile, "") == 0 || msgfile == NULL)
+			self->set_msgfile(self, NULL);
+		else if (strcmp(msgfile, "stdout") == 0)
+			self->set_msgfile(self, stdout);
+		else if (strcmp(msgfile, "stderr") == 0)
+			self->set_msgfile(self, stderr);
+		else {
+			fmsg = fopen(msgfile, "a");
+			if (fmsg != NULL) {
+				self->set_msgfile(self, fmsg);
+			}
+			else
+				ret = 1;
+		}
+		return ret;
+	}
+	
 	%typemap(cstype) DBT *get_partition_keys "DatabaseEntry[]"
 	%typemap(imtype) DBT *get_partition_keys "IntPtr"
 	%csmethodmodifiers get_partition_keys "private"
@@ -927,7 +944,7 @@ typedef struct __db
 		return ret;
 	}
 %}
-typedef struct __dbc
+typedef struct 
 {
 %extend {
 	int close() {
@@ -993,7 +1010,7 @@ typedef struct __dbc
 }
 %}
 
-typedef struct __db_txn_token
+typedef struct
 {
 %typemap(cstype) u_int8_t [DB_TXN_TOKEN_SIZE] "byte[]"
 %typemap(imtype, out = "IntPtr") u_int8_t [DB_TXN_TOKEN_SIZE] "byte[]"
@@ -1020,7 +1037,7 @@ u_int8_t buf[DB_TXN_TOKEN_SIZE];
 		}
 	}
 %}
-typedef struct __dbt
+typedef struct
 {
 	u_int32_t dlen;
 	u_int32_t doff;
@@ -1082,7 +1099,7 @@ typedef struct __dbt
 	}
 %}
 
-typedef struct __db_site
+typedef struct 
 {
 %extend {
 	int close() {
@@ -1111,7 +1128,7 @@ typedef struct __db_site
 }
 } DB_SITE;
 
-typedef struct __db_stream
+typedef struct
 {
 %extend {
 	int close(u_int32_t flags) {
@@ -1132,7 +1149,7 @@ typedef struct __db_stream
 }
 } DB_STREAM;
 
-typedef struct __db_repmgrsite
+typedef struct
 {
 	%typemap(csvarin) int eid %{%}
 	int eid;
@@ -1156,7 +1173,7 @@ typedef struct __db_repmgrsite
 	}	
 %}
 
-typedef struct __dbtxn
+typedef struct
 {
 %extend {
 	int abort() {
@@ -1449,7 +1466,7 @@ typedef struct __dbtxn
 %typemap(csimports) DB_ENV "using System;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;"		
-typedef struct __dbenv
+typedef struct
 {
 
 %typemap(cstype) void *api2_internal "DatabaseEnvironment"
@@ -1763,6 +1780,13 @@ typedef struct __dbenv
 	}
 	int repmgr_get_ack_policy(int *ack_policy) {
 		return self->repmgr_get_ack_policy(self, ack_policy);
+	}
+
+	int repmgr_get_incoming_queue_max(u_int32_t *gbytes, u_int32_t *bytes) {
+		return self->repmgr_get_incoming_queue_max(self, gbytes, bytes);
+	}
+	int repmgr_set_incoming_queue_max(u_int32_t gbytes, u_int32_t bytes) {
+		return self->repmgr_set_incoming_queue_max(self, gbytes, bytes);
 	}
 
 	DB_CHANNEL *repmgr_channel(int eid, u_int32_t flags, int *err) {
@@ -2183,6 +2207,40 @@ typedef struct __dbenv
 	int set_mp_mmapsize(size_t mp_mmapsize) {
 		return self->set_mp_mmapsize(self, mp_mmapsize);
 	}
+		
+	%typemap(cstype) void (*)(const DB_ENV *, const char *) "BDB_MsgcallDelegate"
+	%typemap(imtype) void (*)(const DB_ENV *, const char *) "BDB_MsgcallDelegate"
+	%typemap(csin) void (*db_msgcall_fcn)(const DB_ENV *dbenv, const char *msg) "db_msgcall_fcn"
+	void set_msgcall(void (*db_msgcall_fcn)(const DB_ENV *dbenv, const char *msg)) {
+		self->set_msgcall(self, db_msgcall_fcn);
+	}
+	
+	int set_msgfile(char *msgfile) {
+		int ret;
+		FILE *fmsg;
+		ret = 0;
+		fmsg = NULL;
+		self->get_msgfile(self, &fmsg);
+		if (fmsg != NULL && fmsg != stdout && fmsg != stderr) {
+			fclose(fmsg);
+			fmsg = NULL;
+		}
+		if (strcmp(msgfile, "") == 0 || msgfile == NULL)
+			self->set_msgfile(self, NULL);
+		else if (strcmp(msgfile, "stdout") == 0)
+			self->set_msgfile(self, stdout);
+		else if (strcmp(msgfile, "stderr") == 0)
+			self->set_msgfile(self, stderr);
+		else {
+			fmsg = fopen(msgfile, "a");
+			if (fmsg != NULL) {
+				self->set_msgfile(self, fmsg);
+			}
+			else
+				ret = 1;
+		}
+		return ret;
+	}
 	
 	int get_thread_count(u_int32_t *count) {
 		return self->get_thread_count(self, count);
@@ -2391,7 +2449,7 @@ typedef struct __dbenv
 }
 } DB_ENV;
 
-typedef struct __key_range {
+typedef struct {
 	%typemap(csvarin) double less %{%}
 	double less;
 	%typemap(csvarin) double equal %{%}
@@ -2400,7 +2458,7 @@ typedef struct __key_range {
 	double greater;
 } DB_KEY_RANGE;
 
-typedef struct __db_lock_u {
+typedef struct {
 	roff_t		off;		/* Offset of the lock in the region */
 	u_int32_t	ndx;		/* Index of the object referenced by
 					 * this lock; used for locking. */
@@ -2408,7 +2466,7 @@ typedef struct __db_lock_u {
 	db_lockmode_t	mode;		/* mode of this lock. */
 } DB_LOCK;
 
-typedef struct __db_lockreq {
+typedef struct {
 	db_lockop_t	 op;		/* Operation. */
 	db_lockmode_t	 mode;		/* Requested mode. */
 	db_timeout_t	 timeout;	/* Time to expire lock. */
@@ -2463,7 +2521,7 @@ size_t alloc_dbt_arr(DB_ENV *dbenv, int num_dbt, void **ptr) {
 
 
 
-typedef struct __db_preplist {
+typedef struct {
         %typemap(cstype) u_int8_t [DB_GID_SIZE] "byte[]"
         %typemap(imtype) u_int8_t [DB_GID_SIZE] "byte[]"
         %typemap(csout, excode=SWIGEXCODE) u_int8_t [DB_GID_SIZE] "{byte[] res = (byte [])($imcall); $excode; return res;}"
@@ -2492,7 +2550,7 @@ typedef struct __db_preplist {
 		return ret;
 	}
 %}
-typedef struct __db_sequence {
+typedef struct {
 %extend {
 	DB_SEQUENCE(DB *dbp, u_int32_t flags) {
 		DB_SEQUENCE *seq = NULL;

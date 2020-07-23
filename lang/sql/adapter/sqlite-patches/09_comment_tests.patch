@@ -12,15 +12,17 @@
  if {0==[sqlite3 -has-codec]} {
    do_test date-14.1 {
      execsql {
-@@ -528,4 +533,5 @@
+@@ -528,6 +533,7 @@
      } {1}
    }
  }
 +}
- finish_test
+ 
+ # Verify that multiple calls to date functions with 'now' return the
+ # same answer.
 --- test/incrblob.test
 +++ test/incrblob.test
-@@ -134,8 +134,8 @@
+@@ -135,8 +135,8 @@
        INSERT INTO blobs VALUES('one', $::str || randstr(500,500), 45);
        COMMIT;
      }
@@ -118,15 +120,15 @@
  finish_test
 --- test/shared3.test
 +++ test/shared3.test
-@@ -101,7 +101,7 @@
+@@ -102,7 +102,7 @@
  
  db1 close
  db2 close
 -db3 close
 +#db3 close
  
- sqlite3_enable_shared_cache $::enable_shared_cache
- finish_test
+ #-------------------------------------------------------------------------
+ # At one point this was causing a faulty assert to fail.
 --- test/shared6.test
 +++ test/shared6.test
 @@ -42,8 +42,8 @@

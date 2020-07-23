@@ -29,7 +29,18 @@ INCLUDE
  * dbt:		data that is to be added or deleted.
  * pagelsn:	former lsn of the page.
  */
-BEGIN addrem		60	151
+BEGIN addrem		61	151
+OP	opcode		u_int32_t	lu
+DB	fileid		int32_t		ld
+ARG	pgno		db_pgno_t	lu
+ARG	indx		u_int32_t	lu
+ARG	nbytes		u_int32_t	lu
+HDR	hdr		DBT		s
+DATA	dbt		DBT		s
+POINTER	pagelsn		DB_LSN *	lu
+END
+
+BEGIN_COMPAT addrem		60	151
 OP	opcode		u_int32_t	lu
 DB	fileid		int32_t		ld
 ARG	pgno		db_pgno_t	lu

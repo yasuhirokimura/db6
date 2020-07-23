@@ -124,7 +124,21 @@
     <ClCompile Include="..\..\lang\sql\sqlite\ext\fts3\fts3_test.c"/>
     <ClCompile Include="..\..\lang\sql\sqlite\ext\fts3\fts3_tokenizer1.c"/>
     <ClCompile Include="..\..\lang\sql\sqlite\ext\fts3\fts3_tokenizer.c"/>
+    <ClCompile Include="..\..\lang\sql\sqlite\ext\fts3\fts3_tokenize_vtab.c"/>
     <ClCompile Include="..\..\lang\sql\sqlite\ext\fts3\fts3_write.c"/>
+    <ClCompile Include="..\..\lang\sql\sqlite\ext\misc\amatch.c"/>
+    <ClCompile Include="..\..\lang\sql\sqlite\ext\misc\closure.c"/>
+    <ClCompile Include="..\..\lang\sql\sqlite\ext\misc\fuzzer.c"/>
+    <ClCompile Include="..\..\lang\sql\sqlite\ext\misc\ieee754.c"/>
+    <ClCompile Include="..\..\lang\sql\sqlite\ext\misc\nextchar.c"/>
+    <ClCompile Include="..\..\lang\sql\sqlite\ext\misc\percentile.c"/>
+    <ClCompile Include="..\..\lang\sql\sqlite\ext\misc\regexp.c"/>
+    <ClCompile Include="..\..\lang\sql\sqlite\ext\misc\rot13.c"/>
+    <ClCompile Include="..\..\lang\sql\sqlite\ext\misc\spellfix.c"/>
+    <ClCompile Include="..\..\lang\sql\sqlite\ext\misc\totype.c"/>
+    <ClCompile Include="..\..\lang\sql\sqlite\ext\misc\vfslog.c"/>
+    <ClCompile Include="..\..\lang\sql\sqlite\ext\misc\vtshim.c"/>
+    <ClCompile Include="..\..\lang\sql\sqlite\ext\misc\wholenumber.c"/>
     <ClCompile Include="..\..\lang\sql\sqlite\src\func.c"/>
     <ClCompile Include="..\..\lang\sql\sqlite\src\global.c"/>
     <ClCompile Include="..\..\lang\sql\sqlite\src\hash.c"/>
@@ -198,7 +212,6 @@
     <ClCompile Include="..\..\lang\sql\sqlite\src\test_devsym.c"/>
     <ClCompile Include="..\..\lang\sql\sqlite\src\test_fs.c"/>
     <ClCompile Include="..\..\lang\sql\sqlite\src\test_func.c"/>
-    <ClCompile Include="..\..\lang\sql\sqlite\src\test_fuzzer.c"/>
     <ClCompile Include="..\..\lang\sql\sqlite\src\test_hexio.c"/>
     <ClCompile Include="..\..\lang\sql\sqlite\src\test_intarray.c"/>
     <ClCompile Include="..\..\lang\sql\sqlite\src\test_journal.c"/>
@@ -210,7 +223,6 @@
     <ClCompile Include="..\..\lang\sql\sqlite\src\test_osinst.c"/>
     <ClCompile Include="..\..\lang\sql\sqlite\src\test_pcache.c"/>
     <ClCompile Include="..\..\lang\sql\sqlite\src\test_quota.c"/>
-    <ClCompile Include="..\..\lang\sql\sqlite\src\test_regexp.c"/>
     <ClCompile Include="..\..\lang\sql\sqlite\src\test_rtree.c"/>
     <ClCompile Include="..\..\lang\sql\sqlite\src\test_schema.c"/>
     <ClCompile Include="..\..\lang\sql\sqlite\src\test_server.c"/>
@@ -221,7 +233,6 @@
     <ClCompile Include="..\..\lang\sql\sqlite\src\test_thread.c"/>
     <ClCompile Include="..\..\lang\sql\sqlite\src\test_vfs.c"/>
     <ClCompile Include="..\..\lang\sql\sqlite\src\test_vfstrace.c"/>
-    <ClCompile Include="..\..\lang\sql\sqlite\src\test_wholenumber.c"/>
     <ClCompile Include="..\..\lang\sql\sqlite\src\test_wsd.c"/>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets"/>

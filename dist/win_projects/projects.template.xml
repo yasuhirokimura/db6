@@ -735,6 +735,7 @@
       <file name="lang\sql\sqlite\ext\fts3\fts3_snippet.c"/>
       <file name="lang\sql\sqlite\ext\fts3\fts3_term.c"/>
       <file name="lang\sql\sqlite\ext\fts3\fts3_tokenizer1.c"/>
+      <file name="lang\sql\sqlite\ext\fts3\fts3_tokenize_vtab.c"/>
       <file name="lang\sql\sqlite\ext\fts3\fts3_tokenizer.c"/>
       <file name="lang\sql\sqlite\ext\fts3\fts3_write.c"/>
       <file name="lang\sql\sqlite\src\func.c"/>
@@ -805,7 +806,8 @@ javac -g -target 1.5 -d "$(OutDir)\jdbc_classes" -classpath "$(OutDir)\jdbc_clas
 echo Building JNI header files
 javah -o ..\..\lang\sql\jdbc\native\sqlite_jni.h -classpath "$(OutDir)\jdbc_classes" SQLite.Database SQLite.Vm SQLite.FunctionContext SQLite.Stmt SQLite.Blob
 echo creating jar file
-jar cf "$(OutDir)\jdbc.jar" -C "$(OutDir)\jdbc_classes" .
+cd $(OutDir)
+jar cf "jdbc.jar" -C "jdbc_classes" .
 echo JDBC build finished</command>
     </event>
     <preprocessor config="all">DB_CREATE_DLL;_UNICODE;UNICODE;HAVE_SQLITE3;HAVE_SQLITE3_MALLOC=1;HAVE_SQLITE3_PREPARE_V2=1;HAVE_SQLITE3_PREPARE16_V2=1;HAVE_SQLITE3_BIND_ZEROBLOB=1;HAVE_SQLITE3_CLEAR_BINDINGS=1;HAVE_SQLITE3_BIND_PARAMETER_COUNT=1;HAVE_SQLITE3_BIND_PARAMETER_NAME=1;HAVE_SQLITE3_BIND_PARAMETER_INDEX=1;HAVE_SQLITE3_RESULT_ZEROBLOB=1;HAVE_SQLITE3_INCRBLOBIO=1;HAVE_SQLITE3_SHARED_CACHE=1</preprocessor>
@@ -905,8 +907,9 @@ echo compiling examples
 mkdir "$(OutDir)\classes.ex"
 javac -g -target 1.5 -d "$(OutDir)\classes.ex" -classpath "$(OutDir)\classes;$(OutDir)\classes.ex" ..\..\examples/java\src\db\*.java ..\..\examples/java\src\db\GettingStarted\*.java ..\..\examples/java\src\db\repquote\*.java ..\..\examples/java\src\db\repquote_gsg\*.java ..\..\examples/java\src\db\txn\*.java ..\..\examples/java\src\collections\access\*.java ..\..\examples/java\src\collections\hello\*.java ..\..\examples/java\src\collections\ship\basic\*.java ..\..\examples/java\src\collections\ship\entity\*.java ..\..\examples/java\src\collections\ship\factory\*.java ..\..\examples/java\src\collections\ship\index\*.java ..\..\examples/java\src\collections\ship\marshal\*.java ..\..\examples/java\src\collections\ship\sentity\*.java ..\..\examples/java\src\collections\ship\tuple\*.java ..\..\examples/java\src\persist\*.java ..\..\examples/java\src\persist\gettingStarted\*.java ..\..\examples/java\src\persist\txn\*.java
 echo creating jar files
-jar cfm "$(OutDir)/db.jar" ../..\lang/java/jarManifestEntries -C "$(OutDir)\classes" .
-jar cf "$(OutDir)/dbexamples.jar" -C "$(OutDir)\classes.ex" .
+cd $(OutDir)
+jar cfm "db.jar" ../../..\lang/java/jarManifestEntries -C "classes" .
+jar cf "dbexamples.jar" -C "classes.ex" .
 echo Java build finished</command>
       <output>force_compilation.txt</output>
     </event>
@@ -1157,7 +1160,21 @@ echo Java build finished</command>
       <file name="lang\sql\sqlite\ext\fts3\fts3_test.c"/>
       <file name="lang\sql\sqlite\ext\fts3\fts3_tokenizer1.c"/>
       <file name="lang\sql\sqlite\ext\fts3\fts3_tokenizer.c"/>
+      <file name="lang\sql\sqlite\ext\fts3\fts3_tokenize_vtab.c"/>
       <file name="lang\sql\sqlite\ext\fts3\fts3_write.c"/>
+      <file name="lang\sql\sqlite\ext\misc\amatch.c"/>
+      <file name="lang\sql\sqlite\ext\misc\closure.c"/>
+      <file name="lang\sql\sqlite\ext\misc\fuzzer.c"/>
+      <file name="lang\sql\sqlite\ext\misc\ieee754.c"/>
+      <file name="lang\sql\sqlite\ext\misc\nextchar.c"/>
+      <file name="lang\sql\sqlite\ext\misc\percentile.c"/>
+      <file name="lang\sql\sqlite\ext\misc\regexp.c"/>
+      <file name="lang\sql\sqlite\ext\misc\rot13.c"/>
+      <file name="lang\sql\sqlite\ext\misc\spellfix.c"/>
+      <file name="lang\sql\sqlite\ext\misc\totype.c"/>
+      <file name="lang\sql\sqlite\ext\misc\vfslog.c"/>
+      <file name="lang\sql\sqlite\ext\misc\vtshim.c"/>
+      <file name="lang\sql\sqlite\ext\misc\wholenumber.c"/>
       <file name="lang\sql\sqlite\src\func.c"/>
       <file name="lang\sql\sqlite\src\global.c"/>
       <file name="lang\sql\sqlite\src\hash.c"/>
@@ -1231,7 +1248,6 @@ echo Java build finished</command>
       <file name="lang\sql\sqlite\src\test_devsym.c"/>
       <file name="lang\sql\sqlite\src\test_fs.c"/>
       <file name="lang\sql\sqlite\src\test_func.c"/>
-      <file name="lang\sql\sqlite\src\test_fuzzer.c"/>
       <file name="lang\sql\sqlite\src\test_hexio.c"/>
       <file name="lang\sql\sqlite\src\test_intarray.c"/>
       <file name="lang\sql\sqlite\src\test_journal.c"/>
@@ -1243,7 +1259,6 @@ echo Java build finished</command>
       <file name="lang\sql\sqlite\src\test_osinst.c"/>
       <file name="lang\sql\sqlite\src\test_pcache.c"/>
       <file name="lang\sql\sqlite\src\test_quota.c"/>
-      <file name="lang\sql\sqlite\src\test_regexp.c"/>
       <file name="lang\sql\sqlite\src\test_rtree.c"/>
       <file name="lang\sql\sqlite\src\test_schema.c"/>
       <file name="lang\sql\sqlite\src\test_server.c"/>
@@ -1254,7 +1269,6 @@ echo Java build finished</command>
       <file name="lang\sql\sqlite\src\test_thread.c"/>
       <file name="lang\sql\sqlite\src\test_vfs.c"/>
       <file name="lang\sql\sqlite\src\test_vfstrace.c"/>
-      <file name="lang\sql\sqlite\src\test_wholenumber.c"/>
       <file name="lang\sql\sqlite\src\test_wsd.c"/>
     </files>
   </project>
@@ -1462,7 +1476,8 @@ echo compiling examples
 mkdir "$(OutDir)\classes.ex"
 javac -g -target 1.5 -d "$(OutDir)\classes.ex" -classpath "$(OutDir)\classes;$(OutDir)\classes.ex" ..\..\examples/java\src\db\*.java ..\..\examples/java\src\db\GettingStarted\*.java ..\..\examples/java\src\db\repquote\*.java ..\..\examples/java\src\db\repquote_gsg\*.java ..\..\examples/java\src\db\txn\*.java ..\..\examples/java\src\collections\access\*.java ..\..\examples/java\src\collections\hello\*.java ..\..\examples/java\src\collections\ship\basic\*.java ..\..\examples/java\src\collections\ship\entity\*.java ..\..\examples/java\src\collections\ship\factory\*.java ..\..\examples/java\src\collections\ship\index\*.java ..\..\examples/java\src\collections\ship\marshal\*.java ..\..\examples/java\src\collections\ship\sentity\*.java ..\..\examples/java\src\collections\ship\tuple\*.java ..\..\examples/java\src\persist\*.java ..\..\examples/java\src\persist\gettingStarted\*.java ..\..\examples/java\src\persist\txn\*.java
 echo creating jar files
-jar cf "$(OutDir)/dbexamples.jar" -C "$(OutDir)\classes.ex" .
+cd $(OutDir)
+jar cf "dbexamples.jar" -C "classes.ex" .
 echo Java example build finished</command>
       <output>force_compilation.txt</output>
     </event>

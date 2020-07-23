@@ -380,7 +380,7 @@ __hamc_del(dbc, flags)
 	hcp = (HASH_CURSOR *)dbc->internal;
 
 	if (F_ISSET(hcp, H_DELETED))
-		return (DB_NOTFOUND);
+		return (DBC_ERR(dbc, DB_NOTFOUND));
 
 	if ((ret = __ham_get_meta(dbc)) != 0)
 		goto out;
@@ -536,7 +536,7 @@ next:			ret = __ham_item_next(dbc, lock_type, pgnop);
 	case DB_CURRENT:
 		/* cgetchk has already determined that the cursor is set. */
 		if (F_ISSET(hcp, H_DELETED)) {
-			ret = DB_KEYEMPTY;
+			ret = DBC_ERR(dbc, DB_KEYEMPTY);
 			goto err;
 		}
 
@@ -578,7 +578,7 @@ next:			ret = __ham_item_next(dbc, lock_type, pgnop);
 			    dbc->thread_info, hcp->page, dbc->priority);
 			hcp->page = NULL;
 			if (hcp->bucket == 0) {
-				ret = DB_NOTFOUND;
+				ret = DBC_ERR(dbc, DB_NOTFOUND);
 				hcp->pgno = PGNO_INVALID;
 				goto err;
 			}
@@ -600,7 +600,7 @@ next:			ret = __ham_item_next(dbc, lock_type, pgnop);
 			F_CLR(hcp, H_ISDUP);
 			hcp->pgno = BUCKET_TO_PAGE(hcp, hcp->bucket);
 			if (hcp->bucket > hcp->hdr->max_bucket) {
-				ret = DB_NOTFOUND;
+				ret = DBC_ERR(dbc, DB_NOTFOUND);
 				hcp->pgno = PGNO_INVALID;
 				goto err;
 			}
@@ -614,7 +614,7 @@ next:			ret = __ham_item_next(dbc, lock_type, pgnop);
 		case DB_SET:
 		case DB_SET_RANGE:
 			/* Key not found. */
-			ret = DB_NOTFOUND;
+			ret = DBC_ERR(dbc, DB_NOTFOUND);
 			goto err;
 		case DB_CURRENT:
 			/*
@@ -623,7 +623,7 @@ next:			ret = __ham_item_next(dbc, lock_type, pgnop);
 			 * locking.  We return the same error code as we would
 			 * if the cursor were deleted.
 			 */
-			ret = DB_KEYEMPTY;
+			ret = DBC_ERR(dbc, DB_KEYEMPTY);
 			goto err;
 		default:
 			DB_ASSERT(env, 0);
@@ -1055,7 +1055,7 @@ get_space:
 			 * DBC->get(DB_NEXT) will return DB_NOTFOUND.
 			 */
 			cp->bucket--;
-			ret = DB_NOTFOUND;
+			ret = DBC_ERR(dbc, DB_NOTFOUND);
 		} else {
 			/*
 			 * Start on the next bucket.
@@ -1112,7 +1112,7 @@ __hamc_put(dbc, key, data, flags, pgnop)
 
 	if (F_ISSET(hcp, H_DELETED) && flags != DB_KEYFIRST &&
 	    flags != DB_KEYLAST && flags != DB_OVERWRITE_DUP)
-		return (DB_NOTFOUND);
+		return (DBC_ERR(dbc, DB_NOTFOUND));
 
 	if ((ret = __ham_get_meta(dbc)) != 0)
 		goto err1;
@@ -1171,7 +1171,7 @@ __hamc_put(dbc, key, data, flags, pgnop)
 		} else if (ret == 0 && flags == DB_NOOVERWRITE &&
 		    !F_ISSET(hcp, H_DELETED)) {
 			if (*pgnop == PGNO_INVALID)
-				ret = DB_KEYEXIST;
+				ret = DBC_ERR(dbc, DB_KEYEXIST);
 			else
 				ret = __bam_opd_exists(dbc, *pgnop);
 			if (ret != 0)
@@ -1619,7 +1619,7 @@ __ham_dup_return(dbc, val, flags)
 		}
 
 		if (cmp != 0)
-			return (DB_NOTFOUND);
+			return (DBC_ERR(dbc, DB_NOTFOUND));
 	}
 
 	/*
@@ -2079,7 +2079,7 @@ __ham_lookup(dbc, key, sought, mode, pgnop)
 			return (ret);
 	}
 	F_SET(hcp, H_NOMORE);
-	return (DB_NOTFOUND);
+	return (DBC_ERR(dbc, DB_NOTFOUND));
 }
 
 /*

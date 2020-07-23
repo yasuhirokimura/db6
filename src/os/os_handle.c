@@ -90,7 +90,7 @@ __os_openhandle(env, name, flags, mode, fhpp)
 					 * return EEXISTS.
 					 */
 					DB_END_SINGLE_THREAD;
-					ret = EEXIST;
+					ret = USR_ERR(env, EEXIST);
 					goto err;
 				}
 				/*
@@ -127,7 +127,10 @@ __os_openhandle(env, name, flags, mode, fhpp)
 			break;
 		}
 
-		switch (ret = __os_posix_err(__os_get_syserr())) {
+		ret = __os_posix_err(__os_get_syserr());
+		if (ret != ENOENT)
+			(void)USR_ERR(env, ret);
+		switch (ret) {
 		case EMFILE:
 		case ENFILE:
 		case ENOSPC:
@@ -160,9 +163,8 @@ __os_openhandle(env, name, flags, mode, fhpp)
 		/* Deny file descriptor access to any child process. */
 		if ((fcntl_flags = fcntl(fhp->fd, F_GETFD)) == -1 ||
 		    fcntl(fhp->fd, F_SETFD, fcntl_flags | FD_CLOEXEC) == -1) {
-			ret = __os_get_syserr();
-			__db_syserr(env, ret, DB_STR("0162",
-			    "fcntl(F_SETFD)"));
+			ret = USR_ERR(env, __os_get_syserr());
+			__db_syserr(env, ret, DB_STR("0162", "fcntl(F_SETFD)"));
 			ret = __os_posix_err(ret);
 			goto err;
 		}
@@ -226,6 +228,7 @@ __os_closehandle(env, fhp)
 		else
 			RETRY_CHK((close(fhp->fd)), ret);
 		if (ret != 0) {
+			ret = USR_ERR(env, ret);
 			__db_syserr(env, ret, DB_STR("0164", "close"));
 			ret = __os_posix_err(ret);
 		}

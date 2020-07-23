@@ -399,19 +399,31 @@ tcl_TxnStat(interp, objc, objv, dbenv)
 	DB_TXN_ACTIVE *p;
 	DB_TXN_STAT *sp;
 	Tcl_Obj *myobjv[2], *res, *thislist, *lsnlist;
-	u_int32_t i;
+	u_int32_t i, flag;
+	char *arg;
 	int myobjc, result, ret;
 
+	flag = 0;
 	result = TCL_OK;
-	/*
-	 * No args for this.  Error if there are some.
-	 */
-	if (objc != 2) {
-		Tcl_WrongNumArgs(interp, 2, objv, NULL);
+
+	if (objc > 3) {
+		Tcl_WrongNumArgs(interp, 2, objv, "?-clear?");
 		return (TCL_ERROR);
 	}
+
+	if (objc == 3) {
+		arg = Tcl_GetStringFromObj(objv[2], NULL);
+		if (strcmp(arg, "-clear") == 0)
+			flag = DB_STAT_CLEAR;
+		else {
+			Tcl_SetResult(interp,
+			    "db stat: unknown arg", TCL_STATIC);
+			return (TCL_ERROR);
+		}
+	}
+
 	_debug_check();
-	ret = dbenv->txn_stat(dbenv, &sp, 0);
+	ret = dbenv->txn_stat(dbenv, &sp, flag);
 	result = _ReturnSetup(interp, ret, DB_RETOK_STD(ret),
 	    "txn stat");
 	if (result == TCL_ERROR)
@@ -478,11 +490,13 @@ tcl_TxnStatPrint(interp, objc, objv, dbenv)
 {	
 	static const char *txnprtopts[] = {
 		"-all",
+		"-alloc",
 		"-clear",
 		 NULL
 	};
 	enum txnprtopts {
 		TXNPRTALL,
+		TXNPRTALLOC,
 		TXNPRTCLEAR
 	};
 	u_int32_t flag;
@@ -502,6 +516,9 @@ tcl_TxnStatPrint(interp, objc, objv, dbenv)
 		switch ((enum txnprtopts)optindex) {
 		case TXNPRTALL:
 			flag |= DB_STAT_ALL;
+			break;
+		case TXNPRTALLOC:
+			flag |= DB_STAT_ALLOC;
 			break;
 		case TXNPRTCLEAR:
 			flag |= DB_STAT_CLEAR;

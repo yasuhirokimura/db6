@@ -143,6 +143,15 @@ public interface EventHandler {
     A callback function to be called when an event is sent from the
     Berkeley DB library.
     <p>
+    This event callback is received when replication Mananger incoming queue
+    has reached its maximum threshold.
+    */
+    public void handleRepInQueueFullEvent();
+
+    /**
+    A callback function to be called when an event is sent from the
+    Berkeley DB library.
+    <p>
     This event callback is received when the local site could not synchronize
     with the master because an internal initialization was required, but
     internal initialization has been turned off by the {@link com.sleepycat.db.ReplicationConfig#AUTOINIT ReplicationConfig.AUTOINIT}

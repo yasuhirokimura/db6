@@ -80,4 +80,5 @@ puts "Processed messages"
 # Close the envs
 error_check_good script_master_close [$masterenv close] 0
 error_check_good script_client_close [$clientenv close] 0
+replclose $testdir/MSGQUEUEDIR
 puts "\tRepscript completed successfully"

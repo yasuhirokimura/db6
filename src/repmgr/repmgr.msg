@@ -140,3 +140,14 @@ BEGIN_MSG v4connect_reject
 ARG	version		u_int32_t
 ARG	gen		u_int32_t
 END
+
+/*
+ * For preferred master LSN history comparison between the sites.
+ * The next_gen_lsn is [0,0] if the next generation doesn't yet exist.
+ */
+BEGIN_MSG lsnhist_match
+ARG	lsn		DB_LSN
+ARG	hist_sec	u_int32_t
+ARG	hist_nsec	u_int32_t
+ARG	next_gen_lsn	DB_LSN
+END

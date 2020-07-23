@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.0</p>
+        <p>Library Version 12.1.6.1</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -22,9 +22,7 @@
         </tr>
         <tr>
           <td width="20%" align="left"><a accesskey="p" href="tcl_error.html">Prev</a> </td>
-          <th width="60%" align="center">Chapter 21. 
-		Berkeley DB Extensions: Tcl
-        </th>
+          <th width="60%" align="center">Chapter 21.  Berkeley DB Extensions: Tcl </th>
           <td width="20%" align="right"> <a accesskey="n" href="ext.html">Next</a></td>
         </tr>
       </table>
@@ -42,50 +40,71 @@
         <ol type="1">
           <li>
             <span class="bold">
-              <strong>I have several versions of Tcl installed. How do I configure
-Berkeley DB to use a particular version?</strong>
+              <strong>I have several versions of Tcl
+                installed. How do I configure Berkeley DB to use a
+                particular version?</strong>
             </span>
             <p>
-    To compile the Tcl interface with a particular version of Tcl, use the
-    --with-tcl option to specify the Tcl installation directory that
-    contains the tclConfig.sh file.  See
-    the <a href="../installation/build_unix_flags.html" class="olink">Changing compile or load options</a> section in the Berkeley DB Installation and Build Guide for more information.
-</p>
+                To compile the Tcl interface with a particular
+                version of Tcl, use the --with-tcl option to specify
+                the Tcl installation directory that contains the
+                tclConfig.sh file. See the <a href="../installation/build_unix_flags.html" class="olink">Changing compile or load options</a> section
+                in the Berkeley DB Installation and Build Guide for more information. 
+            </p>
           </li>
           <li>
             <span class="bold">
-              <strong>Berkeley DB was configured using --enable-tcl or --with-tcl and fails
-to build.</strong>
+              <strong>Berkeley DB was configured using
+                --enable-tcl or --with-tcl and fails to
+                build.</strong>
             </span>
-            <p>The Berkeley DB Tcl interface requires Tcl version 8.5 or greater.</p>
+            <p>
+                The Berkeley DB Tcl interface requires Tcl version
+                8.5 or greater.
+            </p>
           </li>
           <li>
             <span class="bold">
-              <strong>Berkeley DB was configured using --enable-tcl or --with-tcl and fails
-to build.</strong>
+              <strong>Berkeley DB was configured using
+                --enable-tcl or --with-tcl and fails to
+                build.</strong>
             </span>
-            <p>If the Tcl installation was moved after it was configured and installed,
-try reconfiguring and reinstalling Tcl.</p>
-            <p>Also, some systems do not search for shared libraries by default, or do
-not search for shared libraries named the way the Tcl installation names
-them, or are searching for a different kind of library than those in
-your Tcl installation.  For example, Linux systems often require linking
-"libtcl.a" to "libtcl#.#.a", whereas AIX systems often require adding the
-"-brtl" flag to the linker.  A simpler solution that almost always works
-on all systems is to create a link from "libtcl.#.#.a" or "libtcl.so"
-(or whatever you happen to have) to "libtcl.a" and reconfigure.</p>
+            <p>
+                If the Tcl installation was moved after it was
+                configured and installed, try reconfiguring and
+                reinstalling Tcl.
+            </p>
+            <p>
+                Also, some systems do not search for shared
+                libraries by default, or do not search for shared
+                libraries named the way the Tcl installation names
+                them, or are searching for a different kind of library
+                than those in your Tcl installation. For example,
+                Linux systems often require linking "libtcl.a" to
+                "libtcl#.#.a", whereas AIX systems often require
+                adding the "-brtl" flag to the linker. A simpler
+                solution that almost always works on all systems is to
+                create a link from "libtcl.#.#.a" or "libtcl.so" (or
+                whatever you happen to have) to "libtcl.a" and
+                reconfigure.
+            </p>
           </li>
           <li>
             <span class="bold">
-              <strong>Loading the Berkeley DB library into Tcl on AIX causes a core dump.</strong>
+              <strong>Loading the Berkeley DB library into
+                Tcl on AIX causes a core dump.</strong>
             </span>
-            <p>In some versions of Tcl, the "tclConfig.sh" autoconfiguration script
-created by the Tcl installation does not work properly under AIX, and
-you may have to modify values in the tclConfig.sh file to in order to
-load the Berkeley DB library into Tcl.  Specifically, the TCL_LIB_SPEC
-variable should contain sufficient linker flags to find and link against
-the installed libtcl library.  In some circumstances, the tclConfig.sh
-file built by Tcl does not.</p>
+            <p>
+                In some versions of Tcl, the "tclConfig.sh"
+                autoconfiguration script created by the Tcl
+                installation does not work properly under AIX, and you
+                may have to modify values in the tclConfig.sh file to
+                in order to load the Berkeley DB library into Tcl.
+                Specifically, the TCL_LIB_SPEC variable should contain
+                sufficient linker flags to find and link against the
+                installed libtcl library. In some circumstances, the
+                tclConfig.sh file built by Tcl does not.
+            </p>
           </li>
         </ol>
       </div>
@@ -105,9 +124,7 @@ file built by Tcl does not.</p>
           <td width="20%" align="center">
             <a accesskey="h" href="index.html">Home</a>
           </td>
-          <td width="40%" align="right" valign="top"> Chapter 22. 
-		Berkeley DB Extensions
-        </td>
+          <td width="40%" align="right" valign="top"> Chapter 22.  Berkeley DB Extensions </td>
         </tr>
       </table>
     </div>

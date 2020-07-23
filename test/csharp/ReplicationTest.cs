@@ -384,6 +384,7 @@ namespace CsharpAPITest
 		{
 			string home = testHome + "/Master";
 			string dbName = "rep.db";
+			uint metabyte = 1048576;
 			Configuration.ClearDir(home);
 
 			/*
@@ -436,6 +437,7 @@ namespace CsharpAPITest
 
 			// Get initial replication stats.
 			ReplicationStats repStats = env.ReplicationSystemStats();
+			env.Msgfile = home + "/master.log";
 			env.PrintReplicationSystemStats();
 			Assert.AreEqual(100, repStats.EnvPriority);
 			Assert.AreEqual(1, 
@@ -444,8 +446,17 @@ namespace CsharpAPITest
 			Assert.AreEqual(0, repStats.AppliedTransactions);
 			Assert.AreEqual(0, repStats.ElectionDataGeneration);
 
+			// Get repmgr incoming queue max setting.
+			Assert.AreEqual(0, env.RepmgrIncomingQueueMaxGBytes);
+			Assert.AreEqual(100 * metabyte, env.RepmgrIncomingQueueMaxBytes);
+
 			// Start a master site with replication manager.
 			env.RepMgrStartMaster(3);
+
+			// Change repmgr incoming queue setting and verify it.
+			env.RepmgrSetIncomingQueueMax(123, 321);
+			Assert.AreEqual(123, env.RepmgrIncomingQueueMaxGBytes);
+			Assert.AreEqual(321, env.RepmgrIncomingQueueMaxBytes);
 
 			// Open a btree database and write some data.
 			Transaction txn = env.BeginTransaction();
@@ -561,6 +572,10 @@ namespace CsharpAPITest
 			Assert.LessOrEqual(0, repMgrStats.FailedMessages);
 			Assert.Less(0, repMgrStats.MaxElectionThreads);
 			Assert.LessOrEqual(0, repMgrStats.QueuedMessages);
+			// There should be no messages dropped and in the queue now.
+			Assert.AreEqual(0, repMgrStats.IncomingDroppedMessages);
+			Assert.AreEqual(0, repMgrStats.IncomingQueueGBytes);
+			Assert.AreEqual(0, repMgrStats.IncomingQueueBytes);
 
 			// Print them out.
 			env.PrintRepMgrSystemStats();
@@ -609,12 +624,18 @@ namespace CsharpAPITest
 			cfg.RepSystemCfg.RepmgrSitesConfig[1].Host = "127.0.0.1";
 			cfg.RepSystemCfg.RepmgrSitesConfig[1].Port = ports[0];
 			cfg.RepSystemCfg.RepmgrSitesConfig[1].Helper = true;
+			// Set the incoming queue max.
+			cfg.RepSystemCfg.RepmgrIncomingQueueMax(2, 123456);
 			cfg.EventNotify = new EventNotifyDelegate(stuffHappened);
 			DatabaseEnvironment env = DatabaseEnvironment.Open(
 			    home, cfg);
 
 			// Start a client site with replication manager.
 			env.RepMgrStartClient(3, false);
+
+			// Get repmgr incoming queue max setting.
+			Assert.AreEqual(2, env.RepmgrIncomingQueueMaxGBytes);
+			Assert.AreEqual(123456, env.RepmgrIncomingQueueMaxBytes);
 
 			// Leave enough time to sync.
 			Thread.Sleep(20000);
@@ -657,6 +678,11 @@ namespace CsharpAPITest
 			Assert.LessOrEqual(0, repStats.NextPage);
 			Assert.LessOrEqual(0, repStats.ReceivedPages);
 			Assert.AreEqual(1, repStats.Status);
+			// There should be no messages dropped and in the queue now.
+			RepMgrStats repMgrStats = env.RepMgrSystemStats();
+			Assert.AreEqual(0, repMgrStats.IncomingDroppedMessages);
+			Assert.AreEqual(0, repMgrStats.IncomingQueueGBytes);
+			Assert.AreEqual(0, repMgrStats.IncomingQueueBytes);
 
 			// Close all.
 			db.Close(false);

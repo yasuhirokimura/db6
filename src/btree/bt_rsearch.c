@@ -147,7 +147,7 @@ __bam_rsearch(dbc, recnop, flags, stop, exactp)
 				    __TLPUT(dbc, lock)) != 0 && ret == 0)
 					ret = t_ret;
 				if (ret == 0)
-					ret = DB_NOTFOUND;
+					ret = DBC_ERR(dbc, DB_NOTFOUND);
 				goto done;
 			}
 		}
@@ -197,7 +197,8 @@ __bam_rsearch(dbc, recnop, flags, stop, exactp)
 						    lock)) != 0 && ret == 0)
 							ret = t_ret;
 						if (ret == 0)
-							ret = DB_NOTFOUND;
+							ret = DBC_ERR(dbc,
+							    DB_NOTFOUND);
 						goto err;
 					}
 				}

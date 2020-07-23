@@ -16,9 +16,8 @@ namespace BerkeleyDB {
     public class HashDatabaseConfig : DatabaseConfig {
         /* Fields for db->set_flags() */
         /// <summary>
-        /// Policy for duplicate data items in the database; that is, insertion
-        /// when the key of the key/data pair being inserted already exists in
-        /// the database will be successful.
+        /// Policy for duplicate data items in the database. Allows a key/data pair
+        /// to be inserted into the database even if the key already exists.
         /// </summary>
         /// <remarks>
         /// <para>
@@ -31,19 +30,19 @@ namespace BerkeleyDB {
         /// duplicate comparison function. If the application does not specify a
         /// comparison function using 
         /// <see cref="DuplicateCompare"/>, a default lexical
-        /// comparison will be used.
+        /// comparison is be used.
         /// </para>
-		/// <para>
+        /// <para>
         /// <see cref="DuplicatesPolicy.SORTED"/> is preferred to 
         /// <see cref="DuplicatesPolicy.UNSORTED"/> for performance reasons.
         /// <see cref="DuplicatesPolicy.UNSORTED"/> should only be used by
         /// applications wanting to order duplicate data items manually.
         /// </para>
-		/// <para>
+        /// <para>
         /// If the database already exists, the value of Duplicates must be the
-        /// same as the existing database or an error will be returned.
+        /// same as the existing database or an error is returned.
         /// </para>
-		/// </remarks>
+        /// </remarks>
         public DuplicatesPolicy Duplicates;
         internal new uint flags {
             get {
@@ -59,7 +58,7 @@ namespace BerkeleyDB {
         /// <remarks>
         /// If the database does not already exist and
         /// <see cref="CreatePolicy.NEVER"/> is set,
-        /// <see cref="HashDatabase.Open"/> will fail.
+        /// <see cref="HashDatabase.Open"/> fails.
         /// </remarks>
         public CreatePolicy Creation;
         internal new uint openFlags {
@@ -74,7 +73,7 @@ namespace BerkeleyDB {
         /// The path of the directory where blobs are stored.
         /// <para>
         /// If the database is opened within <see cref="DatabaseEnvironment"/>,
-        /// this path setting will be ignored during
+        /// this path setting is ignored during
         /// <see cref="HashDatabase.Open"/>. Use
         /// <see cref="HashDatabase.BlobDir"/> to identify the current storage
         /// location of blobs after opening the database.
@@ -85,18 +84,18 @@ namespace BerkeleyDB {
         internal bool blobThresholdIsSet;
         private uint blobThreshold;
         /// <summary>
-        /// The size in bytes which is used to determine when a data item will
-        /// be stored as a blob.
+        /// The size in bytes which is used to determine when a data item 
+        /// is stored as a blob.
         /// <para>
         /// Any data item that is equal to or larger in size than the
-        /// threshold value will automatically be stored as a blob.
+        /// threshold value is automatically stored as a blob.
         /// </para>
         /// <para>
-        /// If the threshold value is 0, blobs will never be used by the
+        /// If the threshold value is 0, blobs are never be used by the
         /// database.
         /// </para>
         /// <para>
-        /// It is illegal to enable blob in the database which is configured
+        /// It is illegal to enable blob support in the database which is configured
         /// as in-memory database or with chksum, encryption, duplicates,
         /// sorted duplicates, compression, multiversion concurrency control
         /// and transactional read operations with degree 1 isolation.
@@ -135,7 +134,7 @@ namespace BerkeleyDB {
         private uint ffactor;
         /// <summary>
         /// The desired density within the hash table. If no value is specified,
-        /// the fill factor will be selected dynamically as pages are filled. 
+        /// the fill factor is selected dynamically as pages are filled. 
         /// </summary>
         /// <remarks>
         /// <para>
@@ -149,7 +148,7 @@ namespace BerkeleyDB {
         /// (pagesize - 32) / (average_key_size + average_data_size + 8)
         /// </para>
         /// <para>
-        /// If the database already exists, this setting will be ignored.
+        /// If the database already exists, this setting is ignored.
         /// </para>
         /// </remarks>
         public uint FillFactor {
@@ -189,12 +188,12 @@ namespace BerkeleyDB {
         /// setting <see cref="Duplicates"/> to
         /// <see cref="DuplicatesPolicy.SORTED"/>.
         /// </para>
-		/// <para>
+        /// <para>
         /// If no comparison function is specified, the data items are compared
         /// lexically, with shorter data items collating before longer data
         /// items.
         /// </para>
-		/// <para>
+        /// <para>
         /// If the database already exists when <see cref="HashDatabase.Open"/>
         /// is called, the delegate must be the same as that historically used
         /// to create the database or corruption can occur.
@@ -268,12 +267,12 @@ namespace BerkeleyDB {
         /// <para>
         /// In order for the estimate to be used when creating the database,
         /// <see cref="FillFactor"/> must also be set. If the estimate or fill
-        /// factor are not set or are set too low, hash tables will still expand
+        /// factor is not set or is set too low, hash tables still expand
         /// gracefully as keys are entered, although a slight performance
         /// degradation may be noticed.
         /// </para>
         /// <para>
-        /// If the database already exists, this setting will be ignored.
+        /// If the database already exists, this setting is ignored.
         /// </para>
         /// </remarks>
         public uint TableSize {

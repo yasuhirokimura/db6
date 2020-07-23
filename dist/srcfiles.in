@@ -250,7 +250,6 @@ src/mp/mp_sync.c						android vx vxsmall
 src/mp/mp_trickle.c						android vx vxsmall 
 src/mutex/mut_alloc.c						android vx vxsmall 
 src/mutex/mut_failchk.c						android vx vxsmall 
-src/mutex/mut_fcntl.c
 src/mutex/mut_method.c						android vx vxsmall 
 src/mutex/mut_region.c						android vx vxsmall 
 src/mutex/mut_stat.c						android vx vxsmall 

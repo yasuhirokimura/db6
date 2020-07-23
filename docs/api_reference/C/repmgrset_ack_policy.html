@@ -9,12 +9,12 @@
     <link rel="start" href="index.html" title="Berkeley DB C API Reference" />
     <link rel="up" href="rep.html" title="Chapter 10.  Replication Methods" />
     <link rel="prev" href="repmgr_msg_dispatch.html" title="DB_ENV-&gt;repmgr_msg_dispatch()" />
-    <link rel="next" href="repmgr_site.html" title="DB_ENV-&gt;repmgr_site()" />
+    <link rel="next" href="repmgrset_incoming_queue_max.html" title="DB_ENV-&gt;repmgr_set_incoming_queue_max()" />
   </head>
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.0</p>
+        <p>Library Version 12.1.6.1</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -25,7 +25,7 @@
           <th width="60%" align="center">Chapter 10. 
                 Replication Methods
         </th>
-          <td width="20%" align="right"> <a accesskey="n" href="repmgr_site.html">Next</a></td>
+          <td width="20%" align="right"> <a accesskey="n" href="repmgrset_incoming_queue_max.html">Next</a></td>
         </tr>
       </table>
       <hr />
@@ -96,7 +96,7 @@ DB_ENV-&gt;repmgr_set_ack_policy(DB_ENV *env, int ack_policy);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp54449320"></a>Parameters</h3>
+              <h3 class="title"><a id="idp4285920"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -104,7 +104,7 @@ DB_ENV-&gt;repmgr_set_ack_policy(DB_ENV *env, int ack_policy);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp54430720"></a>ack_policy</h4>
+                <h4 class="title"><a id="idp4284864"></a>ack_policy</h4>
               </div>
             </div>
           </div>
@@ -194,7 +194,7 @@ DB_ENV-&gt;repmgr_set_ack_policy(DB_ENV *env, int ack_policy);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp54488528"></a>Errors</h3>
+              <h3 class="title"><a id="idp4326504"></a>Errors</h3>
             </div>
           </div>
         </div>
@@ -211,7 +211,7 @@ DB_ENV-&gt;repmgr_set_ack_policy(DB_ENV *env, int ack_policy);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp54480456"></a>EINVAL</h4>
+                <h4 class="title"><a id="idp4328368"></a>EINVAL</h4>
               </div>
             </div>
           </div>
@@ -226,7 +226,7 @@ DB_ENV-&gt;repmgr_set_ack_policy(DB_ENV *env, int ack_policy);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp54491888"></a>Class</h3>
+              <h3 class="title"><a id="idp4329864"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -238,7 +238,7 @@ DB_ENV-&gt;repmgr_set_ack_policy(DB_ENV *env, int ack_policy);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp54494808"></a>See Also</h3>
+              <h3 class="title"><a id="idp4332784"></a>See Also</h3>
             </div>
           </div>
         </div>
@@ -255,14 +255,16 @@ DB_ENV-&gt;repmgr_set_ack_policy(DB_ENV *env, int ack_policy);  </pre>
           <td width="20%" align="center">
             <a accesskey="u" href="rep.html">Up</a>
           </td>
-          <td width="40%" align="right"> <a accesskey="n" href="repmgr_site.html">Next</a></td>
+          <td width="40%" align="right"> <a accesskey="n" href="repmgrset_incoming_queue_max.html">Next</a></td>
         </tr>
         <tr>
           <td width="40%" align="left" valign="top">DB_ENV-&gt;repmgr_msg_dispatch() </td>
           <td width="20%" align="center">
             <a accesskey="h" href="index.html">Home</a>
           </td>
-          <td width="40%" align="right" valign="top"> DB_ENV-&gt;repmgr_site()</td>
+          <td width="40%" align="right" valign="top"> 
+        DB_ENV-&gt;repmgr_set_incoming_queue_max()
+    </td>
         </tr>
       </table>
     </div>

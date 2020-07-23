@@ -504,7 +504,7 @@ public class Database {
     private native void _function_type(String name, int type);
 
     /**
-     * Return the code of the last error occured in
+     * Return the code of the last error occurred in
      * any of the exec() methods. The value is valid
      * after an Exception has been reported by one of
      * these methods. See the <A HREF="Constants.html">Constants</A>

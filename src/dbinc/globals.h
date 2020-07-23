@@ -68,6 +68,13 @@ typedef struct __db_globals {
 
 	char *saved_errstr;		/* saved error string from backup */
 
+	char *time_format;		/* strftime-format for printing dates */
+
+#if defined(HAVE_ERROR_HISTORY) && defined(HAVE_PTHREAD_SELF)
+	pthread_key_t msgs_key;
+	pthread_once_t thread_once;
+#endif
+
 	/* Underlying OS interface jump table.*/
 	void	(*j_assert) __P((const char *, const char *, int));
 	int	(*j_close) __P((int));	

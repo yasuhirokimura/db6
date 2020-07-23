@@ -49,6 +49,10 @@ namespace CsharpAPITest
 			repConfig.RetransmissionRequest(10, 100);
 			Assert.AreEqual(100, repConfig.RetransmissionRequestMax);
 			Assert.AreEqual(10, repConfig.RetransmissionRequestMin);
+
+			repConfig.RepmgrIncomingQueueMax(123, 456);
+			Assert.AreEqual(123, repConfig.RepmgrIncomingQueueMaxGBytes);
+			Assert.AreEqual(456, repConfig.RepmgrIncomingQueueMaxBytes);
 		}
 
 		[Test]

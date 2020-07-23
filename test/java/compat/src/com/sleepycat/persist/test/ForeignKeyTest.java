@@ -63,19 +63,18 @@ public class ForeignKeyTest extends TxnTestCase {
     }
     
     protected static List<Object[]> paramsHelper(boolean rep) {
-        List<Object[]> txnTypes = getTxnTypes(null, rep);
-        List<Object[]> newParams = new ArrayList<Object[]>();
+        final String[] txnTypes = getTxnTypes(null, rep);
+        final List<Object[]> newParams = new ArrayList<Object[]>();
         int i = 0;
-        for (DeleteAction action : ACTIONS) {
-            for (Object[] types : txnTypes) {
+        for (final DeleteAction action : ACTIONS) {
+            for (final String type : txnTypes) {
                 newParams.add(new Object[]
-                    {types[0], action, ACTION_LABELS[i], "UseSubclass"});
+                    {type, action, ACTION_LABELS[i], "UseSubclass"});
                 newParams.add(new Object[]
-                    {types[0], action, ACTION_LABELS[i], "UseBaseclass"});
+                    {type, action, ACTION_LABELS[i], "UseBaseclass"});
             }
-            i ++;
+            i++;
         }
-        
         return newParams;
     }
     

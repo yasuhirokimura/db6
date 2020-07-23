@@ -178,8 +178,9 @@ BEGIN {
 
 	make_name(thisfunc, thisfunc, version);
 }
-/^[	 ]*\
-(DB|ARG|DBOP|DBT|DATA|HDR|LOCKS|OP|PGDBT|PGDDBT|PGLIST|POINTER|TIME|LONGARG)/ {
+# Some versions of awk do not understand splitting a pattern into several lines
+# with '\', so this > 80 character pattern needs to remain a single line.
+/^[	 ]*(DB|ARG|DBOP|DBT|DATA|HDR|LOCKS|OP|PGDBT|PGDDBT|PGLIST|POINTER|TIME|LONGARG)/ {
 	vars[nvars] = $2;
 	types[nvars] = $3;
 	modes[nvars] = $1;

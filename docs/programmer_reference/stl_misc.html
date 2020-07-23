@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.0</p>
+        <p>Library Version 12.1.6.1</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -40,12 +40,13 @@
         <dl>
           <dt>
             <span class="sect2">
-              <a href="stl_misc.html#idp1127832">Special notes about trivial methods</a>
+              <a href="stl_misc.html#idp1126360">Special notes about trivial methods</a>
             </span>
           </dt>
           <dt>
             <span class="sect2">
-              <a href="stl_misc.html#idp1128696">Using correct container and iterator public types</a>
+              <a href="stl_misc.html#idp1179936">Using correct container and iterator public
+            types</a>
             </span>
           </dt>
         </dl>
@@ -54,76 +55,81 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp1127832"></a>Special notes about trivial methods</h3>
+              <h3 class="title"><a id="idp1126360"></a>Special notes about trivial methods</h3>
             </div>
           </div>
         </div>
-        <p>
-        There are some standard STL methods which are meaningless in dbstl, but they are kept in
-        dbstl as no-ops so as to stay consistent with the standard. These are:
-	</p>
+        <p> 
+            There are some standard STL methods which are
+            meaningless in dbstl, but they are kept in dbstl as no-ops
+            so as to stay consistent with the standard. These are: 
+        </p>
         <table class="simplelist" border="0" summary="Simple list">
           <tr>
             <td>
-              <code class="methodname">db_vecter::reserve();</code>
+                <code class="methodname">db_vecter::reserve();</code>
             </td>
           </tr>
           <tr>
             <td>
-              <code class="methodname">db_vector::max_size();</code>
+                <code class="methodname">db_vector::max_size();</code>
             </td>
           </tr>
           <tr>
             <td>
-              <code class="methodname">db_vector::capacity();</code>
+                <code class="methodname">db_vector::capacity();</code>
             </td>
           </tr>
           <tr>
             <td>
-              <code class="methodname">db_map::reserve();</code>
+                <code class="methodname">db_map::reserve();</code>
             </td>
           </tr>
           <tr>
             <td>
-              <code class="methodname">db_map::max_size();</code>
+                <code class="methodname">db_map::max_size();</code>
             </td>
           </tr>
         </table>
         <p>
-        <code class="methodname">db_vector&lt;&gt;::max_size()</code> and
-        <code class="methodname">db_map&lt;&gt;::max_size()</code> both return 2^30. This does not mean
-        that Berkeley DB can only hold that much data. This value is returned to conform to some
-        compilers' overflow rules — if we set bigger numbers like 2^32 or 2^31, some compilers
-        complain that the number has overflowed.
-	</p>
+            <code class="methodname">db_vector&lt;&gt;::max_size()</code> and
+            <code class="methodname">db_map&lt;&gt;::max_size()</code>
+            both return 2^30. This does not mean that Berkeley DB can
+            only hold that much data. This value is returned to
+            conform to some compilers' overflow rules — if we
+            set bigger numbers like 2^32 or 2^31, some compilers
+            complain that the number has overflowed.
+        </p>
+        <p> 
+            See the Berkeley DB documentation for information about
+            limitations on how much data a database can store. 
+        </p>
         <p>
-        See the Berkeley DB documentation for information about limitations on how much data a
-        database can store.
-	</p>
-        <p>
-        There are also some read-only functions. You set the configuration
-        for these using the Berkeley DB API. You access them using the container's methods. Again,
-        this is to keep consistent with C++ standard STL containers, such as:
-	</p>
+            There are also some read-only functions. You set the
+            configuration for these using the Berkeley DB API. You
+            access them using the container's methods. Again, this is
+            to keep consistent with C++ standard STL containers, such
+            as: 
+        </p>
         <table class="simplelist" border="0" summary="Simple list">
           <tr>
             <td>
-              <code class="methodname">db_map::key_comp();</code>
+                <code class="methodname">db_map::key_comp();</code>
             </td>
           </tr>
           <tr>
             <td>
-              <code class="methodname">db_map::value_comp();</code>
+                <code class="methodname">db_map::value_comp();</code>
             </td>
           </tr>
           <tr>
             <td>
-              <code class="methodname">db_map::hash_funct();</code>
+                <code class="methodname">db_map::hash_funct();</code>
             </td>
           </tr>
           <tr>
             <td>
-              <code class="methodname">db_map::key_eq();</code>
+                <code class="methodname">db_map::key_eq();</code>
             </td>
           </tr>
         </table>
@@ -132,48 +138,60 @@
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp1128696"></a>Using correct container and iterator public types</h3>
+              <h3 class="title"><a id="idp1179936"></a>Using correct container and iterator public
+            types</h3>
             </div>
           </div>
         </div>
+        <p> 
+            All public types defined by the C++ STL specification
+            are present in dbstl. One thing to note is the <span class="bold"><strong>value_type</strong></span>. dbstl defines the
+            <span class="bold"><strong>value_type</strong></span> for each
+            iterator and container class to be the raw type without
+            the
+            <code class="classname">ElementRef</code>/<code class="classname">ElementHolder</code>
+            wrapper, so this type of variable can not be used to store
+            data in a database. There is a <span class="bold"><strong>value_type_wrap</strong></span> 
+            type for each container
+            and iterator type, with the raw type wrapped by the
+            <code class="classname">ElementRef</code>/<code class="classname">ElementHolder</code>.
+        </p>
         <p>
-        All public types defined by the C++ STL specification are present in dbstl. One thing to
-        note is the <span class="bold"><strong>value_type</strong></span>. dbstl defines the <span class="bold"><strong>value_type</strong></span> for each iterator and container class to be the raw
-        type without the <code class="classname">ElementRef</code>/<code class="classname">ElementHolder</code>
-        wrapper, so this type of variable can not be used to store data in a database.  There is a
-        <span class="bold"><strong>value_type_wrap</strong></span> type for each container and iterator type,
-        with the raw type wrapped by the
-        <code class="classname">ElementRef</code>/<code class="classname">ElementHolder</code>.
-	</p>
-        <p>
-        For example, when type <code class="literal">int_vector_t</code> is defined as
-    </p>
+            For example, when type <code class="literal">int_vector_t</code>
+            is defined as 
+        </p>
         <pre class="programlisting">db_vector&lt;int, ElementHolder&lt;int&gt; &gt;</pre>
         <p>
-        its <span class="bold"><strong>value_type</strong></span> is <code class="literal">int</code>, its 
-        <span class="bold"><strong>value_type_wrap</strong></span> is <code class="literal">ElementHolder&lt;int&gt;</code>,
-        and its reference and pointer types are <code class="literal">ElementHolder&lt;int&gt;&amp;</code> and
-        <code class="literal">ElementHolder&lt;int&gt;*</code> respectively.  If you need to store data, use
-        <span class="bold"><strong>value_type_wrap</strong></span> to make use of the wrapper to store data
-        into database.
-	</p>
-        <p>
-        The reason we leave <span class="bold"><strong>value_type</strong></span> as the raw type is that we
-        want the existing algorithms in the STL library to work with dbstl because we have seen that
-        without doing so, a few tests will fail.
-	</p>
-        <p>
-        You need to use the same type as the return type of the data element retrieval functions to
-        hold a value in order to properly manipulate the data element. For example, when calling
-    </p>
+            its <span class="bold"><strong>value_type</strong></span> is
+            <code class="literal">int</code>, its <span class="bold"><strong>value_type_wrap</strong></span>
+            is <code class="literal">ElementHolder&lt;int&gt;</code>, and its
+            reference and pointer types are
+            <code class="literal">ElementHolder&lt;int&gt;&amp;</code> and
+            <code class="literal">ElementHolder&lt;int&gt;*</code>
+            respectively. If you need to store data, use <span class="bold"><strong>value_type_wrap</strong></span> to make use of
+            the wrapper to store data into database.
+        </p>
+        <p> 
+            The reason we leave <span class="bold"><strong>value_type</strong></span> 
+            as the raw type is that we want the existing algorithms in the STL 
+            library to work with dbstl because we have seen that without doing so, 
+            a few tests will fail. 
+        </p>
+        <p> 
+            You need to use the same type as the return type of the
+            data element retrieval functions to hold a value in order
+            to properly manipulate the data element. For example, when
+            calling 
+        </p>
         <pre class="programlisting">db_vector&lt;T&gt;::operator[]</pre>
         <p>
-        check that the return type for this function is 
-    </p>
+            check that the return type for this function is
+        </p>
         <pre class="programlisting">db_vector&lt;T&gt;::datatype_wrap</pre>
-        <p>
-        Then,  hold the return value using an object of the same type:
-    </p>
+        <p> 
+            Then, hold the return value using an object of the same
+            type: 
+        </p>
         <pre class="programlisting">db_vector&lt;T&gt;::datatype_wrap refelem = vctr[3];</pre>
       </div>
     </div>

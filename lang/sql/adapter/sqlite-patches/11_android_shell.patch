@@ -1,7 +1,7 @@
 --- src/shell.c
 +++ src/shell.c
-@@ -36,6 +36,12 @@
- #include "config.h"
+@@ -28,6 +28,12 @@
+ # define _LARGEFILE_SOURCE 1
  #endif
  
 +#ifdef ANDROID
@@ -13,7 +13,7 @@
  #include <stdlib.h>
  #include <string.h>
  #include <stdio.h>
-@@ -1480,6 +1486,13 @@
+@@ -1617,6 +1623,13 @@
        sqlite3_create_function(db, "shellstatic", 0, SQLITE_UTF8, 0,
            shellstaticFunc, 0, 0);
      }

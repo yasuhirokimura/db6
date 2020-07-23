@@ -83,7 +83,10 @@ proc env018 { } {
 	    " get_lg_max " " get_log_max " "100000" }
 	}    
 
-	# Build one environment open command including all tested options.
+	#
+	# Build one environment open command including all tested options, and
+	# create msgfile to catch warning message.
+	#
 	set envopen "berkdb_env -create -home $testdir -txn -lock -log \
 	    -msgfile $testdir/msgfile "
 	foreach item $rlist {
@@ -105,7 +108,10 @@ proc env018 { } {
 
 	}
 
-	# Build one environment re-open command including all tested options.
+	#
+	# Build one environment re-open command including all tested options,
+	# and create msgfile to catch warning message.
+	#
 	set envopen "berkdb_env_noerr -home $testdir -txn -lock -log \
 	    -msgfile $testdir/msgfile "
 	foreach item $rlist {

@@ -201,7 +201,7 @@ __rep_get_nsites(dbenv, n)
 }
 
 int
-__rep_set_priority(dbenv, priority)
+__rep_set_priority_pp(dbenv, priority)
 	DB_ENV *dbenv;
 	u_int32_t priority;
 {
@@ -219,7 +219,7 @@ __rep_get_priority(dbenv, priority)
 }
 
 int
-__rep_set_timeout(dbenv, which, timeout)
+__rep_set_timeout_pp(dbenv, which, timeout)
 	DB_ENV *dbenv;
 	int which;
 	db_timeout_t timeout;

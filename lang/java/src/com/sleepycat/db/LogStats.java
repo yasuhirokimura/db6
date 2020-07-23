@@ -147,7 +147,7 @@ public class LogStats {
     private long st_region_wait;
     /**
     The number of times that a thread of control was forced to wait
-    before obtaining the region lock.
+    before obtaining the log region mutex.
     */
     public long getRegionWait() {
         return st_region_wait;
@@ -155,8 +155,8 @@ public class LogStats {
 
     private long st_region_nowait;
     /**
-    The number of times that a thread of control was able to obtain the
-    region lock without waiting.
+    The number of times that a thread of control was able to obtain
+    the log region mutex without waiting.
     */
     public long getRegionNowait() {
         return st_region_nowait;

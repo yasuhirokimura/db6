@@ -33,6 +33,7 @@ typedef struct {
 	int is_master;
 	int app_finished;
 	int in_client_sync;
+	int is_repmgr;
 } SHARED_DATA;
 
 /* Arguments for support threads. */
@@ -40,6 +41,15 @@ typedef struct {
 	DB_ENV *dbenv;
 	SHARED_DATA *shared;
 } supthr_args;
+
+/*
+ * Per-thread Replication Manager structure to associate a PERM_FAILED event
+ * with its originating transaction.
+ */
+typedef struct {
+	char *thread_name;
+	int flag;
+} permfail_t;
 
 /* Portability macros for basic threading & timing */
 #ifdef _WIN32
@@ -59,6 +69,16 @@ typedef HANDLE thread_t;
     ((WaitForSingleObject((thr), INFINITE) == WAIT_OBJECT_0) &&		   \
     GetExitCodeThread((thr), (LPDWORD)(statusp)) ? 0 : -1)
 
+/* Thread-specific data key for PERM_FAILED structure for Windows. */
+extern DWORD permfail_key;
+/* Thread local storage routine definitions for Windows. */
+#define thread_key_create(keyp) ((*keyp = TlsAlloc()) ==			\
+    TLS_OUT_OF_INDEXES ? (int)GetLastError() : 0)
+#define thread_key_delete(key) (TlsFree(key) ? 0 : (int)GetLastError())
+#define thread_setspecific(key, value) (TlsSetValue(key, value) ? 0 :	\
+    (int)GetLastError())
+#define thread_getspecific(key) TlsGetValue(key)
+
 #else /* !_WIN32 */
 #include <sys/time.h>
 #include <pthread.h>
@@ -67,6 +87,14 @@ typedef pthread_t thread_t;
 #define	thread_create(thrp, attr, func, arg)				   \
     pthread_create((thrp), (attr), (func), (arg))
 #define	thread_join(thr, statusp) pthread_join((thr), (statusp))
+
+/* Thread-specific data key for PERM_FAILED structure for Posix. */
+extern pthread_key_t permfail_key;
+/* Thread local storage routine definitions for Posix. */
+#define thread_key_create(keyp) pthread_key_create(keyp, NULL)
+#define thread_key_delete(key) pthread_key_delete(key)
+#define thread_setspecific(key, value) pthread_setspecific(key, value)
+#define thread_getspecific(key) pthread_getspecific(key)
 
 #endif
 

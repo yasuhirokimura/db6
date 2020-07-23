@@ -11,7 +11,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>(Library Version 12.1.6.0)</p>
+        <p>(Library Version 12.1.6.1)</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -24,11 +24,11 @@
       <div class="titlepage">
         <div>
           <div>
-            <h1 class="title"><a id="idm360488"></a>Berkeley DB Message Reference Guide</h1>
+            <h1 class="title"><a id="idm349552"></a>Berkeley DB Message Reference Guide</h1>
           </div>
           <div>
             <div class="legalnotice">
-              <a id="idm376760"></a>
+              <a id="idm365176"></a>
               <p class="legalnotice-title">
                 <b>Legal Notice</b>
               </p>
@@ -66,7 +66,7 @@
             </div>
           </div>
           <div>
-            <p class="pubdate">1/24/2014</p>
+            <p class="pubdate">6/10/2014</p>
           </div>
         </div>
         <hr />
@@ -585,6 +585,14 @@
                 <td>0233</td>
                 <td>Error reading blob file.</td>
               </tr>
+              <tr>
+                <td>0245</td>
+                <td>library build did not include support for blobs</td>
+              </tr>
+              <tr>
+                <td>0246</td>
+                <td>Blob id integer overflow.</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -1010,6 +1018,14 @@
                 <td>0237</td>
                 <td>Blob enabled databases do not support DB_READ_UNCOMMITTED and TXN_SNAPSHOT</td>
               </tr>
+              <tr>
+                <td>0243</td>
+                <td>Blobs require 64 integer compiler support.</td>
+              </tr>
+              <tr>
+                <td>0244</td>
+                <td>Blobs require 64 integer compiler support.</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -1381,7 +1397,7 @@
               </tr>
               <tr>
                 <td>0658</td>
-                <td>Partitioning only supported on BTREE nad HASH.</td>
+                <td>Partitioning only supported on BTREE and HASH.</td>
               </tr>
               <tr>
                 <td>0659</td>
@@ -1556,10 +1572,6 @@
                 <td>DB_READ_UNCOMMITTED illegal with blob enabled databases</td>
               </tr>
               <tr>
-                <td>0757</td>
-                <td>Blobs are not supported with replication.</td>
-              </tr>
-              <tr>
                 <td>0758</td>
                 <td>Unsupported flags when cloning the DBT.</td>
               </tr>
@@ -1574,10 +1586,6 @@
               <tr>
                 <td>0761</td>
                 <td>Cannot enable blobs in databases with compression.</td>
-              </tr>
-              <tr>
-                <td>0762</td>
-                <td>Blobs are not supported with replication.</td>
               </tr>
               <tr>
                 <td>0763</td>
@@ -1598,6 +1606,26 @@
               <tr>
                 <td>0768</td>
                 <td>Blob size overflow.</td>
+              </tr>
+              <tr>
+                <td>0777</td>
+                <td>Attempt to upgrade an encrypted database without providing a password.</td>
+              </tr>
+              <tr>
+                <td>0778</td>
+                <td>Attempt to upgrade an encrypted database without providing a password.</td>
+              </tr>
+              <tr>
+                <td>0779</td>
+                <td>Attempt to upgrade an encrypted database without providing a password.</td>
+              </tr>
+              <tr>
+                <td>0782</td>
+                <td>Hot backup requires DB_LOG_BLOB</td>
+              </tr>
+              <tr>
+                <td>0783</td>
+                <td>In-memory databases are not </td>
               </tr>
             </tbody>
           </table>
@@ -1785,10 +1813,6 @@
                 <td>Berkeley DB library configured to support only private environments</td>
               </tr>
               <tr>
-                <td>1578</td>
-                <td>architecture lacks fast mutexes: applications cannot be threaded</td>
-              </tr>
-              <tr>
                 <td>1579</td>
                 <td>Database handles still open at environment close</td>
               </tr>
@@ -1815,6 +1839,22 @@
               <tr>
                 <td>1592</td>
                 <td>Must set a view callback.</td>
+              </tr>
+              <tr>
+                <td>1593</td>
+                <td>Maximum number of bytes to display for each key/data item can not be 0.</td>
+              </tr>
+              <tr>
+                <td>1594</td>
+                <td>DB_PRIVATE is not </td>
+              </tr>
+              <tr>
+                <td>1595</td>
+                <td>failchk crash after clean registry</td>
+              </tr>
+              <tr>
+                <td>1596</td>
+                <td>env_open DB_REGISTER w/o RECOVER panic: trying w/recovery</td>
               </tr>
             </tbody>
           </table>
@@ -1882,14 +1922,6 @@
                 <td>DB_ENV-&gt;mutex_set_align: alignment value must be a non-zero power-of-two</td>
               </tr>
               <tr>
-                <td>2019</td>
-                <td>fcntl lock failed</td>
-              </tr>
-              <tr>
-                <td>2020</td>
-                <td>fcntl unlock failed: lock already unlocked</td>
-              </tr>
-              <tr>
                 <td>2021</td>
                 <td>unable to initialize mutex</td>
               </tr>
@@ -1900,10 +1932,6 @@
               <tr>
                 <td>2024</td>
                 <td>pthread readlock failed</td>
-              </tr>
-              <tr>
-                <td>2025</td>
-                <td>pthread unlock failed: lock already unlocked</td>
               </tr>
               <tr>
                 <td>2026</td>
@@ -1958,10 +1986,6 @@
                 <td>DB_ENV-&gt;set_lk_detect: incompatible deadlock detector mode</td>
               </tr>
               <tr>
-                <td>2046</td>
-                <td>Locker still has locks</td>
-              </tr>
-              <tr>
                 <td>2048</td>
                 <td>DB_ENV-&gt;lock_detect: unknown deadlock detection mode specified</td>
               </tr>
@@ -1979,7 +2003,11 @@
               </tr>
               <tr>
                 <td>2060</td>
-                <td>Freeing locker with locks</td>
+                <td>Freeing locker %x with locks</td>
+              </tr>
+              <tr>
+                <td>2069</td>
+                <td>pthread unlock %s: already unlocked</td>
               </tr>
             </tbody>
           </table>
@@ -2125,6 +2153,10 @@
               <tr>
                 <td>2586</td>
                 <td>Warning: Ignoring DB_LOG_AUTO_REMOVE when joining the environment.</td>
+              </tr>
+              <tr>
+                <td>2587</td>
+                <td>DB_LOG_IN_MEMORY is not </td>
               </tr>
             </tbody>
           </table>
@@ -2646,19 +2678,11 @@
               </tr>
               <tr>
                 <td>3675</td>
-                <td>Not enough input bytes to fill a __repmgr_v4connect_reject message</td>
+                <td>Not enough input bytes to fill a __repmgr_lsnhist_match message</td>
               </tr>
               <tr>
                 <td>3682</td>
                 <td>unexpected connection info in record_permlsn</td>
-              </tr>
-              <tr>
-                <td>3683</td>
-                <td>Cannot start replication with blobs enabled.</td>
-              </tr>
-              <tr>
-                <td>3684</td>
-                <td>Cannot start replication with blobs enabled.</td>
               </tr>
               <tr>
                 <td>3685</td>
@@ -2675,14 +2699,6 @@
               <tr>
                 <td>3688</td>
                 <td>Application environment and view mismatch </td>
-              </tr>
-              <tr>
-                <td>3692</td>
-                <td>Cannot start replication with blobs enabled.</td>
-              </tr>
-              <tr>
-                <td>3693</td>
-                <td>Cannot start replication with blobs enabled.</td>
               </tr>
               <tr>
                 <td>3694</td>
@@ -2711,6 +2727,42 @@
               <tr>
                 <td>3700</td>
                 <td>can't enable event for listener</td>
+              </tr>
+              <tr>
+                <td>3701</td>
+                <td>More than two sites in preferred master replication group</td>
+              </tr>
+              <tr>
+                <td>3702</td>
+                <td>A preferred master site must be started with </td>
+              </tr>
+              <tr>
+                <td>3703</td>
+                <td>More than two sites in preferred master replication group</td>
+              </tr>
+              <tr>
+                <td>3704</td>
+                <td>Blob file offset overflow</td>
+              </tr>
+              <tr>
+                <td>3705</td>
+                <td>Blobs require 64 integer compiler support.</td>
+              </tr>
+              <tr>
+                <td>3706</td>
+                <td>DB_ENV-&gt;rep_set_config: %s </td>
+              </tr>
+              <tr>
+                <td>3707</td>
+                <td>DB_ENV-&gt;rep_set_config: preferred master mode </td>
+              </tr>
+              <tr>
+                <td>3708</td>
+                <td>DB_ENV-&gt;rep_set_config: cannot %s %s </td>
+              </tr>
+              <tr>
+                <td>3709</td>
+                <td>DB_ENV-&gt;rep_set_config: could not complete automatic </td>
               </tr>
             </tbody>
           </table>

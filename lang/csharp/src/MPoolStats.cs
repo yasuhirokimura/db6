@@ -37,7 +37,7 @@ namespace BerkeleyDB {
         /// </summary>
         public ulong MaxMMapSize { get { return (ulong)st.st_mmapsize.ToInt64(); } }
         /// <summary>
-        /// Maximum number of open fd's. 
+        /// Maximum number of open file descriptors. 
         /// </summary>
         public int MaxOpenFileDescriptors { get { return st.st_maxopenfd; } }
         /// <summary>
@@ -169,7 +169,7 @@ namespace BerkeleyDB {
         /// </summary>
         public ulong BucketsCheckedDuringAlloc { get { return st.st_alloc_buckets; } }
         /// <summary>
-        /// Max checked during allocation. 
+        /// Max buckets checked during allocation. 
         /// </summary>
         public ulong MaxBucketsCheckedDuringAlloc { get { return st.st_alloc_max_buckets; } }
         /// <summary>
@@ -177,7 +177,7 @@ namespace BerkeleyDB {
         /// </summary>
         public ulong PagesCheckedDuringAlloc { get { return st.st_alloc_pages; } }
         /// <summary>
-        /// Max checked during allocation. 
+        /// Max pages checked during allocation. 
         /// </summary>
         public ulong MaxPagesCheckedDuringAlloc { get { return st.st_alloc_max_pages; } }
         /// <summary>

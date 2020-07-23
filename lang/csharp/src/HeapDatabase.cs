@@ -23,7 +23,7 @@ namespace BerkeleyDB {
         private void Config(HeapDatabaseConfig cfg) {
             base.Config(cfg);
             /* 
-             * Database.Config calls set_flags, but that doesn't get the Heap
+             * Database.Config calls set_flags, but that does not get the Heap
              * specific flags.  No harm in calling it again.
              */
             db.set_flags(cfg.flags);
@@ -53,13 +53,13 @@ namespace BerkeleyDB {
         /// </para>
         /// <para>
         /// If <see cref="DatabaseConfig.AutoCommit"/> is set, the operation
-        /// will be implicitly transaction protected. Note that transactionally
-        /// protected operations on a datbase object requires the object itself
+        /// is implicitly transaction protected. Transactionally
+        /// protected operations on a database object requires the object itself
         /// be transactionally protected during its open.
         /// </para>
         /// </remarks>
         /// <param name="Filename">
-        /// The name of an underlying file that will be used to back the
+        /// The name of an underlying file used to back up the
         /// database. In-memory databases never intended to be preserved on disk
         /// may be created by setting this parameter to null.
         /// </param>
@@ -82,15 +82,15 @@ namespace BerkeleyDB {
         /// </para>
         /// <para>
         /// If <paramref name="txn"/> is null, but
-        /// <see cref="DatabaseConfig.AutoCommit"/> is set, the operation will
-        /// be implicitly transaction protected. Note that transactionally
-        /// protected operations on a datbase object requires the object itself
-        /// be transactionally protected during its open. Also note that the
+        /// <see cref="DatabaseConfig.AutoCommit"/> is set, the operation
+        /// is implicitly transaction protected. Transactionally
+        /// protected operations on a database object requires the object itself
+        /// be transactionally protected during its open. The
         /// transaction must be committed before the object is closed.
         /// </para>
         /// </remarks>
         /// <param name="Filename">
-        /// The name of an underlying file that will be used to back the
+        /// The name of an underlying file used to back up the
         /// database. In-memory databases never intended to be preserved on disk
         /// may be created by setting this parameter to null.
         /// </param>
@@ -141,7 +141,7 @@ namespace BerkeleyDB {
         /// blobs.
         /// <para>
         /// Any data item that is equal to or larger in size than the
-        /// threshold value will automatically be stored as a blob.
+        /// threshold value is automatically stored as a blob.
         /// </para>
         /// <para>
         /// A value of 0 indicates that blobs are not used by the database.
@@ -276,7 +276,7 @@ namespace BerkeleyDB {
         /// </param>
         /// <param name="isoDegree">
         /// The level of isolation for database reads.
-        /// <see cref="Isolation.DEGREE_ONE"/> will be silently ignored for 
+        /// <see cref="Isolation.DEGREE_ONE"/> is silently ignored for 
         /// databases which did not specify
         /// <see cref="DatabaseConfig.ReadUncommitted"/>.
         /// </param>
@@ -327,7 +327,7 @@ namespace BerkeleyDB {
         /// </param>
         /// <param name="isoDegree">
         /// The level of isolation for database reads.
-        /// <see cref="Isolation.DEGREE_ONE"/> will be silently ignored for 
+        /// <see cref="Isolation.DEGREE_ONE"/> is silently ignored for 
         /// databases which did not specify
         /// <see cref="DatabaseConfig.ReadUncommitted"/>.
         /// </param>

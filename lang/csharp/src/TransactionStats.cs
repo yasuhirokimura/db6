@@ -12,7 +12,7 @@ using BerkeleyDB.Internal;
 
 namespace BerkeleyDB {
     /// <summary>
-    /// Statistical information about the transaction subsystem
+    /// Statistical information about the transaction subsystem.
     /// </summary>
     public class TransactionStats {
         private TransactionStatStruct st;
@@ -69,7 +69,7 @@ namespace BerkeleyDB {
         /// </summary>
         public uint MaxSnapshot { get { return st.st_maxnsnapshot; } }
         /// <summary>
-        /// Maximum txns possible 
+        /// Maximum transactions possible 
         /// </summary>
         public uint MaxTransactions { get { return st.st_maxtxns; } }
         /// <summary>

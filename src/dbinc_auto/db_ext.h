@@ -98,6 +98,7 @@ u_int32_t __db_partsize __P((u_int32_t, DBT *));
 #ifdef DIAGNOSTIC
 void __db_check_skeyset __P((DB *, DBT *));
 #endif
+int __dbc_diags __P((DBC *, int));
 int __cdsgroup_begin __P((ENV *, DB_TXN **));
 int __cdsgroup_begin_pp __P((DB_ENV *, DB_TXN **));
 int __db_compact_int __P((DB *, DB_THREAD_INFO *, DB_TXN *, DBT *, DBT *, DB_COMPACT *, u_int32_t, DBT *));
@@ -193,7 +194,7 @@ int __dbh_am_chk __P((DB *, u_int32_t));
 int __db_get_blob_threshold __P((DB *, u_int32_t *));
 int __db_set_blob_threshold __P((DB *, u_int32_t, u_int32_t));
 int __db_blobs_enabled __P((DB *));
-int __db_get_blob_sub_dir __P((DB *, const char **));
+int __db_set_dup_compare __P((DB *, int (*)(DB *, const DBT *, const DBT *, size_t *)));
 int __db_get_flags __P((DB *, u_int32_t *));
 int  __db_set_flags __P((DB *, u_int32_t));
 int  __db_get_lorder __P((DB *, int *));
@@ -236,6 +237,7 @@ int	__db_prheader __P((DB *, const char *, int, int, void *, int (*)(void *, con
 int __db_prfooter __P((void *, int (*)(void *, const void *)));
 int  __db_pr_callback __P((void *, const void *));
 const char * __db_dbtype_to_string __P((DBTYPE));
+char *__db_tohex __P((const void *, size_t, char *));
 int __db_addrem_recover __P((ENV *, DBT *, DB_LSN *, db_recops, void *));
 int __db_addrem_42_recover __P((ENV *, DBT *, DB_LSN *, db_recops, void *));
 int __db_big_recover __P((ENV *, DBT *, DB_LSN *, db_recops, void *));

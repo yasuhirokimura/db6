@@ -31,7 +31,7 @@ namespace BerkeleyDB {
         /// duplicate comparison function. If the application does not specify a
         /// comparison function using 
         /// <see cref="DuplicateCompare"/>, a default lexical
-        /// comparison will be used.
+        /// comparison is used.
         /// </para>
         /// <para>
         /// <see cref="DuplicatesPolicy.SORTED"/> is preferred to 
@@ -41,7 +41,7 @@ namespace BerkeleyDB {
         /// </para>
         /// <para>
         /// If the database already exists, the value of Duplicates must be the
-        /// same as the existing database or an error will be returned.
+        /// same as the existing database or an error is returned.
         /// </para>
         /// <para>
         /// It is an error to specify <see cref="UseRecordNumbers"/> and
@@ -57,7 +57,7 @@ namespace BerkeleyDB {
         /// implementation attempts to coalesce empty pages into higher-level
         /// pages in order to keep the database as small as possible and
         /// minimize search time. This can hurt performance in applications with
-        /// cyclical data demands; that is, applications where the database
+        /// cyclical data demands; applications where the database
         /// grows and shrinks repeatedly. For example, because Berkeley DB does
         /// page-level locking, the maximum level of concurrency in a database
         /// of two pages is far smaller than that in a database of 100 pages, so
@@ -88,7 +88,7 @@ namespace BerkeleyDB {
         /// </para>
         /// <para>
         /// If the database already exists, the value of UseRecordNumbers must
-        /// be the same as the existing database or an error will be returned. 
+        /// be the same as the existing database or an error is returned. 
         /// </para>
         /// </remarks>
         public bool UseRecordNumbers;
@@ -106,7 +106,7 @@ namespace BerkeleyDB {
         /// The path of the directory where blobs are stored.
         /// <para>
         /// If the database is opened within <see cref="DatabaseEnvironment"/>,
-        /// this path setting will be ignored during
+        /// this path setting is ignored during
         /// <see cref="BTreeDatabase.Open"/>. Use
         /// <see cref="BTreeDatabase.BlobDir"/> to identify the current storage
         /// location of blobs after opening the database.
@@ -117,18 +117,18 @@ namespace BerkeleyDB {
         internal bool blobThresholdIsSet;
         private uint blobThreshold;
         /// <summary>
-        /// The size in bytes which is used to determine when a data item will
-        /// be stored as a blob.
+        /// The size in bytes which is used to determine when a data item
+        /// is stored as a blob.
         /// <para>
         /// Any data item that is equal to or larger in size than the
-        /// threshold value will automatically be stored as a blob.
+        /// threshold value is automatically stored as a blob.
         /// </para>
         /// <para>
-        /// If the threshold value is 0, blob will never be used by the
+        /// If the threshold value is 0, blobs are never be used by the
         /// database.
         /// </para>
         /// <para>
-        /// It is illegal to enable blob in the database which is configured
+        /// It is illegal to enable blob support in the database which is configured
         /// as in-memory database or with chksum, encryption, duplicates,
         /// sorted duplicates, compression, multiversion concurrency control
         /// and transactional read operations with degree 1 isolation.
@@ -148,7 +148,7 @@ namespace BerkeleyDB {
         /// <remarks>
         /// If the database does not already exist and
         /// <see cref="CreatePolicy.NEVER"/> is set,
-        /// <see cref="BTreeDatabase.Open"/> will fail.
+        /// <see cref="BTreeDatabase.Open"/> fails.
         /// </remarks>
         public CreatePolicy Creation;
         internal new uint openFlags {
@@ -280,14 +280,14 @@ namespace BerkeleyDB {
         /// </summary>
         /// <remarks>
         /// <para>
-        /// This value is used to determine if key or data items will be stored
+        /// This value is used to determine if key or data items are stored
         /// on overflow pages instead of Btree leaf pages. For more information
         /// on the specific algorithm used, see the Berkeley DB Reference Guide.
         /// The value specified must be at least 2; if not explicitly set, a
         /// value of 2 is used. 
         /// </para>
         /// <para>
-        /// If the database already exists, MinKeysPerPage will be ignored. 
+        /// If the database already exists, MinKeysPerPage is ignored. 
         /// </para>
         /// </remarks>
         public uint MinKeysPerPage {

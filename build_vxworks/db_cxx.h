@@ -784,6 +784,10 @@ public:
 	    u_int32_t flags);
 	virtual int repmgr_get_ack_policy(int *policy);
 	virtual int repmgr_set_ack_policy(int policy);
+	virtual int repmgr_get_incoming_queue_max(u_int32_t *gbytesp,
+	    u_int32_t *bytesp);
+	virtual int repmgr_set_incoming_queue_max(u_int32_t gbytes,
+	    u_int32_t bytes);
 	virtual int repmgr_local_site(DbSite **site);
 	virtual int repmgr_msg_dispatch(void (*) (DbEnv *,
 	    DbChannel *, Dbt *, u_int32_t, u_int32_t), u_int32_t flags);

@@ -15,12 +15,18 @@
 # TEST should go directly.
 
 proc repmgr100 {  } {
-	source ./include.tcl
-	global rep_verbose
-	global verbose_type
-
 	set tnum "100"
-	puts "Repmgr$tnum: Basic repmgr multi-process master support."
+	set testopts { none prefmas }
+	foreach to $testopts {
+		puts "Repmgr$tnum ($to): Basic repmgr multi-process\
+		    master support."
+		repmgr100_sub $tnum $to
+	}
+}
+
+proc repmgr100_sub { tnum testopt } {
+	global testdir
+
 	set site_prog [setup_site_prog]
 
 	env_cleanup $testdir
@@ -35,16 +41,36 @@ proc repmgr100 {  } {
 	set master_port [lindex $ports 0]
 	set client_port [lindex $ports 1]
 
+	#
+	# Use heartbeats because the client usually requires a rerequest cycle
+	# to finish catching up with the master after its initial client sync.
+	# In repmgr, heartbeats are needed for client rerequests if there is
+	# no further master activity.
+	#
 	puts "\tRepmgr$tnum.a: Set up the master (on TCP port $master_port)."
 	set master [open "| $site_prog" "r+"]
 	fconfigure $master -buffering line
 	puts $master "home $masterdir"
-	make_dbconfig $masterdir \
-	    [list [list repmgr_site 127.0.0.1 $master_port db_local_site on] \
-	    "rep_set_config db_repmgr_conf_2site_strict off"]
+	set masconfig [list \
+	    [list repmgr_site 127.0.0.1 $master_port db_local_site on] \
+	    "rep_set_timeout db_rep_heartbeat_send 250000"]
+	if { $testopt == "prefmas" } {
+		lappend masconfig \
+		    "rep_set_config db_repmgr_conf_prefmas_master on" \
+		    "rep_set_config db_repmgr_conf_2site_strict on"
+	} else {
+		lappend masconfig \
+		    "rep_set_config db_repmgr_conf_2site_strict off"
+	}
+	make_dbconfig $masterdir $masconfig
 	puts $master "output $testdir/m1output"
 	puts $master "open_env"
-	puts $master "start master"
+	if { $testopt == "none" } {
+		puts $master "start master"
+	} else {
+		# Preferred master requires both sites to start as client.
+		puts $master "start client"
+	}
 	error_check_match start_master [gets $master] "*Successful*"
 	puts $master "open_db test.db"
 	puts $master "put myKey myValue"
@@ -59,10 +85,19 @@ proc repmgr100 {  } {
 	fconfigure $client -buffering line
 	puts $client "home $clientdir"
 	puts $client "local $client_port"
-	make_dbconfig $clientdir \
-	    [list [list repmgr_site 127.0.0.1 $client_port db_local_site on] \
+	set cliconfig [list \
+	    [list repmgr_site 127.0.0.1 $client_port db_local_site on] \
 	    [list repmgr_site 127.0.0.1 $master_port db_bootstrap_helper on] \
-	    "rep_set_config db_repmgr_conf_2site_strict off"]
+	    "rep_set_timeout db_rep_heartbeat_monitor 400000"]
+	if { $testopt == "prefmas" } {
+		lappend cliconfig \
+		    "rep_set_config db_repmgr_conf_prefmas_client on" \
+		    "rep_set_config db_repmgr_conf_2site_strict on"
+	} else {
+		lappend cliconfig \
+		    "rep_set_config db_repmgr_conf_2site_strict off"
+	}
+	make_dbconfig $clientdir $cliconfig
 	puts $client "output $testdir/coutput"
 	puts $client "open_env"
 	puts $client "start client"
@@ -94,6 +129,10 @@ proc repmgr100 {  } {
 	puts $master "echo m1putted"
 	set sentinel [gets $master]
 	error_check_good m1_putted $sentinel "m1putted"
+
+	# Allow time for any rerequests needed for the client to finish
+	# catching up.
+	tclsleep 2
 
 	puts "\tRepmgr$tnum.e: Check that replicated data is visible at client."
 	puts $client "open_db test.db"

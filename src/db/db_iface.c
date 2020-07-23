@@ -1172,6 +1172,13 @@ __db_open_pp(dbp, txn, fname, dname, type, flags, mode)
 	/* Save the current DB handle flags for refresh. */
 	dbp->orig_flags = dbp->flags;
 
+	if (fname == 0 && PREFMAS_IS_SET(env)) {
+		__db_errx(env, DB_STR("0783", "In-memory databases are not "
+		    "supported in Replication Manager preferred master mode"));
+		ret = EINVAL;
+		goto err;
+	}
+
 	/* Check for replication block. */
 	handle_check = IS_ENV_REPLICATED(env);
 	if (handle_check &&
@@ -1422,12 +1429,6 @@ __db_open_arg(dbp, txn, fname, dname, type, flags)
 	if (LF_ISSET(DB_READ_UNCOMMITTED) && dbp->blob_threshold) {
 		__db_errx(env, DB_STR("0756",
 	"DB_READ_UNCOMMITTED illegal with blob enabled databases"));
-		return (EINVAL);
-	}
-
-	if (REP_ON(env) && dbp->blob_threshold != 0) {
-		__db_errx(env, DB_STR("0757",
-		    "Blobs are not supported with replication."));
 		return (EINVAL);
 	}
 

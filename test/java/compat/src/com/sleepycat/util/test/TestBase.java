@@ -45,17 +45,19 @@ public abstract class TestBase {
         /* Copy Environments when the test failed. */
         @Override
         protected void failed(Throwable t, Description desc) {
+            String dirName = makeFileName(desc);
             try {
-                copyEnvironments(makeFileName(desc));
+                copyEnvironments(dirName);
             } catch (Exception e) {
                 throw new RuntimeException
-                    ("can't copy env dir after failure", e);
+                    ("can't copy env dir to " + dirName  + " after failure", e);
             }
         }
         
         @Override
         protected void succeeded(Description desc){
-        }};
+        }
+    };
     
     @Before
     public void setUp() 
@@ -66,17 +68,19 @@ public abstract class TestBase {
     
     @After
     public void tearDown() throws Exception {
-        //Provision for future use
+        // Provision for future use
     }
+    
     /**
      *  Copy the testing directory to other place. 
      */
     private void copyEnvironments(String path) throws Exception{
         
         File failureDir = SharedTestUtils.getFailureCopyDir();
-        if (failureDir.list().length < SharedTestUtils.getCopyLimit())
-            SharedTestUtils.copyDir
-                (SharedTestUtils.getTestDir(), new File(failureDir, path));
+        if (failureDir.list().length < SharedTestUtils.getCopyLimit()) {
+            SharedTestUtils.copyDir(SharedTestUtils.getTestDir(),
+                                    new File(failureDir, path));
+        }
     }
     
     /**

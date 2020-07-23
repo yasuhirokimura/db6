@@ -192,8 +192,10 @@ __lock_id_free(env, sh_locker)
 	ENV *env;
 	DB_LOCKER *sh_locker;
 {
+	DB_LOCKER locker;
 	DB_LOCKREGION *region;
 	DB_LOCKTAB *lt;
+	DB_MSGBUF mb;
 	int ret;
 
 	lt = env->lk_handle;
@@ -201,9 +203,14 @@ __lock_id_free(env, sh_locker)
 	ret = 0;
 
 	if (sh_locker->nlocks != 0) {
-		__db_errx(env, DB_STR("2046",
-		    "Locker still has locks"));
-		ret = EINVAL;
+		locker = *sh_locker;
+		ret = USR_ERR(env, EINVAL);
+		__db_errx(env, DB_STR_A("2046",
+		    "Locker %d still has %d locks", "%d %d"),
+		    locker.id, locker.nlocks );
+		DB_MSGBUF_INIT(&mb);
+		(void)__lock_dump_locker(env, &mb, lt, sh_locker);
+		DB_MSGBUF_FLUSH(env, &mb);
 		goto err;
 	}
 
@@ -529,15 +536,21 @@ __lock_freelocker_int(lt, region, sh_locker, reallyfree)
 	int reallyfree;
 {
 	ENV *env;
+	DB_MSGBUF mb;
 	DB_THREAD_INFO *ip;
 	u_int32_t indx;
 	int ret;
 
 	env = lt->env;
-
-	if (SH_LIST_FIRST(&sh_locker->heldby, __db_lock) != NULL) {
-		__db_errx(env, DB_STR("2060", "Freeing locker with locks"));
-		return (EINVAL);
+	if (!SH_LIST_EMPTY(&sh_locker->heldby)) {
+		ret = USR_ERR(env, EINVAL);
+		__db_errx(env,
+		    DB_STR("2060", "Freeing locker %x with locks"),
+		    sh_locker->id);
+		DB_MSGBUF_INIT(&mb);
+		(void)__lock_dump_locker(env, &mb, lt, sh_locker);
+		DB_MSGBUF_FLUSH(env, &mb);
+		return (ret);
 	}
 
 	/* If this is part of a family, we must fix up its links. */

@@ -231,6 +231,8 @@ typedef struct __db_reg_env { /* SHARED */
 	time_t	  op_timestamp;		/* Timestamp for operations. */
 	time_t	  rep_timestamp;	/* Timestamp for rep db handles. */
 	u_int32_t reg_panic;		/* DB_REGISTER triggered panic */
+	u_int32_t failure_panic;	/* Failchk or mutex lock saw a crash. */
+	char	  failure_symptom[DB_FAILURE_SYMPTOM_SIZE];
 	uintmax_t unused;		/* The ALLOC_LAYOUT structure follows
 					 * the REGENV structure in memory and
 					 * contains uintmax_t fields.  Force

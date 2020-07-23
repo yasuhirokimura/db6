@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.0</p>
+        <p>Library Version 12.1.6.1</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -50,19 +50,22 @@ Run the C tests in the following order:
                 <li>
                   <p>
 
-Tests for mutexes located in the <code class="literal">test_mutex</code>
-directory. To run the tests, follow the instructions in the
-<code class="literal">test_mutex/readme</code> file.
+Tests for mutexes located in the <code class="literal">src/mutex</code>
+directory. Build and run the tests in your build directory: 
+</p>
+                  <pre class="programlisting"> 
+% make test_mutex
+% ./test_mutex
+</pre>
+                  <p>
 </p>
                 </li>
                 <li>
                   <p>
 Tests for the common code paths located in the
-<code class="literal">test_micro</code> directory. To run the tests in a shell
+<code class="literal">test/micro</code> directory. To run the tests in a shell
 script, follow the instructions in the
-<code class="literal">test_micro/readme</code> file. To run the tests as
-simple C tests, follow the instructions in the
-<code class="literal">test_micro/readme_embedded</code> file.
+<code class="literal">test/micro/README</code> file.
 </p>
                 </li>
               </ol>

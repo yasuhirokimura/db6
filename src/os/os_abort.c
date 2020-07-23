@@ -13,11 +13,11 @@
 /*
  * __os_abort --
  *
- * PUBLIC: void __os_abort __P((ENV *));
+ * PUBLIC: void __os_abort __P((const ENV *));
  */
 void
 __os_abort(env)
-	ENV *env;
+	const ENV *env;
 {
 	__os_stack(env);		/* Try and get a stack trace. */
 

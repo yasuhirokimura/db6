@@ -50,7 +50,7 @@ __heap_truncate(dbc, countp)
 		return (ret);
 	if ((ret = __memp_fget(mpf, &pgno,
 	    dbc->thread_info, dbc->txn, DB_MPOOL_DIRTY, &meta)) != 0) {
-		__TLPUT(dbc, lock);
+		(void)__TLPUT(dbc, lock);
 		goto err;
 	}
 

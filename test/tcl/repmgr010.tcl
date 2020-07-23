@@ -11,6 +11,9 @@
 # TEST	nsites running. Verify that "all" acknowledgement policy results in 
 # TEST	ack failures with fewer than nsites running.  Make sure the presence
 # TEST	of more views than participants doesn't cause incorrect ack behavior.
+# TEST	Make sure unelectable master requires more acks for "quorum" policy.
+# TEST	Test that an unelectable client joining the group doesn't cause
+# TEST	PERM_FAILs.
 # TEST
 # TEST	Run for btree only because access method shouldn't matter.
 # TEST
@@ -31,6 +34,9 @@ proc repmgr010 { { niter 100 } { tnum "010" } args } {
 		puts "Repmgr$tnum ($method $v): repmgr ack policy test."
 		repmgr010_sub $method $niter $tnum $v $args
 	}
+
+	puts "Repmgr$tnum.ju ($method): repmgr join unelectable test."
+	repmgr010_joinunelect $method $niter $tnum $args
 }
 
 proc repmgr010_sub { method niter tnum viewopt largs } {
@@ -159,21 +165,50 @@ proc repmgr010_sub { method niter tnum viewopt largs } {
 		rep_verify $masterdir $masterenv $viewdir4 $viewenv4 1 1 1
 	}
 
-	puts "\tRepmgr$tnum.g: Adjust all sites to ack policy all."
-	# Reopen first client with ack policy all
-	set cl_envcmd "berkdb_env_noerr -create $verbargs \
-	    -errpfx CLIENT -home $clientdir -txn -rep -thread"
-	# Open -recover to clear env region, including startup_done value.
+	#
+	# Test that an unelectable master impacts the number of client
+	# acks required for the quorum policy.  In a repgroup with an
+	# unelectable master and two electable clients, acks from both
+	# clients are required for durability.
+	#
+	puts "\tRepmgr$tnum.g: Make master unelectable."
+	$masterenv repmgr -pri 0
+
+	puts "\tRepmgr$tnum.h: Run more transactions, verify ack failures."
+	# One electable client is no longer enough for durability.
+	set unelect_perm_failed \
+	    [stat_field $masterenv repmgr_stat "Acknowledgement failures"]
+	eval rep_test $method $masterenv NULL $niter $start 0 0 $largs
+	incr start $niter
+	error_check_good unelect_perm_fails [expr \
+	    [stat_field $masterenv repmgr_stat "Acknowledgement failures"] \
+	    > $unelect_perm_failed] 1
+
+	puts "\tRepmgr$tnum.i: Restart client."
 	set clientenv [eval $cl_envcmd -recover]
-	$clientenv repmgr -ack all \
+	$clientenv repmgr -ack quorum \
 	    -local [list 127.0.0.1 [lindex $ports 1]] \
 	    -remote [list 127.0.0.1 [lindex $ports 0]] \
 	    -remote [list 127.0.0.1 [lindex $ports 2]] \
 	    -start client
 	await_startup_done $clientenv
 
-	# Adjust other sites to ack policy all
+	puts "\tRepmgr$tnum.j: Run more transactions, verify no ack failures."
+	# Now with both clients up, we have enough acks for durability.
+	set unelect_perm_failed \
+	    [stat_field $masterenv repmgr_stat "Acknowledgement failures"]
+	eval rep_test $method $masterenv NULL $niter $start 0 0 $largs
+	incr start $niter
+	error_check_good unelect_no_perm_fails [expr \
+	    [stat_field $masterenv repmgr_stat "Acknowledgement failures"] \
+	    == $unelect_perm_failed] 1
+
+	puts "\tRepmgr$tnum.k: Make master electable again."
+	$masterenv repmgr -pri 100
+
+	puts "\tRepmgr$tnum.l: Adjust all sites to ack policy all."
 	$masterenv repmgr -ack all
+	$clientenv repmgr -ack all
 	$clientenv2 repmgr -ack all
 	if { $viewopt == "view" } {
 		$viewenv1 repmgr -ack all
@@ -182,7 +217,7 @@ proc repmgr010_sub { method niter tnum viewopt largs } {
 		$viewenv4 repmgr -ack all
 	}
 
-	puts "\tRepmgr$tnum.h: Shut down first client."
+	puts "\tRepmgr$tnum.m: Shut down first client."
 	error_check_good client_close [$clientenv close] 0
 	set init_perm_failed \
 	    [stat_field $masterenv repmgr_stat "Acknowledgement failures"]
@@ -191,10 +226,10 @@ proc repmgr010_sub { method niter tnum viewopt largs } {
 	# Use of -ack all guarantees replication complete before repmgr send
 	# function returns and rep_test finishes.
 	#
-	puts "\tRepmgr$tnum.i: Run third set of transactions at master."
+	puts "\tRepmgr$tnum.n: Run more transactions at master."
 	eval rep_test $method $masterenv NULL $small_iter $start 0 0 $largs
 
-	puts "\tRepmgr$tnum.j: Verify client$viewstr, some ack failures."
+	puts "\tRepmgr$tnum.o: Verify client$viewstr, some ack failures."
 	rep_verify $masterdir $masterenv $clientdir2 $clientenv2 1 1 1
 	error_check_good all_perm_failed [expr \
 	    [stat_field $masterenv repmgr_stat "Acknowledgement failures"] \
@@ -211,6 +246,102 @@ proc repmgr010_sub { method niter tnum viewopt largs } {
 		error_check_good v1_close [$viewenv1 close] 0
 	}
 	error_check_good client2_close [$clientenv2 close] 0
+	error_check_good masterenv_close [$masterenv close] 0
+}
+
+#
+# Test that an unelectable client joining the replication group doesn't
+# generate PERM_FAILs before it is connected.
+#
+proc repmgr010_joinunelect { method niter tnum largs } {
+	global testdir
+	global rep_verbose
+	global verbose_type
+
+	set nsites 3
+
+	set small_iter [expr $niter / 10]
+
+	set verbargs ""
+	if { $rep_verbose == 1 } {
+		set verbargs " -verbose {$verbose_type on} "
+	}
+
+	env_cleanup $testdir
+	set ports [available_ports $nsites]
+
+	set masterdir $testdir/MASTERDIR
+	set clientdir $testdir/CLIENTDIR
+	set clientdir2 $testdir/CLIENTDIR2
+
+	file mkdir $masterdir
+	file mkdir $clientdir
+	file mkdir $clientdir2
+	puts "\tRepmgr$tnum.ju.a: Start master and client, acks allpeers."
+	set ma_envcmd "berkdb_env_noerr -create $verbargs \
+	    -errpfx MASTER -home $masterdir -txn -rep -thread"
+	set masterenv [eval $ma_envcmd]
+	$masterenv repmgr -ack allpeers \
+	    -timeout {ack 5000000} \
+	    -local [list 127.0.0.1 [lindex $ports 0]] \
+	    -start master
+	set cl_envcmd "berkdb_env_noerr -create $verbargs \
+	    -errpfx CLIENT -home $clientdir -txn -rep -thread"
+	set clientenv [eval $cl_envcmd]
+	$clientenv repmgr -ack allpeers \
+	    -local [list 127.0.0.1 [lindex $ports 1]] \
+	    -remote [list 127.0.0.1 [lindex $ports 0]] \
+	    -start client
+	await_startup_done $clientenv
+
+	puts "\tRepmgr$tnum.ju.b: Start unelectable client, enable test hook."
+	set cl2_envcmd "berkdb_env_noerr -create $verbargs \
+	    -errpfx CLIENT2 -home $clientdir2 -txn -rep -thread"
+	set clientenv2 [eval $cl2_envcmd]
+	#
+	# The heartbeat test hook also prevents connection attempts.  In
+	# this test, it keeps the unelectable client in a state where it
+	# has joined the group but it cannot establish its regular repmgr
+	# connections until the test hook is rescinded.  During this time,
+	# the master knows from the join operation that this site is not a
+	# peer, so its presence should not cause any PERM_FAILs.
+	#
+	$masterenv test abort repmgr_heartbeat
+	$clientenv test abort repmgr_heartbeat
+	$clientenv2 test abort repmgr_heartbeat
+	$clientenv2 repmgr -pri 0 -ack allpeers \
+	    -local [list 127.0.0.1 [lindex $ports 2]] \
+	    -remote [list 127.0.0.1 [lindex $ports 0]] \
+	    -start client
+	# Defer await_startup_done until test hook is turned off.
+
+	set unelect_perm_failed \
+	    [stat_field $masterenv repmgr_stat "Acknowledgement failures"]
+
+	puts "\tRepmgr$tnum.ju.c: Run first set of transactions at master."
+	set start 0
+	eval rep_test $method $masterenv NULL $small_iter $start 0 0 $largs
+	incr start $small_iter
+
+	puts "\tRepmgr$tnum.ju.d: Disable test hook."
+	$masterenv test abort none
+	$clientenv test abort none
+	$clientenv2 test abort none
+	await_startup_done $clientenv2
+
+	puts "\tRepmgr$tnum.ju.e: Run second set of transactions at master."
+	eval rep_test $method $masterenv NULL $small_iter $start 0 0 $largs
+	incr start $small_iter
+
+	puts "\tRepmgr$tnum.ju.f: Verify client databases, no ack failures."
+	error_check_good unelect_perm_fails2 [expr \
+	    [stat_field $masterenv repmgr_stat "Acknowledgement failures"] \
+	    == $unelect_perm_failed] 1
+	rep_verify $masterdir $masterenv $clientdir $clientenv 1 1 1
+	rep_verify $masterdir $masterenv $clientdir2 $clientenv2 1 1 1
+
+	error_check_good client2_close [$clientenv2 close] 0
+	error_check_good client_close [$clientenv close] 0
 	error_check_good masterenv_close [$masterenv close] 0
 }
 

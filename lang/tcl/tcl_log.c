@@ -345,18 +345,31 @@ tcl_LogStat(interp, objc, objv, dbenv)
 {
 	DB_LOG_STAT *sp;
 	Tcl_Obj *res;
+	u_int32_t flag;
+	char *arg;
 	int result, ret;
 
+	flag = 0;
 	result = TCL_OK;
-	/*
-	 * No args for this.  Error if there are some.
-	 */
-	if (objc != 2) {
-		Tcl_WrongNumArgs(interp, 2, objv, NULL);
+
+	if (objc > 3) {
+		Tcl_WrongNumArgs(interp, 2, objv, "?-clear?");
 		return (TCL_ERROR);
 	}
+
+	if (objc == 3) {
+		arg = Tcl_GetStringFromObj(objv[2], NULL);
+		if (strcmp(arg, "-clear") == 0)
+			flag = DB_STAT_CLEAR;
+		else {
+ 			Tcl_SetResult(interp,
+			"db stat: unknown arg", TCL_STATIC);
+			return (TCL_ERROR);
+		}
+	}
+
 	_debug_check();
-	ret = dbenv->log_stat(dbenv, &sp, 0);
+	ret = dbenv->log_stat(dbenv, &sp, flag);
 	result = _ReturnSetup(interp, ret, DB_RETOK_STD(ret), "log stat");
 	if (result == TCL_ERROR)
 		return (result);
@@ -419,11 +432,13 @@ tcl_LogStatPrint(interp, objc, objv, dbenv)
 {
 	static const char *logstatprtopts[] = {
 		"-all",
+		"-alloc",
 		"-clear",
 		 NULL
 	};
 	enum logstatprtopts {
 		LOGSTATPRTALL,
+		LOGSTATPRTALLOC,
 		LOGSTATPRTCLEAR
 	};
 	u_int32_t flag;
@@ -443,6 +458,9 @@ tcl_LogStatPrint(interp, objc, objv, dbenv)
 		switch ((enum logstatprtopts)optindex) {
 		case LOGSTATPRTALL:
 			flag |= DB_STAT_ALL;
+			break;
+		case LOGSTATPRTALLOC:
+			flag |= DB_STAT_ALLOC;
 			break;
 		case LOGSTATPRTCLEAR:
 			flag |= DB_STAT_CLEAR;
@@ -722,6 +740,7 @@ static const char *confwhich[] = {
 	"direct",
 	"dsync",
 	"inmemory",
+	"nosync",
 	"zero",
 	NULL
 };
@@ -731,6 +750,7 @@ enum logwhich {
 	LOGCONF_DIRECT,
 	LOGCONF_DSYNC,
 	LOGCONF_INMEMORY,
+	LOGCONF_NOSYNC,
 	LOGCONF_ZERO
 };
 
@@ -779,6 +799,9 @@ tcl_LogConfig(interp, dbenv, which, onoff)
 		break;
 	case LOGCONF_INMEMORY:
 		wh = DB_LOG_IN_MEMORY;
+		break;
+	case LOGCONF_NOSYNC:
+		wh = DB_LOG_NOSYNC;
 		break;
 	case LOGCONF_ZERO:
 		wh = DB_LOG_ZERO;
@@ -841,6 +864,9 @@ tcl_LogGetConfig(interp, dbenv, which)
 		break;
 	case LOGCONF_INMEMORY:
 		wh = DB_LOG_IN_MEMORY;
+		break;
+	case LOGCONF_NOSYNC:
+		wh = DB_LOG_NOSYNC;
 		break;
 	case LOGCONF_ZERO:
 		wh = DB_LOG_ZERO;

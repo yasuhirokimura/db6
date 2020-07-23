@@ -38,7 +38,7 @@ namespace BerkeleyDB {
         private void Config(BTreeDatabaseConfig cfg) {
             base.Config(cfg);
             /* 
-             * Database.Config calls set_flags, but that doesn't get the BTree
+             * Database.Config calls set_flags, but that does not get the BTree
              * specific flags.  No harm in calling it again.
              */
             db.set_flags(cfg.flags);
@@ -109,13 +109,13 @@ namespace BerkeleyDB {
         /// </para>
         /// <para>
         /// If <see cref="DatabaseConfig.AutoCommit"/> is set, the operation
-        /// will be implicitly transaction protected. Note that transactionally
+        /// is implicitly transaction protected. Transactionally
         /// protected operations on a database object requires the object itself
         /// be transactionally protected during its open.
         /// </para>
         /// </remarks>
         /// <param name="Filename">
-        /// The name of an underlying file that will be used to back the
+        /// The name of an underlying file used to back the
         /// database. In-memory databases never intended to be preserved on disk
         /// may be created by setting this parameter to null.
         /// </param>
@@ -139,18 +139,18 @@ namespace BerkeleyDB {
         /// object that created it, in circumstances where doing so is safe. If
         /// <paramref name="Filename"/> is null and
         /// <paramref name="DatabaseName"/> is non-null, the database can be
-        /// opened by other threads of control and will be replicated to client
+        /// opened by other threads of control and be replicated to client
         /// sites in any replication group.
         /// </para>
         /// <para>
         /// If <see cref="DatabaseConfig.AutoCommit"/> is set, the operation
-        /// will be implicitly transaction protected. Note that transactionally
+        /// is implicitly transaction protected. Transactionally
         /// protected operations on a database object requires the object itself
         /// be transactionally protected during its open.
         /// </para>
         /// </remarks>
         /// <param name="Filename">
-        /// The name of an underlying file that will be used to back the
+        /// The name of an underlying file that used to back the
         /// database. In-memory databases never intended to be preserved on disk
         /// may be created by setting this parameter to null.
         /// </param>
@@ -179,15 +179,15 @@ namespace BerkeleyDB {
         /// </para>
         /// <para>
         /// If <paramref name="txn"/> is null, but
-        /// <see cref="DatabaseConfig.AutoCommit"/> is set, the operation will
-        /// be implicitly transaction protected. Note that transactionally
+        /// <see cref="DatabaseConfig.AutoCommit"/> is set, the operation
+        /// is implicitly transaction protected. Transactionally
         /// protected operations on a database object requires the object itself
-        /// be transactionally protected during its open. Also note that the
+        /// be transactionally protected during its open. The
         /// transaction must be committed before the object is closed.
         /// </para>
         /// </remarks>
         /// <param name="Filename">
-        /// The name of an underlying file that will be used to back the
+        /// The name of an underlying file used to back the
         /// database. In-memory databases never intended to be preserved on disk
         /// may be created by setting this parameter to null.
         /// </param>
@@ -219,20 +219,20 @@ namespace BerkeleyDB {
         /// object that created it, in circumstances where doing so is safe. If
         /// <paramref name="Filename"/> is null and
         /// <paramref name="DatabaseName"/> is non-null, the database can be
-        /// opened by other threads of control and will be replicated to client
+        /// opened by other threads of control and be replicated to client
         /// sites in any replication group.
         /// </para>
         /// <para>
         /// If <paramref name="txn"/> is null, but
-        /// <see cref="DatabaseConfig.AutoCommit"/> is set, the operation will
-        /// be implicitly transaction protected. Note that transactionally
+        /// <see cref="DatabaseConfig.AutoCommit"/> is set, the operation
+        /// is implicitly transaction protected. Transactionally
         /// protected operations on a database object requires the object itself
-        /// be transactionally protected during its open. Also note that the
+        /// be transactionally protected during its open. The
         /// transaction must be committed before the object is closed.
         /// </para>
         /// </remarks>
         /// <param name="Filename">
-        /// The name of an underlying file that will be used to back the
+        /// The name of an underlying file used to back the
         /// database. In-memory databases never intended to be preserved on disk
         /// may be created by setting this parameter to null.
         /// </param>
@@ -384,7 +384,7 @@ namespace BerkeleyDB {
         /// blobs.
         /// <para>
         /// Any data item that is equal to or larger in size than the
-        /// threshold value will automatically be stored as a blob.
+        /// threshold value is automatically stored as a blob.
         /// </para>
         /// <para>
         /// A value of 0 indicates that blobs are not used by the database.
@@ -547,7 +547,7 @@ namespace BerkeleyDB {
         }
 
         /// <summary>
-        /// If false, empty pages will not be coalesced into higher-level pages.
+        /// If false, empty pages are not coalesced into higher-level pages.
         /// </summary>
         public bool ReverseSplit {
             get {
@@ -568,8 +568,8 @@ namespace BerkeleyDB {
         /// </summary>
         /// <remarks>
         /// If the operation occurs in a transactional database, the operation
-        /// will be implicitly transaction protected using multiple
-        /// transactions. These transactions will be periodically committed to
+        /// is implicitly transaction protected using multiple
+        /// transactions. These transactions are periodically committed to
         /// avoid locking large sections of the tree. Any deadlocks encountered
         /// cause the compaction operation to be retried from the point of the
         /// last transaction commit.
@@ -591,8 +591,8 @@ namespace BerkeleyDB {
         /// </para>
         /// <para>
         /// If <paramref name="txn"/> is null, but the operation occurs in a
-        /// transactional database, the operation will be implicitly transaction
-        /// protected using multiple transactions. These transactions will be
+        /// transactional database, the operation is implicitly transaction
+        /// protected using multiple transactions. These transactions are
         /// periodically committed to avoid locking large sections of the tree.
         /// Any deadlocks encountered cause the compaction operation to be
         /// retried from the point of the last transaction commit.
@@ -721,7 +721,7 @@ namespace BerkeleyDB {
         /// </param>
         /// <param name="isoDegree">
         /// The level of isolation for database reads.
-        /// <see cref="Isolation.DEGREE_ONE"/> will be silently ignored for 
+        /// <see cref="Isolation.DEGREE_ONE"/> is silently ignored for 
         /// databases which did not specify
         /// <see cref="DatabaseConfig.ReadUncommitted"/>.
         /// </param>
@@ -825,7 +825,7 @@ namespace BerkeleyDB {
         /// </param>
         /// <param name="BufferSize">
         /// The initial size of the buffer to fill with duplicate data items. If
-        /// the buffer is not large enough, it will be automatically resized.
+        /// the buffer is not large enough, it is automatically resized.
         /// </param>
         /// <exception cref="NotFoundException">
         /// A NotFoundException is thrown if <paramref name="recno"/> is not in
@@ -849,7 +849,7 @@ namespace BerkeleyDB {
         /// </param>
         /// <param name="BufferSize">
         /// The initial size of the buffer to fill with duplicate data items. If
-        /// the buffer is not large enough, it will be automatically resized.
+        /// the buffer is not large enough, it is automatically resized.
         /// </param>
         /// <param name="txn">
         /// <paramref name="txn"/> is a Transaction object returned from
@@ -880,7 +880,7 @@ namespace BerkeleyDB {
         /// </param>
         /// <param name="BufferSize">
         /// The initial size of the buffer to fill with duplicate data items. If
-        /// the buffer is not large enough, it will be automatically resized.
+        /// the buffer is not large enough, it is automatically resized.
         /// </param>
         /// <param name="txn">
         /// <paramref name="txn"/> is a Transaction object returned from
@@ -1029,7 +1029,7 @@ namespace BerkeleyDB {
         /// </param>
         /// <param name="isoDegree">
         /// The level of isolation for database reads.
-        /// <see cref="Isolation.DEGREE_ONE"/> will be silently ignored for 
+        /// <see cref="Isolation.DEGREE_ONE"/> is silently ignored for 
         /// databases which did not specify
         /// <see cref="DatabaseConfig.ReadUncommitted"/>.
         /// </param>

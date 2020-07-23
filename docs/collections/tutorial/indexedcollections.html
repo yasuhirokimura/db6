@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.0</p>
+        <p>Library Version 12.1.6.1</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -203,19 +203,19 @@ public class SampleViews
         return supplierByCityMap;
     }
 
-    public final StoredEntrySet getShipmentByPartMap()
+    public final StoredEntrySet getShipmentByPartEntrySet()
     {
-        return (StoredEntrySet) shipmentByPartMap();
+        return (StoredEntrySet) shipmentByPartMap.entrySet();
     }
 
-    public final StoredEntrySet getShipmentBySupplierMap()
+    public final StoredEntrySet getShipmentBySupplierEntrySet()
     {
-        return (StoredEntrySet) shipmentBySupplierMap();
+        return (StoredEntrySet) shipmentBySupplierMap.entrySet();
     }
 
-    public final StoredEntrySet getSupplierByCityMap()
+    public final StoredEntrySet getSupplierByCityEntrySet()
     {
-        return (StoredEntrySet) supplierByCityMap();
+        return (StoredEntrySet) supplierByCityMap.entrySet();
     }</code></strong>
     ...
 } </pre>

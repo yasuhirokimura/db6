@@ -264,7 +264,7 @@ __memp_pgread(dbmfp, bhp, can_create)
 		 * how to handle the error.
 		 */
 		if (!can_create) {
-			ret = DB_PAGE_NOTFOUND;
+			ret = USR_ERR(env, DB_PAGE_NOTFOUND);
 			goto err;
 		}
 

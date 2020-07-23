@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.0</p>
+        <p>Library Version 12.1.6.1</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -28,33 +28,65 @@
       </table>
       <hr />
     </div>
-    <div class="sect1" lang="en" xml:lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a id="stl_usecase"></a>Dbstl typical use cases</h2></div></div></div>
-Among others, the following are some typical use cases where dbstl would
-be prefered over C++ STL:
- 
-<div class="itemizedlist"><ul type="disc"><li><p>
-Working with a large amount of data, more than can reside in memory.
-Using C++ STL would force a number of page swaps, which will degrade
-performance.  When using dbstl, data is stored in a database and Berkeley
-DB ensures the needed data is in memory, so that the overall performance
-of the machine is not slowed down. 
-</p></li><li><p>
-Familiar Interface.  dbstl provides a familiar interface to Berkeley DB,
-hiding the marshalling and unmashalling details and automatically
-managing Berkeley DB structures and objects.
-</p></li><li><p>
-Transaction semantics.  dbstl provides the ACID properties (or a subset of
-the ACID properties) in addition to supporting all of the STL
-functionality.
-</p></li><li><p>
-Concurrent access.  Few (if any) existing C++ STL implementations support
-reading/writing to the same container concurrently, dbstl does.
-</p></li><li><p>
-Object persistence.  dbstl allows your application to store objects in a
-database, and use the objects across different runs of your application. 
-dbstl is capable of storing complicated objects which are not located in
-a contiguous chunk of memory, with some user configurations.
-</p></li></ul></div></div>
+    <div class="sect1" lang="en" xml:lang="en">
+      <div class="titlepage">
+        <div>
+          <div>
+            <h2 class="title" style="clear: both"><a id="stl_usecase"></a>Dbstl typical use cases</h2>
+          </div>
+        </div>
+      </div>
+      <p>
+    Among others, the following are some typical use cases where dbstl
+    would be prefered over C++ STL: 
+   </p>
+      <div class="itemizedlist">
+        <ul type="disc">
+          <li>
+            <p>
+                Working with a large amount of data, more than can
+                reside in memory. Using C++ STL would force a number
+                of page swaps, which will degrade performance. When
+                using dbstl, data is stored in a database and Berkeley
+                DB ensures the needed data is in memory, so that the
+                overall performance of the machine is not slowed down.
+            </p>
+          </li>
+          <li>
+            <p> 
+                Familiar Interface. dbstl provides a familiar
+                interface to Berkeley DB, hiding the marshalling and
+                unmashalling details and automatically managing
+                Berkeley DB structures and objects. 
+            </p>
+          </li>
+          <li>
+            <p> 
+                Transaction semantics. dbstl provides the ACID
+                properties (or a subset of the ACID properties) in
+                addition to supporting all of the STL functionality.
+            </p>
+          </li>
+          <li>
+            <p>
+                Concurrent access. Few (if any) existing C++ STL
+                implementations support reading/writing to the same
+                container concurrently, dbstl does. 
+            </p>
+          </li>
+          <li>
+            <p>
+                Object persistence. dbstl allows your application
+                to store objects in a database, and use the objects
+                across different runs of your application. dbstl is
+                capable of storing complicated objects which are not
+                located in a contiguous chunk of memory, with some
+                user configurations. 
+            </p>
+          </li>
+        </ul>
+      </div>
+    </div>
     <div class="navfooter">
       <hr />
       <table width="100%" summary="Navigation footer">

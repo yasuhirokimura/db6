@@ -1,6 +1,6 @@
 --- test/eqp.test
 +++ test/eqp.test
-@@ -502,6 +502,7 @@
+@@ -521,6 +521,7 @@
  # documentation page eqp.html works. The C code is duplicated in test1.c
  # and wrapped in Tcl command [print_explain_query_plan] 
  #
@@ -8,7 +8,7 @@
  set boilerplate {
    proc explain_query_plan {db sql} {
      set stmt [sqlite3_prepare_v2 db $sql -1 DUMMY]
-@@ -537,6 +538,7 @@
+@@ -556,6 +557,7 @@
  0 0 0 COMPOUND SUBQUERIES 1 AND 2 (EXCEPT)
  }]
  

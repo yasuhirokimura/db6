@@ -1897,11 +1897,11 @@ proc z21 {} {
 		await_event $envB site_removed
 		await_event $envC site_removed
 		await_event $envA site_removed
+		$db close
 		$envD close
 		env_cleanup $testdir/dirD
 	}
 
-	$db close
 	$envB close
 	$envC close
 	$envA close

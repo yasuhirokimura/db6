@@ -9,13 +9,17 @@
 #include "db_config.h"
 
 #include "db_int.h"
+#include "dbinc/blob.h"
 #include "dbinc/db_page.h"
 #include "dbinc/db_am.h"
 #include "dbinc/lock.h"
 #include "dbinc/mp.h"
 #include "dbinc/txn.h"
 
-static int __rep_collect_txn __P((ENV *, DB_LSN *, LSN_COLLECTION *));
+static int __rep_collect_txn
+    __P((ENV *, DB_LSN *, LSN_COLLECTION *, DELAYED_BLOB_LIST **));
+static int __rep_remove_delayed_blobs
+    __P((ENV *, db_seq_t, u_int32_t ,DELAYED_BLOB_LIST **));
 static int __rep_do_ckp __P((ENV *, DBT *, __rep_control_args *));
 static int __rep_fire_newmaster __P((ENV *, u_int32_t, int));
 static int __rep_fire_startupdone __P((ENV *, u_int32_t, int));
@@ -463,9 +467,14 @@ __rep_process_message_int(env, control, rec, eid, ret_lsnp)
 		 * accept the generation number and participate in future
 		 * elections and communication. Otherwise, I need to hear about
 		 * a new master and sync up.
+		 *
+		 * But do not do any of this if REP_F_HOLD_GEN is set.  In
+		 * this case we keep the site at its current gen until we
+		 * clear this flag.
 		 */
-		if (rp->rectype == REP_ALIVE ||
-		    rp->rectype == REP_VOTE1 || rp->rectype == REP_VOTE2) {
+		if ((rp->rectype == REP_ALIVE ||
+		    rp->rectype == REP_VOTE1 || rp->rectype == REP_VOTE2) &&
+		    !F_ISSET(rep, REP_F_HOLD_GEN)) {
 			REP_SYSTEM_LOCK(env);
 			RPRINT(env, (env, DB_VERB_REP_MSGS,
 			    "Updating gen from %lu to %lu",
@@ -590,6 +599,36 @@ __rep_process_message_int(env, control, rec, eid, ret_lsnp)
 		CLIENT_MASTERCHK;
 		ret = __rep_allreq(env, rp, eid);
 		CLIENT_REREQ;
+		break;
+	case REP_BLOB_ALL_REQ:
+		RECOVERING_SKIP;
+		CLIENT_MASTERCHK;
+		ret = __rep_blob_allreq(env, eid, rec);
+		CLIENT_REREQ;
+		break;
+	case REP_BLOB_CHUNK:
+		/* Handle even if in recovery. */
+		CLIENT_ONLY(rep, rp);
+		ret = __rep_blob_chunk(env, eid, ip, rec);
+		if (ret == DB_REP_PAGEDONE)
+			ret = 0;
+		break;
+	case REP_BLOB_CHUNK_REQ:
+		RECOVERING_SKIP;
+		CLIENT_MASTERCHK;
+		ret = __rep_blob_chunk_req(env, eid, rec);
+		CLIENT_REREQ;
+		break;
+	case REP_BLOB_UPDATE:
+		CLIENT_ONLY(rep, rp);
+		ret = __rep_blob_update(env, eid, ip, rec);
+		break;
+	case REP_BLOB_UPDATE_REQ:
+		MASTER_ONLY(rep, rp);
+		infop = env->reginfo;
+		renv = infop->primary;
+		MASTER_UPDATE(env, renv);
+		ret = __rep_blob_update_req(env, ip, rec);
 		break;
 	case REP_BULK_LOG:
 		RECOVERING_LOG_SKIP;
@@ -1549,6 +1588,7 @@ __rep_process_txn(env, rec)
 	DB_REP *db_rep;
 	DB_THREAD_INFO *ip;
 	DB_TXNHEAD *txninfo;
+	DELAYED_BLOB_LIST *dblp, *dummy;
 	LSN_COLLECTION lc;
 	REP *rep;
 	__txn_regop_args *txn_args;
@@ -1561,6 +1601,7 @@ __rep_process_txn(env, rec)
 	db_rep = env->rep_handle;
 	rep = db_rep->region;
 	logc = NULL;
+	dblp = dummy = NULL;
 	txn_args = NULL;
 	txn42_args = NULL;
 	prep_args = NULL;
@@ -1630,8 +1671,19 @@ __rep_process_txn(env, rec)
 		goto err;
 
 	/* Phase 1.  Get a list of the LSNs in this transaction, and sort it. */
-	if ((ret = __rep_collect_txn(env, &prev_lsn, &lc)) != 0)
+	if ((ret = __rep_collect_txn(env, &prev_lsn, &lc, &dblp)) != 0)
 		goto err;
+	/* Deal with any child transactions that had to be delayed. */
+	while (dblp != NULL) {
+		if ((ret = __rep_collect_txn(
+		    env, &dblp->lsn, &lc, &dummy)) != 0)
+			goto err;
+		DB_ASSERT(env, dummy == NULL);
+		dummy = dblp;
+		dblp = dummy->next;
+		__os_free(env, dummy);
+		dummy = NULL;
+	}
 	qsort(lc.array, lc.nlsns, sizeof(DB_LSN), __rep_lsn_cmp);
 
 	/*
@@ -1672,6 +1724,12 @@ err:	memset(&req, 0, sizeof(req));
 	if ((t_ret = __lock_id_free(env, locker)) != 0 && ret == 0)
 		ret = t_ret;
 
+	while (dblp != NULL) {
+		dummy = dblp;
+		dblp = dummy->next;
+		__os_free(env, dummy);
+	}
+
 err1:	if (txn_args != NULL)
 		__os_free(env, txn_args);
 	if (txn42_args != NULL)
@@ -1708,10 +1766,11 @@ err1:	if (txn_args != NULL)
  *	the entire transaction family at once.
  */
 static int
-__rep_collect_txn(env, lsnp, lc)
+__rep_collect_txn(env, lsnp, lc, dbl)
 	ENV *env;
 	DB_LSN *lsnp;
 	LSN_COLLECTION *lc;
+	DELAYED_BLOB_LIST **dbl;
 {
 	__dbreg_register_args *dbregargp;
 	__txn_child_args *argp;
@@ -1719,6 +1778,7 @@ __rep_collect_txn(env, lsnp, lc)
 	DB_LSN c_lsn;
 	DB_REP *db_rep;
 	DBT data;
+	db_seq_t blob_file_id;
 	u_int32_t child, rectype, skip_txnid;
 	u_int nalloc;
 	int ret, t_ret, view_partial;
@@ -1763,13 +1823,17 @@ __rep_collect_txn(env, lsnp, lc)
 			*lsnp = argp->prev_lsn;
 			child = argp->child;
 			__os_free(env, argp);
+
+			if (child == skip_txnid && *dbl != NULL &&
+			    (*dbl)->child == child)
+				(*dbl)->lsn = c_lsn;
 			/*
 			 * If skip_txnid is set, it is the id of the child txnid
 			 * that creates a database we should skip.  So, if
 			 * this is that child txn, do not collect it.
 			 */
 			if (skip_txnid == TXN_INVALID || child != skip_txnid)
-				ret = __rep_collect_txn(env, &c_lsn, lc);
+				ret = __rep_collect_txn(env, &c_lsn, lc, dbl);
 		} else if (IS_VIEW_SITE(env) &&
 		    rectype == DB___dbreg_register) {
 			db_rep = env->rep_handle;
@@ -1785,13 +1849,18 @@ __rep_collect_txn(env, lsnp, lc)
 			child = dbregargp->id;
 			name = (char *)dbregargp->name.data;
 			skip_txnid = TXN_INVALID;
-			if (child != TXN_INVALID && !IS_DB_FILE(name)) {
+			if (child != TXN_INVALID &&
+			    (!IS_DB_FILE(name) || IS_BLOB_META(name))) {
 				/*
 				 * The 'id' has a child txn so it is a create.
 				 */
 				DB_ASSERT(env, db_rep->partial != NULL);
-				if ((ret = db_rep->partial(env->dbenv,
-				    name, &view_partial, 0)) != 0) {
+				GET_LO_HI(env, dbregargp->blob_fid_lo,
+				    dbregargp->blob_fid_hi, blob_file_id, ret);
+				if (ret != 0)
+					goto err;
+				if ((ret = __rep_call_partial(env,
+				    name, &view_partial, 0, dbl)) != 0) {
 					VPRINT(env, (env, DB_VERB_REP_MISC,
 		    "rep_collect_txn: partial cb err %d for %s", ret, name));
 					__os_free(env, dbregargp);
@@ -1801,8 +1870,13 @@ __rep_collect_txn(env, lsnp, lc)
 				 * Save the child txnid for when we walk back
 				 * into the txn_child record.
 				 */
-				if (view_partial == 0)
+				if (view_partial == 0) {
 					skip_txnid = child;
+					if ((ret =
+					    __rep_remove_delayed_blobs(env,
+					    blob_file_id, child, dbl)) != 0)
+						goto err;
+				}
 			}
 			__os_free(env, dbregargp);
 		}
@@ -1840,6 +1914,62 @@ err:	if ((t_ret = __logc_close(logc)) != 0 && ret == 0)
 	if (data.data != NULL)
 		__os_ufree(env, data.data);
 	return (ret);
+}
+
+/*
+ * __rep_remove_delayed_blobs --
+ *
+ * If a blob meta database is opened in the same transaction as the database
+ * that owns it, then deciding whether it should be replicated or not needs
+ * to be delayed until after the rest of the transaction is processed.  To do
+ * this, the transaction's information is added to a DELAYED_BLOB_LIST.  When
+ * the owning database is processed, if it is not replicated then remove the
+ * entry of its blob meta database from the delayed list.
+ */
+static int
+__rep_remove_delayed_blobs(env, blob_file_id, child, dbl)
+	ENV *env;
+	db_seq_t blob_file_id;
+	u_int32_t child;
+	DELAYED_BLOB_LIST **dbl;
+{
+	DELAYED_BLOB_LIST *ent, *next, *prev;
+
+	if (*dbl == NULL)
+		return (0);
+
+	/*
+	 * If the child transaction has not been set, then a new entry was just
+	 * added to the list.
+	 */
+	if ((*dbl)->child == 0) {
+		(*dbl)->child = child;
+		return (0);
+	}
+
+	if (blob_file_id == 0)
+		return (0);
+
+	/*
+	 * This blob meta database should not be replicated if its associated
+	 * database is not replicated.  Remove it from the delayed
+	 * list so it will not be processed at a later time.
+	 */
+	for (ent = *dbl; ent != NULL; ent = (DELAYED_BLOB_LIST *)ent->next) {
+		if (ent->blob_file_id == blob_file_id && ent->child != child) {
+			next = (DELAYED_BLOB_LIST *)ent->next;
+			prev = (DELAYED_BLOB_LIST *)ent->prev;
+			if (ent == *dbl)
+				*dbl = next;
+			if (prev != NULL)
+				prev->next = ent->next;
+			if (next != NULL)
+				next->prev = ent->prev;
+			__os_free(env, ent);
+			break;
+		}
+	}
+	return (0);
 }
 
 /*
@@ -2342,7 +2472,7 @@ __rep_resend_req(env, rereq)
 	DB_REP *db_rep;
 	LOG *lp;
 	REP *rep;
-	int master, ret;
+	int blob_sync, master, ret;
 	repsync_t sync_state;
 	u_int32_t gapflags, msgtype, repflags, sendflags;
 
@@ -2357,6 +2487,7 @@ __rep_resend_req(env, rereq)
 
 	repflags = rep->flags;
 	sync_state = rep->sync_state;
+	blob_sync = rep->blob_sync;
 	/*
 	 * If we are delayed we do not rerequest anything.
 	 */
@@ -2379,9 +2510,17 @@ __rep_resend_req(env, rereq)
 		 */
 		msgtype = REP_UPDATE_REQ;
 	} else if (sync_state == SYNC_PAGE) {
-		REP_SYSTEM_LOCK(env);
-		ret = __rep_pggap_req(env, rep, NULL, gapflags);
-		REP_SYSTEM_UNLOCK(env);
+		if (blob_sync == 0) {
+			REP_SYSTEM_LOCK(env);
+			ret = __rep_pggap_req(env, rep, NULL, gapflags);
+			REP_SYSTEM_UNLOCK(env);
+		} else {
+			MUTEX_LOCK(env, rep->mtx_clientdb);
+			REP_SYSTEM_LOCK(env);
+			ret = __rep_blob_rereq(env, rep);
+			REP_SYSTEM_UNLOCK(env);
+			MUTEX_UNLOCK(env, rep->mtx_clientdb);
+		}
 	} else {
 		MUTEX_LOCK(env, rep->mtx_clientdb);
 		ret = __rep_loggap_req(env, rep, NULL, gapflags);
@@ -2483,9 +2622,20 @@ __rep_skip_msg(env, rep, eid, rectype)
 		if (rep->master_id == DB_EID_INVALID)	/* Case 1. */
 			(void)__rep_send_message(env,
 			    DB_EID_BROADCAST, REP_MASTER_REQ, NULL, NULL, 0, 0);
-		else if (eid == rep->master_id)		/* Case 2. */
-			ret = __rep_resend_req(env, 0);
-		else if (F_ISSET(rep, REP_F_CLIENT))	/* Case 3. */
+		else if (eid == rep->master_id)	{	/* Case 2. */
+			/*
+			 * When we receive log messages in the SYNC_PAGE stage
+			 * and we decide to rerequest, it often means the pages
+			 * we expect have been dropped.  Send a rerequest with
+			 * gapflags for better performance.
+			 */
+			if ((rectype == REP_LOG || rectype == REP_BULK_LOG ||
+			    rectype == REP_LOG_MORE) &&
+			    rep->sync_state == SYNC_PAGE)
+				ret = __rep_resend_req(env, 1);
+			else
+				ret = __rep_resend_req(env, 0);
+		} else if (F_ISSET(rep, REP_F_CLIENT))	/* Case 3. */
 			(void)__rep_send_message(env,
 			    eid, REP_REREQUEST, NULL, NULL, 0, 0);
 	}

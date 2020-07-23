@@ -67,6 +67,7 @@ int __lock_stat_pp __P((DB_ENV *, DB_LOCK_STAT **, u_int32_t));
 int __lock_stat_print_pp __P((DB_ENV *, u_int32_t));
 int  __lock_stat_print __P((ENV *, u_int32_t));
 void __lock_printlock __P((DB_LOCKTAB *, DB_MSGBUF *mbp, struct __db_lock *, int));
+int  __lock_dump_locker __P((ENV *, DB_MSGBUF *, DB_LOCKTAB *, DB_LOCKER *));
 int __lock_set_timeout __P((ENV *, DB_LOCKER *, db_timeout_t, u_int32_t));
 int __lock_set_timeout_internal __P((ENV *, DB_LOCKER *, db_timeout_t, u_int32_t));
 int __lock_inherit_timeout __P((ENV *, DB_LOCKER *, DB_LOCKER *));

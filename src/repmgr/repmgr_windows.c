@@ -827,7 +827,7 @@ handle_completion(env, conn)
 	if (events.lNetworkEvents & FD_CLOSE) {
 		error = events.iErrorCode[FD_CLOSE_BIT];
 
-		/* 
+		/*
 		 * There could be data for reading when we see FD_CLOSE,
 		 * so we should try reading in this case.
 		 */

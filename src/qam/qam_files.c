@@ -445,6 +445,8 @@ __qam_fremove(dbp, pgnoaddr)
 		    * sizeof(array->mpfarray[0]));
 		array->mpfarray[
 		    array->hi_extent - array->low_extent].mpf = NULL;
+		array->mpfarray[
+		    array->hi_extent - array->low_extent].pinref = 0;
 		if (array->low_extent != array->hi_extent)
 			array->low_extent++;
 	} else {

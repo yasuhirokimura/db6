@@ -10,6 +10,7 @@
 
 #include "db_int.h"
 #include "dbinc/db_page.h"
+#include "dbinc/blob.h"
 #include "dbinc/btree.h"
 #include "dbinc/mp.h"
 #include "dbinc/txn.h"
@@ -22,10 +23,7 @@ static int  __rep_check_applied __P((ENV *,
     DB_THREAD_INFO *, DB_COMMIT_INFO *, struct rep_waitgoal *));
 static void __rep_config_map __P((ENV *, u_int32_t *, u_int32_t *));
 static u_int32_t __rep_conv_vers __P((ENV *, u_int32_t));
-static int __rep_defview __P((DB_ENV *, const char *, int *, u_int32_t));
-static int __rep_read_lsn_history __P((ENV *,
-    DB_THREAD_INFO *, DB_TXN **, DBC **, u_int32_t,
-    __rep_lsn_hist_data_args *, struct rep_waitgoal *, u_int32_t));
+static int  __rep_defview __P((DB_ENV *, const char *, int *, u_int32_t));
 static int  __rep_restore_prepared __P((ENV *));
 static int  __rep_save_lsn_hist __P((ENV *, DB_THREAD_INFO *, DB_LSN *));
 /*
@@ -124,9 +122,11 @@ __rep_get_config(dbenv, which, onp)
 #undef	OK_FLAGS
 #define	OK_FLAGS							\
     (DB_REP_CONF_AUTOINIT | DB_REP_CONF_AUTOROLLBACK |			\
-    DB_REP_CONF_BULK | DB_REP_CONF_DELAYCLIENT | DB_REP_CONF_INMEM |	\
+    DB_REP_CONF_BULK | DB_REP_CONF_DELAYCLIENT |			\
+    DB_REP_CONF_ELECT_LOGLENGTH | DB_REP_CONF_INMEM |			\
     DB_REP_CONF_LEASE | DB_REP_CONF_NOWAIT |				\
-    DB_REPMGR_CONF_2SITE_STRICT | DB_REPMGR_CONF_ELECTIONS)
+    DB_REPMGR_CONF_2SITE_STRICT | DB_REPMGR_CONF_ELECTIONS |		\
+    DB_REPMGR_CONF_PREFMAS_CLIENT | DB_REPMGR_CONF_PREFMAS_MASTER)
 
 	if (FLD_ISSET(which, ~OK_FLAGS))
 		return (__db_ferr(env, "DB_ENV->rep_get_config", 0));
@@ -172,19 +172,30 @@ __rep_set_config(dbenv, which, on)
 	REP *rep;
 	REP_BULK bulk;
 	u_int32_t mapped, orig;
-	int ret, t_ret;
+	int inmemlog, pm_ret, ret, t_ret;
 
 	env = dbenv->env;
 	db_rep = env->rep_handle;
 	ret = 0;
+	pm_ret = 0;
+	inmemlog = 0;
 
 #undef	OK_FLAGS
 #define	OK_FLAGS							\
     (DB_REP_CONF_AUTOINIT | DB_REP_CONF_AUTOROLLBACK |			\
-    DB_REP_CONF_BULK | DB_REP_CONF_DELAYCLIENT | DB_REP_CONF_INMEM |	\
+    DB_REP_CONF_BULK | DB_REP_CONF_DELAYCLIENT |			\
+    DB_REP_CONF_ELECT_LOGLENGTH | DB_REP_CONF_INMEM |			\
     DB_REP_CONF_LEASE | DB_REP_CONF_NOWAIT |				\
-    DB_REPMGR_CONF_2SITE_STRICT | DB_REPMGR_CONF_ELECTIONS)
-#define	REPMGR_FLAGS (REP_C_2SITE_STRICT | REP_C_ELECTIONS)
+    DB_REPMGR_CONF_2SITE_STRICT | DB_REPMGR_CONF_ELECTIONS |		\
+    DB_REPMGR_CONF_PREFMAS_CLIENT | DB_REPMGR_CONF_PREFMAS_MASTER)
+#define	REPMGR_FLAGS (REP_C_2SITE_STRICT | REP_C_ELECTIONS |		\
+    REP_C_PREFMAS_CLIENT | REP_C_PREFMAS_MASTER)
+
+#define	TURNING_ON_PREFMAS(orig, curr)					\
+    ((FLD_ISSET(curr, REP_C_PREFMAS_MASTER) &&				\
+    !FLD_ISSET(orig, REP_C_PREFMAS_MASTER)) ||				\
+    (FLD_ISSET(curr, REP_C_PREFMAS_CLIENT) &&				\
+    !FLD_ISSET(orig, REP_C_PREFMAS_CLIENT)))
 
 	ENV_NOT_CONFIGURED(
 	    env, db_rep->region, "DB_ENV->rep_set_config", DB_INIT_REP);
@@ -225,6 +236,62 @@ __rep_set_config(dbenv, which, on)
 			return (EINVAL);
 		}
 		/*
+		 * The undocumented ELECT_LOGLENGTH option and the preferred
+		 * master options cannot be changed after calling repmgr_start.
+		 */
+		if (FLD_ISSET(mapped, (REP_C_ELECT_LOGLENGTH |
+		    REP_C_PREFMAS_MASTER | REP_C_PREFMAS_CLIENT)) &&
+		    F_ISSET(rep, REP_F_START_CALLED)) {
+			__db_errx(env, DB_STR("3706",
+			    "DB_ENV->rep_set_config: %s "
+			    "must be configured before DB_ENV->repmgr_start"),
+			    FLD_ISSET(mapped, REP_C_ELECT_LOGLENGTH) ?
+			    "ELECT_LOGLENGTH" : "preferred master");
+			ENV_LEAVE(env, ip);
+			return (EINVAL);
+		}
+		/*
+		 * Do not allow users to turn on preferred master if
+		 * leases or in-memory replication files are in effect,
+		 * or with a private environment or in-memory log files.
+		 */
+		if (FLD_ISSET(mapped,
+		    (REP_C_PREFMAS_MASTER | REP_C_PREFMAS_CLIENT)) &&
+		    (REP_CONFIG_IS_SET(env, (REP_C_LEASE | REP_C_INMEM)) ||
+		    (__log_get_config(dbenv,
+		    DB_LOG_IN_MEMORY, &inmemlog) == 0 &&
+		    (inmemlog > 0 || F_ISSET(env, ENV_PRIVATE))))) {
+			__db_errx(env, DB_STR("3707",
+			    "DB_ENV->rep_set_config: preferred master mode "
+			    "cannot be used with %s"),
+			    REP_CONFIG_IS_SET(env, REP_C_LEASE) ?
+			    "master leases" :
+			    REP_CONFIG_IS_SET(env, REP_C_INMEM) ?
+			    "in-memory replication files" :
+			    inmemlog > 0 ? "in-memory log files" :
+			    "a private environment");
+			ENV_LEAVE(env, ip);
+			return (EINVAL);
+		}
+		/*
+		 * If we are already in preferred master mode, we can't
+		 * turn off elections or 2site_strict and we can't turn on
+		 * leases.
+		 */
+		if (PREFMAS_IS_SET(env) && ((FLD_ISSET(mapped,
+		    (REP_C_ELECTIONS | REP_C_2SITE_STRICT)) && on == 0) ||
+		    (FLD_ISSET(mapped, REP_C_LEASE) && on > 0))) {
+			__db_errx(env, DB_STR("3708",
+			    "DB_ENV->rep_set_config: cannot %s %s "
+			    "in preferred master mode"),
+			    on == 0 ? "disable" : "enable",
+			    FLD_ISSET(mapped, REP_C_ELECTIONS) ? "elections" :
+			    FLD_ISSET(mapped, REP_C_LEASE) ? "leases" :
+			    "2SITE_STRICT");
+			ENV_LEAVE(env, ip);
+			return (EINVAL);
+		}
+		/*
 		 * Leases must be turned on before calling rep_start.
 		 * Leases can never be turned off once they're turned on.
 		 */
@@ -253,6 +320,17 @@ __rep_set_config(dbenv, which, on)
 		else
 			FLD_CLR(rep->config, mapped);
 
+#ifdef HAVE_REPLICATION_THREADS
+		/* Do automatic preferred master configuration. */
+		if (TURNING_ON_PREFMAS(orig, rep->config) &&
+		    (pm_ret = __repmgr_prefmas_auto_config(dbenv,
+		    &rep->config)) != 0) {
+			REP_SYSTEM_UNLOCK(env);
+			MUTEX_UNLOCK(env, rep->mtx_clientdb);
+			ENV_LEAVE(env, ip);
+			goto prefmas_err;
+		}
+#endif
 		/*
 		 * Bulk transfer requires special processing if it is getting
 		 * toggled.
@@ -298,10 +376,25 @@ __rep_set_config(dbenv, which, on)
 			ret = t_ret;
 #endif
 	} else {
+		orig = db_rep->config;
 		if (on)
 			FLD_SET(db_rep->config, mapped);
 		else
 			FLD_CLR(db_rep->config, mapped);
+#ifdef HAVE_REPLICATION_THREADS
+		/* Do automatic preferred master configuration. */
+		if (TURNING_ON_PREFMAS(orig, db_rep->config))
+			pm_ret =
+			    __repmgr_prefmas_auto_config(dbenv,
+			    &db_rep->config);
+#endif
+	}
+prefmas_err:
+	if (pm_ret != 0) {
+		__db_errx(env, DB_STR("3709",
+		    "DB_ENV->rep_set_config: could not complete automatic "
+		    "preferred master configuration"));
+		ret = EINVAL;
 	}
 	/* Configuring 2SITE_STRICT, etc. makes this a repmgr application */
 	if (ret == 0 && FLD_ISSET(mapped, REPMGR_FLAGS))
@@ -332,6 +425,10 @@ __rep_config_map(env, inflagsp, outflagsp)
 		FLD_SET(*outflagsp, REP_C_DELAYCLIENT);
 		FLD_CLR(*inflagsp, DB_REP_CONF_DELAYCLIENT);
 	}
+	if (FLD_ISSET(*inflagsp, DB_REP_CONF_ELECT_LOGLENGTH)) {
+		FLD_SET(*outflagsp, REP_C_ELECT_LOGLENGTH);
+		FLD_CLR(*inflagsp, DB_REP_CONF_ELECT_LOGLENGTH);
+	}
 	if (FLD_ISSET(*inflagsp, DB_REP_CONF_INMEM)) {
 		FLD_SET(*outflagsp, REP_C_INMEM);
 		FLD_CLR(*inflagsp, DB_REP_CONF_INMEM);
@@ -351,6 +448,14 @@ __rep_config_map(env, inflagsp, outflagsp)
 	if (FLD_ISSET(*inflagsp, DB_REPMGR_CONF_ELECTIONS)) {
 		FLD_SET(*outflagsp, REP_C_ELECTIONS);
 		FLD_CLR(*inflagsp, DB_REPMGR_CONF_ELECTIONS);
+	}
+	if (FLD_ISSET(*inflagsp, DB_REPMGR_CONF_PREFMAS_CLIENT)) {
+		FLD_SET(*outflagsp, REP_C_PREFMAS_CLIENT);
+		FLD_CLR(*inflagsp, DB_REPMGR_CONF_PREFMAS_CLIENT);
+	}
+	if (FLD_ISSET(*inflagsp, DB_REPMGR_CONF_PREFMAS_MASTER)) {
+		FLD_SET(*outflagsp, REP_C_PREFMAS_MASTER);
+		FLD_CLR(*inflagsp, DB_REPMGR_CONF_PREFMAS_MASTER);
 	}
 	DB_ASSERT(env, *inflagsp == 0);
 }
@@ -372,14 +477,10 @@ __rep_start_pp(dbenv, dbt, flags)
 	ENV *env;
 	DB_REP *db_rep;
 	DB_THREAD_INFO *ip;
-	char *path;
-	int isdir, ret;
-	u_int32_t blob_threshold;
+	int ret;
 
 	env = dbenv->env;
 	db_rep = env->rep_handle;
-	path = NULL;
-	isdir = 0;
 
 	ENV_REQUIRES_CONFIG_XX(
 	    env, rep_handle, "DB_ENV->rep_start", DB_INIT_REP);
@@ -389,25 +490,6 @@ __rep_start_pp(dbenv, dbt, flags)
 "DB_ENV->rep_start: cannot call from Replication Manager application"));
 		return (EINVAL);
 	}
-
-	if ((ret = __env_get_blob_threshold_pp(dbenv, &blob_threshold)) != 0)
-		return (ret);
-	if (blob_threshold != 0) {
-		__db_errx(env, DB_STR("3683",
-		    "Cannot start replication with blobs enabled."));
-		return (EINVAL);
-	}
-
-	/* Check if the blob directory exists. */
-	if ((ret = __db_appname(env, DB_APP_BLOB, NULL, NULL, &path)) != 0)
-		return (ret);
-	if (__os_exists(env, path, &isdir) == 0 && isdir != 0) {
-		__os_free(env, path);
-		__db_errx(env, DB_STR("3684",
-		    "Cannot start replication with blobs enabled."));
-		return (EINVAL);
-	}
-	__os_free(env, path);
 
 	switch (LF_ISSET(DB_REP_CLIENT | DB_REP_MASTER)) {
 	case DB_REP_CLIENT:
@@ -427,7 +509,7 @@ __rep_start_pp(dbenv, dbt, flags)
 	}
 
 	ENV_ENTER(env, ip);
-	ret = __rep_start_int(env, dbt, flags);
+	ret = __rep_start_int(env, dbt, flags, 0);
 	ENV_LEAVE(env, ip);
 
 	return (ret);
@@ -462,13 +544,14 @@ __rep_start_pp(dbenv, dbt, flags)
  * clients that reference non-existent files whose creation was backed out
  * during a synchronizing recovery.
  *
- * PUBLIC: int __rep_start_int __P((ENV *, DBT *, u_int32_t));
+ * PUBLIC: int __rep_start_int __P((ENV *, DBT *, u_int32_t, u_int32_t));
  */
 int
-__rep_start_int(env, dbt, flags)
+__rep_start_int(env, dbt, flags, startopts)
 	ENV *env;
 	DBT *dbt;
 	u_int32_t flags;
+	u_int32_t startopts;
 {
 	DB *dbp;
 	DB_LOG *dblp;
@@ -544,8 +627,14 @@ __rep_start_int(env, dbt, flags)
 		goto out;
 
 	REP_SYSTEM_LOCK(env);
+	/*
+	 * The FORCE_ROLECHG option is used when a side-effect of the role
+	 * change such as incrementing the master gen is needed regardless
+	 * of the previous role.
+	 */
 	role_chg = (!F_ISSET(rep, REP_F_MASTER) && role == DB_REP_MASTER) ||
-	    (!F_ISSET(rep, REP_F_CLIENT) && role == DB_REP_CLIENT);
+	    (!F_ISSET(rep, REP_F_CLIENT) && role == DB_REP_CLIENT) ||
+	    FLD_ISSET(startopts, REP_START_FORCE_ROLECHG);
 
 	/*
 	 * There is no need for lockout if all we're doing is sending a message.
@@ -563,9 +652,11 @@ __rep_start_int(env, dbt, flags)
 		goto out;
 	}
 
-	if (FLD_ISSET(rep->lockout_flags, REP_LOCKOUT_MSG)) {
+	if (!FLD_ISSET(startopts, REP_START_WAIT_LOCKMSG) &&
+	    FLD_ISSET(rep->lockout_flags, REP_LOCKOUT_MSG)) {
 		/*
-		 * There is already someone in msg lockout.  Return.
+		 * There is already someone in msg lockout and we are not
+		 * waiting.  Return.
 		 */
 		RPRINT(env, (env, DB_VERB_REP_MISC,
 		    "Thread already in msg lockout"));
@@ -754,10 +845,15 @@ __rep_start_int(env, dbt, flags)
 		 *       now defunct on master.
 		 *   NEWFILE: Used to delay client apply during newfile
 		 *       operation, not applicable to master.
+		 *   READONLY_MASTER: Used to coordinate preferred master
+		 *       takeover, should not remain in effect after restart.
+		 *   HOLD_GEN: Freeze gen for preferred master, should not
+		 *       remain in effect after restart.
 		 */
 		F_CLR(rep, REP_F_CLIENT | REP_F_ABBREVIATED |
 		    REP_F_MASTERELECT | REP_F_SKIPPED_APPLY | REP_F_DELAY |
-		    REP_F_LEASE_EXPIRED | REP_F_NEWFILE);
+		    REP_F_LEASE_EXPIRED | REP_F_NEWFILE |
+		    REP_F_READONLY_MASTER | REP_F_HOLD_GEN);
 		/*
 		 * When becoming a master, set the following flags:
 		 *   MASTER: Indicate that this site is master.
@@ -894,11 +990,16 @@ __rep_start_int(env, dbt, flags)
 		}
 		/*
 		 * When becoming a client, clear the following flags:
+		 *   HOLD_GEN: Freeze gen for preferred master, should not
+		 *       remain in effect after restart.
 		 *   MASTER: Site is no longer a master.
 		 *   MASTERELECT: Indicates that a master is elected
 		 *       rather than appointed, not applicable on client.
+		 *   READONLY_MASTER: Used to coordinate preferred master
+		 *       takeover, should not remain in effect after restart.
 		 */
-		F_CLR(rep, REP_F_MASTER | REP_F_MASTERELECT);
+		F_CLR(rep, REP_F_HOLD_GEN | REP_F_MASTER | REP_F_MASTERELECT |
+		    REP_F_READONLY_MASTER);
 		F_SET(rep, REP_F_CLIENT);
 
 		/*
@@ -996,6 +1097,15 @@ __rep_start_int(env, dbt, flags)
 		 */
 		if ((ret = __dbt_usercopy(env, dbt)) != 0)
 			goto out;
+		/*
+		 * The HOLD_CLIGEN option does not allow this client's
+		 * gen to change until the REP_F_HOLD_GEN flag is cleared.
+		 * It prevents this site from responding to NEWMASTER messages
+		 * and disables updating the gen from other incoming messages.
+		 */
+		if (FLD_ISSET(startopts, REP_START_HOLD_CLIGEN))
+			F_SET(rep, REP_F_HOLD_GEN);
+
 		(void)__rep_send_message(env,
 		    DB_EID_BROADCAST, REP_NEWCLIENT, NULL, dbt, 0, 0);
 	}
@@ -1230,6 +1340,9 @@ __rep_client_dbinit(env, startup, which)
 	if (which == REP_DB) {
 		name = REPDBNAME;
 		rdbpp = &db_rep->rep_db;
+	} else if (which == REP_BLOB) {
+		name = REPBLOBNAME;
+		rdbpp = &db_rep->blob_dbp;
 	} else {
 		name = REPPAGENAME;
 		rdbpp = &db_rep->file_dbp;
@@ -1269,16 +1382,28 @@ __rep_client_dbinit(env, startup, which)
 	if (which == REP_DB &&
 	    (ret = __bam_set_bt_compare(dbp, __rep_bt_cmp)) != 0)
 		goto err;
+	if (which == REP_BLOB &&
+	    (ret = __bam_set_bt_compare(dbp, __rep_blob_cmp)) != 0 &&
+	    (ret = __db_set_dup_compare(dbp, __rep_offset_cmp)) != 0)
+		goto err;
 
 	/* Don't write log records on the client. */
 	if ((ret = __db_set_flags(dbp, DB_TXN_NOT_DURABLE)) != 0)
 		goto err;
 
+	/* Blob gap processing requires sorted duplicates. */
+	if (which == REP_BLOB) {
+		if ((ret = __db_set_blob_threshold(dbp, 0, 0)) != 0)
+			goto err;
+		if ((ret = __db_set_flags(dbp, DB_DUPSORT)) != 0)
+			goto err;
+	}
+
 	flags = DB_NO_AUTO_COMMIT | DB_CREATE | DB_INTERNAL_TEMPORARY_DB |
 	    (F_ISSET(env, ENV_THREAD) ? DB_THREAD : 0);
 
 	if ((ret = __db_open(dbp, ip, NULL, fname, subdb,
-	    (which == REP_DB ? DB_BTREE : DB_RECNO),
+	    (which == REP_PG ? DB_RECNO : DB_BTREE),
 	    flags, 0, PGNO_BASE_MD)) != 0)
 		goto err;
 
@@ -1333,6 +1458,82 @@ __rep_bt_cmp(dbp, dbt1, dbt2, locp)
 		return (-1);
 
 	return (0);
+}
+
+/*
+ * __rep_blob_cmp --
+ *
+ * Comparison function for the blob gap database.  The key is the blob_sid
+ * appended with the blob_id.
+ *
+ * PUBLIC: int  __rep_blob_cmp __P((DB *, const DBT *, const DBT *, size_t *));
+ */
+int
+__rep_blob_cmp(dbp, dbt1, dbt2, locp)
+	DB *dbp;
+	const DBT *dbt1, *dbt2;
+	size_t *locp;
+{
+	db_seq_t blob_id1, blob_id2, blob_sid1, blob_sid2;
+	u_int8_t *p;
+
+	COMPQUIET(dbp, NULL);
+	COMPQUIET(locp, NULL);
+
+	/* Use memcpy here to prevent alignment issues. */
+	p = dbt1->data;
+	memcpy(&blob_sid1, p, sizeof(db_seq_t));
+	p += sizeof(db_seq_t);
+	memcpy(&blob_id1, p, sizeof(db_seq_t));
+	p = dbt2->data;
+	memcpy(&blob_sid2, p, sizeof(db_seq_t));
+	p += sizeof(db_seq_t);
+	memcpy(&blob_id2, p, sizeof(db_seq_t));
+
+	if (blob_sid1 > blob_sid2)
+		return (1);
+
+	if (blob_sid1 < blob_sid2)
+		return (-1);
+
+	if (blob_id1 > blob_id2)
+		return (1);
+
+	if (blob_id1 < blob_id2)
+		return (-1);
+
+	return (0);
+}
+
+/*
+ * __rep_offset_cmp --
+ *
+ * Comparison function for duplicates in the the blob gap database.
+ *
+ * PUBLIC: int  __rep_offset_cmp
+ * PUBLIC:  __P((DB *, const DBT *, const DBT *, size_t *));
+ */
+int
+__rep_offset_cmp(dbp, dbt1, dbt2, locp)
+	DB *dbp;
+	const DBT *dbt1, *dbt2;
+	size_t *locp;
+{
+	off_t offset1, offset2;
+
+	COMPQUIET(dbp, NULL);
+	COMPQUIET(locp, NULL);
+
+	/* Use memcpy here to prevent alignment issues. */
+	memcpy(&offset1, dbt1->data, sizeof(off_t));
+	memcpy(&offset2, dbt2->data, sizeof(off_t));
+
+	if (offset1 == offset2)
+		return (0);
+	else if (offset1 > offset2)
+		return (1);
+
+	return (-1);
 }
 
 /*
@@ -1813,18 +2014,15 @@ __rep_get_nsites(dbenv, n)
 }
 
 /*
- * PUBLIC: int __rep_set_priority __P((DB_ENV *, u_int32_t));
+ * PUBLIC: int __rep_set_priority_pp __P((DB_ENV *, u_int32_t));
  */
 int
-__rep_set_priority(dbenv, priority)
+__rep_set_priority_pp(dbenv, priority)
 	DB_ENV *dbenv;
 	u_int32_t priority;
 {
 	DB_REP *db_rep;
 	ENV *env;
-	REP *rep;
-	u_int32_t prev;
-	int ret;
 
 	env = dbenv->env;
 	db_rep = env->rep_handle;
@@ -1832,6 +2030,30 @@ __rep_set_priority(dbenv, priority)
 	ENV_NOT_CONFIGURED(
 	    env, db_rep->region, "DB_ENV->rep_set_priority", DB_INIT_REP);
 
+	if (PREFMAS_IS_SET(env)) {
+		__db_errx(env, DB_STR_A("3710",
+"%s: cannot change priority in preferred master mode.",
+		    "%s"), "DB_ENV->rep_set_priority");
+		return (EINVAL);
+	}
+
+	return (__rep_set_priority_int(env, priority));
+}
+
+/*
+ * PUBLIC: int __rep_set_priority_int __P((ENV *, u_int32_t));
+ */
+int
+__rep_set_priority_int(env, priority)
+	ENV *env;
+	u_int32_t priority;
+{
+	DB_REP *db_rep;
+	REP *rep;
+	u_int32_t prev;
+	int ret;
+
+	db_rep = env->rep_handle;
 	ret = 0;
 	if (REP_ON(env)) {
 		rep = db_rep->region;
@@ -1872,10 +2094,10 @@ __rep_get_priority(dbenv, priority)
 }
 
 /*
- * PUBLIC: int __rep_set_timeout __P((DB_ENV *, int, db_timeout_t));
+ * PUBLIC: int __rep_set_timeout_pp __P((DB_ENV *, int, db_timeout_t));
  */
 int
-__rep_set_timeout(dbenv, which, timeout)
+__rep_set_timeout_pp(dbenv, which, timeout)
 	DB_ENV *dbenv;
 	int which;
 	db_timeout_t timeout;
@@ -1883,13 +2105,10 @@ __rep_set_timeout(dbenv, which, timeout)
 	DB_REP *db_rep;
 	DB_THREAD_INFO *ip;
 	ENV *env;
-	REP *rep;
 	int repmgr_timeout, ret;
 
 	env = dbenv->env;
 	db_rep = env->rep_handle;
-	rep = db_rep->region;
-	ret = 0;
 	repmgr_timeout = 0;
 
 	if (timeout == 0 && (which == DB_REP_CONNECTION_RETRY ||
@@ -1915,12 +2134,46 @@ __rep_set_timeout(dbenv, which, timeout)
 		return (EINVAL);
 	}
 	if (which == DB_REP_LEASE_TIMEOUT && IS_REP_STARTED(env)) {
-		ret = EINVAL;
 		__db_errx(env, DB_STR_A("3568",
 "%s: lease timeout must be set before DB_ENV->rep_start.",
 		    "%s"), "DB_ENV->rep_set_timeout");
 		return (EINVAL);
 	}
+	if (PREFMAS_IS_SET(env) &&
+	    (which == DB_REP_HEARTBEAT_MONITOR ||
+	    which == DB_REP_HEARTBEAT_SEND) &&
+	    timeout == 0) {
+		__db_errx(env, DB_STR_A("3711",
+"%s: cannot turn off heartbeat timeout in preferred master mode.",
+		    "%s"), "DB_ENV->rep_set_timeout");
+		return (EINVAL);
+	}
+
+	ret = __rep_set_timeout_int(env, which, timeout);
+
+	/* Setting a repmgr timeout makes this a repmgr application */
+	if (ret == 0 && repmgr_timeout)
+		APP_SET_REPMGR(env);
+	return (ret);
+
+}
+
+/*
+ * PUBLIC: int __rep_set_timeout_int __P((ENV *, int, db_timeout_t));
+ */
+int
+__rep_set_timeout_int(env, which, timeout)
+	ENV *env;
+	int which;
+	db_timeout_t timeout;
+{
+	DB_REP *db_rep;
+	REP *rep;
+	int ret;
+
+	db_rep = env->rep_handle;
+	rep = db_rep->region;
+	ret = 0;
 
 	switch (which) {
 	case DB_REP_CHECKPOINT_DELAY:
@@ -1985,10 +2238,6 @@ __rep_set_timeout(dbenv, which, timeout)
 	    "Unknown timeout type argument to DB_ENV->rep_set_timeout"));
 		ret = EINVAL;
 	}
-
-	/* Setting a repmgr timeout makes this a repmgr application */
-	if (ret == 0 && repmgr_timeout)
-		APP_SET_REPMGR(env);
 	return (ret);
 }
 
@@ -2211,6 +2460,95 @@ __rep_defview(dbenv, name, result, flags)
 	COMPQUIET(flags, 0);
 	*result = 1;
 	return (0);
+}
+
+/*
+ * __rep_call_partial --
+ *	Calls the partial function, after doing some checks required for
+ *	handling blobs.
+ *
+ * PUBLIC: int __rep_call_partial
+ * PUBLIC:  __P((ENV *, const char *, int *, u_int32_t, DELAYED_BLOB_LIST **));
+ */
+int
+__rep_call_partial(env, name, result, flags, lsp)
+	ENV *env;
+	const char *name;
+	int *result;
+	u_int32_t flags;
+	DELAYED_BLOB_LIST **lsp;
+{
+	DB_LOG *dblp;
+	DB_REP *db_rep;
+	DELAYED_BLOB_LIST *dbl;
+	FNAME *fname;
+	db_seq_t blob_file_id;
+	char *file_name;
+	int ret;
+
+	ret = 0;
+	blob_file_id = 0;
+	db_rep = env->rep_handle;
+	dblp = env->lg_handle;
+	fname = NULL;
+
+	/*
+	 * If the database being sent is a blob meta database or file, then the
+	 * name of its associated database needs to be passed to the partial
+	 * function.  To do this, use the blob file id in the path to the
+	 * file to look up the blob_file_id of the associated database.  That
+	 * can be used to look up the name of the associated database through
+	 * dbreg.
+	 */
+	if (db_rep->partial == __rep_defview ||
+	    (!IS_BLOB_META(name) && !IS_BLOB_FILE(name))) {
+		ret = db_rep->partial(env->dbenv, name, result, flags);
+	} else {
+		/*
+		 * The top level blob meta database must always be replicated.
+		 */
+		if (strcmp(name, BLOB_META_FILE_NAME) == 0) {
+			*result = 1;
+			return (ret);
+		}
+		if ((ret = __blob_path_to_dir_ids(
+		    env, name, &blob_file_id, NULL)) != 0)
+			return (ret);
+		DB_ASSERT(env, blob_file_id > 0);
+
+		/*
+		 * It is possible that the database that owns this blob meta
+		 * database has not yet been processed on the client when
+		 * processing the transaction, so assume it is not replicated.
+		 * Return its information and process it later when its
+		 * owning database is processed (which must happen in the
+		 * same transaction).
+		 */
+		if (__dbreg_blob_file_to_fname(
+		    dblp, blob_file_id, 0, &fname) != 0) {
+			if ((ret = __os_malloc(
+			    env, sizeof(DELAYED_BLOB_LIST), &dbl)) != 0)
+				return (ret);
+			memset(dbl, 0, sizeof(DELAYED_BLOB_LIST));
+			dbl->blob_file_id = blob_file_id;
+			if (*lsp == NULL)
+				*lsp = dbl;
+			else {
+				dbl->next = *lsp;
+				(*lsp)->prev = dbl;
+				*lsp = dbl;
+			}
+			*result = 0;
+			return (0);
+		}
+
+		file_name = fname->fname_off == INVALID_ROFF ?
+		    NULL : R_ADDR(&dblp->reginfo, fname->fname_off);
+		DB_ASSERT(env, file_name != NULL);
+		ret = db_rep->partial(env->dbenv, file_name, result, flags);
+	}
+
+	return (ret);
 }
 
 /*
@@ -2826,7 +3164,7 @@ __rep_check_applied(env, ip, commit_info, reasonp)
 	 */
 	if (commit_info->gen == gen) {
 		ret = __rep_read_lsn_history(env,
-		    ip, &txn, &dbc, gen, &hist, reasonp, DB_SET);
+		    ip, &txn, &dbc, gen, &hist, reasonp, DB_SET, 1);
 		if (ret == DB_NOTFOUND) {
 			/*
 			 * We haven't yet received the LSN history of the
@@ -2853,7 +3191,7 @@ __rep_check_applied(env, ip, commit_info, reasonp)
 			 * masters at the same gen, and the txn of interest was
 			 * rolled back.
 			 */
-			ret = DB_NOTFOUND;
+			ret = USR_ERR(env, DB_NOTFOUND);
 			goto out;
 		}
 
@@ -2883,7 +3221,7 @@ __rep_check_applied(env, ip, commit_info, reasonp)
 		 * description of the txn of interest doesn't match what we see
 		 * in the history available to us now.
 		 */
-		ret = DB_NOTFOUND;
+		ret = USR_ERR(env, DB_NOTFOUND);
 
 	} else if (commit_info->gen < gen || gen == 0) {
 		/*
@@ -2892,10 +3230,10 @@ __rep_check_applied(env, ip, commit_info, reasonp)
 		 * the token LSN is within the close/open range defined by
 		 * [base,next).
 		 */
-		ret = __rep_read_lsn_history(env,
-		    ip, &txn, &dbc, commit_info->gen, &hist, reasonp, DB_SET);
-		t_ret = __rep_read_lsn_history(env,
-		    ip, &txn, &dbc, commit_info->gen, &hist2, reasonp, DB_NEXT);
+		ret = __rep_read_lsn_history(env, ip,
+		    &txn, &dbc, commit_info->gen, &hist, reasonp, DB_SET, 1);
+		t_ret = __rep_read_lsn_history(env, ip,
+		    &txn, &dbc, commit_info->gen, &hist2, reasonp, DB_NEXT, 1);
 		if (ret == DB_NOTFOUND) {
 			/*
 			 * If the desired gen is not in our database, it could
@@ -2945,7 +3283,7 @@ __rep_check_applied(env, ip, commit_info, reasonp)
 			 * don't match, meaning the txn was written at a dup
 			 * master and that gen instance was rolled back.
 			 */
-			ret = DB_NOTFOUND;
+			ret = USR_ERR(env, DB_NOTFOUND);
 			goto out;
 		}
 
@@ -2970,7 +3308,7 @@ __rep_check_applied(env, ip, commit_info, reasonp)
 		    LOG_COMPARE(&commit_info->lsn, &hist2.lsn) < 0)
 			ret = 0;
 		else
-			ret = DB_NOTFOUND;
+			ret = USR_ERR(env, DB_NOTFOUND);
 	} else {
 		/*
 		 * Token names a future gen.  If we're a client and the LSN also
@@ -2984,7 +3322,7 @@ __rep_check_applied(env, ip, commit_info, reasonp)
 			reasonp->u.gen = commit_info->gen;
 			return (DB_TIMEOUT);
 		}
-		return (DB_NOTFOUND);
+		return (USR_ERR(env, DB_NOTFOUND));
 	}
 
 out:
@@ -3000,9 +3338,19 @@ out:
 /*
  * The txn and dbc handles are owned by caller, though we create them if
  * necessary.  Caller is responsible for closing them.
+ *
+ * The use_cache option is enabled for the read-your-writes feature, which
+ * makes frequent requests for the cached information (envid and lsn) when it
+ * is in use.  Callers that require information that is not cached (e.g.
+ * timestamp) should not set use_cache.
+ *
+ * PUBLIC: int __rep_read_lsn_history __P((ENV *, DB_THREAD_INFO *, DB_TXN **,
+ * PUBLIC:    DBC **, u_int32_t, __rep_lsn_hist_data_args *,
+ * PUBLIC:    struct rep_waitgoal *, u_int32_t, int));
  */
-static int
-__rep_read_lsn_history(env, ip, txn, dbc, gen, gen_infop, reasonp, flags)
+int
+__rep_read_lsn_history(env, ip, txn, dbc, gen, gen_infop, reasonp, flags,
+    use_cache)
 	ENV *env;
 	DB_THREAD_INFO *ip;
 	DB_TXN **txn;
@@ -3011,6 +3359,7 @@ __rep_read_lsn_history(env, ip, txn, dbc, gen, gen_infop, reasonp, flags)
 	__rep_lsn_hist_data_args *gen_infop;
 	struct rep_waitgoal *reasonp;
 	u_int32_t flags;
+	int use_cache;
 {
 	DB_REP *db_rep;
 	REP *rep;
@@ -3031,7 +3380,8 @@ __rep_read_lsn_history(env, ip, txn, dbc, gen, gen_infop, reasonp, flags)
 	/* Simply return cached info, if we already have it. */
 	desired_gen = flags == DB_SET ? gen : gen + 1;
 	REP_SYSTEM_LOCK(env);
-	if (rep->gen == desired_gen && !IS_ZERO_LSN(rep->gen_base_lsn)) {
+	if (use_cache && rep->gen == desired_gen &&
+	    !IS_ZERO_LSN(rep->gen_base_lsn)) {
 		gen_infop->lsn = rep->gen_base_lsn;
 		gen_infop->envid = rep->master_envid;
 		goto unlock;
@@ -3140,6 +3490,8 @@ __rep_conv_vers(env, log_ver)
 	 * We can't use a switch statement, some of the DB_LOGVERSION_XX
 	 * constants are the same.
 	 */
+	if (log_ver == DB_LOGVERSION_61)
+		return (DB_REPVERSION_61);
 	if (log_ver == DB_LOGVERSION_60p1)
 		return (DB_REPVERSION_60);
 	if (log_ver == DB_LOGVERSION_60)

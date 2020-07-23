@@ -377,7 +377,7 @@ __txn_getckp(env, lsnp)
 	TXN_SYSTEM_UNLOCK(env);
 
 	if (IS_ZERO_LSN(lsn))
-		return (DB_NOTFOUND);
+		return (USR_ERR(env, DB_NOTFOUND));
 
 	*lsnp = lsn;
 	return (0);

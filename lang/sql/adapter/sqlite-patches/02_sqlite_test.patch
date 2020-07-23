@@ -1,6 +1,6 @@
 --- src/test1.c
 +++ src/test1.c
-@@ -3624,7 +3624,7 @@
+@@ -3626,7 +3626,7 @@
      if( bytes>=0 ){
        bytes = bytes - (int)(zTail-zSql);
      }
@@ -9,7 +9,7 @@
        bytes = (int)strlen(zTail);
      }
      Tcl_ObjSetVar2(interp, objv[4], 0, Tcl_NewStringObj(zTail, bytes), 0);
-@@ -6029,8 +6029,6 @@
+@@ -6297,8 +6297,6 @@
    extern int sqlite3_hostid_num;
  #endif
    extern int sqlite3_max_blobsize;
@@ -18,7 +18,7 @@
    static struct {
       char *zName;
       Tcl_CmdProc *xProc;
-@@ -6209,7 +6207,6 @@
+@@ -6486,7 +6486,6 @@
       { "tcl_variable_type",       tcl_variable_type, 0       },
  #ifndef SQLITE_OMIT_SHARED_CACHE
       { "sqlite3_enable_shared_cache", test_enable_shared, 0  },
@@ -28,20 +28,18 @@
  #ifdef SQLITE_ENABLE_COLUMN_METADATA
 --- src/test2.c
 +++ src/test2.c
-@@ -19,6 +19,7 @@
- #include <string.h>
- #include <ctype.h>
+@@ -21,475 +21,14 @@
+ 
+ extern const char *sqlite3ErrName(int);
  
 +#ifndef SQLITE_OMIT_DISKIO
++
  /*
- ** Interpret an SQLite error number
- */
-@@ -53,470 +54,6 @@
  ** Page size and reserved size used for testing.
  */
  static int test_pagesize = 1024;
--
--/*
+ 
+ /*
 -** Dummy page reinitializer
 -*/
 -static void pager_test_reiniter(DbPage *pNotUsed){
@@ -74,7 +72,7 @@
 -      SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_MAIN_DB,
 -      pager_test_reiniter);
 -  if( rc!=SQLITE_OK ){
--    Tcl_AppendResult(interp, errorName(rc), 0);
+-    Tcl_AppendResult(interp, sqlite3ErrName(rc), 0);
 -    return TCL_ERROR;
 -  }
 -  sqlite3PagerSetCachesize(pPager, nPage);
@@ -106,7 +104,7 @@
 -  pPager = sqlite3TestTextToPtr(argv[1]);
 -  rc = sqlite3PagerClose(pPager);
 -  if( rc!=SQLITE_OK ){
--    Tcl_AppendResult(interp, errorName(rc), 0);
+-    Tcl_AppendResult(interp, sqlite3ErrName(rc), 0);
 -    return TCL_ERROR;
 -  }
 -  return TCL_OK;
@@ -133,7 +131,7 @@
 -  pPager = sqlite3TestTextToPtr(argv[1]);
 -  rc = sqlite3PagerRollback(pPager);
 -  if( rc!=SQLITE_OK ){
--    Tcl_AppendResult(interp, errorName(rc), 0);
+-    Tcl_AppendResult(interp, sqlite3ErrName(rc), 0);
 -    return TCL_ERROR;
 -  }
 -  return TCL_OK;
@@ -160,12 +158,12 @@
 -  pPager = sqlite3TestTextToPtr(argv[1]);
 -  rc = sqlite3PagerCommitPhaseOne(pPager, 0, 0);
 -  if( rc!=SQLITE_OK ){
--    Tcl_AppendResult(interp, errorName(rc), 0);
+-    Tcl_AppendResult(interp, sqlite3ErrName(rc), 0);
 -    return TCL_ERROR;
 -  }
 -  rc = sqlite3PagerCommitPhaseTwo(pPager);
 -  if( rc!=SQLITE_OK ){
--    Tcl_AppendResult(interp, errorName(rc), 0);
+-    Tcl_AppendResult(interp, sqlite3ErrName(rc), 0);
 -    return TCL_ERROR;
 -  }
 -  return TCL_OK;
@@ -192,7 +190,7 @@
 -  pPager = sqlite3TestTextToPtr(argv[1]);
 -  rc = sqlite3PagerOpenSavepoint(pPager, 1);
 -  if( rc!=SQLITE_OK ){
--    Tcl_AppendResult(interp, errorName(rc), 0);
+-    Tcl_AppendResult(interp, sqlite3ErrName(rc), 0);
 -    return TCL_ERROR;
 -  }
 -  return TCL_OK;
@@ -220,7 +218,7 @@
 -  rc = sqlite3PagerSavepoint(pPager, SAVEPOINT_ROLLBACK, 0);
 -  sqlite3PagerSavepoint(pPager, SAVEPOINT_RELEASE, 0);
 -  if( rc!=SQLITE_OK ){
--    Tcl_AppendResult(interp, errorName(rc), 0);
+-    Tcl_AppendResult(interp, sqlite3ErrName(rc), 0);
 -    return TCL_ERROR;
 -  }
 -  return TCL_OK;
@@ -247,7 +245,7 @@
 -  pPager = sqlite3TestTextToPtr(argv[1]);
 -  rc = sqlite3PagerSavepoint(pPager, SAVEPOINT_RELEASE, 0);
 -  if( rc!=SQLITE_OK ){
--    Tcl_AppendResult(interp, errorName(rc), 0);
+-    Tcl_AppendResult(interp, sqlite3ErrName(rc), 0);
 -    return TCL_ERROR;
 -  }
 -  return TCL_OK;
@@ -340,7 +338,7 @@
 -    rc = sqlite3PagerGet(pPager, pgno, &pPage);
 -  }
 -  if( rc!=SQLITE_OK ){
--    Tcl_AppendResult(interp, errorName(rc), 0);
+-    Tcl_AppendResult(interp, sqlite3ErrName(rc), 0);
 -    return TCL_ERROR;
 -  }
 -  sqlite3_snprintf(sizeof(zBuf),zBuf,"%p",pPage);
@@ -494,7 +492,7 @@
 -  pPage = (DbPage *)sqlite3TestTextToPtr(argv[1]);
 -  rc = sqlite3PagerWrite(pPage);
 -  if( rc!=SQLITE_OK ){
--    Tcl_AppendResult(interp, errorName(rc), 0);
+-    Tcl_AppendResult(interp, sqlite3ErrName(rc), 0);
 -    return TCL_ERROR;
 -  }
 -  pData = sqlite3PagerGetData(pPage);
@@ -504,10 +502,11 @@
 -}
 -
 -#ifndef SQLITE_OMIT_DISKIO
- /*
+-/*
  ** Usage:   fake_big_file  N  FILENAME
  **
-@@ -546,6 +83,12 @@
+ ** Write a few bytes at the N megabyte point of FILENAME.  This will
+@@ -518,6 +57,12 @@
    }
    if( Tcl_GetInt(interp, argv[1], &n) ) return TCL_ERROR;
  
@@ -520,7 +519,7 @@
    pVfs = sqlite3_vfs_find(0);
    nFile = (int)strlen(argv[2]);
    zFile = sqlite3_malloc( nFile+2 );
-@@ -573,31 +116,6 @@
+@@ -545,31 +90,6 @@
  }
  #endif
  
@@ -552,7 +551,7 @@
  /*
  ** sqlite3BitvecBuiltinTest SIZE PROGRAM
  **
-@@ -632,58 +150,49 @@
+@@ -604,58 +124,49 @@
    return TCL_OK;
  }  
  
@@ -652,10 +651,10 @@
 +  return TCL_OK;
 +}
 +
+ extern const char *sqlite3ErrName(int);
+
  /*
- ** Interpret an SQLite error number
- */
-@@ -363,36 +372,6 @@
+@@ -339,36 +348,6 @@
  }
  
  /*
@@ -692,7 +691,7 @@
  ** Usage:   btree_payload_size ID
  **
  ** Return the number of bytes of payload
-@@ -404,8 +383,7 @@
+@@ -380,8 +359,7 @@
    const char **argv      /* Text of each argument */
  ){
    BtCursor *pCur;
@@ -702,7 +701,7 @@
    char zBuf[50];
  
    if( argc!=2 ){
-@@ -418,103 +396,13 @@
+@@ -394,103 +372,13 @@
  
    /* The cursor may be in "require-seek" state. If this is the case, the
    ** call to BtreeDataSize() will fix it. */
@@ -808,7 +807,7 @@
  ** usage:   btree_from_db  DB-HANDLE
  **
  ** This command returns the btree handle for the main database associated
-@@ -559,67 +447,6 @@
+@@ -535,67 +423,6 @@
  }
  
  /*
@@ -876,7 +875,7 @@
  ** Register commands with the TCL interpreter.
  */
  int Sqlitetest3_Init(Tcl_Interp *interp){
-@@ -634,13 +461,13 @@
+@@ -610,13 +437,13 @@
       { "btree_cursor",             (Tcl_CmdProc*)btree_cursor             },
       { "btree_close_cursor",       (Tcl_CmdProc*)btree_close_cursor       },
       { "btree_next",               (Tcl_CmdProc*)btree_next               },
@@ -953,7 +952,7 @@
      int isNew;
  
      int aKey[MALLOC_LOG_KEYINTS];
--    int nKey = sizeof(int)*MALLOC_LOG_KEYINTS;
+-    unsigned int nKey = sizeof(int)*MALLOC_LOG_KEYINTS;
 +    unsigned int nKey = sizeof(int)*MALLOC_LOG_FRAMES;
  
      memset(aKey, 0, nKey);

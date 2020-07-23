@@ -282,6 +282,7 @@ proc rep065_sub { iter mv nsites slist } {
 		# to the current version and start everyone up again.
 		incr count
 	}
+	replclose_noenv $controldir/$testdir/MSGQUEUEDIR
 }
 
 proc method_version { } {
@@ -291,9 +292,11 @@ proc method_version { } {
 	# As of the 5.2 release we added the method 'heap'.
 	# For 5.2 and later versions select a method at random
 	# from the list of all methods except heap.  Always
-	# set up one pair using heap with 5.2 or 5.3.
-	set post52_versions {db-5.2.42 db-5.3.21 db-6.0.22}
-	set heap_version [lindex $post52_versions [berkdb random_int 0 1]] 
+	# set up one pair using heap with a 5.2 or later version.
+	set post52_versions {db-5.2.42 db-5.3.28 db-6.0.30}
+	set post52_len [expr [llength $post52_versions] - 1]
+	set heap_version [lindex $post52_versions \
+	    [berkdb random_int 0 $post52_len]]
 	lappend mv [list heap $heap_version]
 	set methods\
 	    {btree rbtree recno frecno rrecno queue queueext hash}

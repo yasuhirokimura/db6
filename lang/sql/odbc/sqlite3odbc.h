@@ -15,7 +15,7 @@
  * @file sqlite3odbc.h
  * Header file for SQLite3 ODBC driver.
  *
- * $Id: sqlite3odbc.h,v 1.41 2013/01/11 12:20:56 chw Exp chw $
+ * $Id: sqlite3odbc.h,v 1.43 2013/09/23 09:20:26 chw Exp chw $
  *
  * Copyright (c) 2004-2013 Christian Werner <chw@ch-werner.de>
  *
@@ -138,6 +138,7 @@ typedef struct dbc {
     int step_enable;		/**< True for sqlite_compile/step/finalize */
     int trans_disable;		/**< True for no transaction support */
     int oemcp;			/**< True for Win32 OEM CP translation */
+    int jdconv;			/**< True for julian day conversion */
     struct stmt *cur_s3stmt;	/**< Current STMT executing sqlite statement */
     int s3stmt_needmeta;	/**< True to get meta data in s3stmt_step(). */
     FILE *trace;		/**< sqlite3_trace() file pointer or NULL */
@@ -170,6 +171,8 @@ typedef struct {
     int prec;			/**< Precision of column */
     int autoinc;		/**< AUTO_INCREMENT column */
     int notnull;		/**< NOT NULL constraint on column */
+    int ispk;			/**< Flag for primary key (> 0) */
+    int isrowid;		/**< Flag for ROWID column (> 0) */
     char *typename;		/**< Column type name or NULL */
     char *label;		/**< Column label or NULL */
 } COL;
@@ -230,12 +233,14 @@ typedef struct stmt {
     SQLCHAR *query;		/**< Current query, raw string */
     int *ov3;			/**< True for SQL_OV_ODBC3 */
     int *oemcp;			/**< True for Win32 OEM CP translation */
+    int *jdconv;		/**< True for julian day conversion */
     int isselect;		/**< > 0 if query is a SELECT statement */
     int ncols;			/**< Number of result columns */
     COL *cols;			/**< Result column array */
     COL *dyncols;		/**< Column array, but malloc()ed */
     int dcols;			/**< Number of entries in dyncols */
     int bkmrk;			/**< True when bookmarks used */
+    SQLINTEGER *bkmrkptr;	/**< SQL_ATTR_FETCH_BOOKMARK_PTR */
     BINDCOL bkmrkcol;		/**< Bookmark bound column */
     BINDCOL *bindcols;		/**< Array of bound columns */
     int nbindcols;		/**< Number of entries in bindcols */
@@ -245,6 +250,7 @@ typedef struct stmt {
     int pdcount;		/**< SQLParamData() counter */
     int nrows;			/**< Number of result rows */
     int rowp;			/**< Current result row */
+    int rowprs;			/**< Current start row of rowset */
     char **rows;		/**< 2-dim array, result set */
     void (*rowfree)();		/**< Free function for rows */
     int naterr;			/**< Native error code */
@@ -280,6 +286,9 @@ typedef struct stmt {
     char *bincache;		/**< Cache for blob data */
     int binlen;			/**< Length of blob data */
     int guessed_types;		/**< Flag for drvprepare()/drvexecute() */
+    int one_tbl;		/**< Flag for single table (> 0) */
+    int has_pk;			/**< Flag for primary key (> 0) */
+    int has_rowid;		/**< Flag for ROWID (>= 0 or -1) */
 } STMT;
 
 #endif

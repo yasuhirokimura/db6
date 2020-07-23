@@ -76,6 +76,12 @@ __fop_create_recover(env, dbtp, lsnp, op, info)
 	int ret;
 	char *path, *real_name;
 	const char *dirname;
+#ifdef	HAVE_REPLICATION
+	DELAYED_BLOB_LIST *dbl;
+	int view_partial;
+
+	dbl = NULL;
+#endif
 
 	COMPQUIET(info, NULL);
 
@@ -122,6 +128,21 @@ do_unlink:		(void)__os_unlink(env, real_name, 0);
 		 */
 		if (__os_abspath(real_name))
 			path += 2;
+#endif
+
+#ifdef	HAVE_REPLICATION
+		/*
+		 * Prevent replication of blob files if their owning database
+		 * is not replicated.
+		 */
+		if (IS_VIEW_SITE(env) && IS_BLOB_FILE(path)) {
+			if ((ret = __rep_call_partial(env,
+			    path, &view_partial, 0, &dbl)) != 0)
+				goto out;
+			DB_ASSERT(env, dbl == NULL);
+			if (view_partial == 0)
+				goto out;
+		}
 #endif
 		/* Blob directories might not exist yet. */
 		if (__os_exists(env, real_name, NULL) != 0 &&
@@ -269,6 +290,15 @@ __fop_write_recover(env, dbtp, lsnp, op, info)
 
 	COMPQUIET(info, NULL);
 
+#ifndef HAVE_64BIT_TYPES
+	COMPQUIET(dbtp, NULL);
+	COMPQUIET(lsnp, NULL);
+	COMPQUIET(op, 0);
+	__db_errx(env, DB_STR("0243",
+	    "Blobs require 64 integer compiler support."));
+	return (DB_OPNOTSUP);
+#endif
+
 	REC_PRINT(__fop_write_print);
 	REC_NOOP_INTRO(__fop_write_read);
 
@@ -360,6 +390,15 @@ __fop_write_file_recover_int(
 			    dirname->size == 0 ? NULL : dirname->data,
 			    appname == DB_APP_DATA ? DB_APP_RECOVER : appname,
 			    NULL, offset, new_data->data, new_data->size, 0);
+#ifdef	HAVE_REPLICATION
+			/*
+			 * Blob files of databases that are not replicated are
+			 * also not replicated.  So assume any ENOENT errors
+			 * are because the file was not replicated.
+			 */
+			if (ret == ENOENT && IS_VIEW_SITE(env))
+				ret = 0;
+#endif
 		} else {
 			/* DB_ASSERT(env, !IS_REP_CLIENT(env)); */
 		}
@@ -371,7 +410,6 @@ end:	if (path != NULL)
 		(void)__os_closehandle(env, fhp);
 	return (ret);
 }
-
 
 /*
  * __fop_write_file_recover --
@@ -398,6 +436,15 @@ __fop_write_file_recover(env, dbtp, lsnp, op, info)
 	__fop_write_file_args *argp;
 	int ret;
 	COMPQUIET(info, NULL);
+
+#ifndef HAVE_64BIT_TYPES
+	COMPQUIET(dbtp, NULL);
+	COMPQUIET(lsnp, NULL);
+	COMPQUIET(op, 0);
+	__db_errx(env, DB_STR("0244",
+	    "Blobs require 64 integer compiler support."));
+	return (DB_OPNOTSUP);
+#endif
 
 	REC_PRINT(__fop_write_file_print);
 	REC_NOOP_INTRO(__fop_write_file_read);

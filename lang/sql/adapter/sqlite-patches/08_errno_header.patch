@@ -12,7 +12,7 @@
  
 --- configure
 +++ configure
-@@ -11993,7 +11993,8 @@
+@@ -11991,7 +11991,8 @@
  
  
  
@@ -35,7 +35,7 @@
  # Figure out whether or not we have these functions
 --- src/sqliteInt.h
 +++ src/sqliteInt.h
-@@ -79,6 +79,9 @@
+@@ -80,6 +80,9 @@
  #ifdef HAVE_INTTYPES_H
  #include <inttypes.h>
  #endif

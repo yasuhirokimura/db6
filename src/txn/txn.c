@@ -801,8 +801,9 @@ __txn_commit(txn, flags)
 				if (ret == 0) {
 					DB_LSN s_lsn;
 
-					DB_ASSERT(env, __log_current_lsn_int(
-					    env, &s_lsn, NULL, NULL) == 0);
+					if ((ret = __log_current_lsn_int(
+					    env, &s_lsn, NULL, NULL)) != 0)
+						goto err;
 					DB_ASSERT(env, LOG_COMPARE(
 					    &td->visible_lsn, &s_lsn) <= 0);
 					COMPQUIET(s_lsn.file, 0);
@@ -1056,7 +1057,7 @@ __txn_abort(txn)
 	 * it, however make sure that it is aborted when the last process
 	 * tries to abort it.
 	 */
-	if (txn->xa_thr_status != TXN_XA_THREAD_NOTA &&  td->xa_ref > 1) {
+	if (txn->xa_thr_status != TXN_XA_THREAD_NOTA && td->xa_ref > 1) {
 		td->status = TXN_NEED_ABORT;
 		return (0);
 	}
@@ -2171,5 +2172,5 @@ __txn_applied(env, ip, commit_info, timeout)
 	if (renv->envid == commit_info->envid &&
 	    LOG_COMPARE(&commit_info->lsn, &lsn) <= 0)
 		return (0);
-	return (DB_NOTFOUND);
+	return (USR_ERR(env, DB_NOTFOUND));
 }

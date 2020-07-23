@@ -19,6 +19,7 @@ extern "C" {
  * Names of client temp databases.
  */
 #define	REPFILEPREFIX	"__db.rep"
+#define	REPBLOBNAME	"__db.rep.blob.db"
 #define	REPDBNAME	"__db.rep.db"
 #define	REPPAGENAME     "__db.reppg.db"
 
@@ -42,43 +43,58 @@ extern "C" {
 /*
  * Message types
  */
-#define	REP_INVALID	0	/* Invalid message type. */
-#define	REP_ALIVE	1	/* I am alive message. */
-#define	REP_ALIVE_REQ	2	/* Request for alive messages. */
-#define	REP_ALL_REQ	3	/* Request all log records greater than LSN. */
-#define	REP_BULK_LOG	4	/* Bulk transfer of log records. */
-#define	REP_BULK_PAGE	5	/* Bulk transfer of pages. */
-#define	REP_DUPMASTER	6	/* Duplicate master detected; propagate. */
-#define	REP_FILE	7	/* Page of a database file. NOTUSED */
-#define	REP_FILE_FAIL	8	/* File requested does not exist. */
-#define	REP_FILE_REQ	9	/* Request for a database file. NOTUSED */
-#define	REP_LEASE_GRANT	10	/* Client grants a lease to a master. */
-#define	REP_LOG		11	/* Log record. */
-#define	REP_LOG_MORE	12	/* There are more log records to request. */
-#define	REP_LOG_REQ	13	/* Request for a log record. */
-#define	REP_MASTER_REQ	14	/* Who is the master */
-#define	REP_NEWCLIENT	15	/* Announces the presence of a new client. */
-#define	REP_NEWFILE	16	/* Announce a log file change. */
-#define	REP_NEWMASTER	17	/* Announces who the master is. */
-#define	REP_NEWSITE	18	/* Announces that a site has heard from a new
-				 * site; like NEWCLIENT, but indirect.  A
-				 * NEWCLIENT message comes directly from the new
-				 * client while a NEWSITE comes indirectly from
-				 * someone who heard about a NEWSITE.
-				 */
-#define	REP_PAGE	19	/* Database page. */
-#define	REP_PAGE_FAIL	20	/* Requested page does not exist. */
-#define	REP_PAGE_MORE	21	/* There are more pages to request. */
-#define	REP_PAGE_REQ	22	/* Request for a database page. */
-#define	REP_REREQUEST	23	/* Force rerequest. */
-#define	REP_START_SYNC	24	/* Tell client to begin syncing a ckp.*/
-#define	REP_UPDATE	25	/* Environment hotcopy information. */
-#define	REP_UPDATE_REQ	26	/* Request for hotcopy information. */
-#define	REP_VERIFY	27	/* A log record for verification. */
-#define	REP_VERIFY_FAIL	28	/* The client is outdated. */
-#define	REP_VERIFY_REQ	29	/* Request for a log record to verify. */
-#define	REP_VOTE1	30	/* Send out your information for an election. */
-#define	REP_VOTE2	31	/* Send a "you are master" vote. */
+#define	REP_INVALID		0	/* Invalid message type. */
+#define	REP_ALIVE		1	/* I am alive message. */
+#define	REP_ALIVE_REQ		2	/* Request for alive messages. */
+#define	REP_ALL_REQ		3	/* Request all log records greater than
+					 * LSN. */
+#define	REP_BLOB_ALL_REQ	4	/* Request all the given blob files. */
+#define	REP_BLOB_CHUNK		5	/* A piece of data contained in a blob
+					 * file. */
+#define	REP_BLOB_CHUNK_REQ	6	/* Request a piece of data from a blob
+					 * file. */
+#define	REP_BLOB_UPDATE		7	/* A list of blob files for a
+					 * database. */
+#define	REP_BLOB_UPDATE_REQ	8	/* Request blob files. */
+#define	REP_BULK_LOG		9	/* Bulk transfer of log records. */
+#define	REP_BULK_PAGE		10	/* Bulk transfer of pages. */
+#define	REP_DUPMASTER		11	/* Duplicate master detected;
+					 * propagate. */
+#define	REP_FILE		12	/* Page of a database file. NOTUSED */
+#define	REP_FILE_FAIL		13	/* File requested does not exist. */
+#define	REP_FILE_REQ		14	/* Request for a database file.
+					 * NOTUSED */
+#define	REP_LEASE_GRANT		15	/* Client grants a lease to a master. */
+#define	REP_LOG			16	/* Log record. */
+#define	REP_LOG_MORE		17	/* There are more log records to
+					 * request. */
+#define	REP_LOG_REQ		18	/* Request for a log record. */
+#define	REP_MASTER_REQ		19	/* Who is the master */
+#define	REP_NEWCLIENT		20	/* Announces the presence of a new
+					 * client. */
+#define	REP_NEWFILE		21	/* Announce a log file change. */
+#define	REP_NEWMASTER		22	/* Announces who the master is. */
+#define	REP_NEWSITE		23	/* Announces that a site has heard from
+					 * a new site; like NEWCLIENT, but
+					 * indirect.  A NEWCLIENT message comes
+					 * directly from the new client while a
+					 * NEWSITE comes indirectly from
+					 * someone who heard about a NEWSITE.*/
+#define	REP_PAGE		24	/* Database page. */
+#define	REP_PAGE_FAIL		25	/* Requested page does not exist. */
+#define	REP_PAGE_MORE		26	/* There are more pages to request. */
+#define	REP_PAGE_REQ		27	/* Request for a database page. */
+#define	REP_REREQUEST		28	/* Force rerequest. */
+#define	REP_START_SYNC		29	/* Tell client to begin syncing a ckp.*/
+#define	REP_UPDATE		30	/* Environment hotcopy information. */
+#define	REP_UPDATE_REQ		31	/* Request for hotcopy information. */
+#define	REP_VERIFY		32	/* A log record for verification. */
+#define	REP_VERIFY_FAIL		33	/* The client is outdated. */
+#define	REP_VERIFY_REQ		34	/* Request for a log record to
+					 * verify. */
+#define	REP_VOTE1		35	/* Send out your information for an
+					 * election. */
+#define	REP_VOTE2		36	/* Send a "you are master" vote. */
 /*
  * Maximum message number for conversion tables.  Update this
  * value as the largest message number above increases.
@@ -90,7 +106,7 @@ extern "C" {
  * NOTE: When changing messages above, the two tables for upgrade support
  * need adjusting.  They are in rep_util.c.
  */
-#define	REP_MAX_MSG	31
+#define	REP_MAX_MSG	36
 
 /*
  * This is the list of client-to-client requests messages.
@@ -99,6 +115,8 @@ extern "C" {
  */
 #define	REP_MSG_REQ(rectype)			\
     (rectype == REP_ALL_REQ ||			\
+    rectype == REP_BLOB_ALL_REQ ||		\
+    rectype == REP_BLOB_CHUNK_REQ ||		\
     rectype == REP_LOG_REQ ||			\
     rectype == REP_PAGE_REQ ||			\
     rectype == REP_VERIFY_REQ)
@@ -127,6 +145,7 @@ extern "C" {
 #define	DB_LOGVERSION_53	19
 #define	DB_LOGVERSION_60	20
 #define	DB_LOGVERSION_60p1	21
+#define	DB_LOGVERSION_61	22
 #define	DB_LOGVERSION_MIN	DB_LOGVERSION_44
 #define	DB_REPVERSION_INVALID	0
 #define	DB_REPVERSION_44	3
@@ -134,12 +153,12 @@ extern "C" {
 #define	DB_REPVERSION_46	4
 #define	DB_REPVERSION_47	5
 #define	DB_REPVERSION_48	5
-#define	DB_REPVERSION_50	5
 #define	DB_REPVERSION_51	5
 #define	DB_REPVERSION_52	6
 #define	DB_REPVERSION_53	7
 #define	DB_REPVERSION_60	7
-#define	DB_REPVERSION		DB_REPVERSION_60
+#define	DB_REPVERSION_61	8
+#define	DB_REPVERSION		DB_REPVERSION_61
 #define	DB_REPVERSION_MIN	DB_REPVERSION_44
 
 /*
@@ -220,6 +239,7 @@ extern "C" {
  * Database types for __rep_client_dbinit
  */
 typedef enum {
+	REP_BLOB,	/* Blob file database. */
 	REP_DB,		/* Log record database. */
 	REP_PG		/* Pg database. */
 } repdb_t;
@@ -252,7 +272,7 @@ typedef enum {
 typedef enum {
 	SYNC_OFF,	/* No recovery. */
 	SYNC_LOG,	/* Recovery - log. */
-	SYNC_PAGE,	/* Recovery - pages. */
+	SYNC_PAGE,	/* Recovery - pages and blobs. */
 	SYNC_UPDATE,	/* Recovery - update. */
 	SYNC_VERIFY 	/* Recovery - verify. */
 } repsync_t;
@@ -359,6 +379,17 @@ typedef struct __rep { /* SHARED */
 	u_int32_t	first_vers;	/* Log version of first log file. */
 	DB_LSN		last_lsn;	/* Latest LSN we need. */
 	/* These are protected by mtx_clientdb. */
+	db_seq_t	gap_bl_hi_id;	/* Last id in the blob gap. */
+	db_seq_t	gap_bl_hi_sid;	/* Last sid in the blob gap. */
+	off_t		gap_bl_hi_off;	/* Last offset in the blob gap. */
+	db_seq_t	last_blob_id;	/* Last id on the list to process. */
+	db_seq_t	last_blob_sid;	/* Last sid on the list to process. */
+	db_seq_t	prev_blob_id;	/* Previous last id on list. */
+	db_seq_t	prev_blob_sid;	/* Previous last sid on list. */
+	db_seq_t	highest_id;	/* Highest file id to request. */
+	u_int32_t	blob_more_files;/* More blob files to be processed. */
+	int		blob_sync;	/* Currently handling blobs. */
+	int		blob_rereq;	/* When to rereq a blob update msg. */
 	db_timespec	last_pg_ts;	/* Last page stored timestamp. */
 	db_pgno_t	ready_pg;	/* Next pg expected. */
 	db_pgno_t	waiting_pg;	/* First pg after gap. */
@@ -418,8 +449,11 @@ typedef struct __rep { /* SHARED */
 	db_timeout_t	connection_retry_wait;
 	db_timeout_t	heartbeat_frequency; /* Max period between msgs. */
 	db_timeout_t	heartbeat_monitor_timeout;
-	u_int32_t	inqueue_msg_max;
-	u_int32_t	inqueue_bulkmsg_max;
+	u_int32_t	inqueue_max_gbytes;
+	u_int32_t	inqueue_max_bytes;
+	u_int32_t	inqueue_rz_gbytes;
+	u_int32_t	inqueue_rz_bytes;
+	u_int32_t	inqueue_full_event_on;
 #endif  /* HAVE_REPLICATION_THREADS */
 
 	/* Statistics. */
@@ -439,10 +473,13 @@ typedef struct __rep { /* SHARED */
 #define	REP_C_AUTOTAKEOVER	0x00008		/* Auto listener take over. */
 #define	REP_C_BULK		0x00010		/* Bulk transfer. */
 #define	REP_C_DELAYCLIENT	0x00020		/* Delay client sync-up. */
-#define	REP_C_ELECTIONS		0x00040		/* Repmgr to use elections. */
-#define	REP_C_INMEM		0x00080		/* In-memory replication. */
-#define	REP_C_LEASE		0x00100		/* Leases configured. */
-#define	REP_C_NOWAIT		0x00200		/* Immediate error return. */
+#define	REP_C_ELECT_LOGLENGTH	0x00040		/* Log length wins election. */
+#define	REP_C_ELECTIONS		0x00080		/* Repmgr to use elections. */
+#define	REP_C_INMEM		0x00100		/* In-memory replication. */
+#define	REP_C_LEASE		0x00200		/* Leases configured. */
+#define	REP_C_NOWAIT		0x00400		/* Immediate error return. */
+#define	REP_C_PREFMAS_CLIENT	0x00800		/* Preferred master client. */
+#define	REP_C_PREFMAS_MASTER	0x01000		/* Preferred master site. */
 	u_int32_t	config;		/* Configuration flags. */
 
 	/* Election. */
@@ -473,15 +510,17 @@ typedef struct __rep { /* SHARED */
 #define	REP_F_CLIENT		0x00000008	/* Client replica. */
 #define	REP_F_DELAY		0x00000010	/* Delaying client sync-up. */
 #define	REP_F_GROUP_ESTD	0x00000020	/* Rep group is established. */
-#define	REP_F_INUPDREQ		0x00000040	/* Thread in rep_update_req. */
-#define	REP_F_LEASE_EXPIRED	0x00000080	/* Leases guaranteed expired. */
-#define	REP_F_MASTER		0x00000100	/* Master replica. */
-#define	REP_F_MASTERELECT	0x00000200	/* Master elect. */
-#define	REP_F_NEWFILE		0x00000400	/* Newfile in progress. */
-#define	REP_F_NIMDBS_LOADED	0x00000800	/* NIMDBs are materialized. */
-#define	REP_F_SKIPPED_APPLY	0x00001000	/* Skipped applying a record. */
-#define	REP_F_START_CALLED	0x00002000	/* Rep_start called. */
-#define	REP_F_SYS_DB_OP		0x00004000	/* Operation in progress. */
+#define	REP_F_HOLD_GEN		0x00000040	/* PrefMas startup hold gen. */
+#define	REP_F_INUPDREQ		0x00000080	/* Thread in rep_update_req. */
+#define	REP_F_LEASE_EXPIRED	0x00000100	/* Leases guaranteed expired. */
+#define	REP_F_MASTER		0x00000200	/* Master replica. */
+#define	REP_F_MASTERELECT	0x00000400	/* Master elect. */
+#define	REP_F_NEWFILE		0x00000800	/* Newfile in progress. */
+#define	REP_F_NIMDBS_LOADED	0x00001000	/* NIMDBs are materialized. */
+#define	REP_F_READONLY_MASTER	0x00002000	/* PrefMas readonly master. */
+#define	REP_F_SKIPPED_APPLY	0x00004000	/* Skipped applying a record. */
+#define	REP_F_START_CALLED	0x00008000	/* Rep_start called. */
+#define	REP_F_SYS_DB_OP		0x00010000	/* Operation in progress. */
 	u_int32_t	flags;
 } REP;
 
@@ -612,6 +651,22 @@ do {									\
 } while (0)
 
 
+/* Macros to determine current replication configuration options. */
+#define REP_CONFIG_IS_SET(env, flags) 					\
+	(REP_ON(env) ? 							\
+	FLD_ISSET(((env)->rep_handle->region)->config, flags) : 	\
+	FLD_ISSET(((env)->rep_handle)->config, flags))
+#ifdef HAVE_REPLICATION_THREADS
+#define PREFMAS_IS_SET(env) 						\
+	(REP_CONFIG_IS_SET(env, 					\
+	(REP_C_PREFMAS_MASTER | REP_C_PREFMAS_CLIENT)))
+#else
+#define PREFMAS_IS_SET(env)	0
+#endif
+#define IS_PREFMAS_MODE(env)						\
+	(REP_ON(env) && PREFMAS_IS_SET(env) &&				\
+	((env)->rep_handle->region)->config_nsites < 3)
+
 /*
  * Gap processing flags.  These provide control over the basic
  * gap processing algorithm for some special cases.
@@ -621,11 +676,22 @@ do {									\
 					/* REREQUEST is a superset of FORCE. */
 
 /*
+ * Internal options for rep_start_int().  These are used by preferred master
+ * mode to help coordinate between the sites during changes of master.
+ */
+#define	REP_START_FORCE_ROLECHG	0x001	/* Force role change to advance gen. */
+#define	REP_START_HOLD_CLIGEN	0x002	/* Hold client gen before doing
+					 * lsnhist match. */
+#define	REP_START_WAIT_LOCKMSG	0x004	/* Wait for REP_LOCKOUT_MSG. */
+
+/*
  * Flags indicating what kind of record we want to back up to, in the log.
  */
-#define	REP_REC_COMMIT		0x001 	/* Most recent commit record. */
-#define	REP_REC_PERM		0x002	/* Most recent perm record. */
+#define REP_REC_COMMIT		0x001   /* Most recent commit record. */
+#define REP_REC_PERM		0x002   /* Most recent perm record. */
 					/* PERM is a superset of COMMIT. */
+#define REP_REC_PERM_DEL	0x004   /* Most recent PERM, or fail if a
+					 * file delete is found first. */
 
 /*
  * Permanent record types.
@@ -772,6 +838,7 @@ struct __db_rep {
 	DB_MPOOLFILE	*file_mpf;	/* Mpoolfile for current database. */
 	DB		*file_dbp;	/* This file's page info. */
 	DBC		*queue_dbc;	/* Dbc for a queue file. */
+	DB		*blob_dbp;	/* Blob file database. */
 
 	/*
 	 * Please change __rep_print_all (rep_stat.c) to track any changes made
@@ -799,8 +866,8 @@ struct __db_rep {
 	db_timeout_t	connection_retry_wait;
 	db_timeout_t	heartbeat_frequency; /* Max period between msgs. */
 	db_timeout_t	heartbeat_monitor_timeout;
-	u_int32_t	inqueue_msg_max;
-	u_int32_t	inqueue_bulkmsg_max;
+	u_int32_t	inqueue_max_gbytes;
+	u_int32_t	inqueue_max_bytes;
 
 	/* Thread synchronization. */
 	REPMGR_RUNNABLE *selector, **messengers, **elect_threads;
@@ -830,12 +897,14 @@ struct __db_rep {
 	CONNECTION_LIST	connections;
 	RETRY_Q_HEADER	retries;	/* Sites needing connection retry. */
 	struct {
-		int	size;
+		u_int32_t gbytes;
+		u_int32_t bytes;
 		STAILQ_HEAD(__repmgr_q_header, __repmgr_message) header;
 	} input_queue;
 
 	socket_t	listen_fd;
 	db_timespec	last_bcast;	/* Time of last broadcast msg. */
+	db_timespec	last_hbeat;	/* Time of last heartbeat (prefmas). */
 	db_timespec	l_listener_chk; /* Time to check local listener. */
 	db_timeout_t	l_listener_wait;/* Timeout to check local listener. */
 	db_timespec	m_listener_chk; /* Time to check master listener. */
@@ -891,6 +960,16 @@ struct __db_rep {
 	 */
 	u_int8_t	*restored_list;
 	size_t		restored_list_length;
+
+	/*
+	 * Preferred master mode indicator for a pending action.  A
+	 * master_switch is initiated when the preferred master site is
+	 * ready to take over as master.  A start_temp_master is initiated
+	 * when the client site needs to start as the temporary master.
+	 */
+	enum { no_action, master_switch, start_temp_master } prefmas_pending;
+	/* The LSN at the very beginning of preferred master site startup. */
+	DB_LSN prefmas_init_lsn;
 
 	/* Application's message dispatch call-back function. */
 	void  (*msg_dispatch) __P((DB_ENV *, DB_CHANNEL *,
@@ -1143,6 +1222,20 @@ typedef struct {
 	DB_LOCKREQ	*reqs;
 	DBT		*objs;
 } linfo_t;
+
+/*
+ * Used to store information on the child transaction that opens a blob meta
+ * database.  In partial replication processing the child transaction of the
+ * blob meta database must be delayed until after processing the child
+ * transaction that opens the database that owns the BMD.
+ */
+typedef struct {
+	db_seq_t blob_file_id;
+	DB_LSN lsn;
+	u_int32_t child;
+	void *next;
+	void *prev;
+} DELAYED_BLOB_LIST;
 
 #if defined(__cplusplus)
 }

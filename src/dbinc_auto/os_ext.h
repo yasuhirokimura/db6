@@ -6,7 +6,7 @@
 extern "C" {
 #endif
 
-void __os_abort __P((ENV *));
+void __os_abort __P((const ENV *));
 int __os_abspath __P((const char *));
 #if defined(HAVE_REPLICATION_THREADS)
 int __os_getaddrinfo __P((ENV *, const char *, u_int, const char *, const ADDRINFO *, ADDRINFO **));
@@ -18,12 +18,12 @@ int __os_umalloc __P((ENV *, size_t, void *));
 int __os_urealloc __P((ENV *, size_t, void *));
 void __os_ufree __P((ENV *, void *));
 int __os_strdup __P((ENV *, const char *, void *));
-int __os_calloc __P((ENV *, size_t, size_t, void *));
-int __os_malloc __P((ENV *, size_t, void *));
-int __os_realloc __P((ENV *, size_t, void *));
-void __os_free __P((ENV *, void *));
+int __os_calloc __P((const ENV *, size_t, size_t, void *));
+int __os_malloc __P((const ENV *, size_t, void *));
+int __os_realloc __P((const ENV *, size_t, void *));
+void __os_free __P((const ENV *, void *));
 void *__ua_memcpy __P((void *, const void *, size_t));
-void __os_gettime __P((ENV *, db_timespec *, int));
+void __os_gettime __P((const ENV *, db_timespec *, int));
 int __os_fs_notzero __P((void));
 int __os_support_direct_io __P((void));
 int __os_support_db_register __P((void));
@@ -62,7 +62,11 @@ int __os_read __P((ENV *, DB_FH *, void *, size_t, size_t *));
 int __os_write __P((ENV *, DB_FH *, void *, size_t, size_t *));
 int __os_physwrite __P((ENV *, DB_FH *, void *, size_t, size_t *));
 int __os_seek __P((ENV *, DB_FH *, db_pgno_t, u_int32_t, off_t));
-void __os_stack __P((ENV *));
+void __os_stack __P((const ENV *));
+void __os_stack_top __P((const ENV *, unsigned, unsigned));
+void __os_stack_text __P((const ENV *, char *, size_t, unsigned, unsigned));
+int __os_stack_save __P((const ENV *, unsigned, void **));
+void __os_stack_msgadd __P((const ENV *, DB_MSGBUF *, unsigned, unsigned, void **));
 int __os_exists __P((ENV *, const char *, int *));
 int __os_ioinfo __P((ENV *, const char *, DB_FH *, u_int32_t *, u_int32_t *, u_int32_t *));
 int __os_tmpdir __P((ENV *, u_int32_t));

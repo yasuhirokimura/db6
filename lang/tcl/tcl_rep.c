@@ -36,10 +36,13 @@ static const NAMEMAP rep_config_types[] = {
 	{"autorollback",	DB_REP_CONF_AUTOROLLBACK},
 	{"bulk",		DB_REP_CONF_BULK},
 	{"delayclient",		DB_REP_CONF_DELAYCLIENT},
+	{"electloglength",	DB_REP_CONF_ELECT_LOGLENGTH},
 	{"inmem",		DB_REP_CONF_INMEM},
 	{"lease",		DB_REP_CONF_LEASE},
 	{"mgr2sitestrict",	DB_REPMGR_CONF_2SITE_STRICT},
 	{"mgrelections",	DB_REPMGR_CONF_ELECTIONS},
+	{"mgrprefmasclient",	DB_REPMGR_CONF_PREFMAS_CLIENT},
+	{"mgrprefmasmaster",	DB_REPMGR_CONF_PREFMAS_MASTER},
 	{"nowait",		DB_REP_CONF_NOWAIT},
 	{NULL,			0}
 };
@@ -137,8 +140,12 @@ tcl_RepGetTwo(interp, dbenv, op)
 	case DBTCL_GETCLOCK:
 		ret = dbenv->rep_get_clockskew(dbenv, &val1, &val2);
 		break;
-	case DBTCL_GETINQUEUE:
+	case DBTCL_GETINQUEUE_MAX:
 		ret = dbenv->repmgr_get_incoming_queue_max(dbenv,
+		    &val1, &val2);
+		break;
+	case DBTCL_GETINQUEUE_REDZONE:
+		ret = __repmgr_get_incoming_queue_redzone(dbenv,
 		    &val1, &val2);
 		break;
 	case DBTCL_GETLIMIT:
@@ -948,7 +955,7 @@ tcl_RepStat(interp, objc, objv, dbenv)
 	result = TCL_OK;
 
 	if (objc > 3) {
-		Tcl_WrongNumArgs(interp, 2, objv, NULL);
+		Tcl_WrongNumArgs(interp, 2, objv, "?-clear?");
 		return (TCL_ERROR);
 	}
 	if (objc == 3) {
@@ -1050,7 +1057,9 @@ tcl_RepStat(interp, objc, objv, dbenv)
 	    sp->st_startsync_delayed);
 	MAKE_STAT_LIST("Maximum lease seconds", sp->st_max_lease_sec);
 	MAKE_STAT_LIST("Maximum lease usecs", sp->st_max_lease_usec);
+	/* Undocumented field used by tests only. */
 	MAKE_STAT_LIST("File fail cleanups done", sp->st_filefail_cleanups);
+	/* Undocumented field used by tests only. */
 	MAKE_WSTAT_LIST("Future duplicated log records", sp->st_log_futuredup);
 
 	Tcl_SetObjResult(interp, res);
@@ -1160,13 +1169,13 @@ tcl_RepMgr(interp, objc, objv, dbenv)
 	long to;
 	int ack, creator, i, j, legacy, myobjc, optindex;
 	int peer, result, ret, totype, t_ret;
-	u_int32_t msgth, start_flag, uintarg, uintarg2;
+	u_int32_t call_start, msgth, start_flag, uintarg, uintarg2;
 	char *arg;
 
 	result = TCL_OK;
 	ack = ret = totype = 0;
 	msgth = 1;
-	start_flag = 0;
+	call_start = start_flag = 0;
 
 	if (objc <= 2) {
 		Tcl_WrongNumArgs(interp, 2, objv, "?args?");
@@ -1217,7 +1226,7 @@ tcl_RepMgr(interp, objc, objv, dbenv)
 				break;
 			if (myobjc != 2) {
 				Tcl_WrongNumArgs(interp, 2, objv,
-				    "?-inqueue {msgs bulkmsgs}?");
+				    "?-inqueue {gbytes bytes}?");
 				result = TCL_ERROR;
 				break;
 			}
@@ -1402,12 +1411,18 @@ tcl_RepMgr(interp, objc, objv, dbenv)
 				start_flag = DB_REP_CLIENT;
 			else if (strcmp(arg, "elect") == 0)
 				start_flag = DB_REP_ELECTION;
+			else if (strcmp(arg, "none") == 0) {
+				start_flag = 0;
+				call_start = 1;
+			}
 			else {
 				Tcl_AddErrorInfo(
 				    interp, "start: illegal state");
 				result = TCL_ERROR;
 				break;
 			}
+			if (start_flag)
+				call_start = 1;
 			/*
 			 * Some config functions need to be called
 			 * before repmgr_start.  So finish parsing all
@@ -1455,7 +1470,7 @@ tcl_RepMgr(interp, objc, objv, dbenv)
 	 * Only call repmgr_start if needed.  The user may use this
 	 * call just to reconfigure, change policy, etc.
 	 */
-	if (start_flag != 0 && result == TCL_OK) {
+	if (call_start && result == TCL_OK) {
 		_debug_check();
 		ret = dbenv->repmgr_start(dbenv, (int)msgth, start_flag);
 		result = _ReturnSetup(
@@ -1550,7 +1565,7 @@ tcl_RepMgrStat(interp, objc, objv, dbenv)
 	result = TCL_OK;
 
 	if (objc > 3) {
-		Tcl_WrongNumArgs(interp, 2, objv, NULL);
+		Tcl_WrongNumArgs(interp, 2, objv, "?-clear?");
 		return (TCL_ERROR);
 	}
 	if (objc == 3) {
@@ -1582,6 +1597,12 @@ tcl_RepMgrStat(interp, objc, objv, dbenv)
 	MAKE_WSTAT_LIST("Acknowledgement failures", sp->st_perm_failed);
 	MAKE_WSTAT_LIST("Messages delayed", sp->st_msgs_queued);
 	MAKE_WSTAT_LIST("Messages discarded", sp->st_msgs_dropped);
+	MAKE_WSTAT_LIST("Incoming messages size (gbytes)", 
+	    sp->st_incoming_queue_gbytes);
+	MAKE_WSTAT_LIST("Incoming messages size (bytes)", 
+	    sp->st_incoming_queue_bytes);
+	MAKE_WSTAT_LIST("Incoming messages discarded", 
+	    sp->st_incoming_msgs_dropped);
 	MAKE_WSTAT_LIST("Connections dropped", sp->st_connection_drop);
 	MAKE_WSTAT_LIST("Failed re-connects", sp->st_connect_fail);
 	MAKE_STAT_LIST("Election threads", sp->st_elect_threads);
@@ -1591,7 +1612,6 @@ tcl_RepMgrStat(interp, objc, objv, dbenv)
 	MAKE_STAT_LIST("Participant sites", sp->st_site_participants);
 	MAKE_WSTAT_LIST("Automatic replication process takeovers",
 	    sp->st_takeovers);
-	MAKE_STAT_LIST("Incoming queue size", sp->st_incoming_queue_size);
 
 	Tcl_SetObjResult(interp, res);
 error:

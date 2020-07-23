@@ -17,8 +17,11 @@
 
 static int convert_gmdb(ENV *, DB_THREAD_INFO *, DB *, DB_TXN *);
 static int get_eid __P((ENV *, const char *, u_int, int *));
-static int __repmgr_addrcmp __P((repmgr_netaddr_t *, repmgr_netaddr_t *));
 static int read_gmdb __P((ENV *, DB_THREAD_INFO *, u_int8_t **, size_t *));
+static int __repmgr_addrcmp __P((repmgr_netaddr_t *, repmgr_netaddr_t *));
+static int __repmgr_find_commit __P((ENV *, DB_LSN *, DB_LSN *, int *));
+static int __repmgr_remote_lsnhist(ENV *, int, u_int32_t,
+    __repmgr_lsnhist_match_args *);
 
 /*
  * Schedules a future attempt to re-establish a connection with the given site.
@@ -304,6 +307,7 @@ __repmgr_new_site(env, sitep, host, port)
 	site->net_addr.host = p;
 	site->net_addr.port = (u_int16_t)port;
 
+	site->max_ack_gen = 0;
 	ZERO_LSN(site->max_ack);
 	site->ack_policy = 0;
 	site->alignment = 0;
@@ -621,12 +625,13 @@ __repmgr_format_addr_loc(addr, buffer)
 }
 
 /*
- * PUBLIC: int __repmgr_repstart __P((ENV *, u_int32_t));
+ * PUBLIC: int __repmgr_repstart __P((ENV *, u_int32_t, u_int32_t));
  */
 int
-__repmgr_repstart(env, flags)
+__repmgr_repstart(env, flags, startopts)
 	ENV *env;
 	u_int32_t flags;
+	u_int32_t startopts;
 {
 	DBT my_addr;
 	int ret;
@@ -634,7 +639,11 @@ __repmgr_repstart(env, flags)
 	/* Include "cdata" in case sending to old-version site. */
 	if ((ret = __repmgr_prepare_my_addr(env, &my_addr)) != 0)
 		return (ret);
-	ret = __rep_start_int(env, &my_addr, flags);
+	/*
+	 * force_role_chg and hold_client_gen are used by preferred master
+	 * mode to help control site startup.
+	 */
+	ret = __rep_start_int(env, &my_addr, flags, startopts);
 	__os_free(env, my_addr.data);
 	if (ret != 0)
 		__db_err(env, ret, DB_STR("3673", "rep_start"));
@@ -642,11 +651,12 @@ __repmgr_repstart(env, flags)
 }
 
 /*
- * PUBLIC: int __repmgr_become_master __P((ENV *));
+ * PUBLIC: int __repmgr_become_master __P((ENV *, u_int32_t));
  */
 int
-__repmgr_become_master(env)
+__repmgr_become_master(env, startopts)
 	ENV *env;
+	u_int32_t startopts;
 {
 	DB_REP *db_rep;
 	DB_THREAD_INFO *ip;
@@ -692,7 +702,7 @@ __repmgr_become_master(env)
 	db_rep->client_intent = FALSE;
 	UNLOCK_MUTEX(db_rep->mutex);
 
-	if ((ret = __repmgr_repstart(env, DB_REP_MASTER)) != 0)
+	if ((ret = __repmgr_repstart(env, DB_REP_MASTER, startopts)) != 0)
 		return (ret);
 
 	/*
@@ -871,8 +881,14 @@ __repmgr_open(env, rep_)
 	rep->election_retry_wait = db_rep->election_retry_wait;
 	rep->heartbeat_monitor_timeout = db_rep->heartbeat_monitor_timeout;
 	rep->heartbeat_frequency = db_rep->heartbeat_frequency;
-	rep->inqueue_msg_max = db_rep->inqueue_msg_max;
-	rep->inqueue_bulkmsg_max = db_rep->inqueue_bulkmsg_max;
+	rep->inqueue_max_gbytes = db_rep->inqueue_max_gbytes;
+	rep->inqueue_max_bytes = db_rep->inqueue_max_bytes;
+	if (rep->inqueue_max_gbytes == 0 && rep->inqueue_max_bytes == 0) {
+		rep->inqueue_max_bytes = DB_REPMGR_DEFAULT_INQUEUE_MAX;
+	}
+	__repmgr_set_incoming_queue_redzone(rep, rep->inqueue_max_gbytes,
+	    rep->inqueue_max_bytes);
+
 	return (ret);
 }
 
@@ -991,6 +1007,18 @@ __repmgr_join(env, rep_)
 	}
 
 	db_rep->siteinfo_seq = rep->siteinfo_seq;
+	/*
+	 * Update the incoming queue limit settings if necessary.
+	 */
+	if ((db_rep->inqueue_max_gbytes != 0 ||
+	    db_rep->inqueue_max_bytes != 0) &&
+	    (db_rep->inqueue_max_gbytes != rep->inqueue_max_gbytes ||
+	     db_rep->inqueue_max_bytes != rep->inqueue_max_gbytes)) {
+		rep->inqueue_max_gbytes = db_rep->inqueue_max_gbytes;
+		rep->inqueue_max_bytes = db_rep->inqueue_max_bytes;
+		__repmgr_set_incoming_queue_redzone(rep,
+		    rep->inqueue_max_gbytes, rep->inqueue_max_bytes);
+	}
 unlock:
 	MUTEX_UNLOCK(env, rep->mtx_repmgr);
 	return (ret);
@@ -1321,6 +1349,83 @@ __repmgr_stable_lsn(env, stable_lsn)
 }
 
 /*
+ * PUBLIC: int __repmgr_make_request_conn __P((ENV *,
+ * PUBLIC:     repmgr_netaddr_t *, REPMGR_CONNECTION **));
+ */
+int
+__repmgr_make_request_conn(env, addr, connp)
+	ENV *env;
+	repmgr_netaddr_t *addr;
+	REPMGR_CONNECTION **connp;
+{
+	DBT vi;
+	__repmgr_msg_hdr_args msg_hdr;
+	__repmgr_version_confirmation_args conf;
+	REPMGR_CONNECTION *conn;
+	int alloc, ret, unused;
+
+	alloc = FALSE;
+	if ((ret = __repmgr_connect(env, addr, &conn, &unused)) != 0)
+		return (ret);
+	conn->type = APP_CONNECTION;
+
+	/* Read a handshake msg, to get version confirmation and parameters. */
+	if ((ret = __repmgr_read_conn(conn)) != 0)
+		goto err;
+	/*
+	 * We can only get here after having read the full 9 bytes that we
+	 * expect, so this can't fail.
+	 */
+	DB_ASSERT(env, conn->reading_phase == SIZES_PHASE);
+	ret = __repmgr_msg_hdr_unmarshal(env, &msg_hdr,
+	    conn->msg_hdr_buf, __REPMGR_MSG_HDR_SIZE, NULL);
+	DB_ASSERT(env, ret == 0);
+	__repmgr_iovec_init(&conn->iovecs);
+	conn->reading_phase = DATA_PHASE;
+
+	if ((ret = __repmgr_prepare_simple_input(env, conn, &msg_hdr)) != 0)
+		goto err;
+	alloc = TRUE;
+
+	if ((ret = __repmgr_read_conn(conn)) != 0)
+		goto err;
+
+	/*
+	 * Analyze the handshake msg, and stash relevant info.
+	 */
+	if ((ret = __repmgr_find_version_info(env, conn, &vi)) != 0)
+		goto err;
+	DB_ASSERT(env, vi.size > 0);
+	if ((ret = __repmgr_version_confirmation_unmarshal(env,
+	    &conf, vi.data, vi.size, NULL)) != 0)
+		goto err;
+
+	if (conf.version < GM_MIN_VERSION ||
+	    (IS_VIEW_SITE(env) && conf.version < VIEW_MIN_VERSION) ||
+	    (PREFMAS_IS_SET(env) && conf.version < PREFMAS_MIN_VERSION)) {
+		ret = DB_REP_UNAVAIL;
+		goto err;
+	}
+	conn->version = conf.version;
+
+err:
+	if (alloc) {
+		DB_ASSERT(env, conn->input.repmgr_msg.cntrl.size > 0);
+		__os_free(env, conn->input.repmgr_msg.cntrl.data);
+		DB_ASSERT(env, conn->input.repmgr_msg.rec.size > 0);
+		__os_free(env, conn->input.repmgr_msg.rec.data);
+	}
+	__repmgr_reset_for_reading(conn);
+	if (ret == 0)
+		*connp = conn;
+	else {
+		(void)__repmgr_close_connection(env, conn);
+		(void)__repmgr_destroy_conn(env, conn);
+	}
+	return (ret);
+}
+
+/*
  * PUBLIC: int __repmgr_send_sync_msg __P((ENV *, REPMGR_CONNECTION *,
  * PUBLIC:     u_int32_t, u_int8_t *, u_int32_t));
  */
@@ -1347,6 +1452,500 @@ __repmgr_send_sync_msg(env, conn, type, buf, len)
 		__repmgr_add_buffer(&iovecs, buf, len);
 
 	return (__repmgr_write_iovecs(env, conn, &iovecs, &unused));
+}
+
+/*
+ * Reads a whole message, when we expect to get a REPMGR_OWN_MSG.
+ */
+/*
+ * PUBLIC: int __repmgr_read_own_msg __P((ENV *, REPMGR_CONNECTION *,
+ * PUBLIC:     u_int32_t *, u_int8_t **, size_t *));
+ */
+int
+__repmgr_read_own_msg(env, conn, typep, bufp, lenp)
+	ENV *env;
+	REPMGR_CONNECTION *conn;
+	u_int32_t *typep;
+	u_int8_t **bufp;
+	size_t *lenp;
+{
+	__repmgr_msg_hdr_args msg_hdr;
+	u_int8_t *buf;
+	u_int32_t type;
+	size_t size;
+	int ret;
+
+	__repmgr_reset_for_reading(conn);
+	if ((ret = __repmgr_read_conn(conn)) != 0)
+		goto err;
+	ret = __repmgr_msg_hdr_unmarshal(env, &msg_hdr,
+	    conn->msg_hdr_buf, __REPMGR_MSG_HDR_SIZE, NULL);
+	DB_ASSERT(env, ret == 0);
+
+	if ((conn->msg_type = msg_hdr.type) != REPMGR_OWN_MSG) {
+		ret = DB_REP_UNAVAIL; /* Protocol violation. */
+		goto err;
+	}
+	type = REPMGR_OWN_MSG_TYPE(msg_hdr);
+	if ((size = (size_t)REPMGR_OWN_BUF_SIZE(msg_hdr)) > 0) {
+		conn->reading_phase = DATA_PHASE;
+		__repmgr_iovec_init(&conn->iovecs);
+
+		if ((ret = __os_malloc(env, size, &buf)) != 0)
+			goto err;
+		conn->input.rep_message = NULL;
+
+		__repmgr_add_buffer(&conn->iovecs, buf, size);
+		if ((ret = __repmgr_read_conn(conn)) != 0) {
+			__os_free(env, buf);
+			goto err;
+		}
+		*bufp = buf;
+	}
+
+	*typep = type;
+	*lenp = size;
+
+err:
+	return (ret);
+}
+
+/*
+ * Returns TRUE if we are connected to the other site in a preferred
+ * master replication group, FALSE otherwise.
+ *
+ * PUBLIC: int __repmgr_prefmas_connected __P((ENV *));
+ */
+int
+__repmgr_prefmas_connected(env)
+	ENV *env;
+{
+	DB_REP *db_rep;
+	REPMGR_CONNECTION *conn;
+	REPMGR_SITE *other_site;
+
+	db_rep = env->rep_handle;
+
+	/*
+	 * Preferred master mode only has 2 sites, so the other site is
+	 * always EID 1.
+	 */
+	if (!IS_PREFMAS_MODE(env) || !IS_KNOWN_REMOTE_SITE(1))
+		  return (FALSE);
+
+	other_site = SITE_FROM_EID(1);
+	if (other_site->state == SITE_CONNECTED)
+		return (TRUE);
+
+	if ((conn = other_site->ref.conn.in) != NULL &&
+	    IS_READY_STATE(conn->state))
+		return (TRUE);
+	if ((conn = other_site->ref.conn.out) != NULL &&
+	    IS_READY_STATE(conn->state))
+		return (TRUE);
+
+	return (FALSE);
+}
+
+/*
+ * Used by a preferred master site to restart the remote temporary master
+ * site as a client.  This is used to help guarantee that the preferred master
+ * site's transactions are never rolled back.
+ *
+ * PUBLIC: int __repmgr_restart_site_as_client __P((ENV *, int));
+ */
+int
+__repmgr_restart_site_as_client(env, eid)
+	ENV *env;
+	int eid;
+{
+	DB_REP *db_rep;
+	REPMGR_CONNECTION *conn;
+	repmgr_netaddr_t addr;
+	u_int32_t type;
+	size_t len;
+	u_int8_t any_value, *response_buf;
+	int ret, t_ret;
+
+	COMPQUIET(any_value, 0);
+	db_rep = env->rep_handle;
+	conn = NULL;
+
+	if (!IS_PREFMAS_MODE(env))
+		return (0);
+
+	LOCK_MUTEX(db_rep->mutex);
+	addr = SITE_FROM_EID(eid)->net_addr;
+	UNLOCK_MUTEX(db_rep->mutex);
+	if ((ret = __repmgr_make_request_conn(env, &addr, &conn)) != 0)
+		return (ret);
+
+	/*
+	 * No payload needed, but must send at least a dummy byte for the
+	 * other side to recognize that a message has arrived.
+	 */
+	if ((ret = __repmgr_send_sync_msg(env, conn,
+	    REPMGR_RESTART_CLIENT, VOID_STAR_CAST &any_value, 1)) != 0)
+		goto err;
+
+	if ((ret = __repmgr_read_own_msg(env,
+	    conn, &type, &response_buf, &len)) != 0)
+		goto err;
+	if (type != REPMGR_PREFMAS_SUCCESS) {
+		RPRINT(env, (env, DB_VERB_REPMGR_MISC,
+		    "restart_site_as_client got unexpected message type %d",
+		    type));
+		ret = DB_REP_UNAVAIL; /* Invalid response: protocol violation */
+	}
+err:
+	if (conn != NULL) {
+		if ((t_ret = __repmgr_close_connection(env,
+		    conn)) != 0 && ret != 0)
+			ret = t_ret;
+		if ((t_ret = __repmgr_destroy_conn(env,
+		    conn)) != 0 && ret != 0)
+			ret = t_ret;
+	}
+	return (ret);
+}
+
+/*
+ * Used by a preferred master site to make the remote temporary master
+ * site a readonly master.  This is used to help preserve all temporary
+ * master transactions.
+ *
+ * PUBLIC: int __repmgr_make_site_readonly_master __P((ENV *, int,
+ * PUBLIC:     u_int32_t *, DB_LSN *));
+ */
+int
+__repmgr_make_site_readonly_master(env, eid, gen, sync_lsnp)
+	ENV *env;
+	int eid;
+	u_int32_t *gen;
+	DB_LSN *sync_lsnp;
+{
+	DB_REP *db_rep;
+	REPMGR_CONNECTION *conn;
+	repmgr_netaddr_t addr;
+	__repmgr_permlsn_args permlsn;
+	u_int32_t type;
+	size_t len;
+	u_int8_t any_value, *response_buf;
+	int ret, t_ret;
+
+	COMPQUIET(any_value, 0);
+	db_rep = env->rep_handle;
+	conn = NULL;
+	response_buf = NULL;
+	*gen = 0;
+	ZERO_LSN(*sync_lsnp);
+
+	if (!IS_PREFMAS_MODE(env))
+		return (0);
+
+	LOCK_MUTEX(db_rep->mutex);
+	addr = SITE_FROM_EID(eid)->net_addr;
+	UNLOCK_MUTEX(db_rep->mutex);
+	if ((ret = __repmgr_make_request_conn(env, &addr, &conn)) != 0)
+		return (ret);
+
+	/*
+	 * No payload needed, but must send at least a dummy byte for the
+	 * other side to recognize that a message has arrived.
+	 */
+	if ((ret = __repmgr_send_sync_msg(env, conn,
+	    REPMGR_READONLY_MASTER, VOID_STAR_CAST &any_value, 1)) != 0)
+		goto err;
+
+	if ((ret = __repmgr_read_own_msg(env,
+	    conn, &type, &response_buf, &len)) != 0)
+		goto err;
+
+	if (type == REPMGR_READONLY_RESPONSE) {
+		if ((ret = __repmgr_permlsn_unmarshal(env,
+		    &permlsn, response_buf, len, NULL)) != 0)
+			goto err;
+		*gen = permlsn.generation;
+		*sync_lsnp = permlsn.lsn;
+	} else {
+		RPRINT(env, (env, DB_VERB_REPMGR_MISC,
+		    "make_site_readonly_master got unexpected message type %d",
+		    type));
+		ret = DB_REP_UNAVAIL; /* Invalid response: protocol violation */
+	}
+
+err:
+	if (conn != NULL) {
+		if ((t_ret = __repmgr_close_connection(env,
+		    conn)) != 0 && ret != 0)
+			ret = t_ret;
+		if ((t_ret = __repmgr_destroy_conn(env,
+		    conn)) != 0 && ret != 0)
+			ret = t_ret;
+	}
+	if (response_buf != NULL)
+		__os_free(env, response_buf);
+	return (ret);
+}
+
+/*
+ * Used by a preferred master site to perform the LSN history comparisons to
+ * determine whether there is are continuous or conflicting sets of
+ * transactions between this site and the remote temporary master.
+ *
+ * PUBLIC: int __repmgr_lsnhist_match __P((ENV *,
+ * PUBLIC:     DB_THREAD_INFO *, int, int *));
+ */
+int
+__repmgr_lsnhist_match(env, ip, eid, match)
+	ENV *env;
+	DB_THREAD_INFO *ip;
+	int eid;
+	int *match;
+{
+	DB_REP *db_rep;
+	REP *rep;
+	__rep_lsn_hist_data_args my_lsnhist;
+	__repmgr_lsnhist_match_args remote_lsnhist;
+	u_int32_t my_gen;
+	int found_commit, ret;
+
+	db_rep = env->rep_handle;
+	rep = db_rep->region;
+	*match = FALSE;
+	my_gen = rep->gen;
+	found_commit = FALSE;
+
+	if (!IS_PREFMAS_MODE(env))
+		  return (0);
+
+	/* Get local LSN history information for comparison. */
+	if ((ret = __rep_get_lsnhist_data(env, ip, my_gen, &my_lsnhist)) != 0)
+		return (ret);
+
+	/* Get remote LSN history information for comparison. */
+	ret = __repmgr_remote_lsnhist(env, eid, my_gen, &remote_lsnhist);
+
+	/*
+	 * If the current gen doesn't exist at the remote site, the match
+	 * fails.
+	 *
+	 * If the remote LSN or timestamp at the current gen doesn't match
+	 * ours, we probably had a whack-a-mole situation where each site
+	 * as up and down in isolation one or more times and the match fails.
+	 *
+	 * If the remote LSN for the next generation is lower than this
+	 * site's startup LSN and there are any commit operations between
+	 * these LSNs, there are conflicting sets of transactions and the
+	 * match fails.
+	 */
+	RPRINT(env, (env, DB_VERB_REPMGR_MISC,
+	    "lsnhist_match my_lsn [%lu][%lu] remote_lsn [%lu][%lu]",
+	    (u_long)my_lsnhist.lsn.file, (u_long)my_lsnhist.lsn.offset,
+	    (u_long)remote_lsnhist.lsn.file,
+	    (u_long)remote_lsnhist.lsn.offset));
+	RPRINT(env, (env, DB_VERB_REPMGR_MISC,
+	    "lsnhist_match my_time %lu:%lu remote_time %lu:%lu",
+	    (u_long)my_lsnhist.hist_sec, (u_long)my_lsnhist.hist_nsec,
+	    (u_long)remote_lsnhist.hist_sec, (u_long)remote_lsnhist.hist_nsec));
+	RPRINT(env, (env, DB_VERB_REPMGR_MISC,
+	    "lsnhist_match pminit_lsn [%lu][%lu] next_gen_lsn [%lu][%lu]",
+	    (u_long)db_rep->prefmas_init_lsn.file,
+	    (u_long)db_rep->prefmas_init_lsn.offset,
+	    (u_long)remote_lsnhist.next_gen_lsn.file,
+	    (u_long)remote_lsnhist.next_gen_lsn.offset));
+	if (ret != DB_REP_UNAVAIL &&
+	    LOG_COMPARE(&my_lsnhist.lsn, &remote_lsnhist.lsn) == 0 &&
+	    my_lsnhist.hist_sec == remote_lsnhist.hist_sec &&
+	    my_lsnhist.hist_nsec == remote_lsnhist.hist_nsec) {
+		/*
+		 * If the remote site doesn't yet have the next gen or if
+		 * our startup LSN is <= than the remote next gen LSN, we
+		 * have a match.
+		 *
+		 * Otherwise, our startup LSN is higher than the remote
+		 * next gen LSN.  If we have any commit operations between
+		 * these two LSNs, we have preferred master operations we
+		 * must preserve and there is not a match.  But if we just
+		 * have uncommitted operations between these LSNs it doesn't
+		 * matter if they are rolled back, so we call it a match and
+		 * try to retain temporary master transactions if possible.
+		 */
+		if (IS_ZERO_LSN(remote_lsnhist.next_gen_lsn) ||
+		    LOG_COMPARE(&db_rep->prefmas_init_lsn,
+		    &remote_lsnhist.next_gen_lsn) <= 0)
+			*match = TRUE;
+		else if ((ret = __repmgr_find_commit(env,
+		    &remote_lsnhist.next_gen_lsn,
+		    &db_rep->prefmas_init_lsn, &found_commit)) == 0 &&
+		    !found_commit) {
+			RPRINT(env, (env, DB_VERB_REPMGR_MISC,
+			    "lsnhist_match !found_commit set match TRUE"));
+			*match = TRUE;
+		}
+	}
+
+	/* Don't return an error if current gen didn't exist at remote site. */
+	if (ret == DB_REP_UNAVAIL)
+		ret = 0;
+	RPRINT(env, (env, DB_VERB_REPMGR_MISC,
+	    "lsnhist_match match %d returning %d", *match, ret));
+	return (ret);
+}
+
+/*
+ * Checks a range of log records from low_lsn to high_lsn for any
+ * commit operations.  Sets found_commit to TRUE if a commit is
+ * found.
+ */
+static int
+__repmgr_find_commit(env, low_lsn, high_lsn, found_commit)
+	ENV *env;
+	DB_LSN *low_lsn;
+	DB_LSN *high_lsn;
+	int *found_commit;
+{
+	DB_LOGC *logc;
+	DB_LSN lsn;
+	DBT rec;
+	__txn_regop_args *txn_args;
+	u_int32_t rectype;
+	int ret, t_ret;
+
+	*found_commit = FALSE;
+	ret = 0;
+
+	lsn = *low_lsn;
+	if ((ret = __log_cursor(env, &logc)) != 0)
+		return (ret);
+	memset(&rec, 0, sizeof(rec));
+	if (__logc_get(logc, &lsn, &rec, DB_SET) == 0) {
+		do {
+			LOGCOPY_32(env, &rectype, rec.data);
+			if (rectype == DB___txn_regop) {
+				if ((ret = __txn_regop_read(
+				    env, rec.data, &txn_args)) != 0)
+					goto close_cursor;
+				if (txn_args->opcode == TXN_COMMIT) {
+					*found_commit = TRUE;
+					__os_free(env, txn_args);
+					break;
+				}
+				__os_free(env, txn_args);
+			}
+		} while ((ret = __logc_get(logc, &lsn, &rec, DB_NEXT)) == 0 &&
+		    LOG_COMPARE(&lsn, high_lsn) <= 0);
+	}
+close_cursor:
+	if ((t_ret = __logc_close(logc)) != 0 && ret == 0)
+		ret = t_ret;
+	return (ret);
+}
+
+/*
+ * Used by a preferred master site to get remote LSN history information
+ * from the other site in the replication group.
+ */
+static int
+__repmgr_remote_lsnhist(env, eid, gen, lsnhist_match)
+	ENV *env;
+	int eid;
+	u_int32_t gen;
+	__repmgr_lsnhist_match_args *lsnhist_match;
+{
+	DB_REP *db_rep;
+	REPMGR_CONNECTION *conn;
+	repmgr_netaddr_t addr;
+	__rep_lsn_hist_key_args lsnhist_key;
+	u_int8_t lsnhist_key_buf[__REP_LSN_HIST_KEY_SIZE];
+	u_int32_t type;
+	size_t len;
+	u_int8_t *response_buf;
+	int ret, t_ret;
+
+	db_rep = env->rep_handle;
+	conn = NULL;
+	response_buf = NULL;
+
+	if (!IS_KNOWN_REMOTE_SITE(eid))
+		  return (0);
+
+	LOCK_MUTEX(db_rep->mutex);
+	addr = SITE_FROM_EID(eid)->net_addr;
+	UNLOCK_MUTEX(db_rep->mutex);
+	if ((ret = __repmgr_make_request_conn(env, &addr, &conn)) != 0)
+		return (ret);
+
+	/* Marshal generation for which to request remote lsnhist data. */
+	lsnhist_key.version = REP_LSN_HISTORY_FMT_VERSION;
+	lsnhist_key.gen = gen;
+	__rep_lsn_hist_key_marshal(env, &lsnhist_key, lsnhist_key_buf);
+	if ((ret = __repmgr_send_sync_msg(env, conn, REPMGR_LSNHIST_REQUEST,
+	    lsnhist_key_buf, sizeof(lsnhist_key_buf))) != 0)
+		goto err;
+
+	if ((ret = __repmgr_read_own_msg(env,
+	    conn, &type, &response_buf, &len)) != 0)
+		goto err;
+
+	/* Unmarshal remote lsnhist time and LSNs for comparison. */
+	if (type == REPMGR_LSNHIST_RESPONSE) {
+		if ((ret = __repmgr_lsnhist_match_unmarshal(env, lsnhist_match,
+		    response_buf, __REPMGR_LSNHIST_MATCH_SIZE, NULL)) != 0)
+			goto err;
+	} else {
+		/*
+		 * If the other site sent back REPMGR_PREFMAS_FAILURE, it means
+		 * no lsnhist record for the requested gen was found on other
+		 * site.
+		 */
+		if (type != REPMGR_PREFMAS_FAILURE)
+			RPRINT(env, (env, DB_VERB_REPMGR_MISC,
+			    "remote_lsnhist got unexpected message type %d",
+			    type));
+		ret = DB_REP_UNAVAIL;
+	}
+
+err:
+	if (conn != NULL) {
+		if ((t_ret = __repmgr_close_connection(env,
+		    conn)) != 0 && ret != 0)
+			ret = t_ret;
+		if ((t_ret = __repmgr_destroy_conn(env,
+		    conn)) != 0 && ret != 0)
+			ret = t_ret;
+	}
+	if (response_buf != NULL)
+		__os_free(env, response_buf);
+	return (ret);
+}
+
+/*
+ * Returns the number of tries and the amount of time to yield the
+ * processor for preferred master waits.  The total wait is the larger
+ * of 2 seconds or 3 * ack_timeout.
+ *
+ * PUBLIC: int __repmgr_prefmas_get_wait __P((ENV *, u_int32_t *, u_long *));
+ */
+int
+__repmgr_prefmas_get_wait(env, tries, yield_usecs)
+	ENV *env;
+	u_int32_t *tries;
+	u_long *yield_usecs;
+{
+	DB_REP *db_rep;
+	REP *rep;
+	db_timeout_t max_wait;
+
+	db_rep = env->rep_handle;
+	rep = db_rep->region;
+
+	*yield_usecs = 250000;
+	max_wait = DB_REPMGR_DEFAULT_ACK_TIMEOUT * 2;
+	if ((rep->ack_timeout * 3) > max_wait)
+		max_wait = rep->ack_timeout * 3;
+	*tries = max_wait / (u_int32_t)*yield_usecs;
+	return (0);
 }
 
 /*
@@ -1669,6 +2268,7 @@ __repmgr_refresh_membership(env, buf, len, version)
 	u_int32_t version;
 {
 	DB_REP *db_rep;
+	REP *rep;
 	REPMGR_SITE *site;
 	__repmgr_membr_vers_args membr_vers;
 	__repmgr_site_info_args site_info;
@@ -1680,6 +2280,7 @@ __repmgr_refresh_membership(env, buf, len, version)
 	int eid, ret;
 
 	db_rep = env->rep_handle;
+	rep = db_rep->region;
 
 	/*
 	 * Membership list consists of membr_vers followed by a number of
@@ -1735,6 +2336,11 @@ __repmgr_refresh_membership(env, buf, len, version)
 	}
 	ret = __rep_set_nsites_int(env, participants);
 	DB_ASSERT(env, ret == 0);
+	if (FLD_ISSET(rep->config,
+	    REP_C_PREFMAS_MASTER | REP_C_PREFMAS_CLIENT) &&
+	    rep->config_nsites > 2)
+		__db_errx(env, DB_STR("3703",
+	    "More than two sites in preferred master replication group"));
 
 	/* Scan "touched" flags so as to notice sites that have been removed. */
 	for (i = 0; i < db_rep->site_cnt; i++) {
@@ -1869,6 +2475,7 @@ __repmgr_defer_op(env, op)
 	 */
 	if ((ret = __os_calloc(env, 1, sizeof(*msg), &msg)) != 0)
 		return (ret);
+	msg->size = sizeof(*msg);
 	msg->msg_hdr.type = REPMGR_OWN_MSG;
 	REPMGR_OWN_MSG_TYPE(msg->msg_hdr) = op;
 	ret = __repmgr_queue_put(env, msg);
@@ -1940,7 +2547,7 @@ __repmgr_become_client(env)
 	if ((ret = __repmgr_await_gmdbop(env)) == 0)
 		db_rep->client_intent = TRUE;
 	UNLOCK_MUTEX(db_rep->mutex);
-	return (ret == 0 ? __repmgr_repstart(env, DB_REP_CLIENT) : ret);
+	return (ret == 0 ? __repmgr_repstart(env, DB_REP_CLIENT, 0) : ret);
 }
 
 /*
@@ -2154,10 +2761,11 @@ __repmgr_set_membership(env, host, port, status, flags)
 			 * failure shouldn't hurt anything, because we'll just
 			 * naturally try again later.
 			 */
-			ret = __repmgr_schedule_connection_attempt(env,
-			    eid, TRUE);
-			if (eid != db_rep->self_eid)
+			if (eid != db_rep->self_eid) {
+				ret = __repmgr_schedule_connection_attempt(env,
+				    eid, TRUE);
 				DB_EVENT(env, DB_EVENT_REP_SITE_ADDED, &eid);
+			}
 		} else if (orig != 0 && status == 0)
 			DB_EVENT(env, DB_EVENT_REP_SITE_REMOVED, &eid);
 

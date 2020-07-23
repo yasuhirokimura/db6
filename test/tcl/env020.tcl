@@ -48,7 +48,7 @@ proc env020_init_include { } {
 	set f [open "./env020_include.tcl" w]
 	puts $f "global section_separator"
 	puts $f "global statprt_pattern"
-	puts $f "global region_statprt_pattern	"
+	puts $f "global region_statprt_pattern"
 	puts $f "global lk_statprt_pattern_def"
 	puts $f "global lk_statprt_pattern_params"
 	puts $f "global lk_statprt_pattern_conf"
@@ -80,6 +80,10 @@ proc env020_init_include { } {
 	puts $f "global env_statprt_pattern_ENV"
 	puts $f "global env_statprt_pattern_DB_ENV"
 	puts $f "global env_statprt_pattern_per_region"
+	puts $f "global env_statprt_pattern_allocation"
+	puts $f "global env_statprt_pattern_LOG_SUBSYSTEM"
+	puts $f "global env_statprt_pattern_LOCK_SUBSYSTEM"
+	puts $f "global env_statprt_pattern_MUTEX_SUBSYSTEM"
 	close $f
 }
 
@@ -642,7 +646,8 @@ proc env020_init { } {
 		"Total number of sites in replication group"
 		"Number of view sites in replication group"
 		"Number of automatic replication process takeovers"
-		"Size of incoming message queue"
+		"Number of messages discarded due to incoming queue full"
+		"Incoming message size in queue"
 	}
 
 	set repmgr_statprt_pattern_sites {
@@ -708,6 +713,7 @@ proc env020_init { } {
 		"References"
 		"Current region size"
 		"Maximum region size"
+		"Process failure detected"
 	}
 
 	set env_statprt_pattern_filehandle {
@@ -759,6 +765,7 @@ proc env020_init { } {
 		"Verbose flags"
 		"Mutex align"
 		"Mutex cnt"
+		"Mutex failchk timeout"
 		"Mutex inc"
 		"Mutex tas spins"
 		"Lock conflicts"
@@ -843,13 +850,36 @@ proc env020_init { } {
 		"Operation timestamp"
 		"Replication timestamp"
 	}
+
+	set env_statprt_pattern_allocation {
+		"Allocation list by address, offset: {chunk length, user length}"
+		{0[xX][0-9a-fA-F]*,\s*\d*\s*{\d*, \s*\d*}}
+		{0[xX][0-9a-fA-F]*\s*{\d*}}
+	}
+
+	set env_statprt_pattern_LOG_SUBSYSTEM {
+		"LOG FNAME list"
+		"Fid max"
+		"Log buffer size"
+		{btree\s*\d\s*\d*\s*\d\s*\d\s*\d\s*DBP}
+		{\(\d [0-9a-fA-F]* \d*\)}
+	}
+
+	set env_statprt_pattern_LOCK_SUBSYSTEM {
+		"Number of ids on the free stack"
+		{dd= \d locks held \d\s*write locks \d\s*pid/thread \d*/\d*}
+	}
+
+	set env_statprt_pattern_MUTEX_SUBSYSTEM {
+		"DB_MUTEXREGION structure:"
+	}
 }
 
 proc env020_lock_stat_print { } {
 	source "./env020_include.tcl"
 
 	set opts {"" "-clear" "-lk_conf" "-lk_lockers" "-lk_objects"
-	    "-lk_params" "-all"}
+	    "-lk_params" "-all" "-all -alloc"}
 	set patterns [list $lk_statprt_pattern_def $lk_statprt_pattern_def \
 	    [concat $section_separator $region_statprt_pattern \
 	    $lk_statprt_pattern_conf] \
@@ -862,7 +892,12 @@ proc env020_lock_stat_print { } {
 	    [concat $section_separator [env020_def_pattern lock] \
 	    $region_statprt_pattern $lk_statprt_pattern_def \
 	    $lk_statprt_pattern_conf $lk_statprt_pattern_lockers \
-	    $lk_statprt_pattern_objects $lk_statprt_pattern_params]]
+	    $lk_statprt_pattern_objects $lk_statprt_pattern_params] \
+	    [concat $section_separator [env020_def_pattern lock] \
+	    $region_statprt_pattern $lk_statprt_pattern_def \
+	    $lk_statprt_pattern_conf $lk_statprt_pattern_lockers \
+	    $lk_statprt_pattern_objects $lk_statprt_pattern_params \
+	    $env_statprt_pattern_allocation]] 
 	set check_type lock_stat_print
 	set stp_method lock_stat_print
 
@@ -872,11 +907,15 @@ proc env020_lock_stat_print { } {
 proc env020_log_stat_print { } {
 	source "./env020_include.tcl"
 
-	set opts {"" "-clear" "-all"}
+	set opts {"" "-clear" "-all" "-all -alloc"}
 	set patterns [list $log_statprt_pattern_def $log_statprt_pattern_def \
 	    [concat $section_separator [env020_def_pattern log] \
 	    $region_statprt_pattern $log_statprt_pattern_def \
-	    $log_statprt_pattern_DBLOG $log_statprt_pattern_LOG]]
+	    $log_statprt_pattern_DBLOG $log_statprt_pattern_LOG] \
+	    [concat $section_separator [env020_def_pattern log] \
+	    $region_statprt_pattern $log_statprt_pattern_def \
+	    $log_statprt_pattern_DBLOG $log_statprt_pattern_LOG \
+	    $env_statprt_pattern_allocation]] 
 	set check_type log_stat_print
 	set stp_method log_stat_print
 
@@ -886,7 +925,7 @@ proc env020_log_stat_print { } {
 proc env020_mpool_stat_print { } {
 	source "./env020_include.tcl"
 
-	set opts {"" "-clear" "-hash" "-all"}
+	set opts {"" "-clear" "-hash" "-all" "-all -alloc"}
 	set patterns [list $mp_statprt_pattern_def $mp_statprt_pattern_def \
 	    [concat $section_separator $region_statprt_pattern \
 	    $mp_statprt_pattern_MPOOL $mp_statprt_pattern_DB_MPOOL \
@@ -896,7 +935,12 @@ proc env020_mpool_stat_print { } {
 	    $mp_statprt_pattern_MPOOL $mp_statprt_pattern_DB_MPOOL \
 	    $mp_statprt_pattern_DB_MPOOLFILE $mp_statprt_pattern_MPOOLFILE \
 	    $mp_statprt_pattern_Cache $mp_statprt_pattern_def \
-	    [env020_def_pattern mp]]]
+	    [env020_def_pattern mp]] \
+	    [concat $section_separator $region_statprt_pattern \
+	    $mp_statprt_pattern_MPOOL $mp_statprt_pattern_DB_MPOOL \
+	    $mp_statprt_pattern_DB_MPOOLFILE $mp_statprt_pattern_MPOOLFILE \
+	    $mp_statprt_pattern_Cache $mp_statprt_pattern_def \
+	    [env020_def_pattern mp] $env_statprt_pattern_allocation]] 
 	set check_type mpool_stat_print
 	set stp_method mpool_stat_print
 
@@ -906,11 +950,15 @@ proc env020_mpool_stat_print { } {
 proc env020_mutex_stat_print { } {
 	source "./env020_include.tcl"
 
-	set opts {"" "-clear" "-all"}
+	set opts {"" "-clear" "-all" "-all -alloc"}
 	set patterns [list $mut_statprt_pattern_def $mut_statprt_pattern_def \
 	    [concat $section_separator $region_statprt_pattern \
 	    [env020_def_pattern mut] $mut_statprt_pattern_def \
-	    $mut_statprt_pattern_mutex $mut_statprt_pattern_DB_MUTEXREGION]]
+	    $mut_statprt_pattern_mutex $mut_statprt_pattern_DB_MUTEXREGION] \
+ 	    [concat $section_separator $region_statprt_pattern \
+	    [env020_def_pattern mut] $mut_statprt_pattern_def \
+	    $mut_statprt_pattern_mutex $mut_statprt_pattern_DB_MUTEXREGION \
+	    $env_statprt_pattern_allocation]]
 	set check_type mutex_stat_print
 	set stp_method mutex_stat_print
 
@@ -948,11 +996,15 @@ proc env020_repmgr_stat_print { } {
 proc env020_txn_stat_print { } {
 	source "./env020_include.tcl"
 
-	set opts {"" "-clear" "-all"}
+	set opts {"" "-clear" "-all" "-all -alloc"}
 	set patterns [list $txn_statprt_pattern_def $txn_statprt_pattern_def \
 	    [concat $section_separator [env020_def_pattern txn] \
 	    $region_statprt_pattern $txn_statprt_pattern_def \
-	    $txn_statprt_pattern_DB_TXNMGR $txn_statprt_pattern_DB_TXNREGION]]
+	    $txn_statprt_pattern_DB_TXNMGR $txn_statprt_pattern_DB_TXNREGION] \
+	    [concat $section_separator [env020_def_pattern txn] \
+	    $region_statprt_pattern $txn_statprt_pattern_def \
+	    $txn_statprt_pattern_DB_TXNMGR $txn_statprt_pattern_DB_TXNREGION \
+	    $env_statprt_pattern_allocation]] 
 	set check_type txn_stat_print
 	set stp_method txn_stat_print
 
@@ -962,7 +1014,8 @@ proc env020_txn_stat_print { } {
 proc env020_env_stat_print { } {
 	source "./env020_include.tcl"
 
-	set opts {"" "-clear" "-all" "-subsystem"}
+	set opts {"" "-clear" "-all" "-all -alloc" "-all -subsystem" \
+	    "-all -subsystem -alloc"}
 	set patterns [list \
 	    [concat $env_statprt_pattern_Main $section_separator \
 	    $env_statprt_pattern_filehandle] \
@@ -972,11 +1025,52 @@ proc env020_env_stat_print { } {
 	    $region_statprt_pattern $env_statprt_pattern_Main \
 	    $env_statprt_pattern_filehandle $env_statprt_pattern_ENV \
 	    $env_statprt_pattern_DB_ENV $env_statprt_pattern_per_region] \
-	    [concat $section_separator $env_statprt_pattern_Main \
-	    $env_statprt_pattern_filehandle $log_statprt_pattern_def \
-	    $lk_statprt_pattern_def $mp_statprt_pattern_def \
-	    $rep_statprt_pattern_def $repmgr_statprt_pattern_def \
-	    $txn_statprt_pattern_def $mut_statprt_pattern_def]]
+ 	    [concat $section_separator [env020_def_pattern env] \
+	    $region_statprt_pattern $env_statprt_pattern_Main \
+	    $env_statprt_pattern_filehandle $env_statprt_pattern_ENV \
+	    $env_statprt_pattern_DB_ENV $env_statprt_pattern_per_region \
+	    $env_statprt_pattern_allocation] \
+ 	    [concat $section_separator [env020_def_pattern env] \
+	    $region_statprt_pattern $env_statprt_pattern_Main \
+	    $env_statprt_pattern_filehandle $env_statprt_pattern_ENV \
+	    $env_statprt_pattern_DB_ENV $env_statprt_pattern_per_region \
+	    [env020_def_pattern log] $log_statprt_pattern_def \
+	    $log_statprt_pattern_LOG $env_statprt_pattern_LOG_SUBSYSTEM \
+	    [env020_def_pattern lock] $lk_statprt_pattern_def \
+	    $lk_statprt_pattern_params $env_statprt_pattern_LOCK_SUBSYSTEM \
+	    $lk_statprt_pattern_objects \
+	    [env020_def_pattern mp] $mp_statprt_pattern_def \
+	    $mp_statprt_pattern_DB_MPOOL $mp_statprt_pattern_MPOOLFILE \
+	    $mp_statprt_pattern_MPOOL $mp_statprt_pattern_DB_MPOOLFILE \
+	    $mp_statprt_pattern_Cache \
+	    [env020_def_pattern mut] $mut_statprt_pattern_def \
+	    $env_statprt_pattern_MUTEX_SUBSYSTEM \
+	    [env020_def_pattern rep] $rep_statprt_pattern_def \
+	    $rep_statprt_pattern_DB_REP $rep_statprt_pattern_REP \
+	    $rep_statprt_pattern_LOG $repmgr_statprt_pattern_def \
+	    [env020_def_pattern txn] $txn_statprt_pattern_def \
+	    $txn_statprt_pattern_DB_TXNREGION] \
+ 	    [concat $section_separator [env020_def_pattern env] \
+	    $region_statprt_pattern $env_statprt_pattern_Main \
+	    $env_statprt_pattern_filehandle $env_statprt_pattern_ENV \
+	    $env_statprt_pattern_DB_ENV $env_statprt_pattern_per_region \
+	    [env020_def_pattern log] $log_statprt_pattern_def \
+	    $log_statprt_pattern_LOG $env_statprt_pattern_LOG_SUBSYSTEM \
+	    [env020_def_pattern lock] $lk_statprt_pattern_def \
+	    $lk_statprt_pattern_params $env_statprt_pattern_LOCK_SUBSYSTEM \
+	    $lk_statprt_pattern_objects \
+	    [env020_def_pattern mp] $mp_statprt_pattern_def \
+	    $mp_statprt_pattern_DB_MPOOL $mp_statprt_pattern_MPOOLFILE \
+	    $mp_statprt_pattern_MPOOL $mp_statprt_pattern_DB_MPOOLFILE \
+	    $mp_statprt_pattern_Cache \
+	    [env020_def_pattern mut] $mut_statprt_pattern_def \
+	    $env_statprt_pattern_MUTEX_SUBSYSTEM \
+	    [env020_def_pattern rep] $rep_statprt_pattern_def \
+	    $rep_statprt_pattern_DB_REP $rep_statprt_pattern_REP \
+	    $rep_statprt_pattern_LOG $repmgr_statprt_pattern_def \
+	    [env020_def_pattern txn] $txn_statprt_pattern_def \
+	    $txn_statprt_pattern_DB_TXNREGION $env_statprt_pattern_allocation]] \
+
 	set check_type stat_print
 	set stp_method stat_print
 
@@ -1059,23 +1153,24 @@ proc env020_env_stp_chk {opts patterns check_type stp_method} {
 				puts "\t\tUsing $opt option"
 			}
 			set pattern [lindex $patterns $i]
-			$env msgfile $testdir/msgfile.$i
+			error_check_good "$env set msgfile" \
+			    [$env msgfile $testdir/msgfile.$i] 0
 			if {$fail == 0} {
 				error_check_good "${check_type}($opts)" \
 				    [eval $env $stp_method $opt] 0
-				$env msgfile /dev/stdout
+				error_check_good "$env set msgfile" \
+				    [$env msgfile /dev/stdout] 0
 				env020_check_output $pattern $testdir/msgfile.$i
 			} else {
 				set ret [catch {eval $env $stp_method $opt} res]
-				$env msgfile /dev/stdout
+				error_check_good "$env set msgfile" \
+				    [$env msgfile /dev/stdout] 0
 				error_check_bad $stp_method $ret 0
 				error_check_bad chk_err [regexp $failmsg $res] 0
 			}
-			file delete -force $testdir/msgfile.$i
-			error_check_good "file_not_exists" \
-			    [file exists $testdir/msgfile.$i] 0
+			error_check_good "$env close msgfile" \
+			    [$env msgfile_close] 0
 		}
-
 		error_check_good "$txn1 commit" [$txn1 commit] 0
 		error_check_good "$txn2 commit" [$txn2 commit] 0
 		error_check_good "$db4 close" [$db4 close] 0
@@ -1115,6 +1210,7 @@ proc env020_bt_stat_print {} {
 		"Byte order"
 		"Flags"
 		"Minimum keys per-page"
+		"Number of pages in the database"
 		"Underlying database page size"
 		"Overflow key/data size"
 		"Number of levels in the tree"
@@ -1161,10 +1257,10 @@ proc env020_ham_stat_print {} {
 		"Number of hash buckets"
 		"Number of bytes free on bucket pages"
 		"Number of blobs"
-		"Number of overflow pages"
-		"Number of bytes free in overflow pages"
+		{Number of hash overflow \(big item\) pages}
+		{Number of bytes free in hash overflow \(big item\) pages}
 		"Number of bucket overflow pages"
-		"Number of bytes free in bucket overflow pages"
+		"Number of bytes free on bucket overflow pages"
 		"Number of duplicate pages"
 		"Number of bytes free in duplicate pages"
 		"Number of pages on the free list"
@@ -1220,6 +1316,7 @@ proc env020_ram_stat_print {} {
 		"Flags"
 		"Fixed-length record size"
 		"Fixed-length record pad"
+		"Number of pages in the database"
 		"Underlying database page size"
 		"Number of levels in the tree"
 		"Number of records in the tree"
@@ -1345,6 +1442,7 @@ proc env020_db_stat_print {method pattern all_pattern} {
 	    -msgfile $testdir/msgfile1 db1.db]
 
 	error_check_good db_stat_print [$db stat_print] 0
+	error_check_good "$db close msgfile" [$db msgfile_close] 0
 	error_check_good "$db close" [$db close] 0
 	env020_check_output $pattern $testdir/msgfile1
 
@@ -1353,6 +1451,7 @@ proc env020_db_stat_print {method pattern all_pattern} {
 	set db [eval berkdb_open_noerr -create -env $env -$method \
 	    -msgfile $testdir/msgfile2 db2.db]
 	error_check_good db_stat_print [$db stat_print -fast] 0
+	error_check_good "$db close msgfile" [$db msgfile_close] 0
 	error_check_good "$db close" [$db close] 0
 	env020_check_output $pattern $testdir/msgfile2
 
@@ -1361,18 +1460,12 @@ proc env020_db_stat_print {method pattern all_pattern} {
 	set db [eval berkdb_open_noerr -create -env $env -$method \
 	    -msgfile $testdir/msgfile3 db3.db]
 	error_check_good db_stat_print [$db stat_print -all] 0
+	error_check_good "$db close msgfile" [$db msgfile_close] 0
 	error_check_good "$db close" [$db close] 0
 	env020_check_output [concat $dball_pattern $pattern $all_pattern] \
             $testdir/msgfile3
 
 	error_check_good "$env close" [$env close] 0
-
-	file delete -force $testdir/msgfile1
-	error_check_good "file_not_exists" [file exists $testdir/msgfile1] 0
-	file delete -force $testdir/msgfile2
-	error_check_good "file_not_exists" [file exists $testdir/msgfile2] 0
-	file delete -force $testdir/msgfile3
-	error_check_good "file_not_exists" [file exists $testdir/msgfile3] 0
 }
 
 proc env020_seq_stat_print { } {
@@ -1397,9 +1490,15 @@ proc env020_seq_stat_print { } {
 	set seq [eval berkdb sequence -create $db key1]
 	error_check_good check_seq [is_valid_seq $seq] TRUE
 	error_check_good seq_stat_print [$seq stat_print] 0
+	error_check_good "$db close msgfile" [$db msgfile_close] 0
 
-	$env msgfile $testdir/msgfile2
+	error_check_good "$db set msgfile" [$db msgfile $testdir/msgfile2] 0
 	error_check_good seq_stat_print [$seq stat_print -clear] 0
+	error_check_good "$db close msgfile" [$db msgfile_close] 0
+
+	error_check_good "$db set msgfile" [$db msgfile $testdir/msgfile3] 0
+	error_check_good seq_stat_print [$seq stat_print -all] 0
+	error_check_good "$db close msgfile" [$db msgfile_close] 0
 
 	error_check_good seq_close [$seq close] 0
 	error_check_good "$db close" [$db close] 0
@@ -1411,8 +1510,6 @@ proc env020_seq_stat_print { } {
 	puts "\t\tUsing -clear option"
 	env020_check_output $pattern $testdir/msgfile2
 
-	file delete -force $testdir/msgfile1
-	error_check_good "file_not_exists" [file exists $testdir/msgfile1] 0
-	file delete -force $testdir/msgfile2
-	error_check_good "file_not_exists" [file exists $testdir/msgfile2] 0
+	puts "\t\tUsing the -all option"
+	env020_check_output $pattern $testdir/msgfile3
 }

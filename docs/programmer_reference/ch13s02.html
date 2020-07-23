@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.0</p>
+        <p>Library Version 12.1.6.1</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -22,9 +22,7 @@
         </tr>
         <tr>
           <td width="20%" align="left"><a accesskey="p" href="xa.html">Prev</a> </td>
-          <th width="60%" align="center">Chapter 13. 
-		Distributed Transactions
-        </th>
+          <th width="60%" align="center">Chapter 13.  Distributed Transactions </th>
           <td width="20%" align="right"> <a accesskey="n" href="xa_build.html">Next</a></td>
         </tr>
       </table>
@@ -34,35 +32,39 @@
       <div class="titlepage">
         <div>
           <div>
-            <h2 class="title" style="clear: both"><a id="idp2187304"></a>Berkeley DB XA Implementation</h2>
+            <h2 class="title" style="clear: both"><a id="idp2481936"></a>Berkeley DB XA Implementation</h2>
           </div>
         </div>
       </div>
       <p>
-Berkeley DB provides support for distributed transactions using the two-phase commit protocol
- via its <a href="../api_reference/C/txnprepare.html" class="olink">DB_TXN-&gt;prepare()</a> interfaces.
- The <a href="../api_reference/C/txnprepare.html" class="olink">DB_TXN-&gt;prepare()</a> method performs the first phase of a
-two-phase commit, flushing the log to disk, and associating a global
-transaction ID with the underlying Berkeley DB transaction.
- This global transaction ID is used by the global transaction manager to
-identify the Berkeley DB transaction, and will be returned by the
-<a href="../api_reference/C/txnrecover.html" class="olink">DB_ENV-&gt;txn_recover()</a> method when it is called during recovery.
- </p>
+        Berkeley DB provides support for distributed transactions 
+        using the two-phase commit protocol via its <a href="../api_reference/C/txnprepare.html" class="olink">DB_TXN-&gt;prepare()</a> interfaces.
+        The <a href="../api_reference/C/txnprepare.html" class="olink">DB_TXN-&gt;prepare()</a> method performs the first phase of a
+        two-phase commit, flushing the log to disk, and associating a global
+        transaction ID with the underlying Berkeley DB transaction.
+        This global transaction ID is used by the global transaction manager to
+        identify the Berkeley DB transaction, and will be returned by the
+        <a href="../api_reference/C/txnrecover.html" class="olink">DB_ENV-&gt;txn_recover()</a> method when it is called during recovery.
+     </p>
       <p>  
-However, Berkeley DB does not perform distributed deadlock detection. 
-Instead, when being used as an XA resource manager, Berkeley DB acquires all locks 
-in a non-blocking mode. This results in pre-emptive abort of transactions that have the potential to deadlock.  
-While this can lead to more transactions being aborted than is strictly necessary, 
-it avoids system-wide hanging due to distributed deadlocks.
-</p>
-      <p>When using distributed transactions, there is no way to perform
-hot backups of multiple environments and guarantee that the backups
-are globally transaction-consistent across these multiple environments.
-If backups are desired, then all write transactions should be suspended;
-that is, active write transactions must be allowed to complete and no
-new write transactions should be begun.  Once there are no active write
-transactions, the logs may be copied for backup purposes and the backup
-will be consistent across the multiple environments.</p>
+        However, Berkeley DB does not perform distributed deadlock 
+        detection. Instead, when being used as an XA resource manager, 
+        Berkeley DB acquires all locks in a non-blocking mode. This 
+        results in pre-emptive abort of transactions that have the 
+        potential to deadlock. While this can lead to more transactions
+        being aborted than is strictly necessary, 
+        it avoids system-wide hanging due to distributed deadlocks.
+     </p>
+      <p>
+         When using distributed transactions, there is no way to perform
+         hot backups of multiple environments and guarantee that the backups
+         are globally transaction-consistent across these multiple environments.
+         If backups are desired, then all write transactions should be suspended;
+         that is, active write transactions must be allowed to complete and no
+         new write transactions should be begun.  Once there are no active write
+         transactions, the logs may be copied for backup purposes and the backup
+         will be consistent across the multiple environments.
+     </p>
     </div>
     <div class="navfooter">
       <hr />
@@ -75,9 +77,7 @@ will be consistent across the multiple environments.</p>
           <td width="40%" align="right"> <a accesskey="n" href="xa_build.html">Next</a></td>
         </tr>
         <tr>
-          <td width="40%" align="left" valign="top">Chapter 13. 
-		Distributed Transactions
-         </td>
+          <td width="40%" align="left" valign="top">Chapter 13.  Distributed Transactions  </td>
           <td width="20%" align="center">
             <a accesskey="h" href="index.html">Home</a>
           </td>

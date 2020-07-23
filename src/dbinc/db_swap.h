@@ -184,6 +184,25 @@ extern "C" {
 		P_32_SWAP(p);						\
 } while (0)
 
+#undef	DB_NTOHLL_COPYIN
+#define	DB_NTOHLL_COPYIN(env, i, p) do {				\
+	u_int8_t *tmp;							\
+	tmp = (u_int8_t *)&(i);						\
+	if (F_ISSET(env, ENV_LITTLEENDIAN)) {				\
+		tmp[7] = *p++;						\
+		tmp[6] = *p++;						\
+		tmp[5] = *p++;						\
+		tmp[4] = *p++;						\
+		tmp[3] = *p++;						\
+		tmp[2] = *p++;						\
+		tmp[1] = *p++;						\
+		tmp[0] = *p++;						\
+	} else {							\
+		memcpy(&(i), p, sizeof(u_int64_t));			\
+		p = (u_int8_t *)p + sizeof(u_int64_t);			\
+	}								\
+} while (0)
+
 #undef	DB_NTOHL_COPYIN
 #define	DB_NTOHL_COPYIN(env, i, p) do {					\
 	u_int8_t *tmp;							\
@@ -210,6 +229,24 @@ extern "C" {
 		memcpy(&(i), p, sizeof(u_int16_t));			\
 		p = (u_int8_t *)p + sizeof(u_int16_t);			\
 	}								\
+} while (0)
+
+#undef	DB_HTONLL_COPYOUT
+#define	DB_HTONLL_COPYOUT(env, p, i) do {				\
+	u_int8_t *tmp;							\
+	tmp = (u_int8_t *)p;						\
+	if (F_ISSET(env, ENV_LITTLEENDIAN)) {				\
+		*tmp++ = ((u_int8_t *)&(i))[7];				\
+		*tmp++ = ((u_int8_t *)&(i))[6];				\
+		*tmp++ = ((u_int8_t *)&(i))[5];				\
+		*tmp++ = ((u_int8_t *)&(i))[4];				\
+		*tmp++ = ((u_int8_t *)&(i))[3];				\
+		*tmp++ = ((u_int8_t *)&(i))[2];				\
+		*tmp++ = ((u_int8_t *)&(i))[1];				\
+		*tmp++ = ((u_int8_t *)&(i))[0];				\
+	} else								\
+		memcpy(p, &(i), sizeof(u_int64_t));			\
+	p = (u_int8_t *)p + sizeof(u_int64_t);				\
 } while (0)
 
 #undef	DB_HTONL_COPYOUT

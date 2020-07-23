@@ -135,6 +135,7 @@ __memp_fget(dbmfp, pgnoaddr, ip, txn, flags, addrp)
 #ifdef DIAGNOSTIC
 	DB_LOCKTAB *lt;
 	DB_LOCKER *locker;
+	int pagelock_err;
 #endif
 
 	*(void **)addrp = NULL;
@@ -278,7 +279,7 @@ retry:		MUTEX_LOCK(env, hp->mtx_hash);
 			 * the BTREE in a subsequent txn).
 			 */
 			if (bhp == NULL) {
-				ret = DB_PAGE_NOTFOUND;
+				ret = USR_ERR(env, DB_PAGE_NOTFOUND);
 				goto err;
 			}
 		}
@@ -380,11 +381,11 @@ thawed:			need_free = (atomic_dec(env, &bhp->ref) == 0);
 			bhp = NULL;
 			goto retry;
 		} else if (dirty && SH_CHAIN_HASNEXT(bhp, vc)) {
-			ret = DB_LOCK_DEADLOCK;
+			ret = USR_ERR(env, DB_LOCK_DEADLOCK);
 			goto err;
 		} else if (F_ISSET(bhp, BH_FREED) && flags != DB_MPOOL_CREATE &&
 		    flags != DB_MPOOL_NEW && flags != DB_MPOOL_FREE) {
-			ret = DB_PAGE_NOTFOUND;
+			ret = USR_ERR(env, DB_PAGE_NOTFOUND);
 			goto err;
 		}
 
@@ -1186,8 +1187,15 @@ alloc:		/* Allocate a new buffer header and data space. */
 			lt = env->lk_handle;
 			locker = (DB_LOCKER *)
 			    (R_ADDR(&lt->reginfo, ip->dbth_locker));
-			DB_ASSERT(env, __db_has_pagelock(env, locker, dbmfp,
-			    (PAGE*)bhp->buf, DB_LOCK_WRITE) == 0);
+			pagelock_err = __db_has_pagelock(env, locker, dbmfp,
+			    (PAGE *)bhp->buf, DB_LOCK_WRITE);
+			if (pagelock_err != 0) {
+				if (pagelock_err == DB_RUNRECOVERY)
+					return (pagelock_err);
+				__db_syserr(env, pagelock_err,
+				    "Locker %x has no page lock for pgno %d",
+				    locker->id, ((PAGE *)bhp->buf)->pgno);
+			}
 		}
 #endif
 

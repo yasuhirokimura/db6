@@ -29,11 +29,7 @@ static int get_channel_connection __P((CHANNEL *, REPMGR_CONNECTION **));
 static int init_dbsite __P((ENV *, int, const char *, u_int, DB_SITE **));
 static int join_group_at_site __P((ENV *, repmgr_netaddr_t *));
 static int kick_blockers __P((ENV *, REPMGR_CONNECTION *, void *));
-static int make_request_conn __P((ENV *,
-    repmgr_netaddr_t *, REPMGR_CONNECTION **));
 static int set_local_site __P((DB_SITE *, u_int32_t));
-static int read_own_msg __P((ENV *,
-    REPMGR_CONNECTION *, u_int32_t *, u_int8_t **, size_t *));
 static int refresh_site __P((DB_SITE *));
 static int __repmgr_await_threads __P((ENV *));
 static int __repmgr_build_data_out __P((ENV *,
@@ -65,14 +61,10 @@ __repmgr_start_pp(dbenv, nthreads, flags)
 	DB_REP *db_rep;
 	ENV *env;
 	DB_THREAD_INFO *ip;
-	char *path;
-	int isdir, ret;
-	u_int32_t blob_threshold;
+	int ret;
 
 	env = dbenv->env;
 	db_rep = env->rep_handle;
-	path = NULL;
-	isdir = 0;
 
 	switch (flags) {
 	case 0:
@@ -94,25 +86,6 @@ __repmgr_start_pp(dbenv, nthreads, flags)
 		return (EINVAL);
 	}
 
-	if ((ret = __env_get_blob_threshold_pp(dbenv, &blob_threshold)) != 0)
-		return (ret);
-	if (blob_threshold != 0) {
-		__db_errx(env, DB_STR("3692",
-		    "Cannot start replication with blobs enabled."));
-		return (EINVAL);
-	}
-
-	/* Check if the blob directory exists. */
-	if ((ret = __db_appname(env, DB_APP_BLOB, NULL, NULL, &path)) != 0)
-		return (ret);
-	if (__os_exists(env, path, &isdir) == 0 && isdir != 0) {
-		__os_free(env, path);
-		__db_errx(env, DB_STR("3693",
-		    "Cannot start replication with blobs enabled."));
-		return (EINVAL);
-	}
-	__os_free(env, path);
-
 	if (APP_IS_BASEAPI(env))
 		return (repmgr_only(env, "repmgr_start"));
 
@@ -128,6 +101,15 @@ __repmgr_start_pp(dbenv, nthreads, flags)
 	    (flags == DB_REP_MASTER || flags == DB_REP_ELECTION)) {
 		__db_errx(env, DB_STR("3694",
 		    "A view site must be started with DB_REP_CLIENT"));
+		return (EINVAL);
+	}
+
+	/* Must start site as client in preferred master mode. */
+	if (PREFMAS_IS_SET(env) &&
+	    (flags == DB_REP_MASTER || flags == DB_REP_ELECTION)) {
+		__db_errx(env, DB_STR("3702",
+		    "A preferred master site must be started with "
+		    "DB_REP_CLIENT"));
 		return (EINVAL);
 	}
 
@@ -164,14 +146,34 @@ __repmgr_start_int(env, nthreads, flags)
 	int nthreads;
 	u_int32_t flags;
 {
+	DB_LOG *dblp;
 	DB_REP *db_rep;
+	LOG *lp;
 	REP *rep;
 	REPMGR_SITE *me, *site;
-	int first, is_listener, locked, min, need_masterseek, ret, start_master;
+	u_int32_t startopts;
+	int first, flags_error, is_listener, locked, min;
+	int need_masterseek, ret, start_master;
 	u_int i, n;
 
 	db_rep = env->rep_handle;
 	rep = db_rep->region;
+	dblp = env->lg_handle;
+	lp = dblp->reginfo.primary;
+	flags_error = 0;
+	startopts = 0;
+
+	/*
+	 * For preferred master master site startup, we need to save the
+	 * log location at the end of our previous transactions for
+	 * the lsnhist_match comparisons.  Starting repmgr adds a few
+	 * more log records that we don't want to count in lsnhist_match.
+	 */
+	if (FLD_ISSET(rep->config, REP_C_PREFMAS_MASTER)) {
+		LOG_SYSTEM_LOCK(env);
+		db_rep->prefmas_init_lsn = lp->lsn;
+		LOG_SYSTEM_UNLOCK(env);
+	}
 
 	if ((ret = __rep_set_transport_int(env,
 	    db_rep->self_eid, __repmgr_send)) != 0)
@@ -212,7 +214,9 @@ __repmgr_start_int(env, nthreads, flags)
 				return (EINVAL);
 			}
 		} else if (ret == ENOENT) {
-			if (FLD_ISSET(me->config, DB_GROUP_CREATOR))
+			if (FLD_ISSET(me->config, DB_GROUP_CREATOR) ||
+			    (IS_PREFMAS_MODE(env) &&
+			    FLD_ISSET(rep->config, REP_C_PREFMAS_MASTER)))
 				start_master = TRUE;
 			/*
 			 * LEGACY is inconsistent with CREATOR, but start_master
@@ -272,16 +276,6 @@ __repmgr_start_int(env, nthreads, flags)
 	}
 
 	/*
-	 * If we're the first repmgr_start() call, we will have to start
-	 * threads.  Therefore, we require a flags value (to tell us how).
-	 */
-	if (db_rep->repmgr_status != running && flags == 0) {
-		__db_errx(env, DB_STR("3639",
-	"A non-zero flags value is required for initial repmgr_start() call"));
-		return (EINVAL);
-	}
-
-	/*
 	 * Figure out the current situation.  The current invocation of
 	 * repmgr_start() is either the first one (on the given env handle), or
 	 * a subsequent one.
@@ -298,13 +292,17 @@ __repmgr_start_int(env, nthreads, flags)
 	 * To avoid a race, once we decide we're in the first call, mark the
 	 * handle as started, so that no other thread thinks the same thing.
 	 */
+	first = FALSE;
+	is_listener = FALSE;
 	LOCK_MUTEX(db_rep->mutex);
 	locked = TRUE;
 	if (db_rep->repmgr_status == running && !(rep->listener == 0 &&
-	    FLD_ISSET(rep->config, REP_C_AUTOTAKEOVER))) {
-		first = FALSE;
+	    FLD_ISSET(rep->config, REP_C_AUTOTAKEOVER)))
 		is_listener = !IS_SUBORDINATE(db_rep);
-	} else {
+	else if (db_rep->repmgr_status != running &&
+	    rep->listener == 0 && flags == 0)
+		flags_error = 1;
+	else {
 		first = TRUE;
 		db_rep->repmgr_status = running;
 
@@ -312,14 +310,25 @@ __repmgr_start_int(env, nthreads, flags)
 		if (rep->listener == 0) {
 			is_listener = TRUE;
 			__os_id(env->dbenv, &rep->listener, NULL);
-		} else {
-			is_listener = FALSE;
+		} else
 			nthreads = 0;
-		}
 		MUTEX_UNLOCK(env, rep->mtx_repmgr);
 	}
 	UNLOCK_MUTEX(db_rep->mutex);
 	locked = FALSE;
+
+	/*
+	 * The first repmgr_start() call for the main listener process
+	 * requires a flags value to tell us how to start up the site.
+	 * But we don't require a flags value for the repmgr_start()
+	 * call for a subordinate process because the site is already
+	 * started and we would only ignore the value anyway.
+	 */
+	if (flags_error) {
+		__db_errx(env, DB_STR("3639",
+	"A non-zero flags value is required for initial repmgr_start() call"));
+		return (EINVAL);
+	}
 
 	if (!first) {
 		/*
@@ -379,14 +388,24 @@ __repmgr_start_int(env, nthreads, flags)
 		 * of rep_start calls even within an env region lifetime.
 		 */
 		if (start_master) {
-			ret = __repmgr_become_master(env);
+			ret = __repmgr_become_master(env, 0);
 			/* No other repmgr threads running yet. */
 			DB_ASSERT(env, ret != DB_REP_UNAVAIL);
 			if (ret != 0)
 				goto err;
 			need_masterseek = FALSE;
 		} else {
-			if ((ret = __repmgr_repstart(env, DB_REP_CLIENT)) != 0)
+			/*
+			 * The preferred master site cannot allow its gen
+			 * to change until it has done its lsnhist_match to
+			 * guarantee that no preferred master transactions
+			 * will be rolled back.
+			 */
+			if (IS_PREFMAS_MODE(env) &&
+			    FLD_ISSET(rep->config, REP_C_PREFMAS_MASTER))
+				startopts = REP_START_HOLD_CLIGEN;
+			if ((ret = __repmgr_repstart(env,
+			    DB_REP_CLIENT, startopts)) != 0)
 				goto err;
 			/*
 			 * The repmgr election code starts elections only if
@@ -451,6 +470,12 @@ __repmgr_start_int(env, nthreads, flags)
 		}
 		UNLOCK_MUTEX(db_rep->mutex);
 		locked = FALSE;
+		/*
+		 * Turn on the DB_EVENT_REP_INQUEUE_FULL event firing.  We only
+		 * do this for the main listener process.  For a subordinate
+		 * process, it is always turned on.
+		 */
+		rep->inqueue_full_event_on = 1;
 	}
 	if (db_rep->selector == NULL) {
 		/* All processes (even non-listeners) need a select() thread. */
@@ -543,6 +568,53 @@ __repmgr_valid_config(env, flags)
 }
 
 /*
+ * Set priority, heartbeat and election_retry timeouts for preferred master
+ * mode.  Turn on 2SITE_STRICT and ELECTIONS.  Can be called whether or not
+ * REP_ON() is true
+ *
+ * PUBLIC: int __repmgr_prefmas_auto_config __P((DB_ENV *, u_int32_t *));
+ */
+int __repmgr_prefmas_auto_config (dbenv, config_flags)
+	DB_ENV *dbenv;
+	u_int32_t *config_flags;
+{
+	ENV * env;
+	db_timeout_t timeout;
+	int ret;
+
+	env = dbenv->env;
+	timeout = 0;
+
+	/* Change heartbeat timeouts if they are not already set. */
+	if ((ret = __rep_get_timeout(dbenv,
+	    DB_REP_HEARTBEAT_MONITOR, &timeout)) == 0 &&
+	    timeout == 0 && (ret = __rep_set_timeout_int(env,
+	    DB_REP_HEARTBEAT_MONITOR,
+	    DB_REPMGR_PREFMAS_HEARTBEAT_MONITOR)) != 0)
+		return (ret);
+	if ((ret = __rep_get_timeout(dbenv,
+	    DB_REP_HEARTBEAT_SEND, &timeout)) == 0 &&
+	    timeout == 0 && (ret = __rep_set_timeout_int(env,
+	    DB_REP_HEARTBEAT_SEND, DB_REPMGR_PREFMAS_HEARTBEAT_SEND)) != 0)
+		return (ret);
+
+	/* Change election_retry timeout if it is still the default value. */
+	if ((ret = __rep_get_timeout(dbenv,
+	    DB_REP_ELECTION_RETRY, &timeout)) == 0 &&
+	    timeout == DB_REPMGR_DEFAULT_ELECTION_RETRY &&
+	    (ret = __rep_set_timeout_int(env,
+	    DB_REP_ELECTION_RETRY, DB_REPMGR_PREFMAS_ELECTION_RETRY)) != 0)
+		return (ret);
+
+	if ((ret = __rep_set_priority_int(env, FLD_ISSET(*config_flags,
+	    REP_C_PREFMAS_MASTER) ? DB_REPMGR_PREFMAS_PRIORITY_MASTER :
+	    DB_REPMGR_PREFMAS_PRIORITY_CLIENT)) != 0)
+		return (ret);
+	FLD_SET(*config_flags, REP_C_ELECTIONS | REP_C_2SITE_STRICT);
+	return (0);
+}
+
+/*
  * Starts message processing threads.  On entry, the actual number of threads
  * already active is db_rep->nthreads; the desired number of threads is passed
  * as "n".
@@ -591,7 +663,7 @@ __repmgr_restart(env, nthreads, flags)
 	REP *rep;
 	REPMGR_RUNNABLE **th;
 	u_int32_t cur_repflags;
-	int locked, ret, t_ret;
+	int locked, ret, role_change, t_ret;
 	u_int delta, i, min, nth;
 
 	th = NULL;
@@ -609,6 +681,7 @@ __repmgr_restart(env, nthreads, flags)
 	}
 
 	ret = 0;
+	role_change = 0;
 	db_rep = env->rep_handle;
 	DB_ASSERT(env, REP_ON(env));
 	rep = db_rep->region;
@@ -616,11 +689,14 @@ __repmgr_restart(env, nthreads, flags)
 	cur_repflags = F_ISSET(rep, REP_F_MASTER | REP_F_CLIENT);
 	DB_ASSERT(env, cur_repflags);
 	if (FLD_ISSET(cur_repflags, REP_F_MASTER) &&
-	    flags == DB_REP_CLIENT)
+	    flags == DB_REP_CLIENT) {
 		ret = __repmgr_become_client(env);
-	else if (FLD_ISSET(cur_repflags, REP_F_CLIENT) &&
-	    flags == DB_REP_MASTER)
-		ret = __repmgr_become_master(env);
+		role_change = 1;
+	} else if (FLD_ISSET(cur_repflags, REP_F_CLIENT) &&
+	    flags == DB_REP_MASTER) {
+		ret = __repmgr_become_master(env, 0);
+		role_change = 1;
+	}
 	if (ret != 0)
 		return (ret);
 
@@ -692,6 +768,9 @@ __repmgr_restart(env, nthreads, flags)
 		}
 		__os_free(env, th);
 	}
+	/* We will always turn on the inqueue full event after role change. */
+	if (role_change)
+		rep->inqueue_full_event_on = 1;
 
 out:	if (locked)
 		UNLOCK_MUTEX(db_rep->mutex);
@@ -950,27 +1029,18 @@ __repmgr_get_ack_policy(dbenv, policy)
  * PUBLIC: int __repmgr_set_incoming_queue_max __P((DB_ENV *, u_int32_t,
  * PUBLIC:     u_int32_t));
  *
- * Undocumented interface: Supplies the maximum number of messages and bulk
- * messages that the incoming message queue can hold.  This limits the amount
- * of dynamic memory the incoming message queue can allocate.  When the
- * incoming message queue is at its maximum, incoming messages are dropped
- * and must be rerequested.
- *
- * The messages value is used unless DB_REP_CONF_BULK is configured, in which
- * case bulk_messages is used.  Decrease the applicable limit if dynamic
- * memory usage is too high; increase it if there are too many rerequests.
+ * Sets the maximum amount of dynamic memory used by the Replication Manager
+ * incoming queue.
  */
 int
-__repmgr_set_incoming_queue_max(dbenv, messages, bulk_messages)
+__repmgr_set_incoming_queue_max(dbenv, gbytes, bytes)
 	DB_ENV *dbenv;
-	u_int32_t messages;
-	u_int32_t bulk_messages;
+	u_int32_t gbytes, bytes;
 {
 	DB_REP *db_rep;
 	DB_THREAD_INFO *ip;
 	ENV *env;
 	REP *rep;
-	u_int32_t bulkmsgs, msgs;
 
 	env = dbenv->env;
 	db_rep = env->rep_handle;
@@ -987,17 +1057,33 @@ __repmgr_set_incoming_queue_max(dbenv, messages, bulk_messages)
 		return (EINVAL);
 	}
 
-	/* If the caller provided 0 for either value, use its default. */
-	msgs = messages > 0 ? messages : DB_REPMGR_DEFAULT_INQUEUE_MSGS;
-	bulkmsgs = bulk_messages > 0 ?
-	    bulk_messages : DB_REPMGR_DEFAULT_INQUEUE_BULKMSGS;
-	if (REP_ON(env)) {
-		rep->inqueue_msg_max = msgs;
-		rep->inqueue_bulkmsg_max = bulkmsgs;
-	} else {
-		db_rep->inqueue_msg_max = msgs;
-		db_rep->inqueue_bulkmsg_max = bulkmsgs;
+	/*
+	 * If the caller provided 0 for the size, the size will be unlimited.
+	 */
+	if (gbytes == 0 && bytes == 0) {
+		gbytes = UINT32_MAX;
+		bytes = GIGABYTE - 1;
 	}
+
+	while (bytes >= GIGABYTE) {
+		bytes -= GIGABYTE;
+		if (gbytes < UINT32_MAX)
+			gbytes++;
+	}
+
+	if (REP_ON(env)) {
+		ENV_ENTER(env, ip);
+		MUTEX_LOCK(env, rep->mtx_repmgr);
+		rep->inqueue_max_gbytes = gbytes;
+		rep->inqueue_max_bytes = bytes;
+		__repmgr_set_incoming_queue_redzone(rep, gbytes, bytes);
+		MUTEX_UNLOCK(env, rep->mtx_repmgr);
+		ENV_LEAVE(env, ip);
+	} else {
+		db_rep->inqueue_max_gbytes = gbytes;
+		db_rep->inqueue_max_bytes = bytes;
+	}
+
 	/*
 	 * Setting incoming queue maximum sizes makes this a replication
 	 * manager application.
@@ -1010,16 +1096,16 @@ __repmgr_set_incoming_queue_max(dbenv, messages, bulk_messages)
  * PUBLIC: int __repmgr_get_incoming_queue_max __P((DB_ENV *, u_int32_t *,
  * PUBLIC:     u_int32_t *));
  *
- * Undocumented interface: Gets the maximum number of messages and
- * bulk messages that the incoming message queue can hold.
+ * Gets the maximum amount of dynamic memory that can be used by the
+ * Replicaton Manager incoming queue.
  */
 int
-__repmgr_get_incoming_queue_max(dbenv, messagesp, bulk_messagesp)
+__repmgr_get_incoming_queue_max(dbenv, gbytesp, bytesp)
 	DB_ENV *dbenv;
-	u_int32_t *messagesp;
-	u_int32_t *bulk_messagesp;
+	u_int32_t *gbytesp, *bytesp;
 {
 	ENV *env;
+	DB_THREAD_INFO *ip;
 	DB_REP *db_rep;
 	REP *rep;
 
@@ -1027,10 +1113,117 @@ __repmgr_get_incoming_queue_max(dbenv, messagesp, bulk_messagesp)
 	db_rep = env->rep_handle;
 	rep = db_rep->region;
 
-	*messagesp = REP_ON(env) ?
-	    rep->inqueue_msg_max : db_rep->inqueue_msg_max;
-	*bulk_messagesp = REP_ON(env) ?
-	    rep->inqueue_bulkmsg_max : db_rep->inqueue_bulkmsg_max;
+	if (REP_ON(env)) {
+		ENV_ENTER(env, ip);
+		MUTEX_LOCK(env, rep->mtx_repmgr);
+		*gbytesp = rep->inqueue_max_gbytes;
+		*bytesp = rep->inqueue_max_bytes;
+		MUTEX_UNLOCK(env, rep->mtx_repmgr);
+		ENV_LEAVE(env, ip);
+	} else {
+		*gbytesp = db_rep->inqueue_max_gbytes;
+		*bytesp = db_rep->inqueue_max_bytes;
+	}
+
+	return (0);
+}
+
+/*
+ * PUBLIC: void __repmgr_set_incoming_queue_redzone __P((void *, u_int32_t,
+ * PUBLIC:     u_int32_t));
+ *
+ * Sets the lower bound of the repmgr incoming queue red zone.
+ * !!! Assumes caller holds mtx_repmgr lock.
+ *
+ * Note that we can't simply get the REP* address from the env as we usually do,
+ * because at the time of this call it may not have been linked into there yet.
+ * Also note that, REP is not a public structure, so we use "void *" here.
+ */
+void __repmgr_set_incoming_queue_redzone(rep_, gbytes, bytes)
+	void *rep_;
+	u_int32_t gbytes, bytes;
+{
+	REP *rep;
+	double rdgbytes, rdbytes;
+
+	rep = rep_;
+
+	/*
+	 * We use 'double' values to do the computation for precision, and
+	 * to avoid overflow.
+	 */
+	rdgbytes = gbytes * 1.00 * DB_REPMGR_INQUEUE_REDZONE_PERCENT / 100.00;
+	rdbytes = (rdgbytes - (u_int32_t)rdgbytes) * GIGABYTE;
+	rdbytes += bytes * 1.00 * DB_REPMGR_INQUEUE_REDZONE_PERCENT / 100.00;
+	if (rdbytes >= GIGABYTE) {
+		rdgbytes += 1;
+		rdbytes -= GIGABYTE;
+	}
+	rep->inqueue_rz_gbytes = (u_int32_t)rdgbytes;
+	rep->inqueue_rz_bytes = (u_int32_t)rdbytes;
+}
+
+/*
+ * PUBLIC: int __repmgr_get_incoming_queue_redzone __P((DB_ENV *,
+ * PUBLIC:     u_int32_t *, u_int32_t *));
+ *
+ * Gets the lower bound of the repmgr incoming queue red zone.
+ * This method must be called after environment open.
+ */
+int __repmgr_get_incoming_queue_redzone(dbenv, gbytesp, bytesp)
+	DB_ENV *dbenv;
+	u_int32_t *gbytesp, *bytesp;
+{
+	DB_REP *db_rep;
+	DB_THREAD_INFO *ip;
+	ENV *env;
+	REP *rep;
+
+	env = dbenv->env;
+	db_rep = env->rep_handle;
+	rep = db_rep->region;
+
+	ENV_REQUIRES_CONFIG(
+	    env, db_rep->region, "__repmgr_get_incoming_queue_redzone",
+	    DB_INIT_REP);
+
+	ENV_ENTER(env, ip);
+	MUTEX_LOCK(env, rep->mtx_repmgr);
+	*gbytesp = rep->inqueue_rz_gbytes;
+	*bytesp = rep->inqueue_rz_bytes;
+	MUTEX_UNLOCK(env, rep->mtx_repmgr);
+	ENV_LEAVE(env, ip);
+
+	return (0);
+}
+
+/*
+ * PUBLIC: int __repmgr_get_incoming_queue_fullevent __P((DB_ENV *,
+ * PUBLIC:     int *));
+ *
+ * Return whether the DB_EVENT_REP_INQUEUE_FULL event firing is
+ * turned on or off.
+ * This method must be called after environment open.
+ */
+int __repmgr_get_incoming_queue_fullevent(dbenv, onoffp)
+	DB_ENV *dbenv;
+	int *onoffp;
+{
+	DB_REP *db_rep;
+	ENV *env;
+	REP *rep;
+
+	env = dbenv->env;
+	db_rep = env->rep_handle;
+	rep = db_rep->region;
+
+	ENV_REQUIRES_CONFIG(
+	    env, db_rep->region,
+	    "DB_ENV->__repmgr_get_incoming_queue_fullevent",
+	    DB_INIT_REP);
+
+	*onoffp = rep->inqueue_full_event_on ? 1 : 0;
+
 	return (0);
 }
 
@@ -1051,8 +1244,8 @@ __repmgr_env_create(env, db_rep)
 	db_rep->config_nsites = 0;
 	ADJUST_AUTOTAKEOVER_WAITS(db_rep, DB_REPMGR_DEFAULT_ACK_TIMEOUT);
 	db_rep->perm_policy = DB_REPMGR_ACKS_QUORUM;
-	db_rep->inqueue_msg_max = DB_REPMGR_DEFAULT_INQUEUE_MSGS;
-	db_rep->inqueue_bulkmsg_max = DB_REPMGR_DEFAULT_INQUEUE_BULKMSGS;
+	db_rep->inqueue_max_gbytes = 0;
+	db_rep->inqueue_max_bytes = 0;
 #ifdef HAVE_REPLICATION_LISTENER_TAKEOVER
 	FLD_SET(db_rep->config, REP_C_AUTOTAKEOVER);
 #endif
@@ -1064,7 +1257,8 @@ __repmgr_env_create(env, db_rep)
 	TAILQ_INIT(&db_rep->connections);
 	TAILQ_INIT(&db_rep->retries);
 
-	db_rep->input_queue.size = 0;
+	db_rep->input_queue.gbytes = 0;
+	db_rep->input_queue.bytes = 0;
 	STAILQ_INIT(&db_rep->input_queue.header);
 
 	__repmgr_env_create_pf(db_rep);
@@ -1405,7 +1599,7 @@ get_shared_netaddr(env, eid, netaddr)
 	MUTEX_LOCK(env, rep->mtx_repmgr);
 
 	if ((u_int)eid >= rep->site_cnt) {
-		ret = DB_NOTFOUND;
+		ret = USR_ERR(env, DB_NOTFOUND);
 		goto err;
 	}
 	DB_ASSERT(env, rep->siteinfo_off != INVALID_ROFF);
@@ -1650,7 +1844,7 @@ send_msg_self(env, iovecs, nmsg)
 	u_int32_t nmsg;
 {
 	REPMGR_MESSAGE *msg;
-	size_t align, bodysize, structsize;
+	size_t align, bodysize, msgsize, structsize;
 	u_int8_t *membase;
 	int ret;
 
@@ -1658,10 +1852,12 @@ send_msg_self(env, iovecs, nmsg)
 	bodysize = iovecs->total_bytes - __REPMGR_MSG_HDR_SIZE;
 	structsize = (size_t)DB_ALIGN((size_t)(sizeof(REPMGR_MESSAGE) +
 	    nmsg * sizeof(DBT)), align);
-	if ((ret = __os_malloc(env, structsize + bodysize, &membase)) != 0)
+	msgsize = structsize + bodysize;
+	if ((ret = __os_malloc(env, msgsize, &membase)) != 0)
 		return (ret);
 
 	msg = (void*)membase;
+	msg->size = msgsize;
 	membase += structsize;
 
 	/*
@@ -2601,6 +2797,7 @@ join_group_at_site(env, addrp)
 	repmgr_netaddr_t *addrp;
 {
 	DB_REP *db_rep;
+	REP *rep;
 	REPMGR_CONNECTION *conn;
 	SITE_STRING_BUFFER addr_buf;
 	repmgr_netaddr_t addr, myaddr;
@@ -2614,6 +2811,7 @@ join_group_at_site(env, addrp)
 	int ret, t_ret;
 
 	db_rep = env->rep_handle;
+	rep = db_rep->region;
 
 	LOCK_MUTEX(db_rep->mutex);
 	myaddr = SITE_FROM_EID(db_rep->self_eid)->net_addr;
@@ -2626,7 +2824,7 @@ join_group_at_site(env, addrp)
 	RPRINT(env, (env, DB_VERB_REPMGR_MISC, "try join request to site %s",
 	    __repmgr_format_addr_loc(addrp, addr_buf)));
 retry:
-	if ((ret = make_request_conn(env, addrp, &conn)) != 0)
+	if ((ret = __repmgr_make_request_conn(env, addrp, &conn)) != 0)
 		return (ret);
 	DB_ASSERT(env, conn->version > 0 && conn->version <= DB_REPMGR_VERSION);
 	if (conn->version < 5) {
@@ -2642,6 +2840,8 @@ retry:
 		site_info.flags = 0;
 		if (IS_VIEW_SITE(env))
 			FLD_SET(site_info.flags, SITE_VIEW);
+		if (rep->priority > 0)
+			FLD_SET(site_info.flags, SITE_JOIN_ELECTABLE);
 		ret = __repmgr_site_info_marshal(env,
 		    &site_info, siteinfo_buf, sizeof(siteinfo_buf), &req_len);
 	}
@@ -2651,7 +2851,7 @@ retry:
 	    REPMGR_JOIN_REQUEST, siteinfo_buf, (u_int32_t)req_len)) != 0)
 		goto err;
 
-	if ((ret = read_own_msg(env,
+	if ((ret = __repmgr_read_own_msg(env,
 	    conn, &type, &response_buf, &msg_len)) != 0)
 		goto err;
 
@@ -2719,130 +2919,6 @@ err:
 	if (response_buf != NULL)
 		__os_free(env, response_buf);
 
-	return (ret);
-}
-
-/*
- * Reads a whole message, when we expect to get a REPMGR_OWN_MSG.
- */
-static int
-read_own_msg(env, conn, typep, bufp, lenp)
-	ENV *env;
-	REPMGR_CONNECTION *conn;
-	u_int32_t *typep;
-	u_int8_t **bufp;
-	size_t *lenp;
-{
-	__repmgr_msg_hdr_args msg_hdr;
-	u_int8_t *buf;
-	u_int32_t type;
-	size_t size;
-	int ret;
-
-	__repmgr_reset_for_reading(conn);
-	if ((ret = __repmgr_read_conn(conn)) != 0)
-		goto err;
-	ret = __repmgr_msg_hdr_unmarshal(env, &msg_hdr,
-	    conn->msg_hdr_buf, __REPMGR_MSG_HDR_SIZE, NULL);
-	DB_ASSERT(env, ret == 0);
-
-	if ((conn->msg_type = msg_hdr.type) != REPMGR_OWN_MSG) {
-		ret = DB_REP_UNAVAIL; /* Protocol violation. */
-		goto err;
-	}
-	type = REPMGR_OWN_MSG_TYPE(msg_hdr);
-	if ((size = (size_t)REPMGR_OWN_BUF_SIZE(msg_hdr)) > 0) {
-		conn->reading_phase = DATA_PHASE;
-		__repmgr_iovec_init(&conn->iovecs);
-
-		if ((ret = __os_malloc(env, size, &buf)) != 0)
-			goto err;
-		conn->input.rep_message = NULL;
-
-		__repmgr_add_buffer(&conn->iovecs, buf, size);
-		if ((ret = __repmgr_read_conn(conn)) != 0) {
-			__os_free(env, buf);
-			goto err;
-		}
-		*bufp = buf;
-	}
-
-	*typep = type;
-	*lenp = size;
-
-err:
-	return (ret);
-}
-
-static int
-make_request_conn(env, addr, connp)
-	ENV *env;
-	repmgr_netaddr_t *addr;
-	REPMGR_CONNECTION **connp;
-{
-	DBT vi;
-	__repmgr_msg_hdr_args msg_hdr;
-	__repmgr_version_confirmation_args conf;
-	REPMGR_CONNECTION *conn;
-	int alloc, ret, unused;
-
-	alloc = FALSE;
-	if ((ret = __repmgr_connect(env, addr, &conn, &unused)) != 0)
-		return (ret);
-	conn->type = APP_CONNECTION;
-
-	/* Read a handshake msg, to get version confirmation and parameters. */
-	if ((ret = __repmgr_read_conn(conn)) != 0)
-		goto err;
-	/*
-	 * We can only get here after having read the full 9 bytes that we
-	 * expect, so this can't fail.
-	 */
-	DB_ASSERT(env, conn->reading_phase == SIZES_PHASE);
-	ret = __repmgr_msg_hdr_unmarshal(env, &msg_hdr,
-	    conn->msg_hdr_buf, __REPMGR_MSG_HDR_SIZE, NULL);
-	DB_ASSERT(env, ret == 0);
-	__repmgr_iovec_init(&conn->iovecs);
-	conn->reading_phase = DATA_PHASE;
-
-	if ((ret = __repmgr_prepare_simple_input(env, conn, &msg_hdr)) != 0)
-		goto err;
-	alloc = TRUE;
-
-	if ((ret = __repmgr_read_conn(conn)) != 0)
-		goto err;
-
-	/*
-	 * Analyze the handshake msg, and stash relevant info.
-	 */
-	if ((ret = __repmgr_find_version_info(env, conn, &vi)) != 0)
-		goto err;
-	DB_ASSERT(env, vi.size > 0);
-	if ((ret = __repmgr_version_confirmation_unmarshal(env,
-	    &conf, vi.data, vi.size, NULL)) != 0)
-		goto err;
-
-	if (conf.version < GM_MIN_VERSION ||
-	    (IS_VIEW_SITE(env) && conf.version < VIEW_MIN_VERSION)) {
-		ret = DB_REP_UNAVAIL;
-		goto err;
-	}
-	conn->version = conf.version;
-
-err:
-	if (alloc) {
-		DB_ASSERT(env, conn->input.repmgr_msg.cntrl.size > 0);
-		__os_free(env, conn->input.repmgr_msg.cntrl.data);
-		DB_ASSERT(env, conn->input.repmgr_msg.rec.size > 0);
-		__os_free(env, conn->input.repmgr_msg.rec.data);
-	}
-	__repmgr_reset_for_reading(conn);
-	if (ret == 0)
-		*connp = conn;
-	else {
-		(void)__repmgr_close_connection(env, conn);
-		(void)__repmgr_destroy_conn(env, conn);
-	}
 	return (ret);
 }
 
@@ -3343,7 +3419,7 @@ __repmgr_remove_site(dbsite)
 
 	conn = NULL;
 	response_buf = NULL;
-	if ((ret = make_request_conn(env, &addr, &conn)) != 0)
+	if ((ret = __repmgr_make_request_conn(env, &addr, &conn)) != 0)
 		return (ret);
 	DB_ASSERT(env, conn->version > 0 && conn->version <= DB_REPMGR_VERSION);
 	if (conn->version < 5) {
@@ -3365,7 +3441,7 @@ __repmgr_remove_site(dbsite)
 	if ((ret = __repmgr_send_sync_msg(env, conn,
 	    REPMGR_REMOVE_REQUEST, siteinfo_buf, (u_int32_t)len)) != 0)
 		goto err;
-	if ((ret = read_own_msg(env,
+	if ((ret = __repmgr_read_own_msg(env,
 	    conn, &type, &response_buf, &len)) != 0)
 		goto err;
 	ret = type == REPMGR_REMOVE_SUCCESS ? 0 : DB_REP_UNAVAIL;
@@ -3420,11 +3496,12 @@ __repmgr_demote_site(env, eid)
 	DB_SITE *dbsite;
 	REP *rep;
 	REPMGR_SITE *site;
-	int ret, tries;
+	int ret, t_ret, tries;
 
 	db_rep = env->rep_handle;
 	rep = db_rep->region;
 	site = SITE_FROM_EID(eid);
+	dbsite = NULL;
 
 	/* Inform other repmgr threads that a demotion is in progress. */
 	db_rep->demotion_pending = TRUE;
@@ -3446,8 +3523,8 @@ __repmgr_demote_site(env, eid)
 		}
 	}
 
-	/* Remove site from replication group and deallocates dbsite. */
-	if ((ret = __repmgr_remove_and_close_site(dbsite)) != 0)
+	/* Remove site from replication group. */
+	if ((ret = __repmgr_remove_site(dbsite)) != 0)
 		goto err;
 
 	/*
@@ -3461,6 +3538,12 @@ __repmgr_demote_site(env, eid)
 		goto err;
 
 err:
+	/* Deallocates dbsite. */
+	if (dbsite != NULL) {
+		t_ret = __repmgr_site_close(dbsite);
+		if (ret == 0 && t_ret != 0)
+			ret = t_ret;
+	}
 	/* Must reset demotion_pending before leaving this routine. */
 	db_rep->demotion_pending = FALSE;
 	return (ret);

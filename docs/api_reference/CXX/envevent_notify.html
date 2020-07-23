@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.0</p>
+        <p>Library Version 12.1.6.1</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -83,7 +83,7 @@ DbEnv::set_event_notify(
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp1820152"></a>Parameters</h3>
+              <h3 class="title"><a id="idp60376544"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -91,7 +91,7 @@ DbEnv::set_event_notify(
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp1817000"></a>db_event_fcn</h4>
+                <h4 class="title"><a id="idp60386664"></a>db_event_fcn</h4>
               </div>
             </div>
           </div>
@@ -122,6 +122,74 @@ DbEnv::set_event_notify(
                     </p>
                 <div class="itemizedlist">
                   <ul type="circle">
+                    <li>
+                      <p><a id="event_notify_DB_EVENT_FAILCHK_PANIC"></a>
+                                <code class="literal">DB_EVENT_FAILCHK_PANIC</code>
+                            </p>
+                      <p>
+                                The thread is about to return a
+                                <a href="../../programmer_reference/program_errorret.html#program_errorret.DB_RUNRECOVERY" class="olink">
+                                    DB_RUNRECOVERY
+                                </a>
+                                error because a prior panic event has occurred and the
+                                thread has been marked by <a class="xref" href="envfailchk.html" title="DbEnv::failchk()">DbEnv::failchk()</a> as being held by a
+                                crashed process. 
+                            </p>
+                      <p>
+                                The <span class="bold"><strong>event_info</strong></span> parameter
+                                is a pointer to a <code class="literal">DB_FAILCHK_PANIC_INFO</code>
+                                structure, which contains these fields:
+                            </p>
+                      <pre class="programlisting">int error;
+char symptom[DB_FAILURE_SYMPTOM_SIZE];</pre>
+                      <p>
+                                When this event is seen, the database environment has
+                                failed. All threads of control in the database environment
+                                should exit, and recovery should be run.
+                            </p>
+                      <p>
+                                This event is generated only when failchk broadcasting is
+                                configured. You configured broadcasting by
+                                specifying 
+                                <code class="literal">--enable-failchk_broadcast</code>
+                                when you compile your Berkeley DB library.
+                            </p>
+                    </li>
+                    <li>
+                      <p><a id="event_notify_DB_EVENT_MUTEX_DIED"></a>
+                                <code class="literal">DB_EVENT_MUTEX_DIED</code>
+                            </p>
+                      <p>
+                                The thread is about to return a
+                                <a href="../../programmer_reference/program_errorret.html#program_errorret.DB_RUNRECOVERY" class="olink">
+                                    DB_RUNRECOVERY
+                                </a>
+                                error because a mutex it requires has been 
+                                marked by <a class="xref" href="envfailchk.html" title="DbEnv::failchk()">DbEnv::failchk()</a> as being held by a
+                                crashed process. 
+                            </p>
+                      <p>
+                                The <span class="bold"><strong>event_info</strong></span> parameter
+                                is a pointer to a <code class="literal">DB_MUTEX_DIED_INFO</code>
+                                structure, which contains these fields:
+                            </p>
+                      <pre class="programlisting"> pid_t         mtxdied_pid;
+db_threadid_t mtxdied_tid;
+db_mutex_t    mtxdied_mtx;
+char          mtxdied_desc[DB_MUTEX_DESCRIBE_STRLEN]; </pre>
+                      <p>
+                                When this event is seen, the database environment has
+                                failed. All threads of control in the database environment
+                                should exit, and recovery should be run.
+                            </p>
+                      <p>
+                                This event is generated only when failchk broadcasting is
+                                configured. You configured broadcasting by
+                                specifying 
+                                <code class="literal">--enable-failchk_broadcast</code>
+                                when you compile your Berkeley DB library.
+                            </p>
+                    </li>
                     <li>
                       <p><a id="event_notify_DB_EVENT_PANIC"></a>
                                 <code class="literal">DB_EVENT_PANIC</code>
@@ -343,6 +411,15 @@ DbEnv::set_event_notify(
                             </p>
                     </li>
                     <li>
+                      <p><a id="event_notify_DB_EVENT_REP_INQUEUE_FULL"></a>
+                               <code class="literal">DB_EVENT_REP_INQUEUE_FULL</code>
+                            </p>
+                      <p>
+                                Incoming messages will be dropped because the Replication Mananger
+                                incoming queue has reached its maximum threshold.
+                            </p>
+                    </li>
+                    <li>
                       <p><a id="event_notify_DB_EVENT_REP_JOIN_FAILURE"></a>
                                <code class="literal">DB_EVENT_REP_JOIN_FAILURE</code>
                             </p>
@@ -506,7 +583,7 @@ DbEnv::set_event_notify(
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp1800848"></a>Class</h3>
+              <h3 class="title"><a id="idp60419280"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -518,7 +595,7 @@ DbEnv::set_event_notify(
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp1819936"></a>See Also</h3>
+              <h3 class="title"><a id="idp60365632"></a>See Also</h3>
             </div>
           </div>
         </div>

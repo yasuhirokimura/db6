@@ -332,7 +332,7 @@ proc error_check_bad { func result bad {txn 0}} {
 		}
 		flush stdout
 		flush stderr
-		error "FAIL:[timestamp] $func returned error value $bad"
+		error "\nFAIL:[timestamp] $func returned error value $bad"
 	}
 }
 
@@ -343,14 +343,14 @@ proc error_check_good { func result desired {txn 0} } {
 		}
 		flush stdout
 		flush stderr
-		error "FAIL:[timestamp]\
+		error "\nFAIL:[timestamp]\
 		    $func: expected $desired, got $result"
 	}
 }
 
 proc error_check_match { note result desired } {
 	if { ![string match $desired $result] } {
-		error "FAIL:[timestamp]\
+		error "\nFAIL:[timestamp]\
 		    $note: expected $desired, got $result"
 	}
 }
@@ -623,7 +623,7 @@ proc replicate { str times } {
 proc repeat { str n } {
 	set ret ""
 	while { $n > 0 } {
-		set ret $str$ret
+		append ret $str
 		incr n -1
 	}
 	return $ret
@@ -2829,6 +2829,26 @@ proc is_partition_callback { args } {
 	}
 }
 
+# Returns 0 if the environment configuration conflicts with blobs, 1 otherwise.
+proc can_support_blobs { method args } {
+    	global databases_in_memory
+
+    	if { [is_frecno $method] || [is_rrecno $method] ||\
+	    [is_recno $method] || [is_queue $method] } {
+		return 0
+    	}
+    	foreach conf { "-encryptaes" "-encrypt" "-compress" "-dup" "-dupsort" \
+	    "-read_uncommitted" "-multiversion" } {
+		if { [string first $conf $args] != -1 } {
+		    	return 0
+		}
+	}
+    	if { $databases_in_memory == 1 } {
+		return 0
+    	}
+    	return 1
+}
+
 # Sort lines in file $in and write results to file $out.
 # This is a more portable alternative to execing the sort command,
 # which has assorted issues on NT [#1576].
@@ -3284,6 +3304,34 @@ proc dump_compare { file1 file2 } {
 	}
 	if { [catch { eval exec $util_path/db_dump \
 	    -f $testdir/dump2 $file2 } res] } {
+		error "FAIL db_dump: $res"
+	}
+	error_check_good compare_dump \
+	    [filecmp $testdir/dump1 $testdir/dump2] 0
+}
+
+proc dump_compare_blobs { file1 file2 blobdir1 blobdir2 } {
+	global testdir
+	global util_path
+
+	fileremove -f $testdir/dump1
+	fileremove -f $testdir/dump2
+
+	set dpflags1 "-f $testdir/dump1"
+	set dpflags2 "-f $testdir/dump2"
+	if { $blobdir1 != "" } {
+		set dpflags1 "$dpflags1 -b $blobdir1"
+	}
+	if { $blobdir2 != "" } {
+		set dpflags2 "$dpflags2 -b $blobdir2"
+	}
+
+	if { [catch { eval exec $util_path/db_dump \
+	    $dpflags1 $file1 } res] } {
+		error "FAIL db_dump: $res"
+	}
+	if { [catch { eval exec $util_path/db_dump \
+	    $dpflags2 $file2 } res] } {
 		error "FAIL db_dump: $res"
 	}
 	error_check_good compare_dump \
@@ -4254,9 +4302,43 @@ proc my_isalive { pid } {
 	return 1
 }
 
+# Check log file and report failures with FAIL.  Use this when
+# we don't expect failures.
+proc logcheck { logname } {
+	set errstrings [eval findfail $logname]
+	foreach errstring $errstrings {
+		puts "FAIL: error in $logname : $errstring"
+	}
+}
+
+# This proc returns the amount of free disk space in K. 
+proc diskfree-k {{dir .}} {
+	switch $::tcl_platform(os) {
+		FreeBSD -
+		Linux -
+		SunOS {
+			# Use end-2 instead of 3 because long mountpoints 
+			# can make the output to appear in two lines. 
+			# There is df -k -P to avoid this, but -P is not
+			# available on all systems.
+			lindex [lindex [split [exec df -k $dir] \n] end] end-2
+		}
+		HP-UX { lindex [lindex [split [exec bdf $dir] \n] end] 3}
+		Darwin { lindex [lindex [split [exec df -k $dir] \n] end] 3}
+		{Windows NT} {
+			expr [lindex [lindex [split [exec\
+			    cmd /c dir /-c $dir] \n] end] 0]/1024
+		}
+		default {error "don't know how to diskfree-k\
+		    on $::tcl_platform(os)"}
+	}
+} 
+
 # Tests if a directory in the blob directory structure exists
 proc check_blob_sub_exists { blobdir blobsubdir expected } {
 	set blob_subdir $blobdir/$blobsubdir
 	error_check_good "blob subdir exists" \
 	    [file exists $blob_subdir] $expected
 }
+
+

@@ -815,17 +815,17 @@ verify_db_log(dtype, is_part, is_lg, test_cmpdir, backup_cmpdir)
 	for (i = 0; i < m_cnt; i++) {
 		if (i < cnt1 && ((is_lg != 0 &&
 		    strncmp(names1[i], pfx, strlen(pfx)) != 0) ||
-		    strncmp(names1[i], BACKUP_DB, strlen(BACKUP_DB)) != 0 &&
+		    (strncmp(names1[i], BACKUP_DB, strlen(BACKUP_DB)) != 0 &&
 		    (strlen(pfx) > 0 ?
-		    strncmp(names1[i], pfx, strlen(pfx)) != 0 : 1))) {
+		    strncmp(names1[i], pfx, strlen(pfx)) != 0 : 1)))) {
 			t_cnt1--;
 			names1[i] = NULL;
 		}
 		if (i < cnt2 && ((is_lg != 0 &&
 		    strncmp(names2[i], pfx, strlen(pfx)) != 0) ||
-		    strncmp(names2[i], BACKUP_DB, strlen(BACKUP_DB)) != 0 &&
+		    (strncmp(names2[i], BACKUP_DB, strlen(BACKUP_DB)) != 0 &&
 		    (strlen(pfx) > 0 ?
-		    strncmp(names2[i], pfx, strlen(pfx)) != 0 : 1))) {
+		    strncmp(names2[i], pfx, strlen(pfx)) != 0 : 1)))) {
 			t_cnt2--;
 			names2[i] = NULL;
 		}

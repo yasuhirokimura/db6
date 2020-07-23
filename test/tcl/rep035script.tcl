@@ -73,9 +73,10 @@ switch -exact -- $apicall {
 		}
 	}
 	default {
-		puts "FAIL: unrecognized API call $apicall
+		puts "FAIL: unrecognized API call $apicall"
 	}
 }
 
 error_check_good clientenv_close [$clientenv close] 0
+replclose $testdir/MSGQUEUEDIR
 

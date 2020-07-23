@@ -190,15 +190,17 @@ __ham_stat_print(dbc, flags)
 	__db_dl(env,
 	    "Number of blobs", (u_long)sp->hash_nblobs);
 	__db_dl(env,
-	    "Number of overflow pages", (u_long)sp->hash_bigpages);
-	__db_dl_pct(env, "Number of bytes free in overflow pages",
+	    "Number of hash overflow (big item) pages",
+	    (u_long)sp->hash_bigpages);
+	__db_dl_pct(env,
+	    "Number of bytes free in hash overflow (big item) pages",
 	    (u_long)sp->hash_big_bfree, DB_PCT_PG(
 	    sp->hash_big_bfree, sp->hash_bigpages, sp->hash_pagesize), "ff");
 
 	__db_dl(env,
 	    "Number of bucket overflow pages", (u_long)sp->hash_overflows);
 	__db_dl_pct(env,
-	    "Number of bytes free in bucket overflow pages",
+	    "Number of bytes free on bucket overflow pages",
 	    (u_long)sp->hash_ovfl_free, DB_PCT_PG(
 	    sp->hash_ovfl_free, sp->hash_overflows, sp->hash_pagesize), "ff");
 

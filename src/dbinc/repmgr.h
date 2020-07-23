@@ -50,21 +50,26 @@ extern "C" {
  * we introduced a few more new message types, the largest of which had value 8.
  * Protocol version 5 did not introduce any new message types, but changed
  * the format of site info and membership data to support views.
+ *
+ * Protocol version 6 introduced preferred master mode, which added several
+ * new REPMGR_OWN messages.
  */
 #define	REPMGR_MAX_V1_MSG_TYPE	3
 #define	REPMGR_MAX_V2_MSG_TYPE	4
 #define	REPMGR_MAX_V3_MSG_TYPE	4
 #define	REPMGR_MAX_V4_MSG_TYPE	8
 #define	REPMGR_MAX_V5_MSG_TYPE	8
+#define	REPMGR_MAX_V6_MSG_TYPE	8
 #define	HEARTBEAT_MIN_VERSION	2
 #define	CHANNEL_MIN_VERSION	4
 #define	CONN_COLLISION_VERSION	4
 #define	GM_MIN_VERSION		4
 #define	OWN_MIN_VERSION		4
 #define	VIEW_MIN_VERSION	5
+#define	PREFMAS_MIN_VERSION	6
 
 /* The range of protocol versions we're willing to support. */
-#define	DB_REPMGR_VERSION	5
+#define	DB_REPMGR_VERSION	6
 #define	DB_REPMGR_MIN_VERSION	1
 
 /*
@@ -77,17 +82,24 @@ extern "C" {
  * Like the message format types, these message type values should be
  * permanently frozen.
  */
-#define	REPMGR_CONNECT_REJECT	1
-#define	REPMGR_GM_FAILURE	2
-#define	REPMGR_GM_FORWARD	3
-#define	REPMGR_JOIN_REQUEST	4
-#define	REPMGR_JOIN_SUCCESS	5
-#define	REPMGR_PARM_REFRESH	6
-#define	REPMGR_REJOIN		7
-#define	REPMGR_REMOVE_REQUEST	8
-#define	REPMGR_REMOVE_SUCCESS	9
-#define	REPMGR_RESOLVE_LIMBO	10
-#define	REPMGR_SHARING		11
+#define	REPMGR_CONNECT_REJECT		1
+#define	REPMGR_GM_FAILURE		2
+#define	REPMGR_GM_FORWARD		3
+#define	REPMGR_JOIN_REQUEST		4
+#define	REPMGR_JOIN_SUCCESS		5
+#define	REPMGR_PARM_REFRESH		6
+#define	REPMGR_REJOIN			7
+#define	REPMGR_REMOVE_REQUEST		8
+#define	REPMGR_REMOVE_SUCCESS		9
+#define	REPMGR_RESOLVE_LIMBO		10
+#define	REPMGR_SHARING			11
+#define	REPMGR_LSNHIST_REQUEST		12
+#define	REPMGR_LSNHIST_RESPONSE		13
+#define	REPMGR_PREFMAS_FAILURE		14
+#define	REPMGR_PREFMAS_SUCCESS		15
+#define	REPMGR_READONLY_MASTER		16
+#define	REPMGR_READONLY_RESPONSE	17
+#define	REPMGR_RESTART_CLIENT		18
 
 /* Detect inconsistencies between view callback and site's gmdb. */
 #define PARTICIPANT_TO_VIEW(db_rep, site)      				\
@@ -161,9 +173,16 @@ typedef char SITE_STRING_BUFFER[MAX_SITE_LOC_STRING+1];
 #define	DB_REPMGR_DEFAULT_ELECTION_RETRY	(10 * US_PER_SEC)
 #define	DB_REPMGR_DEFAULT_CHANNEL_TIMEOUT	(5 * US_PER_SEC)
 
+/* Default preferred master automatic configuration values. */
+#define	DB_REPMGR_PREFMAS_ELECTION_RETRY	(1 * US_PER_SEC)
+#define	DB_REPMGR_PREFMAS_HEARTBEAT_MONITOR	(2 * US_PER_SEC)
+#define	DB_REPMGR_PREFMAS_HEARTBEAT_SEND	(75 * (US_PER_SEC / 100))
+#define	DB_REPMGR_PREFMAS_PRIORITY_CLIENT	75
+#define	DB_REPMGR_PREFMAS_PRIORITY_MASTER	200
+
 /* Defaults for undocumented incoming queue maximum messages. */
-#define	DB_REPMGR_DEFAULT_INQUEUE_MSGS		5000000
-#define	DB_REPMGR_DEFAULT_INQUEUE_BULKMSGS	5000
+#define	DB_REPMGR_DEFAULT_INQUEUE_MAX		(100 * MEGABYTE)
+#define	DB_REPMGR_INQUEUE_REDZONE_PERCENT	85
 
 typedef TAILQ_HEAD(__repmgr_conn_list, __repmgr_connection) CONNECTION_LIST;
 typedef STAILQ_HEAD(__repmgr_out_q_head, __queued_output) OUT_Q_HEADER;
@@ -184,11 +203,12 @@ struct __repmgr_runnable {
 /*
  * Options governing requested behavior of election thread.
  */
-#define	ELECT_F_EVENT_NOTIFY	0x01 /* Notify application of master failure. */
-#define	ELECT_F_FAST		0x02 /* First election "fast" (n-1 trick). */
-#define	ELECT_F_IMMED		0x04 /* Start with immediate election. */
-#define	ELECT_F_INVITEE		0x08 /* Honor (remote) inviter's nsites. */
-#define	ELECT_F_STARTUP		0x10 /* Observe repmgr_start() policy. */
+#define	ELECT_F_CLIENT_RESTART	0x01 /* Do client restarts but no elections. */
+#define	ELECT_F_EVENT_NOTIFY	0x02 /* Notify application of master failure. */
+#define	ELECT_F_FAST		0x04 /* First election "fast" (n-1 trick). */
+#define	ELECT_F_IMMED		0x08 /* Start with immediate election. */
+#define	ELECT_F_INVITEE		0x10 /* Honor (remote) inviter's nsites. */
+#define	ELECT_F_STARTUP		0x20 /* Observe repmgr_start() policy. */
 		u_int32_t flags;
 
 		/* For connector thread. */
@@ -284,6 +304,7 @@ struct __queued_output {
  */
 typedef struct __repmgr_message {
 	STAILQ_ENTRY(__repmgr_message) entries;
+	size_t size;
 	__repmgr_msg_hdr_args msg_hdr;
 	union {
 		struct {
@@ -564,6 +585,7 @@ struct __repmgr_site {
 	/*
 	 * Everything below here is applicable only to remote sites.
 	 */
+	u_int32_t max_ack_gen;	/* Master generation for max_ack. */
 	DB_LSN max_ack;		/* Best ack we've heard from this site. */
 	int ack_policy;		/* Or 0 if unknown. */
 	u_int16_t alignment;	/* Requirements for app channel msgs. */
@@ -791,7 +813,8 @@ typedef struct {
  * also frozen across releases.  These values are bit fields and may be OR'ed
  * together.
  */
-#define	SITE_VIEW	0x01
+#define	SITE_VIEW		0x01
+#define	SITE_JOIN_ELECTABLE	0x02
 
 /*
  * Message types whose processing could take a long time.  We're careful to
@@ -821,9 +844,9 @@ typedef struct {
  * fraction of the code, it's a tiny fraction of the time: repmgr spends most of
  * its time in a call to select(), and as well a bit in calls into the Base
  * replication API.  All of those release the mutex.
- *     Access to repmgr's shared list of site addresses is protected by
- * another mutex: mtx_repmgr.  And, when changing space allocation for that site
- * list we conform to the convention of acquiring renv->mtx_regenv.  These are
+ *     Access to repmgr's shared values is protected by another mutex: 
+ * mtx_repmgr.  And, when changing space allocation for that site list
+ * we conform to the convention of acquiring renv->mtx_regenv.  These are
  * less frequent of course.
  *     When it's necessary to acquire more than one of these mutexes, the
  * ordering priority (or "lock ordering protocol") is:

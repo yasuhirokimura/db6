@@ -32,3 +32,9 @@ puts "Wait until it gets into SYNC_PAGES state"
 while {![in_sync_state $dirS]} {
 	tclsleep 1
 }
+
+# Make sure there is time for the entire internal init file to be written
+# out to disk.  If the final group membership database section is not yet
+# there, it causes DB_REP_UNAVAIL failures when this site is restarted in
+# the main process.
+tclsleep 1

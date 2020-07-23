@@ -15,9 +15,11 @@
 set testdir [file dirname $argv0]
 source $testdir/tester.tcl
 
-do_test misc7-1-misuse {
-  c_misuse_test
-} {}
+if {[clang_sanitize_address]==0} {
+  do_test misc7-1-misuse {
+    c_misuse_test
+  } {}
+}
 
 do_test misc7-2 {
   c_realloc_test
@@ -269,17 +271,17 @@ ifcapable explain {
     CREATE TABLE abc(a PRIMARY KEY, b, c);
     EXPLAIN QUERY PLAN SELECT * FROM abc AS t2 WHERE rowid = 1;
   } {
-    0 0 0 {SEARCH TABLE abc AS t2 USING INTEGER PRIMARY KEY (rowid=?) (~1 rows)}
+    0 0 0 {SEARCH TABLE abc AS t2 USING INTEGER PRIMARY KEY (rowid=?)}
   }
   do_execsql_test misc7-14.2 {
     EXPLAIN QUERY PLAN SELECT * FROM abc AS t2 WHERE a = 1;
   } {0 0 0 
-     {SEARCH TABLE abc AS t2 USING INDEX sqlite_autoindex_abc_1 (a=?) (~1 rows)}
+     {SEARCH TABLE abc AS t2 USING INDEX sqlite_autoindex_abc_1 (a=?)}
   }
   do_execsql_test misc7-14.3 {
     EXPLAIN QUERY PLAN SELECT * FROM abc AS t2 ORDER BY a;
   } {0 0 0 
-     {SCAN TABLE abc AS t2 USING INDEX sqlite_autoindex_abc_1 (~1000000 rows)}
+     {SCAN TABLE abc AS t2 USING INDEX sqlite_autoindex_abc_1}
   }
 }
 
@@ -355,7 +357,7 @@ do_ioerr_test misc7-16 -sqlprep {
     COMMIT;
   }} msg]
 
-  if {!$rc || ($rc && [string first "columns" $msg]==0)} {
+  if {!$rc || ($rc && [string first "UNIQUE" $msg]==0)} {
     set msg
   } else {
     error $msg

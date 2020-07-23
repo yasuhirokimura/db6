@@ -201,12 +201,18 @@ __lock_vec(env, sh_locker, flags, list, nlist, elistp)
 				if (writes == 1 ||
 				    lp->mode == DB_LOCK_READ ||
 				    lp->mode == DB_LOCK_READ_UNCOMMITTED) {
-					SH_LIST_REMOVE(lp,
-					    locker_links, __db_lock);
+					/*
+					 * It is safe to look at lp before
+					 * locking because any threads sharing
+					 * this locker must not be in the API
+					 * at the same time.
+					 */
 					sh_obj = SH_OFF_TO_PTR(lp,
 					    lp->obj, DB_LOCKOBJ);
 					ndx = sh_obj->indx;
 					OBJECT_LOCK_NDX(lt, region, ndx);
+					SH_LIST_REMOVE(lp,
+					    locker_links, __db_lock);
 					/*
 					 * We are not letting lock_put_internal
 					 * unlink the lock, so we'll have to
@@ -980,12 +986,21 @@ in_abort:	newl->status = DB_LSTAT_WAITING;
 			goto err;
 		}
 
+		/*
+		 * Sleep until someone releases a lock which might let us in.
+		 * Since we want to set the thread state back to ACTIVE, don't
+		 * use the normal MUTEX_LOCK() macro, which would immediately
+		 * return a panic error code. Instead, return the panic after
+		 * restoring the thread state.
+		 */
 		PERFMON2(env, lock, suspend, (DBT *) obj, lock_mode);
-		MUTEX_LOCK(env, newl->mtx_lock);
+		ret = __mutex_lock(env, newl->mtx_lock);
 		PERFMON2(env, lock, resume, (DBT *) obj, lock_mode);
 
 		if (ip != NULL)
 			ip->dbth_state = THREAD_ACTIVE;
+		if (ret != 0)
+			return (ret);
 
 		LOCK_SYSTEM_LOCK(lt, region);
 		OBJECT_LOCK_NDX(lt, region, ndx);
@@ -1684,11 +1699,15 @@ __lock_inherit_locks(lt, sh_locker, flags)
 	for (lp = SH_LIST_FIRST(&sh_locker->heldby, __db_lock);
 	    lp != NULL;
 	    lp = SH_LIST_FIRST(&sh_locker->heldby, __db_lock)) {
-		SH_LIST_REMOVE(lp, locker_links, __db_lock);
-
-		/* See if the parent already has a lock. */
+		/*
+		 * See if the parent already has a lock. It is safe to look at
+		 * lp before locking it because any threads sharing this locker
+		 * must not be in the API with the same time.
+		 */
 		obj = SH_OFF_TO_PTR(lp, lp->obj, DB_LOCKOBJ);
 		OBJECT_LOCK_NDX(lt, region, obj->indx);
+		SH_LIST_REMOVE(lp, locker_links, __db_lock);
+
 		SH_TAILQ_FOREACH(hlp, &obj->holders, links, __db_lock)
 			if (hlp->holder == poff && lp->mode == hlp->mode)
 				break;
@@ -1918,7 +1937,7 @@ __lock_trade(env, lock, new_locker)
 
 	/* If the lock is already released, simply return. */
 	if (lp->gen != lock->gen)
-		return (DB_NOTFOUND);
+		return (USR_ERR(env, DB_NOTFOUND));
 
 	if (new_locker == NULL) {
 		__db_errx(env, DB_STR("2040", "Locker does not exist"));

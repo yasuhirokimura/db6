@@ -14,7 +14,7 @@
   <body>
     <div xmlns="" class="navheader">
       <div class="libver">
-        <p>Library Version 12.1.6.0</p>
+        <p>Library Version 12.1.6.1</p>
       </div>
       <table width="100%" summary="Navigation header">
         <tr>
@@ -75,8 +75,10 @@ DB_ENV-&gt;rep_set_priority(DB_ENV *env, u_int32_t priority);  </pre>
          configuration done before that time.
     </p>
       <p>
-        Note that if the application never explicitly sets a priority, then a default value of 100
-        is used.
+        Note that if the application never explicitly sets a priority, then
+        a default value of 100 is used. In preferred master mode, priority
+        values for each site are automatically set and any attempt to change
+        them results in an error.
     </p>
       <p>
          The <code class="methodname">DB_ENV-&gt;rep_set_priority()</code> method configures a database
@@ -99,7 +101,7 @@ DB_ENV-&gt;rep_set_priority(DB_ENV *env, u_int32_t priority);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp54202176"></a>Parameters</h3>
+              <h3 class="title"><a id="idp4029248"></a>Parameters</h3>
             </div>
           </div>
         </div>
@@ -107,7 +109,7 @@ DB_ENV-&gt;rep_set_priority(DB_ENV *env, u_int32_t priority);  </pre>
           <div class="titlepage">
             <div>
               <div>
-                <h4 class="title"><a id="idp54201528"></a>priority</h4>
+                <h4 class="title"><a id="idp4028600"></a>priority</h4>
               </div>
             </div>
           </div>
@@ -124,7 +126,37 @@ DB_ENV-&gt;rep_set_priority(DB_ENV *env, u_int32_t priority);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp54170424"></a>Class</h3>
+              <h3 class="title"><a id="idp4010456"></a>Errors</h3>
+            </div>
+          </div>
+        </div>
+        <p>
+             The <code class="methodname">DB_ENV-&gt;rep_set_priority()</code> <span>
+            <span>
+                 method may fail and return one of the following non-zero errors:
+            </span>
+            
+        </span>
+        </p>
+        <div class="sect3" lang="en" xml:lang="en">
+          <div class="titlepage">
+            <div>
+              <div>
+                <h4 class="title"><a id="idp4038072"></a>EINVAL</h4>
+              </div>
+            </div>
+          </div>
+          <p>
+                If changing the automatically set priority value in
+                Replication Manager preferred master mode.
+            </p>
+        </div>
+      </div>
+      <div class="sect2" lang="en" xml:lang="en">
+        <div class="titlepage">
+          <div>
+            <div>
+              <h3 class="title"><a id="idp4032616"></a>Class</h3>
             </div>
           </div>
         </div>
@@ -136,7 +168,7 @@ DB_ENV-&gt;rep_set_priority(DB_ENV *env, u_int32_t priority);  </pre>
         <div class="titlepage">
           <div>
             <div>
-              <h3 class="title"><a id="idp54175808"></a>See Also</h3>
+              <h3 class="title"><a id="idp4028360"></a>See Also</h3>
             </div>
           </div>
         </div>

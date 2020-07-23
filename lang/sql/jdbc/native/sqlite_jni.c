@@ -72,7 +72,7 @@ typedef struct {
     struct hbl *blobs;		/* SQLite3 blob handles */
 #endif
 #if HAVE_SQLITE3 && HAVE_SQLITE3_BACKUPAPI
-  struct hbk *backups;		/* SQLite3 backup handles */
+    struct hbk *backups;	/* SQLite3 backup handles */
 #endif
 } handle;
 
@@ -138,6 +138,7 @@ typedef struct {
 /* static cached weak class refs, field and method ids */
 
 static jclass C_java_lang_String = 0;
+static jclass C_SQLite_Database = 0;
 
 static jfieldID F_SQLite_Database_handle = 0;
 static jfieldID F_SQLite_Database_error_code = 0;
@@ -213,6 +214,21 @@ gethandle(JNIEnv *env, jobject obj)
     return (void *) v.l;
 }
 
+static void *
+getclrhandle(JNIEnv *env, jobject obj)
+{
+    jvalue v;
+
+    if ((*env)->MonitorEnter(env, obj) != JNI_OK) {
+	fprintf(stderr, "getclrhandle: MonitorEnter failed\n");
+	return 0;
+    }
+    v.j = (*env)->GetLongField(env, obj, F_SQLite_Database_handle);
+    (*env)->SetLongField(env, obj, F_SQLite_Database_handle, 0);
+    (*env)->MonitorExit(env, obj);
+    return (void *) v.l;
+}
+
 #if HAVE_SQLITE_COMPILE
 static void *
 gethvm(JNIEnv *env, jobject obj)
@@ -223,6 +239,21 @@ gethvm(JNIEnv *env, jobject obj)
     return (void *) v.l;
 }
 
+static void *
+getclrhvm(JNIEnv *env, jobject obj)
+{
+    jvalue v;
+
+    if ((*env)->MonitorEnter(env, obj) != JNI_OK) {
+	fprintf(stderr, "getclrhvm: MonitorEnter failed\n");
+	return 0;
+    }
+    v.j = (*env)->GetLongField(env, obj, F_SQLite_Vm_handle);
+    (*env)->SetLongField(env, obj, F_SQLite_Vm_handle, 0);
+    (*env)->MonitorExit(env, obj);
+    return (void *) v.l;
+}
+
 #if HAVE_SQLITE3
 static void *
 gethstmt(JNIEnv *env, jobject obj)
@@ -230,6 +261,21 @@ gethstmt(JNIEnv *env, jobject obj)
     jvalue v;
 
     v.j = (*env)->GetLongField(env, obj, F_SQLite_Stmt_handle);
+    return (void *) v.l;
+}
+
+static void *
+getclrhstmt(JNIEnv *env, jobject obj)
+{
+    jvalue v;
+
+    if ((*env)->MonitorEnter(env, obj) != JNI_OK) {
+	fprintf(stderr, "getclrhstmt: MonitorEnter failed\n");
+	return 0;
+    }
+    v.j = (*env)->GetLongField(env, obj, F_SQLite_Stmt_handle);
+    (*env)->SetLongField(env, obj, F_SQLite_Stmt_handle, 0);
+    (*env)->MonitorExit(env, obj);
     return (void *) v.l;
 }
 #endif
@@ -244,6 +290,21 @@ gethbl(JNIEnv *env, jobject obj)
     v.j = (*env)->GetLongField(env, obj, F_SQLite_Blob_handle);
     return (void *) v.l;
 }
+
+static void *
+getclrhbl(JNIEnv *env, jobject obj)
+{
+    jvalue v;
+
+    if ((*env)->MonitorEnter(env, obj) != JNI_OK) {
+	fprintf(stderr, "getclrhbl: MonitorEnter failed\n");
+	return 0;
+    }
+    v.j = (*env)->GetLongField(env, obj, F_SQLite_Blob_handle);
+    (*env)->SetLongField(env, obj, F_SQLite_Blob_handle, 0);
+    (*env)->MonitorExit(env, obj);
+    return (void *) v.l;
+}
 #endif
 
 #if HAVE_SQLITE3 && HAVE_SQLITE3_BACKUPAPI
@@ -253,6 +314,21 @@ gethbk(JNIEnv *env, jobject obj)
     jvalue v;
 
     v.j = (*env)->GetLongField(env, obj, F_SQLite_Backup_handle);
+    return (void *) v.l;
+}
+
+static void *
+getclrhbk(JNIEnv *env, jobject obj)
+{
+    jvalue v;
+
+    if ((*env)->MonitorEnter(env, obj) != JNI_OK) {
+	fprintf(stderr, "getclrhbk: MonitorEnter failed\n");
+	return 0;
+    }
+    v.j = (*env)->GetLongField(env, obj, F_SQLite_Backup_handle);
+    (*env)->SetLongField(env, obj, F_SQLite_Backup_handle, 0);
+    (*env)->MonitorExit(env, obj);
     return (void *) v.l;
 }
 #endif
@@ -770,7 +846,7 @@ callback(void *udata, int ncol, char **data, char **cols)
 static void
 doclose(JNIEnv *env, jobject obj, int final)
 {
-    handle *h = gethandle(env, obj);
+    handle *h = getclrhandle(env, obj);
 
     if (h) {
 	hfunc *f;
@@ -782,7 +858,13 @@ doclose(JNIEnv *env, jobject obj, int final)
 #endif
 #if HAVE_SQLITE_COMPILE
 	hvm *v;
+#endif
 
+	if ((*env)->MonitorEnter(env, C_SQLite_Database) != JNI_OK) {
+	    fprintf(stderr, "doclose: MonitorEnter failed\n");
+	    return;
+	}
+#if HAVE_SQLITE_COMPILE
 	while ((v = h->vms)) {
 	    h->vms = v->next;
 	    v->next = 0;
@@ -859,6 +941,7 @@ doclose(JNIEnv *env, jobject obj, int final)
 	    bk->bkup = 0;
 	}
 #endif
+	(*env)->MonitorExit(env, C_SQLite_Database);
 	delglobrefp(env, &h->bh);
 	delglobrefp(env, &h->cb);
 	delglobrefp(env, &h->ai);
@@ -866,7 +949,6 @@ doclose(JNIEnv *env, jobject obj, int final)
 	delglobrefp(env, &h->ph);
 	delglobrefp(env, &h->enc);
 	free(h);
-	(*env)->SetLongField(env, obj, F_SQLite_Database_handle, 0);
 	return;
     }
     if (!final) {
@@ -2457,9 +2539,13 @@ Java_SQLite_Database__1trace(JNIEnv *env, jobject obj, jobject tr)
 static void
 dovmfinal(JNIEnv *env, jobject obj, int final)
 {
-    hvm *v = gethvm(env, obj);
+    hvm *v = getclrhvm(env, obj);
 
     if (v) {
+	if ((*env)->MonitorEnter(env, C_SQLite_Database) != JNI_OK) {
+	    fprintf(stderr, "dovmfinal: MonitorEnter failed\n");
+	    return;
+	}
 	if (v->h) {
 	    handle *h = v->h;
 	    hvm *vv, **vvp;
@@ -2475,6 +2561,7 @@ dovmfinal(JNIEnv *env, jobject obj, int final)
 		vv = *vvp;
 	    }
 	}
+	(*env)->MonitorExit(env, C_SQLite_Database);
 	if (v->vm) {
 #if HAVE_BOTH_SQLITE
 	    if (v->is3) {
@@ -2493,7 +2580,6 @@ dovmfinal(JNIEnv *env, jobject obj, int final)
 	    v->vm = 0;
 	}
 	free(v);
-	(*env)->SetLongField(env, obj, F_SQLite_Vm_handle, 0);
 	return;
     }
     if (!final) {
@@ -2506,9 +2592,13 @@ dovmfinal(JNIEnv *env, jobject obj, int final)
 static void
 dostmtfinal(JNIEnv *env, jobject obj)
 {
-    hvm *v = gethstmt(env, obj);
+    hvm *v = getclrhstmt(env, obj);
 
     if (v) {
+	if ((*env)->MonitorEnter(env, C_SQLite_Database) != JNI_OK) {
+	    fprintf(stderr, "dostmtfinal: MonitorEnter failed\n");
+	    return;
+	}
 	if (v->h) {
 	    handle *h = v->h;
 	    hvm *vv, **vvp;
@@ -2524,12 +2614,12 @@ dostmtfinal(JNIEnv *env, jobject obj)
 		vv = *vvp;
 	    }
 	}
+	(*env)->MonitorExit(env, C_SQLite_Database);
 	if (v->vm) {
 	    sqlite3_finalize((sqlite3_stmt *) v->vm);
 	}
 	v->vm = 0;
 	free(v);
-	(*env)->SetLongField(env, obj, F_SQLite_Stmt_handle, 0);
     }
 }
 #endif
@@ -2538,9 +2628,13 @@ dostmtfinal(JNIEnv *env, jobject obj)
 static void
 doblobfinal(JNIEnv *env, jobject obj)
 {
-    hbl *bl = gethbl(env, obj);
+    hbl *bl = getclrhbl(env, obj);
 
     if (bl) {
+	if ((*env)->MonitorEnter(env, C_SQLite_Database) != JNI_OK) {
+	    fprintf(stderr, "doblobfinal: MonitorEnter failed\n");
+	    return;
+	}
 	if (bl->h) {
 	    handle *h = bl->h;
 	    hbl *blc, **blp;
@@ -2556,12 +2650,12 @@ doblobfinal(JNIEnv *env, jobject obj)
 		blc = *blp;
 	    }
 	}
+	(*env)->MonitorExit(env, C_SQLite_Database);
 	if (bl->blob) {
 	    sqlite3_blob_close(bl->blob);
 	}
 	bl->blob = 0;
 	free(bl);
-	(*env)->SetLongField(env, obj, F_SQLite_Blob_handle, 0);
 	(*env)->SetIntField(env, obj, F_SQLite_Blob_size, 0);
     }
 }
@@ -3162,6 +3256,7 @@ Java_SQLite_Database_vm_1compile(JNIEnv *env, jobject obj, jstring sql,
     vv.j = 0;
     vv.l = (jobject) v;
     (*env)->SetLongField(env, vm, F_SQLite_Vm_handle, vv.j);
+    transfree(&tr);
 #else
     throwex(env, "unsupported");
 #endif
@@ -4567,6 +4662,7 @@ JNICALL Java_SQLite_Database__1key(JNIEnv *env, jobject obj, jbyteArray key)
     len = (*env)->GetArrayLength(env, key);
     data = (*env)->GetByteArrayElements(env, key, 0);
     if (len == 0) {
+	(*env)->ReleaseByteArrayElements(env, key, data, 0);
 	data = 0;
     }
     if (!data) {
@@ -4585,16 +4681,19 @@ JNICALL Java_SQLite_Database__1key(JNIEnv *env, jobject obj, jbyteArray key)
 	sqlite3_key((sqlite3 *) h->sqlite, data, len);
 	if (data) {
 	    memset(data, 0, len);
+	    (*env)->ReleaseByteArrayElements(env, key, data, 0);
 	}
     } else {
 	if (data) {
 	    memset(data, 0, len);
+	    (*env)->ReleaseByteArrayElements(env, key, data, 0);
 	}
 	throwclosed(env);
     }
 #else
     if (data) {
 	memset(data, 0, len);
+	(*env)->ReleaseByteArrayElements(env, key, data, 0);
     }
     /* no error */
 #endif
@@ -4612,6 +4711,7 @@ Java_SQLite_Database__1rekey(JNIEnv *env, jobject obj, jbyteArray key)
     len = (*env)->GetArrayLength(env, key);
     data = (*env)->GetByteArrayElements(env, key, 0);
     if (len == 0) {
+	(*env)->ReleaseByteArrayElements(env, key, data, 0);
 	data = 0;
     }
     if (!data) {
@@ -4630,16 +4730,19 @@ Java_SQLite_Database__1rekey(JNIEnv *env, jobject obj, jbyteArray key)
 	sqlite3_rekey((sqlite3 *) h->sqlite, data, len);
 	if (data) {
 	    memset(data, 0, len);
+	    (*env)->ReleaseByteArrayElements(env, key, data, 0);
 	}
     } else {
 	if (data) {
 	    memset(data, 0, len);
+	    (*env)->ReleaseByteArrayElements(env, key, data, 0);
 	}
 	throwclosed(env);
     }
 #else
     if (data) {
 	memset(data, 0, len);
+	(*env)->ReleaseByteArrayElements(env, key, data, 0);
     }
     throwex(env, "unsupported");
 #endif
@@ -4745,11 +4848,15 @@ JNIEXPORT void JNICALL
 Java_SQLite_Backup__1finalize(JNIEnv *env, jobject obj)
 {
 #if HAVE_SQLITE3 && HAVE_SQLITE3_BACKUPAPI
-    hbk *bk = gethbk(env, obj);
+    hbk *bk = getclrhbk(env, obj);
     int ret = SQLITE_OK;
     char *err = 0;
 
     if (bk) {
+	if ((*env)->MonitorEnter(env, C_SQLite_Database) != JNI_OK) {
+	    fprintf(stderr, "SQLite.Backup.finalize: MonitorEnter failed\n");
+	    return;
+	}
 	if (bk->h) {
 	    handle *h = bk->h;
 	    hbk *bkc, **bkp;
@@ -4765,6 +4872,7 @@ Java_SQLite_Backup__1finalize(JNIEnv *env, jobject obj)
 		bkc = *bkp;
 	    }
 	}
+	(*env)->MonitorExit(env, C_SQLite_Database);
 	if (bk->bkup) {
 	    ret = sqlite3_backup_finish(bk->bkup);
 	    if (ret != SQLITE_OK && bk->h) {
@@ -4773,7 +4881,6 @@ Java_SQLite_Backup__1finalize(JNIEnv *env, jobject obj)
 	}
 	bk->bkup = 0;
 	free(bk);
-	(*env)->SetLongField(env, obj, F_SQLite_Backup_handle, 0);
 	if (ret != SQLITE_OK) {
 	    throwex(env, err ? err : "unknown error");
 	}
@@ -5029,7 +5136,7 @@ JNIEXPORT jint JNICALL
 JNI_OnLoad(JavaVM *vm, void *reserved)
 {
     JNIEnv *env;
-    jclass cls;
+    jclass cls1, cls2;
 
 #ifndef _WIN32
 #if HAVE_SQLITE2
@@ -5041,11 +5148,16 @@ JNI_OnLoad(JavaVM *vm, void *reserved)
     if ((*vm)->GetEnv(vm, (void **) &env, JNI_VERSION_1_2)) {
 	return JNI_ERR;
     }
-    cls = (*env)->FindClass(env, "java/lang/String");
-    if (!cls) {
+    cls1 = (*env)->FindClass(env, "java/lang/String");
+    if (!cls1) {
 	return JNI_ERR;
     }
-    C_java_lang_String = (*env)->NewGlobalRef(env, cls);
+    cls2 = (*env)->FindClass(env, "SQLite/Database");
+    if (!cls2) {
+	return JNI_ERR;
+    }
+    C_java_lang_String = (*env)->NewGlobalRef(env, cls1);
+    C_SQLite_Database = (*env)->NewGlobalRef(env, cls2);
     return JNI_VERSION_1_2;
 }
 
@@ -5056,6 +5168,10 @@ JNI_OnUnload(JavaVM *vm, void *reserved)
 
     if ((*vm)->GetEnv(vm, (void **) &env, JNI_VERSION_1_2)) {
 	return;
+    }
+    if (C_SQLite_Database) {
+	(*env)->DeleteGlobalRef(env, C_SQLite_Database);
+	C_SQLite_Database = 0;
     }
     if (C_java_lang_String) {
 	(*env)->DeleteGlobalRef(env, C_java_lang_String);

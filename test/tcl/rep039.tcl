@@ -159,6 +159,11 @@ proc rep039_sub \
 		error "FAIL:[timestamp] '$crash' is an unrecognized crash type"
 	}
 
+	set blobargs ""
+    	if { [can_support_blobs $method $largs] == 1 } {
+		set blobargs "-blob_threshold 100"
+	}
+
 	env_cleanup $testdir
 
 	replsetup $testdir/MSGQUEUEDIR
@@ -203,7 +208,7 @@ proc rep039_sub \
 	#
 	repladd 1
 	set env_A_cmd "berkdb_env_noerr -create -txn nosync \
-	    $verbargs $repmemargs \
+	    $verbargs $repmemargs $blobargs \
 	    -log_buffer $log_buf -log_max $log_max -errpfx SITE_A \
 	    -home $dirs(A) -rep_transport \[list 1 replsend\]"
 	set envs(A) [eval $env_A_cmd $recargs -rep_master]
@@ -217,7 +222,7 @@ proc rep039_sub \
 		set log_arg "-log_buffer $log_buf"
 	}
 	set env_B_cmd "berkdb_env_noerr -create $txn_arg \
-	    $verbargs $repmemargs \
+	    $verbargs $repmemargs $blobargs \
 	    $log_arg -log_max $log_max -errpfx SITE_B \
 	    -home $dirs(B) -rep_transport \[list 2 replsend\]"
 	set envs(B) [eval $env_B_cmd $recargs -rep_client]
@@ -225,7 +230,7 @@ proc rep039_sub \
 	# Open 2nd client
 	repladd 3
 	set env_C_cmd "berkdb_env_noerr -create -txn nosync \
-	    $verbargs $repmemargs \
+	    $verbargs $repmemargs $blobargs \
 	    -log_buffer $log_buf -log_max $log_max -errpfx SITE_C \
 	    -home $dirs(C) -rep_transport \[list 3 replsend\]"
 	set envs(C) [eval $env_C_cmd $recargs -rep_client]

@@ -82,6 +82,9 @@ proc env016 { } {
 		{ "rep_set_config" "db_rep_conf_delayclient" 
 		    "Env016.b1: Rep config: delayclient"
 		    "rep_get_config delayclient" "1" }
+		{ "rep_set_config" "db_rep_conf_elect_loglength" 
+		    "Env016.b1: Rep config: electloglength"
+		    "rep_get_config electloglength" "1" }
 		{ "rep_set_config" "db_rep_conf_inmem" 
 		    "Env016.b1: Rep config: inmem"
 		    "rep_get_config inmem" "1" }
@@ -97,6 +100,12 @@ proc env016 { } {
 		{ "rep_set_config" "db_repmgr_conf_2site_strict" 
 		    "Env016.b1: Repmgr config: 2 site strict"
 		    "rep_get_config mgr2sitestrict" "1" }
+		{ "rep_set_config" "db_repmgr_conf_prefmas_client" 
+		    "Env016.b1: Repmgr config: prefmas client"
+		    "rep_get_config mgrprefmasclient" "1" }
+		{ "rep_set_config" "db_repmgr_conf_prefmas_master" 
+		    "Env016.b1: Repmgr config: prefmas master"
+		    "rep_get_config mgrprefmasmaster" "1" }
 		{ "rep_set_limit" "0 1048576" "Env016.b2: Rep limit"
 		    "rep_get_limit" }
 		{ "rep_set_nsites" "6" "Env016.b3: Rep nsites"

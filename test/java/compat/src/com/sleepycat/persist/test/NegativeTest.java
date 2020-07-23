@@ -53,8 +53,7 @@ public class NegativeTest extends TxnTestCase {
 
     @Parameters
     public static List<Object[]> genParams() {
-        
-        return getTxnTypes(null, false);
+        return getTxnParams(null, false);
     }
     
     public NegativeTest(String type){

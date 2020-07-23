@@ -217,18 +217,31 @@ tcl_LockStat(interp, objc, objv, dbenv)
 {
 	DB_LOCK_STAT *sp;
 	Tcl_Obj *res;
+	u_int32_t flag;
+	char *arg;
 	int result, ret;
 
+	flag = 0;
 	result = TCL_OK;
-	/*
-	 * No args for this.  Error if there are some.
-	 */
-	if (objc != 2) {
-		Tcl_WrongNumArgs(interp, 2, objv, NULL);
+
+	if (objc > 3) {
+		Tcl_WrongNumArgs(interp, 2, objv, "?-clear?");
 		return (TCL_ERROR);
 	}
+
+	if (objc == 3) {
+		arg = Tcl_GetStringFromObj(objv[2], NULL);
+		if (strcmp(arg, "-clear") == 0)
+			flag = DB_STAT_CLEAR;
+		else {
+			Tcl_SetResult(interp,
+			    "db stat: unknown arg", TCL_STATIC);
+			return (TCL_ERROR);
+		}
+	}
+
 	_debug_check();
-	ret = dbenv->lock_stat(dbenv, &sp, 0);
+	ret = dbenv->lock_stat(dbenv, &sp, flag);
 	result = _ReturnSetup(interp, ret, DB_RETOK_STD(ret), "lock stat");
 	if (result == TCL_ERROR)
 		return (result);
@@ -328,6 +341,7 @@ tcl_LockStatPrint(interp, objc, objv, dbenv)
 {
 	static const char *lkstatprtopts[] = {
 		"-all",
+		"-alloc",
 		"-clear",
 		"-lk_conf",
 		"-lk_lockers",
@@ -337,6 +351,7 @@ tcl_LockStatPrint(interp, objc, objv, dbenv)
 	};
 	enum lkstatprtopts {
 		LKSTATPRTALL,
+		LKSTATPRTALLOC,
 		LKSTATPRTCLEAR,
 		LKSTATPRTCONF,
 		LKSTATPRTLOCKERS,
@@ -360,6 +375,9 @@ tcl_LockStatPrint(interp, objc, objv, dbenv)
 		switch ((enum lkstatprtopts)optindex) {
 		case LKSTATPRTALL:
 			flag |= DB_STAT_ALL;
+			break;
+		case LKSTATPRTALLOC:
+			flag |= DB_STAT_ALLOC;
 			break;
 		case LKSTATPRTCLEAR:
 			flag |= DB_STAT_CLEAR;

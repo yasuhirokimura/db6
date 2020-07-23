@@ -129,7 +129,7 @@ recheck:
 		/* Fetch next page. */
 		if (NEXT_PGNO(hcp->page) == PGNO_INVALID) {
 			F_SET(hcp, H_NOMORE);
-			return (DB_NOTFOUND);
+			return (DBC_ERR(dbc, DB_NOTFOUND));
 		}
 		next_pgno = NEXT_PGNO(hcp->page);
 		hcp->indx = 0;
@@ -344,7 +344,7 @@ __ham_item_prev(dbc, mode, pgnop)
 		if (hcp->pgno == PGNO_INVALID) {
 			/* Beginning of bucket. */
 			F_SET(hcp, H_NOMORE);
-			return (DB_NOTFOUND);
+			return (DBC_ERR(dbc, DB_NOTFOUND));
 		} else if ((ret =
 		    __ham_next_cpage(dbc, hcp->pgno)) != 0)
 			return (ret);
@@ -371,7 +371,7 @@ __ham_item_prev(dbc, mode, pgnop)
 		if (hcp->indx == 0) {
 			/* Bucket was empty. */
 			F_SET(hcp, H_NOMORE);
-			return (DB_NOTFOUND);
+			return (DBC_ERR(dbc, DB_NOTFOUND));
 		}
 	}
 

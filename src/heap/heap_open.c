@@ -14,7 +14,6 @@
 #include "dbinc/fop.h"
 #include "dbinc/heap.h"
 #include "dbinc/lock.h"
-#include "dbinc/log.h"
 #include "dbinc/mp.h"
 
 static void __heap_init_meta __P((DB *, HEAPMETA *, db_pgno_t, DB_LSN*));
@@ -202,7 +201,8 @@ __heap_read_meta(dbp, ip, txn, meta_pgno, flags)
 		h->region_size = meta->region_size;
 
 		if (PGNO(meta) == PGNO_BASE_MD && !F_ISSET(dbp, DB_AM_RECOVER))
-			__memp_set_last_pgno(mpf, meta->dbmeta.last_pgno);
+			(void)__memp_set_last_pgno(
+			    mpf, meta->dbmeta.last_pgno);
 	} else {
 		DB_ASSERT(dbp->env,
 		    IS_RECOVERING(dbp->env) || F_ISSET(dbp, DB_AM_RECOVER));

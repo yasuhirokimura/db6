@@ -16,7 +16,7 @@ namespace BerkeleyDB {
     /// </summary>
     public class DatabaseEnvironmentConfig {
         /// <summary>
-        /// Create a new object, with default settings
+        /// Create a new object with default settings
         /// </summary>
         public DatabaseEnvironmentConfig() {
             DataDirs = new List<string>();
@@ -51,12 +51,12 @@ namespace BerkeleyDB {
         /// <para>
         /// When an error occurs in the Berkeley DB library, a
         /// <see cref="DatabaseException"/>, or subclass of DatabaseException,
-        /// is thrown. In some cases, however, the exception may be insufficient
+        /// is thrown. In some cases the exception may be insufficient
         /// to completely describe the cause of the error, especially during
         /// initial application debugging.
         /// </para>
         /// <para>
-        /// In some cases, when an error occurs, Berkeley DB will call the given
+        /// In some cases, when an error occurs, Berkeley DB calls the given
         /// delegate with additional error information. It is up to the delegate
         /// to display the error message in an appropriate manner.
         /// </para>
@@ -119,9 +119,9 @@ namespace BerkeleyDB {
         /// </summary>
         /// <remarks>
         /// <para>
-        /// Paths specified to <see cref="Database.Open"/> will be searched
+        /// Paths specified to <see cref="Database.Open"/> are searched
         /// relative to this path. Paths set using this method are additive, and
-        /// specifying more than one will result in each specified directory
+        /// specifying more than one results in each specified directory
         /// being searched for database files.
         /// </para>
         /// <para>
@@ -136,7 +136,7 @@ namespace BerkeleyDB {
         /// The path of a directory to be used as the location to create the
         /// access method database files. When <see cref="BTreeDatabase.Open"/>,
         /// <see cref="HashDatabase.Open"/>, <see cref="QueueDatabase.Open"/> or
-        /// <see cref="RecnoDatabase.Open"/> is used to create a file it will be
+        /// <see cref="RecnoDatabase.Open"/> is used to create a file, it will be
         /// created relative to this path.
         /// </summary>
         /// <remarks>
@@ -163,11 +163,11 @@ namespace BerkeleyDB {
         /// be stored as a blob.
         /// <para>
         /// Any data item that is equal to or larger in size than the
-        /// threshold value will automatically be stored as a blob.
+        /// threshold value is automatically stored as a blob.
         /// </para>
         /// <para>
         /// If the threshold value is 0, databases opened in the environment
-        /// will default to never using blobs.
+        /// default to never using blob support.
         /// </para>
         /// <para>
         /// It is illegal to enable blob support in the environment if any of 
@@ -232,9 +232,9 @@ namespace BerkeleyDB {
         /// <remarks>
         /// <para>
         /// By default, Berkeley DB does not create intermediate directories
-        /// needed for recovery, that is, if the file /a/b/c/mydatabase is being
-        /// recovered, and the directory path b/c does not exist, recovery will
-        /// fail. This default behavior is because Berkeley DB does not know
+        /// needed for recovery. For example, if the file /a/b/c/mydatabase is being
+        /// recovered, and the directory path b/c does not exist, recovery
+        /// fails. This occurs because Berkeley DB does not know
         /// what permissions are appropriate for intermediate directory
         /// creation, and creating the directory might result in a security
         /// problem.
@@ -302,13 +302,12 @@ namespace BerkeleyDB {
         /// Transactions that update multiversion databases are not freed until
         /// the last page version that the transaction created is flushed from
         /// cache. This means that applications using multi-version concurrency
-        /// control may need a transaction for each page in cache, in the
-        /// extreme case.
+        /// control may need in the extreme case a transaction for each page in cache.
         /// </para>
         /// <para>
         /// When all of the memory available in the database environment for
         /// transactions is in use, calls to 
-        /// <see cref="DatabaseEnvironment.BeginTransaction"/> will fail (until
+        /// <see cref="DatabaseEnvironment.BeginTransaction"/> fail (until
         /// some active transactions complete). If MaxTransactions is never set,
         /// the database environment is configured to support at least 100
         /// active transactions.
@@ -340,12 +339,12 @@ namespace BerkeleyDB {
         public string MetadataDir;
 
         /// <summary>
-        /// The path of a directory to be used as the location of temporary
+        /// The path of a directory to be used as the location for temporary
         /// files.
         /// </summary>
         /// <remarks>
         /// <para>
-        /// The files created to back in-memory access method databases will be
+        /// The files created to back in-memory access method databases are
         /// created relative to this path. These temporary files can be quite
         /// large, depending on the size of the database.
         /// </para>
@@ -382,8 +381,8 @@ namespace BerkeleyDB {
         /// <remarks>
         /// <para>
         /// ThreadCount must set if <see cref="DatabaseEnvironment.FailCheck"/>
-        /// will be used. ThreadCount does not set the maximum number of threads
-        /// but is used to determine memory sizing and the thread control block
+        /// is used. ThreadCount does not set the maximum number of threads. 
+        /// It is used to determine memory sizing and the thread control block
         /// reclamation policy.
         /// </para>
         /// <para>
@@ -427,7 +426,7 @@ namespace BerkeleyDB {
         /// <para>
         /// If the database environment already exists when
         /// <see cref="DatabaseEnvironment.Open"/> is called, the value of
-        /// InitLockers will be ignored.
+        /// InitLockers is ignored.
         /// </para>
         /// </remarks>
         public uint InitThreadCount {
@@ -456,7 +455,7 @@ namespace BerkeleyDB {
         /// <para>
         /// If the database environment already exists when
         /// <see cref="DatabaseEnvironment.Open"/> is called, the value of
-        /// InitLockers will be ignored.
+        /// InitLockers is ignored.
         /// </para>
         /// </remarks>
         public uint InitTxnCount {
@@ -526,17 +525,17 @@ namespace BerkeleyDB {
         /// <summary>
         /// If true, database operations for which no explicit transaction
         /// handle was specified, and which modify databases in the database
-        /// environment, will be automatically enclosed within a transaction.
+        /// environment, are automatically enclosed within a transaction.
         /// </summary>
         public bool AutoCommit;
         /// <summary>
-        /// If true, Berkeley DB Concurrent Data Store applications will perform
+        /// If true, Berkeley DB Concurrent Data Store applications perform
         /// locking on an environment-wide basis rather than on a per-database
         /// basis. 
         /// </summary>
         public bool CDB_ALLDB;
         /// <summary>
-        /// If true, Berkeley DB will flush database writes to the backing disk
+        /// If true, Berkeley DB flushes database writes to the backing disk
         /// before returning from the write system call, rather than flushing
         /// database writes explicitly in a separate system call, as necessary.
         /// </summary>
@@ -546,36 +545,35 @@ namespace BerkeleyDB {
         /// or systems supporting the Windows FILE_FLAG_WRITE_THROUGH flag).
         /// This flag may result in inaccurate file modification times and other
         /// file-level information for Berkeley DB database files. This flag
-        /// will almost certainly result in a performance decrease on most
-        /// systems. This flag is only applicable to certain filesysystems (for
+        /// almost certainly results in a performance decrease on most
+        /// systems. This flag is only applicable to certain filesystems (for
         /// example, the Veritas VxFS filesystem), where the filesystem's
         /// support for trickling writes back to stable storage behaves badly
         /// (or more likely, has been misconfigured).
         /// </remarks>
         public bool ForceFlush;
-    /// 
-    /// <summary> Set a flag in the environment indicating that a
-    /// hot backup is in progress.
-    /// </summary>
-    /// <remarks>
-    /// When a "hot backup" copy of a database environment is taken, this
-    /// attribute should be configured in the environment prior to copying.
-    /// If any transactions with the bulk insert optimization enabled (i.e.,
-    /// started with the Bulk configuration attribute) are in progress,
-    /// setting the HotBackupInProgress attribute will force a checkpoint in
-    /// the environment.  After this attribute is set, the bulk insert
-    /// optimization is disabled, until the attribute is reset.  Using this
-    /// protocol allows a hot backup procedure to make a consistent copy of
-    /// the database even when bulk transactions are ongoing.  Please see the
-    /// discussion of hot backups in the Getting Started With Transactions
-    /// Guide, and the description of the Bulk attribute in 
-    /// <see cref="TransactionConfig.Bulk"/>for more information.
+        /// 
+        /// <summary> Set a flag in the environment indicating that a
+        /// hot backup is in progress.
+        /// </summary>
+        /// <remarks>
+        /// When a "hot backup" copy of a database environment is taken, this
+        /// attribute should be configured in the environment prior to copying.
+        /// If any transactions with the bulk insert optimization enabled (i.e.,
+        /// started with the Bulk configuration attribute) are in progress,
+        /// setting the HotBackupInProgress attribute forces a checkpoint in
+        /// the environment.  After this attribute is set, the bulk insert
+        /// optimization is disabled, until the attribute is reset.  Using this
+        /// protocol allows a hot backup procedure to make a consistent copy of
+        /// the database even when bulk transactions are ongoing.  For more information
+        /// about hot backups see the Getting Started With Transactions Guide. To learn more
+        /// about the Bulk attribute see <see cref="TransactionConfig.Bulk"/>.
         /// </remarks>
         public bool HotbackupInProgress;
         /// <summary>
-        /// If true, Berkeley DB will page-fault shared regions into memory when
+        /// If true, Berkeley DB page-faults shared regions into memory when
         /// initially creating or joining a Berkeley DB environment. In
-        /// addition, Berkeley DB will write the shared regions when creating an
+        /// addition, Berkeley DB writes the shared regions when creating an
         /// environment, forcing the underlying virtual memory and filesystems
         /// to instantiate both the necessary memory and the necessary disk
         /// space. This can also avoid out-of-disk space failures later on.
@@ -595,20 +593,20 @@ namespace BerkeleyDB {
         /// </summary>
         public bool NoBuffer;
         /// <summary>
-        /// If true, Berkeley DB will grant all requested mutual exclusion
+        /// If true, Berkeley DB grants all requested mutual exclusion
         /// mutexes and database locks without regard for their actual
         /// availability. This functionality should never be used for purposes
         /// other than debugging. 
         /// </summary>
         public bool NoLocking;
         /// <summary>
-        /// If true, Berkeley DB will copy read-only database files into the
+        /// If true, Berkeley DB copies read-only database files into the
         /// local cache instead of potentially mapping them into process memory
         /// (see <see cref="MPoolConfig.MMapSize"/> for further information).
         /// </summary>
         public bool NoMMap;
         /// <summary>
-        /// If true, Berkeley DB will ignore any panic state in the database
+        /// If true, Berkeley DB ignores any panic state in the database
         /// environment. (Database environments in a panic state normally refuse
         /// all attempts to call Berkeley DB functions, throwing
         /// <see cref="RunRecoveryException"/>. This functionality should never
@@ -621,29 +619,29 @@ namespace BerkeleyDB {
         /// </summary>
         /// <remarks>
         /// Berkeley DB overwrites files using alternating 0xff, 0x00 and 0xff
-        /// byte patterns. For file overwriting to be effective, the underlying
+        /// byte patterns. For an effective overwrite, the underlying
         /// file must be stored on a fixed-block filesystem. Systems with
-        /// journaling or logging filesystems will require operating system
+        /// journaling or logging filesystems require operating system
         /// support and probably modification of the Berkeley DB sources.
         /// </remarks>
         public bool Overwrite;
         /// <summary>
         /// If true, database calls timing out based on lock or transaction
-        /// timeout values will throw <see cref="LockNotGrantedException"/>
+        /// timeout values throw <see cref="LockNotGrantedException"/>
         /// instead of <see cref="DeadlockException"/>. This allows applications
         /// to distinguish between operations which have deadlocked and
         /// operations which have exceeded their time limits.
         /// </summary>
         public bool TimeNotGranted;
         /// <summary>
-        /// If true, Berkeley DB will not write or synchronously flush the log
+        /// If true, Berkeley DB does not write or synchronously flush the log
         /// on transaction commit.
         /// </summary>
         /// <remarks>
         /// This means that transactions exhibit the ACI (atomicity,
-        /// consistency, and isolation) properties, but not D (durability); that
-        /// is, database integrity will be maintained, but if the application or
-        /// system fails, it is possible some number of the most recently
+        /// consistency, and isolation) properties, but not D (durability); 
+        /// database integrity is maintained, but if the application or
+        /// system fails, it is possible that some number of the most recently
         /// committed transactions may be undone during recovery. The number of
         /// transactions at risk is governed by how many log updates can fit
         /// into the log buffer, how often the operating system flushes dirty
@@ -659,37 +657,37 @@ namespace BerkeleyDB {
         /// </summary>
         public bool TxnNoWait;
         /// <summary>
-        /// If true, all transactions in the environment will be started as if
+        /// If true, all transactions in the environment are started as if
         /// <see cref="TransactionConfig.Snapshot"/> were passed to
         /// <see cref="DatabaseEnvironment.BeginTransaction"/>, and all
-        /// non-transactional cursors will be opened as if
+        /// non-transactional cursors are opened as if
         /// <see cref="CursorConfig.SnapshotIsolation"/> were passed to
         /// <see cref="BaseDatabase.Cursor"/>.
         /// </summary>
         public bool TxnSnapshot;
         /// <summary>
-        /// If true, Berkeley DB will write, but will not synchronously flush,
+        /// If true, Berkeley DB writes, but does not synchronously flush,
         /// the log on transaction commit.
         /// </summary>
         /// <remarks>
         /// This means that transactions exhibit the ACI (atomicity,
-        /// consistency, and isolation) properties, but not D (durability); that
-        /// is, database integrity will be maintained, but if the system fails,
-        /// it is possible some number of the most recently committed
+        /// consistency, and isolation) properties, but not D (durability);
+        /// database integrity is maintained, but if the system fails,
+        /// it is possible that some number of the most recently committed
         /// transactions may be undone during recovery. The number of
         /// transactions at risk is governed by how often the system flushes
         /// dirty buffers to disk and how often the log is checkpointed.
         /// </remarks>
         public bool TxnWriteNoSync;
         /// <summary>
-        /// If true, all databases in the environment will be opened as if
+        /// If true, all databases in the environment are opened as if
         /// <see cref="DatabaseConfig.UseMVCC"/> is passed to
-        /// <see cref="Database.Open"/>. This flag will be ignored for queue
+        /// <see cref="Database.Open"/>. This flag is ignored for queue
         /// databases for which MVCC is not supported. 
         /// </summary>
         public bool UseMVCC;
         /// <summary>
-        /// If true, Berkeley DB will yield the processor immediately after each
+        /// If true, Berkeley DB yields the processor immediately after each
         /// page or mutex acquisition. This functionality should never be used
         /// for purposes other than stress testing. 
         /// </summary>
@@ -721,21 +719,21 @@ namespace BerkeleyDB {
 
         /* Fields for open() flags */
         /// <summary>
-        /// If true, Berkeley DB subsystems will create any underlying files, as
+        /// If true, Berkeley DB subsystems create any underlying files, as
         /// necessary.
         /// </summary>
         public bool Create;
         /// <summary>
-        /// If true, the created <see cref="DatabaseEnvironment"/> object will
-        /// be free-threaded; that is, concurrently usable by multiple threads
+        /// If true, the created <see cref="DatabaseEnvironment"/> object is
+        /// free-threaded; that is, concurrently usable by multiple threads
         /// in the address space.
         /// </summary>
         /// <remarks>
         /// <para>
         /// Required to be true if the created <see cref="DatabaseEnvironment"/>
-        /// object will be concurrently used by more than one thread in the
+        /// object is concurrently used by more than one thread in the
         /// process, or if any <see cref="Database"/> objects opened in the
-        /// scope of the <see cref="DatabaseEnvironment"/> object will be
+        /// scope of the <see cref="DatabaseEnvironment"/> object is
         /// concurrently used by more than one thread in the process.
         /// </para>
         /// <para>Required to be true when using the Replication Manager.</para>
@@ -752,7 +750,7 @@ namespace BerkeleyDB {
         /// </summary>
         /// <remarks>
         /// <para>
-        /// This setting implies the environment will only be accessed by a
+        /// This setting implies the environment is only accessed by a
         /// single process (although that process may be multithreaded). This
         /// flag has two effects on the Berkeley DB environment. First, all
         /// underlying data structures are allocated from per-process memory
@@ -779,32 +777,32 @@ namespace BerkeleyDB {
         /// <remarks>
         /// If recovery needs to be performed for any reason (including the
         /// initial use of this setting), and <see cref="RunRecovery"/>is also
-        /// specified, recovery will be performed and the open will proceed
+        /// specified, recovery is performed and the open proceeds
         /// normally. If recovery needs to be performed and
         /// <see cref="RunRecovery"/> is not specified,
-        /// <see cref="RunRecoveryException"/> will be thrown. If recovery does
-        /// not need to be performed, <see cref="RunRecovery"/> will be ignored.
+        /// <see cref="RunRecoveryException"/> is thrown. If recovery does
+        /// not need to be performed, <see cref="RunRecovery"/> is ignored.
         /// See Architecting Transactional Data Store applications in the 
         /// Programmer's Reference Guide for more information.
         /// </remarks>
         public bool Register;
         /// <summary>
-        /// If true, catastrophic recovery will be run on this environment
+        /// If true, catastrophic recovery is run on this environment
         /// before opening it for normal use.
         /// </summary>
         /// <remarks>
         /// If true, the <see cref="Create"/> and <see cref="UseTxns"/> must
-        /// also be set, because the regions will be removed and re-created,
+        /// also be set, because the regions are going to be removed and re-created,
         /// and transactions are required for application recovery.
         /// </remarks>
         public bool RunFatalRecovery;
         /// <summary>
-        /// If true, normal recovery will be run on this environment before
+        /// If true, normal recovery is run on this environment before
         /// opening it for normal use.
         /// </summary>
         /// <remarks>
         /// If true, the <see cref="Create"/> and <see cref="UseTxns"/> must
-        /// also be set, because the regions will be removed and re-created,
+        /// also be set, because the regions are going to be removed and re-created,
         /// and transactions are required for application recovery.
         /// </remarks>
         public bool RunRecovery;
@@ -828,7 +826,7 @@ namespace BerkeleyDB {
         /// </para>
         /// <para>
         /// Because permitting users to specify which files are used can create
-        /// security problems, environment information will be used in file 
+        /// security problems, environment information is used in file 
         /// naming for all users only if UseEnvironmentVars is true.
         /// </para>
         /// </remarks>

@@ -9,7 +9,7 @@
           expr.lo fault.lo fkey.lo \
           fts3.lo fts3_aux.lo fts3_expr.lo fts3_hash.lo fts3_icu.lo \
           fts3_porter.lo fts3_snippet.lo fts3_tokenizer.lo fts3_tokenizer1.lo \
-@@ -208,6 +208,7 @@
+@@ -209,6 +209,7 @@
    $(TOP)/src/complete.c \
    $(TOP)/src/ctime.c \
    $(TOP)/src/date.c \
@@ -17,7 +17,7 @@
    $(TOP)/src/delete.c \
    $(TOP)/src/expr.c \
    $(TOP)/src/fault.c \
-@@ -594,6 +595,10 @@
+@@ -615,6 +616,10 @@
  date.lo:	$(TOP)/src/date.c $(HDR)
  	$(LTCOMPILE) $(TEMP_STORE) -c $(TOP)/src/date.c
  
@@ -30,7 +30,7 @@
  
 --- src/pragma.c
 +++ src/pragma.c
-@@ -145,7 +145,7 @@
+@@ -601,7 +601,7 @@
  /*
  ** Generate code to return a single integer value.
  */
@@ -39,7 +39,7 @@
    Vdbe *v = sqlite3GetVdbe(pParse);
    int mem = ++pParse->nMem;
    i64 *pI64 = sqlite3DbMallocRaw(pParse->db, sizeof(value));
-@@ -288,6 +288,8 @@
+@@ -687,6 +687,8 @@
    return azModeName[eMode];
  }
  
@@ -48,20 +48,21 @@
  /*
  ** Process a pragma statement.  
  **
-@@ -380,7 +382,9 @@
-     pParse->rc = rc;
-   }else
-                             
-- 
-+  if( bdbsqlPragma(pParse, zLeft, zRight, iDb)==0 ){
+@@ -783,6 +785,11 @@
+     goto pragma_out;
+   }
+ 
++  if ( bdbsqlPragma(pParse, zLeft, zRight, iDb)==0 ) {
 +    /* Do nothing if this was a Berkeley DB specific pragma. */
-+  }else
- #if !defined(SQLITE_OMIT_PAGER_PRAGMAS) && !defined(SQLITE_OMIT_DEPRECATED)
-   /*
-   **  PRAGMA [database.]default_cache_size
++    goto pragma_out;
++  }
++
+   /* Locate the pragma in the lookup table */
+   lwr = 0;
+   upr = ArraySize(aPragmaNames)-1;
 --- tool/mksqlite3c.tcl
 +++ tool/mksqlite3c.tcl
-@@ -260,6 +260,7 @@
+@@ -269,6 +269,7 @@
     btmutex.c
     btree.c
     backup.c

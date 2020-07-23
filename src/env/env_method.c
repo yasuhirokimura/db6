@@ -82,6 +82,11 @@ db_env_create(dbenvpp, flags)
 	if (flags != 0)
 		return (EINVAL);
 
+#ifdef HAVE_ERROR_HISTORY
+	/* Call thread local storage initializer at least once per process. */
+	__db_thread_init();
+#endif
+
 	/* Allocate the DB_ENV and ENV structures -- we always have both. */
 	if ((ret = __os_calloc(NULL, 1, sizeof(DB_ENV), &dbenv)) != 0)
 		return (ret);
@@ -285,9 +290,9 @@ __db_env_init(dbenv)
 	dbenv->rep_set_config = __rep_set_config;
 	dbenv->rep_set_limit = __rep_set_limit;
 	dbenv->rep_set_nsites = __rep_set_nsites_pp;
-	dbenv->rep_set_priority = __rep_set_priority;
+	dbenv->rep_set_priority = __rep_set_priority_pp;
 	dbenv->rep_set_request = __rep_set_request;
-	dbenv->rep_set_timeout = __rep_set_timeout;
+	dbenv->rep_set_timeout = __rep_set_timeout_pp;
 	dbenv->rep_set_transport = __rep_set_transport_pp;
 	dbenv->rep_set_view = __rep_set_view;
 	dbenv->rep_start = __rep_start_pp;
@@ -377,6 +382,8 @@ __db_env_init(dbenv)
 	dbenv->shm_key = INVALID_REGION_SEGID;
 	dbenv->thread_id = __os_id;
 	dbenv->thread_id_string = __env_thread_id_string;
+
+	dbenv->mutex_failchk_timeout = US_PER_SEC;
 
 	env = dbenv->env;
 	__os_id(NULL, &env->pid_cache, NULL);
@@ -644,12 +651,6 @@ __env_set_blob_threshold(dbenv, bytes, flags)
 
 	if (__db_fchk(dbenv->env, "DB_ENV->set_blob_threshold", flags, 0) != 0)
 		return (EINVAL);
-
-	if (REP_ON(dbenv->env) && bytes != 0) {
-		__db_errx(dbenv->env,
-		    "Blobs are not supported with replication.");
-		return (EINVAL);
-	}
 
 	if (F_ISSET(env, ENV_OPEN_CALLED)) {
 		infop = env->reginfo;
@@ -2041,9 +2042,15 @@ __env_get_timeout(dbenv, timeoutp, flags)
 	int ret;
 
 	ret = 0;
-	if (flags == DB_SET_REG_TIMEOUT) {
+	if (flags == DB_SET_REG_TIMEOUT)
 		*timeoutp = dbenv->envreg_timeout;
-	} else
+	else if (flags == DB_SET_MUTEX_FAILCHK_TIMEOUT)
+#ifdef HAVE_FAILCHK_BROADCAST
+		*timeoutp = dbenv->mutex_failchk_timeout;
+#else
+		ret = USR_ERR(dbenv->env, DB_OPNOTSUP);
+#endif
+	else
 		ret = __lock_get_env_timeout(dbenv, timeoutp, flags);
 	return (ret);
 }
@@ -2065,6 +2072,12 @@ __env_set_timeout(dbenv, timeout, flags)
 	ret = 0;
 	if (flags == DB_SET_REG_TIMEOUT)
 		dbenv->envreg_timeout = timeout;
+	else if (flags == DB_SET_MUTEX_FAILCHK_TIMEOUT)
+#ifdef HAVE_FAILCHK_BROADCAST
+		dbenv->mutex_failchk_timeout = timeout;
+#else
+		ret = USR_ERR(dbenv->env, DB_OPNOTSUP);
+#endif
 	else
 		ret = __lock_set_env_timeout(dbenv, timeout, flags);
 	return (ret);

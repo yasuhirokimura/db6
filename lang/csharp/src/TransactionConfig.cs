@@ -24,27 +24,27 @@ namespace BerkeleyDB {
             /// </summary>
             DEFAULT,
             /// <summary>
-            /// Berkeley DB will not write or synchronously flush the log on
+            /// Berkeley DB does not write or synchronously flush the log on
             /// transaction commit or prepare.
             /// </summary>
             /// <remarks>
             /// <para>
-            /// This means the transaction will exhibit the ACI (atomicity,
+            /// This means the transaction exhibits the ACI (atomicity,
             /// consistency, and isolation) properties, but not D (durability);
-            /// that is, database integrity will be maintained but it is
+            /// database integrity is maintained but it is
             /// possible that this transaction may be undone during recovery. 
             /// </para>
             /// </remarks>
             NOSYNC,
             /// <summary>
-            /// Berkeley DB will write, but will not synchronously flush, the
+            /// Berkeley DB writes, but does not synchronously flush, the
             /// log on transaction commit or prepare. 
             /// </summary>
             /// <remarks>
             /// <para>
             /// This means that transactions exhibit the ACI (atomicity,
             /// consistency, and isolation) properties, but not D (durability);
-            /// that is, database integrity will be maintained, but if the
+            /// database integrity is maintained, but if the
             /// system fails, it is possible some number of the most recently
             /// committed transactions may be undone during recovery. The number
             /// of transactions at risk is governed by how often the system
@@ -61,11 +61,11 @@ namespace BerkeleyDB {
             /// </remarks>
             WRITE_NOSYNC,
             /// <summary>
-            /// Berkeley DB will synchronously flush the log on transaction
+            /// Berkeley DB synchronously flushes the log on transaction
             /// commit or prepare. 
             /// </summary>
             /// <remarks>
-            /// This means the transaction will exhibit all of the ACID
+            /// This means the transaction exhibits all of the ACID
             /// (atomicity, consistency, isolation, and durability) properties.
             /// </remarks>
             SYNC
@@ -81,7 +81,7 @@ namespace BerkeleyDB {
         /// <remarks>
         /// <para>
         /// When this attribute is set, the
-        /// transaction will avoid logging the contents of insertions on newly
+        /// transaction avoids logging the contents of insertions on newly
         /// allocated database pages.  In a transaction that inserts a large
         /// number of new records, the I/O savings of choosing this option can
         /// be significant.  Users of this option should be aware of several
@@ -96,10 +96,9 @@ namespace BerkeleyDB {
         /// is incompatible with replication, and is simply ignored when
         /// replication is enabled.  Also, hot backup procedures must follow a
         /// particular protocol, introduced in 11gr2.5.1, to set a flag in the
-        /// environment before starting to copy files.  It is especially
-        /// important to note that incremental hot backups can be invalidated
-        /// by use of the bulk insert optimization.  Please see the hot backup
-        /// description in the Getting Started with Transactions Guide,
+        /// environment before starting to copy files. Incremental hot backups 
+        /// can be invalidated by use of the bulk insert optimization.  Please see
+        /// the hot backup description in the Getting Started with Transactions Guide,
         /// and the description of the HotbackupInProgress attribute in
         /// <see cref="DatabaseEnvironmentConfig.HotbackupInProgress"/>
         /// for further information.
@@ -125,18 +124,18 @@ namespace BerkeleyDB {
         /// </remarks>    
         public bool NoWait;
         /// <summary>
-        /// If true, this transaction will execute with snapshot isolation.
+        /// If true, this transaction executes with snapshot isolation.
         /// </summary>
         /// <remarks>
         /// <para>
         /// For databases with <see cref="DatabaseConfig.UseMVCC"/> set, data
-        /// values will be read as they are when the transaction begins, without
+        /// values are read as they are when the transaction begins, without
         /// taking read locks. Silently ignored for operations on databases with
         /// <see cref="DatabaseConfig.UseMVCC"/> not set on the underlying
         /// database (read locks are acquired).
         /// </para>
         /// <para>
-        /// A <see cref="DeadlockException"/> will be thrown from update
+        /// A <see cref="DeadlockException"/> is thrown from update
         /// operations if a snapshot transaction attempts to update data which
         /// was modified after the snapshot transaction read it.
         /// </para>
@@ -190,7 +189,7 @@ namespace BerkeleyDB {
         private uint _inittransactioncount;
         internal bool initTransactionCountIsSet;
         /// <summary>
-        /// The initial number of simultaneous transactions that will be
+        /// The initial number of simultaneous transactions that are
         /// allocated for in the Berkeley DB environment
         /// </summary>
         /// <remarks>

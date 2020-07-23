@@ -41,6 +41,8 @@ namespace BerkeleyDB.Internal {
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     internal delegate void BDB_MessageDispatchDelegate(IntPtr dbenv, IntPtr channel, IntPtr request, uint nrequest, uint cb_flags);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    internal delegate void BDB_MsgcallDelegate(IntPtr env, string msg);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     internal delegate int BDB_ReplicationViewDelegate(IntPtr dbenv, string name, ref int result, uint flags);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     internal delegate uint BDB_PartitionDelegate(IntPtr db, IntPtr key);

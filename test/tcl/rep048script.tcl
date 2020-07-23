@@ -81,4 +81,5 @@ puts "Iter $i: Turn bulk $tog"
 # Close the envs
 error_check_good script_db_close [$db close] 0
 error_check_good script_master_close [$masterenv close] 0
+replclose $testdir/MSGQUEUEDIR
 puts "\tRepscript completed successfully"

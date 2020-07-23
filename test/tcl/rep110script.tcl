@@ -58,5 +58,6 @@ error_check_good stat $stat 1
 error_check_good ret [is_substr $ret DB_REP_LOCKOUT] 1
 
 tclsleep 1
+replclose $testdir/MSGQUEUEDIR
 
 return

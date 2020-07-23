@@ -339,6 +339,11 @@ public class RepQuoteExampleGSG implements EventHandler
         // Ignored for now.
     }
 
+    public void handleRepInQueueFullEvent()
+    {
+        // Ignored for now.
+    }
+
     public void handleRepMasterEvent()
     {
         dbenv.setIsMaster(true);

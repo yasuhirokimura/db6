@@ -9,7 +9,6 @@
 #include "db_config.h"
 
 #include "db_int.h"
-#include "dbinc/blob.h"
 #include "dbinc/db_page.h"
 #include "dbinc/btree.h"
 #include "dbinc/heap.h"
@@ -25,7 +24,7 @@ static int  __heapc_get __P((DBC *, DBT *, DBT *, u_int32_t, db_pgno_t *));
 static int  __heapc_put __P((DBC *, DBT *, DBT *, u_int32_t, db_pgno_t *));
 static int  __heapc_reloc __P((DBC *, DBT *, DBT *));
 static int  __heapc_reloc_partial __P((DBC *, DBT *, DBT *));
-static int  __heapc_search __P((DBC *, HEAPPG *, unsigned,
+static void  __heapc_search __P((DBC *, HEAPPG *, db_indx_t,
 		int, db_indx_t *, int *));
 static int  __heapc_split __P((DBC *, DBT *, DBT *, int));
 
@@ -189,6 +188,7 @@ __heap_bulk(dbc, data, flags)
 next_pg:
 	rid.indx = cp->indx;
 	rid.pgno = cp->pgno;
+	prev_rid = rid;
 	pg = cp->page;
 
 	/*
@@ -266,7 +266,7 @@ next_pg:
 				return (ret);
 		} else if (F_ISSET(hdr, HEAP_RECBLOB)) {
 			memcpy(&bhdr, hdr, HEAPBLOBREC_SIZE);
-			blob_id = bhdr.id;
+			blob_id = (db_seq_t)bhdr.id;
 			if ((ret = __blob_bulk(
 			    dbc, data_size, blob_id, np)) != 0)
 				return (ret);
@@ -350,8 +350,9 @@ __heapc_del(dbc, flags)
 	HEAPPG *rpage;
 	HEAP_CURSOR *cp;
 	db_pgno_t region_pgno;
-	int oldspacebits, ret, spacebits, t_ret;
+	int ret, t_ret;
 	db_seq_t blob_id;
+	u_int32_t oldspacebits, spacebits;
 	u_int16_t data_size, size;
 
 	dbp = dbc->dbp;
@@ -403,7 +404,7 @@ start:	if (STD_LOCKING(dbc) && (ret = __db_lget(dbc,
 	/* Delete the blob file. */
 	if (F_ISSET(hdr, HEAP_RECBLOB)) {
 		memcpy(&bhdr, hdr, HEAPBLOBREC_SIZE);
-		blob_id = bhdr.id;
+		blob_id = (db_seq_t)bhdr.id;
 		if ((ret = __blob_del(dbc, blob_id)) != 0)
 			return (ret);
 	}
@@ -446,7 +447,7 @@ start:	if (STD_LOCKING(dbc) && (ret = __db_lget(dbc,
 		    dbc->thread_info, NULL, DB_MPOOL_DIRTY, &rpage)) != 0)
 			goto err;
 		HEAP_SETSPACE(dbp, rpage,
-		    cp->pgno - region_pgno - 1, spacebits);
+		    (cp->pgno - region_pgno) - 1, spacebits);
 	}
 
 err:	DB_ASSERT(dbp->env, ret != DB_PAGE_NOTFOUND);
@@ -584,6 +585,7 @@ __heapc_get(dbc, key, data, flags, pgnop)
 	dbp = dbc->dbp;
 	mpf = dbp->mpf;
 	cp = (HEAP_CURSOR *)dbc->internal;
+	pgno = PGNO_INVALID;
 	LOCK_INIT(meta_lock);
 	COMPQUIET(pgnop, NULL);
 
@@ -613,7 +615,7 @@ __heapc_get(dbc, key, data, flags, pgnop)
 		ACQUIRE_CUR(dbc, lock_type, cp->pgno, 0, 0, ret);
 		if (ret != 0) {
 			if (ret == DB_PAGE_NOTFOUND)
-				ret = DB_NOTFOUND;
+				ret = DBC_ERR(dbc, DB_NOTFOUND);
 			goto err;
 		}
 
@@ -625,7 +627,7 @@ __heapc_get(dbc, key, data, flags, pgnop)
 		hdr = (HEAPHDR *)P_ENTRY(dbp, dpage, cp->indx);
 		if (F_ISSET(hdr, HEAP_RECSPLIT) &&
 		    !F_ISSET(hdr, HEAP_RECFIRST)) {
-			ret = DB_NOTFOUND;
+			ret = DBC_ERR(dbc, DB_NOTFOUND);
 			goto err;
 		}
 
@@ -644,7 +646,7 @@ first:		pgno = FIRST_HEAP_DPAGE;
 			ACQUIRE_CUR(dbc, lock_type, pgno, 0, 0, ret);
 			if (ret != 0 ) {
 				if (ret == DB_PAGE_NOTFOUND)
-					ret = DB_NOTFOUND;
+					ret = DBC_ERR(dbc, DB_NOTFOUND);
 				goto err;
 			}
 			dpage = (HEAPPG *)cp->page;
@@ -687,7 +689,7 @@ last:		pgno = PGNO_BASE_MD;
 		while (!found) {
 			/* Don't look earlier than the first data page. */
 			if (pgno < FIRST_HEAP_DPAGE) {
-				ret = DB_NOTFOUND;
+				ret = DBC_ERR(dbc, DB_NOTFOUND);
 				goto err;
 			}
 
@@ -740,7 +742,7 @@ last:		pgno = PGNO_BASE_MD;
 		dpage = (HEAPPG *)cp->page;
 
 		if (np_inc == 1 && cp->indx >= HEAP_HIGHINDX(dpage))
-			/* At end of current page, must get next page */
+			/* At end of current page, must get next page. */
 			getpage = TRUE;
 		else if (np_inc == -1) {
 			/*
@@ -748,12 +750,15 @@ last:		pgno = PGNO_BASE_MD;
 			 * if already at the first slot.
 			 */
 			for (f_indx=0; (f_indx <= HEAP_HIGHINDX(dpage)) &&
-			   (HEAP_OFFSETTBL(dbp, dpage)[f_indx] == 0); f_indx++);
+			    (HEAP_OFFSETTBL(dbp, dpage)[f_indx] == 0); f_indx++)
+			{
+				/* No-op. */
+			}
 
 			/* At the beginning of current page, get new page */
 			if (cp->indx == 0 || cp->indx <= f_indx) {
 				if (cp->pgno == FIRST_HEAP_DPAGE) {
-					ret = DB_NOTFOUND;
+					ret = DBC_ERR(dbc, DB_NOTFOUND);
 					goto err;
 				}
 				getpage = TRUE;
@@ -762,9 +767,12 @@ last:		pgno = PGNO_BASE_MD;
 
 		while (!found) {
 			if (getpage) {
-				pgno = cp->pgno + np_inc;
+				if (np_inc == -1)
+					pgno = cp->pgno - 1;
+				else if (np_inc == 1)
+					pgno = cp->pgno + 1;
 				if (pgno < FIRST_HEAP_DPAGE) {
-					ret = DB_NOTFOUND;
+					ret = DBC_ERR(dbc, DB_NOTFOUND);
 					goto err;
 				}
 				/* Put current page/lock and get next one */
@@ -773,7 +781,7 @@ last:		pgno = PGNO_BASE_MD;
 					if (np_inc == 1 &&
 					    ret == DB_PAGE_NOTFOUND)
 						/* Beyond last page */
-						ret = DB_NOTFOUND;
+						ret = DBC_ERR(dbc, DB_NOTFOUND);
 					goto err;
 				}
 				dpage = (HEAPPG *)cp->page;
@@ -792,7 +800,7 @@ last:		pgno = PGNO_BASE_MD;
 					 * When searching, indx gets
 					 * bumped to 0
 					 */
-					cp->indx = -1;
+					cp->indx = UINT16_MAX;
 				else
 					/*
 					 * When searching, indx gets bumped to
@@ -809,7 +817,10 @@ last:		pgno = PGNO_BASE_MD;
 			 * record. HEAP_HIGHINDX always points to highest filled
 			 * entry on page.
 			 */
-			cp->indx += np_inc;
+			if (np_inc == -1)
+				cp->indx--;
+			else if (np_inc == 1)
+				cp->indx++;
 			__heapc_search(dbc,
 			    dpage, cp->indx, np_inc, &cp->indx, &found);
 			if (!found)
@@ -827,7 +838,7 @@ last:		pgno = PGNO_BASE_MD;
 		/* First make sure we're trying to get a data page. */
 		if (pgno == PGNO_BASE_MD ||
 		    pgno == HEAP_REGION_PGNO(dbp, pgno)) {
-			ret = DB_NOTFOUND;
+			ret = DBC_ERR(dbc, DB_NOTFOUND);
 			goto err;
 		}
 
@@ -836,7 +847,7 @@ last:		pgno = PGNO_BASE_MD;
 
 		if (ret != 0) {
 			if (ret == DB_PAGE_NOTFOUND)
-				ret = DB_NOTFOUND;
+				ret = DBC_ERR(dbc, DB_NOTFOUND);
 			goto err;
 		}
 		dpage = (HEAPPG *)cp->page;
@@ -845,14 +856,14 @@ last:		pgno = PGNO_BASE_MD;
 		if ((indx >  HEAP_HIGHINDX(dpage)) ||
 		    (HEAP_OFFSETTBL(dbp, dpage)[indx] == 0)) {
 			DISCARD(dbc, cp->page, cp->lock, 0, ret);
-			ret = DB_NOTFOUND;
+			ret = DBC_ERR(dbc, DB_NOTFOUND);
 			goto err;
 		}
 		hdr = (HEAPHDR *)P_ENTRY(dbp, dpage, indx);
 		if (F_ISSET(hdr, HEAP_RECSPLIT) &&
 		    !F_ISSET(hdr, HEAP_RECFIRST)) {
 			DISCARD(dbc, cp->page, cp->lock, 0, ret);
-			ret = DB_NOTFOUND;
+			ret = DBC_ERR(dbc, DB_NOTFOUND);
 			goto err;
 		}
 
@@ -869,7 +880,7 @@ last:		pgno = PGNO_BASE_MD;
 					goto err;
 			} else if (F_ISSET(hdr, HEAP_RECBLOB)) {
 				memcpy(&bhdr, hdr, HEAPBLOBREC_SIZE);
-				blob_id = bhdr.id;
+				blob_id = (db_seq_t)bhdr.id;
 				GET_BLOB_SIZE(dbc->env, bhdr, blob_size, ret);
 				if (ret != 0)
 					goto err;
@@ -890,7 +901,7 @@ last:		pgno = PGNO_BASE_MD;
 			if (F_ISSET(&tmp_val, DB_DBT_MALLOC))
 				__os_ufree(dbp->env, tmp_val.data);
 			if (cmp != 0) {
-				ret = DB_NOTFOUND;
+				ret = DBC_ERR(dbc, DB_NOTFOUND);
 				goto err;
 			}
 		}
@@ -898,7 +909,7 @@ last:		pgno = PGNO_BASE_MD;
 		break;
 	case DB_NEXT_DUP:
 	case DB_PREV_DUP:
-		ret = DB_NOTFOUND;
+		ret = DBC_ERR(dbc, DB_NOTFOUND);
 		goto err;
 	default:
 		/* DB_GET_RECNO, DB_JOIN_ITEM, DB_SET_RECNO are invalid */
@@ -934,27 +945,27 @@ err:	if (ret == 0 ) {
  *	Search a given a heap page, starting at a given index, for a viable heap
  *	record.  Return the index of the found record in indxp.
  */
-static int
-__heapc_search(dbc, dpage, start, dir, indxp, found)
+static void
+__heapc_search(dbc, dpage, begin, dir, indxp, found)
      DBC *dbc;
      HEAPPG *dpage;
-     unsigned start;
+     db_indx_t begin;
      int dir;
      db_indx_t *indxp;
      int *found;
 {
 	DB *dbp;
 	HEAPHDR *hdr;
-	unsigned indx;
+	db_indx_t indx;
 
 	dbp = dbc->dbp;
 	DB_ASSERT(dbp->env, dir == -1 || dir == 1);
 
 	*found = FALSE;
 	if (TYPE(dpage) != P_HEAP || NUM_ENT(dpage) == 0)
-		return (0);
+		return;
 
-	indx = start;
+	indx = begin;
 	for (;;) {
 		if (HEAP_OFFSETTBL(dbp, dpage)[indx] != 0) {
 			hdr = (HEAPHDR *)P_ENTRY(dbp, dpage, indx);
@@ -962,16 +973,18 @@ __heapc_search(dbc, dpage, start, dir, indxp, found)
 			    F_ISSET(hdr, HEAP_RECFIRST)) {
 				*found = TRUE;
 				*indxp = indx;
-				return (0);
+				break;
 			}
 		}
 		if ((dir == -1 && indx == 0) ||
 		    (dir == 1 && indx == HEAP_HIGHINDX(dpage)))
-			return (0);
+			break;
 
-		indx += dir;
+		if (dir == -1)
+			indx--;
+		else
+			indx++;
 	}
-	return (0);
 }
 
 #undef	IS_FIRST
@@ -1030,7 +1043,7 @@ __heapc_reloc_partial(dbc, key, data)
 			dlen = old_size - doff;
 		else
 			dlen = data->dlen;
-		data_size = old_size - dlen + data->size;
+		data_size = (old_size - dlen) + data->size;
 	}
 
 	/*
@@ -1091,8 +1104,8 @@ __heapc_reloc_partial(dbc, key, data)
 			 */
 			data_size = doff + (add_bytes ? data->size : 0);
 		else
-			data_size = old_hdr->size -
-				dlen + (add_bytes ? data->size : 0);
+			data_size = (old_hdr->size -
+				dlen) + (add_bytes ? data->size : 0);
 		data_size += remaining;
 
 		if (data_size > buflen) {
@@ -1136,7 +1149,7 @@ __heapc_reloc_partial(dbc, key, data)
 			if (doff + dlen < old_hdr->size) {
 				olddata += dlen;
 				memcpy(buf,
-				    olddata, old_hdr->size - doff - dlen);
+				    olddata, (old_hdr->size - doff) - dlen);
 				dlen = 0;
 			} else
 				/*
@@ -1249,7 +1262,7 @@ __heapc_reloc_partial(dbc, key, data)
 			size -= sizeof(db_indx_t);
 		/* Round down to a multiple of 4. */
 		size = DB_ALIGN(
-		    size - sizeof(u_int32_t) + 1, sizeof(u_int32_t));
+		    (size - sizeof(u_int32_t)) + 1, sizeof(u_int32_t));
 		DB_ASSERT(dbp->env, size >= sizeof(HEAPSPLITHDR));
 
 		/*
@@ -1495,7 +1508,7 @@ __heapc_reloc(dbc, key, data)
 			size -= sizeof(db_indx_t);
 		/* Round down to a multiple of 4. */
 		size = DB_ALIGN(
-		    size - sizeof(u_int32_t) + 1, sizeof(u_int32_t));
+		    (size - sizeof(u_int32_t)) + 1, sizeof(u_int32_t));
 		DB_ASSERT(dbp->env, size >= sizeof(HEAPSPLITHDR));
 		new_hdr.std_hdr.size =
 		    (u_int16_t)(size - sizeof(HEAPSPLITHDR));
@@ -1640,17 +1653,19 @@ __heapc_put(dbc, key, data, flags, pgnop)
 	HEAP_CURSOR *cp;
 	PAGE *rpage;
 	db_pgno_t region_pgno;
-	int oldspace, ret, space, t_ret;
+	int buf_alloc, ret, t_ret;
 	off_t blob_size;
 	db_seq_t blob_id, new_blob_id;
-	u_int32_t data_size, dlen, new_size, old_flags, old_size, tot_size;
-	u_int8_t *buf, *olddata, *src, *dest;
+	u_int32_t data_size, dlen, new_size, old_flags, old_size;
+	u_int32_t oldspace, space, tot_size;
+	u_int8_t *buf, *olddata;
 
 	dbp = dbc->dbp;
 	mpf = dbp->mpf;
 	cp = (HEAP_CURSOR *)dbc->internal;
 	rpage = NULL;
-	buf = dest = src = NULL;
+	buf = NULL;
+	buf_alloc = 0;
 	dlen = 0;
 	blob_id = new_blob_id = 0;
 
@@ -1714,7 +1729,7 @@ __heapc_put(dbc, key, data, flags, pgnop)
 				dlen = tot_size - data->doff;
 			else
 				dlen = data->dlen;
-			data_size = tot_size - dlen + data->size;
+			data_size = (tot_size - dlen) + data->size;
 		}
 	} else if F_ISSET(old_hdr, HEAP_RECBLOB)
 		data_size = HEAPBLOBREC_DSIZE;
@@ -1750,6 +1765,7 @@ __heapc_put(dbc, key, data, flags, pgnop)
 		 */
 		if ((ret = __os_malloc(dbp->env, data_size, &buf)) != 0)
 			goto err;
+		buf_alloc = 1;
 		new_data.data = buf;
 
 		/*
@@ -1772,10 +1788,10 @@ __heapc_put(dbc, key, data, flags, pgnop)
 		buf += data->size;
 
 		/* Fill in remaining data from the old record, skipping dlen. */
-		if (data->doff < old_hdr->size) {
+		if ((data->doff + data->dlen) < old_hdr->size) {
 			olddata += data->doff + data->dlen;
-			memcpy(buf,
-			    olddata, old_hdr->size - data->doff - data->dlen);
+			memcpy(buf, olddata,
+			    (old_hdr->size - data->doff) - data->dlen);
 		}
 	} else if (F_ISSET(old_hdr, HEAP_RECBLOB)) {
 		data_size = HEAPBLOBREC_DSIZE;
@@ -1786,7 +1802,7 @@ __heapc_put(dbc, key, data, flags, pgnop)
 			new_data.data = HEAPBLOBREC_DATA(data->data);
 		} else {
 			memcpy(&bhdr, old_hdr, HEAPBLOBREC_SIZE);
-			blob_id = bhdr.id;
+			blob_id = (db_seq_t)bhdr.id;
 			GET_BLOB_SIZE(dbp->env, bhdr, blob_size, ret);
 			if (ret != 0)
 				goto err;
@@ -1850,14 +1866,14 @@ __heapc_put(dbc, key, data, flags, pgnop)
 		    dbc->thread_info, NULL, DB_MPOOL_DIRTY, &rpage)) != 0)
 			goto err;
 
-		HEAP_SETSPACE(dbp, rpage, cp->pgno - region_pgno - 1, space);
+		HEAP_SETSPACE(dbp, rpage, (cp->pgno - region_pgno) - 1, space);
 	}
 
 err:	DB_ASSERT(dbp->env, ret != DB_PAGE_NOTFOUND);
 	if (rpage != NULL && (t_ret = __memp_fput(mpf,
 	    dbc->thread_info, rpage, dbc->priority)) != 0 && ret == 0)
 		ret = t_ret;
-	if (F_ISSET(data, DB_DBT_PARTIAL) && !F_ISSET(old_hdr, HEAP_RECBLOB))
+	if (buf_alloc)
 		__os_free(dbp->env, new_data.data);
 
 	if (ret != 0 && LOCK_ISSET(cp->lock))
@@ -1885,17 +1901,21 @@ __heap_getpage(dbc, size, avail)
 	HEAP *h;
 	HEAPPG *rpage;
 	HEAP_CURSOR *cp;
-	db_pgno_t data_pgno, meta_pgno, region_pgno, start_region;
-	int i, lk_mode, max, p, ret, space, start, t_ret;
+	db_pgno_t data_pgno, i, max, meta_pgno, p, region_pgno, start;
+	db_pgno_t start_region;
+	int ret, t_ret;
+	u_int32_t lk_mode, space;
 
 	LOCK_INIT(meta_lock);
+	data_pgno = PGNO_INVALID;
 	dbp = dbc->dbp;
 	mpf = dbp->mpf;
 	cp = (HEAP_CURSOR *)dbc->internal;
 	h = dbp->heap_internal;
 	start_region = region_pgno = h->curregion;
 	max = HEAP_REGION_SIZE(dbp);
-	i = ret = t_ret = 0;
+	i = 0;
+	ret = t_ret = 0;
 
 	/*
 	 * The algorithm for finding a page:
@@ -1958,10 +1978,10 @@ find:	while ((ret = __memp_fget(mpf, &region_pgno,
 		max = h->maxpgno - region_pgno;
 	/*
 	 * Look in the bitmap for a page with sufficient free space.  We use i
-	 * in a slightly strange way.  Because the 2-bits in the bitmap are only
-	 * an estimate, there is a chance the data won't fit on the page we
-	 * choose.  In that case, we re-start the process and want to be able to
-	 * resume this loop where we left off.
+	 * in a slightly strange way.  Because the 2-bits in the bitmap are
+	 * only an estimate, there is a chance the data won't fit on the page
+	 * we choose.  In that case, we re-start the process and want to be
+	 * able to resume this loop where we left off.
 	 */
 	for (; i < max; i++) {
 		p = start + i;
@@ -1969,7 +1989,7 @@ find:	while ((ret = __memp_fget(mpf, &region_pgno,
 			p -= max;
 		if ((*avail = HEAP_SPACE(dbp, rpage, p)) > space)
 			continue;
-		data_pgno = region_pgno + p + 1;
+		data_pgno = (region_pgno + p) + 1;
 		ACQUIRE_CUR(dbc,
 		    DB_LOCK_WRITE, data_pgno, DB_LOCK_NOWAIT, 0, ret);
 		/*
@@ -2226,7 +2246,7 @@ check:		if (size + sizeof(db_indx_t) > HEAP_FREESPACE(dbp, cp->page)) {
 		}
 	}
 
-	h->curpgindx = data_pgno - region_pgno - 1;
+	h->curpgindx = (data_pgno - region_pgno) - 1;
 err:	DB_ASSERT(dbp->env, ret != DB_PAGE_NOTFOUND);
 	if (rpage != NULL && (t_ret = __memp_fput(mpf,
 	    dbc->thread_info, rpage, dbc->priority)) != 0 && ret == 0)
@@ -2258,11 +2278,11 @@ __heap_append(dbc, key, data)
 	HEAP_CURSOR *cp;
 	db_indx_t indx;
 	db_pgno_t region_pgno;
-	int is_blob, ret, space, t_ret;
+	int is_blob, ret, t_ret;
 	off_t blob_size;
 	db_seq_t blob_id;
 	u_int8_t avail;
-	u_int32_t data_size;
+	u_int32_t data_size, space;
 
 	dbp = dbc->dbp;
 	mpf = dbp->mpf;
@@ -2349,7 +2369,7 @@ __heap_append(dbc, key, data)
 		    dbc->thread_info, NULL, DB_MPOOL_DIRTY, &rpage)) != 0)
 			goto err;
 
-		HEAP_SETSPACE(dbp, rpage, cp->pgno - region_pgno - 1, space);
+		HEAP_SETSPACE(dbp, rpage, (cp->pgno - region_pgno) - 1, space);
 	}
 
 err:	DB_ASSERT(dbp->env, ret != DB_PAGE_NOTFOUND);
@@ -2385,8 +2405,8 @@ __heapc_split(dbc, key, data, is_first)
 	HEAP_CURSOR *cp;
 	db_indx_t indx;
 	db_pgno_t region_pgno;
-	int ret, spacebits, t_ret;
-	u_int32_t buflen, doff, left, size;
+	int ret, t_ret;
+	u_int32_t buflen, doff, left, size, spacebits;
 	u_int8_t availbits, *buf;
 
 	dbp = dbc->dbp;
@@ -2401,7 +2421,6 @@ __heapc_split(dbc, key, data, is_first)
 	ret = t_ret = 0;
 	indx = 0;
 	buf = NULL;
-	buflen = 0;
 
 	/*
 	 * Write the record to multiple pages, in chunks starting from the end.
@@ -2415,6 +2434,9 @@ __heapc_split(dbc, key, data, is_first)
 		left += data->doff;
 	}
 	hdrs.tsize = left;
+	buflen = 1;
+	if ((ret = __os_malloc(dbp->env, buflen, &buf)) != 0)
+		return (ret);
 	while (left > 0) {
 		size = DB_ALIGN(left + sizeof(HEAPSPLITHDR), sizeof(u_int32_t));
 		if (size < sizeof(HEAPSPLITHDR))
@@ -2429,8 +2451,10 @@ __heapc_split(dbc, key, data, is_first)
 		else
 			hdrs.std_hdr.flags |= HEAP_RECFIRST;
 
-		if ((ret = __heap_getpage(dbc, size, &availbits)) != 0)
+		if ((ret = __heap_getpage(dbc, size, &availbits)) != 0) {
+			__os_free(dbp->env, buf);
 			return (ret);
+		}
 
 		/*
 		 * size is the total number of bytes being written to the page.
@@ -2456,7 +2480,7 @@ __heapc_split(dbc, key, data, is_first)
 				size -= sizeof(db_indx_t);
 			/* Round down to a multiple of 4. */
 			size = DB_ALIGN(
-			    size - sizeof(u_int32_t) + 1, sizeof(u_int32_t));
+			    (size - sizeof(u_int32_t)) + 1, sizeof(u_int32_t));
 			DB_ASSERT(dbp->env, size >= sizeof(HEAPSPLITHDR));
 			hdrs.std_hdr.size =
 			    (u_int16_t)(size - sizeof(HEAPSPLITHDR));
@@ -2494,10 +2518,10 @@ __heapc_split(dbc, key, data, is_first)
 			 * page minus the bytes we're taking from data.
 			*/
 			t_data.data = buf;
-			memset(buf, '\0', t_data.size - left + doff);
-			buf += t_data.size - left + doff;
+			memset(buf, 0, (t_data.size - left) + doff);
+			buf += (t_data.size - left) + doff;
 			memcpy(buf, data->data, left - doff);
-			doff -= t_data.size - left + doff;
+			doff -= (t_data.size - left) + doff;
 			buf = t_data.data;
 		}
 		hdr_dbt.data = &hdrs;
@@ -2541,7 +2565,7 @@ __heapc_split(dbc, key, data, is_first)
 				goto err;
 
 			HEAP_SETSPACE(dbp,
-			    rpage, cp->pgno - region_pgno - 1, spacebits);
+			    rpage, (cp->pgno - region_pgno) - 1, spacebits);
 			ret = __memp_fput(mpf,
 			    dbc->thread_info, rpage, dbc->priority);
 			rpage = NULL;

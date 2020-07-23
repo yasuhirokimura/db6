@@ -175,6 +175,13 @@ AC_ARG_ENABLE(debug_wop,
 	[db_cv_debug_wop="$enable_debug_wop"], [db_cv_debug_wop="no"])
 AC_MSG_RESULT($db_cv_debug_wop)
 
+AC_MSG_CHECKING(if --enable-error_history option specified)
+AC_ARG_ENABLE(error_history,
+	[AC_HELP_STRING([--enable-error_history],
+			[Build a version that records extra information about errors])],
+	[db_cv_error_history="$enable_error_history"], [db_cv_error_history="no"])
+AC_MSG_RESULT($db_cv_error_history)
+
 AC_MSG_CHECKING(if --enable-diagnostic option specified)
 AC_ARG_ENABLE(diagnostic,
 	[AC_HELP_STRING([--enable-diagnostic],
@@ -354,6 +361,21 @@ AC_ARG_ENABLE(perfmon_statistics,
 	[db_cv_perfmon_statistics="$enable_perfmon_statistics"], [db_cv_perfmon_statistics="no"])
 AC_MSG_RESULT($db_cv_perfmon_statistics)
 
+# Application which use failchk can choose to inform all threads waiting on
+# mutexes to be notified as soon as possible after a crash thread is detected.
+AC_MSG_CHECKING(if --enable-failchk_broadcast option specified)
+AC_ARG_ENABLE(failchk_broadcast,
+	[AC_HELP_STRING([--enable-failchk_broadcast],
+			[Add support for immediately broadcasting failchk events to all waiting threads])],
+	[db_cv_failchk_broadcast="$enable_failchk_broadcast"], [db_cv_failchk_broadcast="no"])
+AC_MSG_RESULT($db_cv_failchk_broadcast)
+if test "$db_cv_failchk_broadcast" = "yes"; then
+	AC_DEFINE(HAVE_FAILCHK_BROADCAST)
+	AH_TEMPLATE(HAVE_FAILCHK_BROADCAST,
+    [Define to 1 for failchk to inform all waiting threads about crashes.])
+	ADDITIONAL_PROGS="$ADDITIONAL_PROGS test_failchk"
+fi
+
 AC_MSG_CHECKING(if --enable-uimutexes option specified)
 AC_ARG_ENABLE(uimutexes,
 	[AC_HELP_STRING([--enable-uimutexes],
@@ -483,7 +505,12 @@ yes|no|ipp) ;;
 *) AC_MSG_ERROR([unknown --with-cryptography argument \'$with_cryptography\']) ;;
 esac
 db_cv_build_cryptography="$with_cryptography"
-AC_MSG_RESULT($db_cv_build_cryptography)
+if test -d "$topdir/src/crypto" ; then
+	AC_MSG_RESULT($db_cv_build_cryptography)
+else
+	db_cv_build_cryptography="no"
+	AC_MSG_WARN(Ignoring --with-cryptography flag value. The NC package builds a Berkeley DB library that does not support encryption.)
+fi
 
 # Testing requires Tcl.
 if test "$db_cv_test" = "yes" -a "$db_cv_tcl" = "no"; then

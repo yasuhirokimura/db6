@@ -1047,6 +1047,7 @@ __memp_fclose(dbmfp, flags)
 					ret = t_ret;
 				__os_free(env, rpath);
 			}
+			mfp->unlink_on_close = 0;
 		}
 		if (MFP_OPEN_CNT(mfp) == 0) {
 			F_CLR(mfp, MP_NOT_DURABLE);
@@ -1096,6 +1097,7 @@ __memp_mf_discard(dbmp, mfp, hp_locked)
 	DB_MPOOL_STAT *sp;
 #endif
 	MPOOL *mp;
+	char *rpath;
 	int need_sync, ret, t_ret;
 
 	env = dbmp->env;
@@ -1122,6 +1124,23 @@ __memp_mf_discard(dbmp, mfp, hp_locked)
 	 * structure again.
 	 */
 	mfp->deadfile = 1;
+
+	/* We should unlink the file if necessary. */
+	if (mfp->block_cnt == 0 && mfp->mpf_cnt == 0 && mfp->unlink_on_close &&
+	    !F_ISSET(mfp, MP_TEMP) && !mfp->no_backing_file) {
+		if ((t_ret = __db_appname(env, DB_APP_DATA,
+		    R_ADDR(dbmp->reginfo, mfp->path_off), NULL,
+		    &rpath)) != 0 && ret == 0)
+			ret = t_ret;
+		if (t_ret == 0) {
+			if ((t_ret = __os_unlink(
+			    dbmp->env, rpath, 0)) != 0 && ret == 0)
+				ret = t_ret;
+			__os_free(env, rpath);
+		}
+		mfp->unlink_on_close = 0;
+		need_sync = 0;
+	}
 
 	/* Discard the mutex we're holding and return it too the pool. */
 	MUTEX_UNLOCK(env, mfp->mutex);

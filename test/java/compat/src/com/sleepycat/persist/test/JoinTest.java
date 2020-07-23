@@ -42,12 +42,10 @@ public class JoinTest extends TxnTestCase {
 
     @Parameters
     public static List<Object[]> genParams() {
-       
-        return getTxnTypes(null, false);
+        return getTxnParams(null, false);
     }
     
     public JoinTest(String type){
-        
         initEnvConfig();
         txnType = type;
         isTransactional = (txnType != TXN_NULL);

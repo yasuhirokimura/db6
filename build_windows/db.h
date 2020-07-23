@@ -60,10 +60,10 @@ extern "C" {
 #define	DB_VERSION_FAMILY	12
 #define	DB_VERSION_RELEASE	1
 #define	DB_VERSION_MAJOR	6
-#define	DB_VERSION_MINOR	0
-#define	DB_VERSION_PATCH	30
-#define	DB_VERSION_STRING	"Berkeley DB 6.0.30: (January 23, 2014)"
-#define	DB_VERSION_FULL_STRING	"Berkeley DB 12c Release 1, library version 12.1.6.0.30: (January 23, 2014)"
+#define	DB_VERSION_MINOR	1
+#define	DB_VERSION_PATCH	19
+#define	DB_VERSION_STRING	"Berkeley DB 6.1.19: (June 10, 2014)"
+#define	DB_VERSION_FULL_STRING	"Berkeley DB 12c Release 1, library version 12.1.6.1.19: (June 10, 2014)"
 
 /*
  * !!!
@@ -163,9 +163,9 @@ typedef	u_int16_t	db_indx_t;	/* Page offset type. */
 #define	DB_MAX_PAGES	0xffffffff	/* >= # of pages in a file */
 
 typedef	u_int32_t	db_recno_t;	/* Record number type. */
-#define	DB_MAX_RECORDS	0xffffffff	/* >= # of records in a tree */
+#define	DB_MAX_RECORDS	0xffffffff	/* >= # of records in a recno tree. */
 
-typedef u_int32_t	db_timeout_t;	/* Type of a timeout. */
+typedef u_int32_t	db_timeout_t;	/* Type of a timeout in microseconds. */
 
 /*
  * Region offsets are the difference between a pointer in a region and the
@@ -189,6 +189,10 @@ struct __db_compact;	typedef struct __db_compact DB_COMPACT;
 struct __db_dbt;	typedef struct __db_dbt DBT;
 struct __db_distab;	typedef struct __db_distab DB_DISTAB;
 struct __db_env;	typedef struct __db_env DB_ENV;
+struct __db_event_mutex_died_info;
+	typedef struct __db_event_mutex_died_info DB_EVENT_MUTEX_DIED_INFO;
+struct __db_event_failchk_info;
+	typedef struct __db_event_failchk_info DB_EVENT_FAILCHK_INFO;
 struct __db_h_stat;	typedef struct __db_h_stat DB_HASH_STAT;
 struct __db_heap_rid;	typedef struct __db_heap_rid DB_HEAP_RID;
 struct __db_heap_stat;	typedef struct __db_heap_stat DB_HEAP_STAT;
@@ -309,6 +313,23 @@ struct __db_mutex_stat { /* SHARED */
 #endif
 };
 
+/* Buffers passed to __mutex_describe() must be at least this large. */
+#define	DB_MUTEX_DESCRIBE_STRLEN	128
+
+/* This is the info of a DB_EVENT_MUTEX_DIED event notification. */
+struct __db_event_mutex_died_info {
+	pid_t         pid;	/* Process which last owned the mutex */
+	db_threadid_t tid;	/* Thread which last owned the mutex */
+	db_mutex_t    mutex;	/* ID of the mutex */
+	char	      desc[DB_MUTEX_DESCRIBE_STRLEN];
+};
+
+/* This is the info of a DB_EVENT_FAILCHK event notification. */
+#define DB_FAILURE_SYMPTOM_SIZE	120
+struct __db_event_failchk_info {
+	int	error;
+	char	symptom[DB_FAILURE_SYMPTOM_SIZE];
+};
 /* This is the length of the buffer passed to DB_ENV->thread_id_string() */
 #define	DB_THREADID_STRLEN	128
 
@@ -506,7 +527,7 @@ struct __db_lockreq {
 /*******************************************************
  * Logging.
  *******************************************************/
-#define	DB_LOGVERSION	21		/* Current log version. */
+#define	DB_LOGVERSION	22		/* Current log version. */
 #define	DB_LOGVERSION_LATCHING 15	/* Log version using latching: db-4.8 */
 #define	DB_LOGCHKSUM	12		/* Check sum headers: db-4.5 */
 #define	DB_LOGOLDVER	8		/* Oldest version supported: db-4.2 */
@@ -997,7 +1018,7 @@ struct __db_txn {
 #define	TXN_SNAPSHOT		0x08000	/* Snapshot Isolation. */
 #define	TXN_SYNC		0x10000	/* Write and sync on prepare/commit. */
 #define	TXN_WRITE_NOSYNC	0x20000	/* Write only on prepare/commit. */
-#define TXN_BULK		0x40000 /* Enable bulk loading optimization. */
+#define	TXN_BULK		0x40000 /* Enable bulk loading optimization. */
 	u_int32_t	flags;
 };
 
@@ -1106,31 +1127,34 @@ struct __db_txn_token {
 
 /*
  * Event notification types.  (Tcl testing interface currently assumes there are
- * no more than 32 of these.)
+ * no more than 32 of these.). Comments include any relevant event_info types.
  */
 #define	DB_EVENT_PANIC			 0
-#define	DB_EVENT_REG_ALIVE		 1
-#define	DB_EVENT_REG_PANIC		 2
+#define	DB_EVENT_REG_ALIVE		 1	/* int: pid which was in env */
+#define	DB_EVENT_REG_PANIC		 2	/* int: error causing the panic. */
 #define	DB_EVENT_REP_AUTOTAKEOVER_FAILED 3
 #define	DB_EVENT_REP_CLIENT		 4
-#define	DB_EVENT_REP_CONNECT_BROKEN	 5
-#define	DB_EVENT_REP_CONNECT_ESTD	 6
-#define	DB_EVENT_REP_CONNECT_TRY_FAILED	 7
+#define	DB_EVENT_REP_CONNECT_BROKEN	 5	/* DB_REPMGR_CONN_ERR */
+#define	DB_EVENT_REP_CONNECT_ESTD	 6	/* int: EID of remote site */
+#define	DB_EVENT_REP_CONNECT_TRY_FAILED	 7	/* DB_REPMGR_CONN_ERR */
 #define	DB_EVENT_REP_DUPMASTER		 8
 #define	DB_EVENT_REP_ELECTED		 9
 #define	DB_EVENT_REP_ELECTION_FAILED	10
 #define	DB_EVENT_REP_INIT_DONE		11
-#define	DB_EVENT_REP_JOIN_FAILURE	12
-#define	DB_EVENT_REP_LOCAL_SITE_REMOVED	13
-#define	DB_EVENT_REP_MASTER		14
-#define	DB_EVENT_REP_MASTER_FAILURE	15
-#define	DB_EVENT_REP_NEWMASTER		16
-#define	DB_EVENT_REP_PERM_FAILED	17
-#define	DB_EVENT_REP_SITE_ADDED		18
-#define	DB_EVENT_REP_SITE_REMOVED	19
-#define	DB_EVENT_REP_STARTUPDONE	20
-#define	DB_EVENT_REP_WOULD_ROLLBACK	21	/* Undocumented; C API only. */
-#define	DB_EVENT_WRITE_FAILED		22
+#define	DB_EVENT_REP_INQUEUE_FULL	12
+#define	DB_EVENT_REP_JOIN_FAILURE	13
+#define	DB_EVENT_REP_LOCAL_SITE_REMOVED	14
+#define	DB_EVENT_REP_MASTER		15
+#define	DB_EVENT_REP_MASTER_FAILURE	16
+#define	DB_EVENT_REP_NEWMASTER		17	/* int: new master's site id */
+#define	DB_EVENT_REP_PERM_FAILED	18
+#define	DB_EVENT_REP_SITE_ADDED		19	/* int: eid */
+#define	DB_EVENT_REP_SITE_REMOVED	20	/* int: eid */
+#define	DB_EVENT_REP_STARTUPDONE	21
+#define	DB_EVENT_REP_WOULD_ROLLBACK	22	/* Undocumented; C API only. */
+#define	DB_EVENT_WRITE_FAILED		23
+#define	DB_EVENT_MUTEX_DIED		24	/* DB_EVENT_MUTEX_DIED_INFO */
+#define	DB_EVENT_FAILCHK_PANIC		25	/* DB_EVENT_FAILCHK_INFO */
 #define	DB_EVENT_NO_SUCH_EVENT		 0xffffffff /* OOB sentinel value */
 
 /* Replication Manager site status. */
@@ -1249,6 +1273,10 @@ struct __db_repmgr_stat { /* SHARED */
 	uintmax_t st_msgs_queued;	/* # msgs queued for network delay. */
 	uintmax_t st_msgs_dropped;	/* # msgs discarded due to excessive
 					   queue length. */
+	u_int32_t st_incoming_queue_gbytes;	/* Incoming queue size: GB. */
+	u_int32_t st_incoming_queue_bytes;	/* Incoming queue size: B. */
+	uintmax_t st_incoming_msgs_dropped;	/* # of msgs discarded due to
+						   incoming queue full. */
 	uintmax_t st_connection_drop;	/* Existing connections dropped. */
 	uintmax_t st_connect_fail;	/* Failed new connection attempts. */
 	u_int32_t st_elect_threads;	/* # of active election threads. */
@@ -1257,7 +1285,6 @@ struct __db_repmgr_stat { /* SHARED */
 	u_int32_t st_site_total;	/* # of repgroup total sites. */
 	u_int32_t st_site_views;	/* # of repgroup view sites. */
 	uintmax_t st_takeovers;		/* # of automatic listener takeovers. */
-	u_int32_t st_incoming_queue_size; /* Undoc: # msgs currently queued. */
 };
 
 /* Replication Manager connection error. */
@@ -1427,6 +1454,7 @@ typedef enum {
 #define	DB_LOCK_NOTGRANTED	(-30992)/* Lock unavailable. */
 #define	DB_LOG_BUFFER_FULL	(-30991)/* In-memory log buffer full. */
 #define	DB_LOG_VERIFY_BAD	(-30990)/* Log verification failed. */
+#define	DB_META_CHKSUM_FAIL	(-30968)/* Metadata page checksum failed. */
 #define	DB_NOSERVER		(-30989)/* Server panic return. */
 #define	DB_NOTFOUND		(-30988)/* Key/data pair not found (EOF). */
 #define	DB_OLD_VERSION		(-30987)/* Out-of-date version. */
@@ -1464,6 +1492,13 @@ typedef enum {
 #define	DB_SWAPBYTES		(-30889)/* Database needs byte swapping. */
 #define	DB_TXN_CKP		(-30888)/* Encountered ckp record in log. */
 #define	DB_VERIFY_FATAL		(-30887)/* DB->verify cannot proceed. */
+
+/*
+ * This exit status indicates that a BDB utility failed because it needed a
+ * resource which had been held by a process which crashed or otherwise did
+ * not exit cleanly.
+ */
+#define DB_EXIT_FAILCHK		3
 
 /* Database handle. */
 struct __db {
@@ -1871,10 +1906,9 @@ struct __db {
 	u_int32_t orig_flags;		   /* Flags at  open, for refresh */
 	u_int32_t flags;
 
-#define DB2_AM_EXCL		0x00000001 /* Exclusively lock the handle */ 
-#define DB2_AM_INTEXCL		0x00000002 /* Internal exclusive lock. */
-#define DB2_AM_NOWAIT		0x00000004 /* Do not wait for handle lock */ 
-	u_int32_t orig_flags2;		   /* Second flags word; for refresh */ 
+#define	DB2_AM_EXCL		0x00000001 /* Exclusively lock the handle */ 
+#define	DB2_AM_INTEXCL		0x00000002 /* Internal exclusive lock. */
+#define	DB2_AM_NOWAIT		0x00000004 /* Do not wait for handle lock */ 
 	u_int32_t flags2;		   /* Second flags word */
 };
 
@@ -1974,7 +2008,7 @@ struct __db_stream {
 		pointer = __p;						\
 	} while (0)
 
-#define DB_MULTIPLE_WRITE_INIT(pointer, dbt)				\
+#define	DB_MULTIPLE_WRITE_INIT(pointer, dbt)				\
 	do {								\
 		(dbt)->flags |= DB_DBT_BULK;				\
 		pointer = (u_int8_t *)(dbt)->data +			\
@@ -1982,7 +2016,7 @@ struct __db_stream {
 		*(u_int32_t *)(pointer) = (u_int32_t)-1;		\
 	} while (0)
 
-#define DB_MULTIPLE_RESERVE_NEXT(pointer, dbt, writedata, writedlen)	\
+#define	DB_MULTIPLE_RESERVE_NEXT(pointer, dbt, writedata, writedlen)	\
 	do {								\
 		u_int32_t *__p = (u_int32_t *)(pointer);		\
 		u_int32_t __off = ((pointer) ==	(u_int8_t *)(dbt)->data +\
@@ -1999,7 +2033,7 @@ struct __db_stream {
 		}							\
 	} while (0)
 
-#define DB_MULTIPLE_WRITE_NEXT(pointer, dbt, writedata, writedlen)	\
+#define	DB_MULTIPLE_WRITE_NEXT(pointer, dbt, writedata, writedlen)	\
 	do {								\
 		void *__destd;						\
 		DB_MULTIPLE_RESERVE_NEXT((pointer), (dbt),		\
@@ -2010,7 +2044,7 @@ struct __db_stream {
 			memcpy(__destd, (writedata), (writedlen));	\
 	} while (0)
 
-#define DB_MULTIPLE_KEY_RESERVE_NEXT(pointer, dbt, writekey, writeklen, writedata, writedlen) \
+#define	DB_MULTIPLE_KEY_RESERVE_NEXT(pointer, dbt, writekey, writeklen, writedata, writedlen) \
 	do {								\
 		u_int32_t *__p = (u_int32_t *)(pointer);		\
 		u_int32_t __off = ((pointer) == (u_int8_t *)(dbt)->data +\
@@ -2033,7 +2067,7 @@ struct __db_stream {
 		}							\
 	} while (0)
 
-#define DB_MULTIPLE_KEY_WRITE_NEXT(pointer, dbt, writekey, writeklen, writedata, writedlen) \
+#define	DB_MULTIPLE_KEY_WRITE_NEXT(pointer, dbt, writekey, writeklen, writedata, writedlen) \
 	do {								\
 		void *__destk, *__destd;				\
 		DB_MULTIPLE_KEY_RESERVE_NEXT((pointer), (dbt),		\
@@ -2047,7 +2081,7 @@ struct __db_stream {
 		}							\
 	} while (0)
 
-#define DB_MULTIPLE_RECNO_WRITE_INIT(pointer, dbt)			\
+#define	DB_MULTIPLE_RECNO_WRITE_INIT(pointer, dbt)			\
 	do {								\
 		(dbt)->flags |= DB_DBT_BULK;				\
 		pointer = (u_int8_t *)(dbt)->data +			\
@@ -2055,7 +2089,7 @@ struct __db_stream {
 		*(u_int32_t *)(pointer) = 0;				\
 	} while (0)
 
-#define DB_MULTIPLE_RECNO_RESERVE_NEXT(pointer, dbt, recno, writedata, writedlen) \
+#define	DB_MULTIPLE_RECNO_RESERVE_NEXT(pointer, dbt, recno, writedata, writedlen) \
 	do {								\
 		u_int32_t *__p = (u_int32_t *)(pointer);		\
 		u_int32_t __off = ((pointer) == (u_int8_t *)(dbt)->data +\
@@ -2073,7 +2107,7 @@ struct __db_stream {
 		}							\
 	} while (0)
 
-#define DB_MULTIPLE_RECNO_WRITE_NEXT(pointer, dbt, recno, writedata, writedlen)\
+#define	DB_MULTIPLE_RECNO_WRITE_NEXT(pointer, dbt, recno, writedata, writedlen)\
 	do {								\
 		void *__destd;						\
 		DB_MULTIPLE_RECNO_RESERVE_NEXT((pointer), (dbt),	\
@@ -2088,7 +2122,7 @@ struct __db_heap_rid {
 	db_pgno_t pgno;			/* Page number. */
 	db_indx_t indx;			/* Index in the offset table. */
 };
-#define DB_HEAP_RID_SZ	(sizeof(db_pgno_t) + sizeof(db_indx_t))
+#define	DB_HEAP_RID_SZ	(sizeof(db_pgno_t) + sizeof(db_indx_t))
 
 /*******************************************************
  * Access method cursors.
@@ -2365,12 +2399,6 @@ typedef enum {
 struct __db_env {
 	ENV *env;			/* Linked ENV structure */
 
-	/*
-	 * The DB_ENV structure can be used concurrently, so field access is
-	 * protected.
-	 */
-	db_mutex_t mtx_db_env;		/* DB_ENV structure mutex */
-
 					/* Error message callback */
 	void (*db_errcall) __P((const DB_ENV *, const char *, const char *));
 	FILE		*db_errfile;	/* Error message file stream */
@@ -2487,6 +2515,11 @@ struct __db_env {
 					 * build settings.
 					 */
         db_timeout_t	envreg_timeout; /* DB_REGISTER wait timeout */
+	/*
+	 * When failchk broadcasting is active, any wait for a mutex will wake
+	 * up this frequently in order to check whether the mutex has died.
+	 */
+	db_timeout_t	mutex_failchk_timeout;
 
 #define	DB_ENV_AUTO_COMMIT	0x00000001 /* DB_AUTO_COMMIT */
 #define	DB_ENV_CDB_ALLDB	0x00000002 /* CDB environment wide locking */
@@ -2506,8 +2539,8 @@ struct __db_env {
 #define	DB_ENV_TXN_SNAPSHOT	0x00008000 /* DB_TXN_SNAPSHOT set */
 #define	DB_ENV_TXN_WRITE_NOSYNC	0x00010000 /* DB_TXN_WRITE_NOSYNC set */
 #define	DB_ENV_YIELDCPU		0x00020000 /* DB_YIELDCPU set */
-#define DB_ENV_HOTBACKUP	0x00040000 /* DB_HOTBACKUP_IN_PROGRESS set */
-#define DB_ENV_NOFLUSH		0x00080000 /* DB_NOFLUSH set */
+#define	DB_ENV_HOTBACKUP	0x00040000 /* DB_HOTBACKUP_IN_PROGRESS set */
+#define	DB_ENV_NOFLUSH		0x00080000 /* DB_NOFLUSH set */
 	u_int32_t flags;
 
 	/* DB_ENV PUBLIC HANDLE LIST BEGIN */
@@ -2545,8 +2578,8 @@ struct __db_env {
 		void (**)(const DB_ENV *, const char *, const char *)));
 	void (*get_errfile) __P((DB_ENV *, FILE **));
 	void (*get_errpfx) __P((DB_ENV *, const char **));
-	int  (*get_flags) __P((DB_ENV *, u_int32_t *));
 	int  (*get_feedback) __P((DB_ENV *, void (**)(DB_ENV *, int, int)));
+	int  (*get_flags) __P((DB_ENV *, u_int32_t *));
 	int  (*get_home) __P((DB_ENV *, const char **));
 	int  (*get_intermediate_dir_mode) __P((DB_ENV *, const char **));
 	int  (*get_isalive) __P((DB_ENV *,
@@ -2951,6 +2984,7 @@ typedef struct entry {
 #define	DB_FLUSH				0x00000002
 #define	DB_FORCE				0x00000001
 #define	DB_FORCESYNC				0x00000001
+#define	DB_FORCESYNCENV				0x00000002
 #define	DB_FOREIGN_ABORT			0x00000001
 #define	DB_FOREIGN_CASCADE			0x00000002
 #define	DB_FOREIGN_NULLIFY			0x00000004
@@ -2990,6 +3024,7 @@ typedef struct entry {
 #define	DB_LOG_DSYNC				0x00000008
 #define	DB_LOG_IN_MEMORY			0x00000010
 #define	DB_LOG_NOCOPY				0x00000008
+#define	DB_LOG_NOSYNC				0x00000020
 #define	DB_LOG_NOT_DURABLE			0x00000010
 #define	DB_LOG_NO_DATA				0x00000002
 #define	DB_LOG_VERIFY_CAF			0x00000001
@@ -3001,7 +3036,7 @@ typedef struct entry {
 #define	DB_LOG_VERIFY_VERBOSE			0x00000040
 #define	DB_LOG_VERIFY_WARNING			0x00000080
 #define	DB_LOG_WRNOSYNC				0x00000020
-#define	DB_LOG_ZERO				0x00000020
+#define	DB_LOG_ZERO				0x00000040
 #define	DB_MPOOL_CREATE				0x00000001
 #define	DB_MPOOL_DIRTY				0x00000002
 #define	DB_MPOOL_DISCARD			0x00000001
@@ -3019,9 +3054,10 @@ typedef struct entry {
 #define	DB_MUTEX_ALLOCATED			0x00000001
 #define	DB_MUTEX_LOCKED				0x00000002
 #define	DB_MUTEX_LOGICAL_LOCK			0x00000004
+#define	DB_MUTEX_OWNER_DEAD			0x00000020
 #define	DB_MUTEX_PROCESS_ONLY			0x00000008
 #define	DB_MUTEX_SELF_BLOCK			0x00000010
-#define	DB_MUTEX_SHARED				0x00000020
+#define	DB_MUTEX_SHARED				0x00000040
 #define	DB_NOERROR				0x00008000
 #define	DB_NOFLUSH				0x00001000
 #define	DB_NOLOCKING				0x00002000
@@ -3051,17 +3087,20 @@ typedef struct entry {
 #define	DB_RENUMBER				0x00000080
 #define	DB_REPMGR_CONF_2SITE_STRICT		0x00000001
 #define	DB_REPMGR_CONF_ELECTIONS		0x00000002
+#define	DB_REPMGR_CONF_PREFMAS_CLIENT		0x00000004
+#define	DB_REPMGR_CONF_PREFMAS_MASTER		0x00000008
 #define	DB_REPMGR_NEED_RESPONSE			0x00000001
 #define	DB_REPMGR_PEER				0x00000010
 #define	DB_REP_ANYWHERE				0x00000001
 #define	DB_REP_CLIENT				0x00000001
-#define	DB_REP_CONF_AUTOINIT			0x00000004
-#define	DB_REP_CONF_AUTOROLLBACK		0x00000008
-#define	DB_REP_CONF_BULK			0x00000010
-#define	DB_REP_CONF_DELAYCLIENT			0x00000020
-#define	DB_REP_CONF_INMEM			0x00000040
-#define	DB_REP_CONF_LEASE			0x00000080
-#define	DB_REP_CONF_NOWAIT			0x00000100
+#define	DB_REP_CONF_AUTOINIT			0x00000010
+#define	DB_REP_CONF_AUTOROLLBACK		0x00000020
+#define	DB_REP_CONF_BULK			0x00000040
+#define	DB_REP_CONF_DELAYCLIENT			0x00000080
+#define	DB_REP_CONF_ELECT_LOGLENGTH		0x00000100
+#define	DB_REP_CONF_INMEM			0x00000200
+#define	DB_REP_CONF_LEASE			0x00000400
+#define	DB_REP_CONF_NOWAIT			0x00000800
 #define	DB_REP_ELECTION				0x00000004
 #define	DB_REP_MASTER				0x00000002
 #define	DB_REP_NOBUFFER				0x00000002
@@ -3078,8 +3117,9 @@ typedef struct entry {
 #define	DB_SEQ_WRAP				0x00000008
 #define	DB_SEQ_WRAPPED				0x00000010
 #define	DB_SET_LOCK_TIMEOUT			0x00000001
-#define	DB_SET_REG_TIMEOUT			0x00000004
-#define	DB_SET_TXN_NOW				0x00000008
+#define	DB_SET_MUTEX_FAILCHK_TIMEOUT		0x00000004
+#define	DB_SET_REG_TIMEOUT			0x00000008
+#define	DB_SET_TXN_NOW				0x00000010
 #define	DB_SET_TXN_TIMEOUT			0x00000002
 #define	DB_SHALLOW_DUP				0x00000100
 #define	DB_SNAPSHOT				0x00000200

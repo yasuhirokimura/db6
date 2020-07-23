@@ -102,7 +102,7 @@ public class HashStats extends DatabaseStats {
 
     private int hash_buckets;
     /**
-    The the number of hash buckets.
+    The number of hash buckets.
     */
     public int getBuckets() {
         return hash_buckets;
@@ -132,7 +132,8 @@ was not configured by the {@link com.sleepycat.db.StatsConfig#setFast StatsConfi
 
     private int hash_bigpages;
     /**
-    The number of big key/data pages.
+    The number of hash overflow pages (created when key/data is too big for
+    the page).
 <p>
 The information is only included if the {@link com.sleepycat.db.Database#getStats Database.getStats} call
 was not configured by the {@link com.sleepycat.db.StatsConfig#setFast StatsConfig.setFast} method.
@@ -143,7 +144,7 @@ was not configured by the {@link com.sleepycat.db.StatsConfig#setFast StatsConfi
 
     private long hash_big_bfree;
     /**
-    The number of bytes free on big item pages.
+    The number of bytes free on hash overflow (big item) pages.
 <p>
 The information is only included if the {@link com.sleepycat.db.Database#getStats Database.getStats} call
 was not configured by the {@link com.sleepycat.db.StatsConfig#setFast StatsConfig.setFast} method.
@@ -154,7 +155,8 @@ was not configured by the {@link com.sleepycat.db.StatsConfig#setFast StatsConfi
 
     private int hash_overflows;
     /**
-    The number of overflow pages.
+    The number of bucket overflow pages (bucket overflow pages are created when
+    items did not fit on the main bucket page).
 <p>
 The information is only included if the {@link com.sleepycat.db.Database#getStats Database.getStats} call
 was not configured by the {@link com.sleepycat.db.StatsConfig#setFast StatsConfig.setFast} method.
@@ -165,7 +167,7 @@ was not configured by the {@link com.sleepycat.db.StatsConfig#setFast StatsConfi
 
     private long hash_ovfl_free;
     /**
-    The number of bytes free on overflow pages.
+    The number of bytes free on bucket overflow pages.
 <p>
 The information is only included if the {@link com.sleepycat.db.Database#getStats Database.getStats} call
 was not configured by the {@link com.sleepycat.db.StatsConfig#setFast StatsConfig.setFast} method.

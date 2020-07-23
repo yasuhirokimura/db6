@@ -19,11 +19,11 @@ namespace BerkeleyDB {
         ///</summary>
         public const int DB_BUFFER_SMALL = DbConstants.DB_BUFFER_SMALL;
         ///<summary>
-        /// "Null" return from 2ndary callbk. 
+        /// "Null" return from secondary callback. 
         ///</summary>
         public const int DB_DONOTINDEX = DbConstants.DB_DONOTINDEX;
         ///<summary>
-        /// A foreign db constraint triggered. 
+        /// A foreign database constraint triggered. 
         ///</summary>
         public const int DB_FOREIGN_CONFLICT = DbConstants.DB_FOREIGN_CONFLICT;
         /// <summary>
@@ -50,6 +50,10 @@ namespace BerkeleyDB {
         /// In-memory log buffer full. 
         ///</summary>
         public const int DB_LOG_BUFFER_FULL = DbConstants.DB_LOG_BUFFER_FULL;
+        ///<summary>
+        /// Checksum mismatch detected.
+        ///</summary>
+        public const int DB_META_CHKSUM_FAIL = DbConstants.DB_META_CHKSUM_FAIL;
         ///<summary>
         /// Server panic return. 
         ///</summary>
@@ -79,7 +83,7 @@ namespace BerkeleyDB {
         ///</summary>
         public const int DB_REP_HOLDELECTION = DbConstants.DB_REP_HOLDELECTION;
         ///<summary>
-        /// This msg should be ignored.
+        /// This message should be ignored.
         ///</summary>
         public const int DB_REP_IGNORE = DbConstants.DB_REP_IGNORE;
         ///<summary>

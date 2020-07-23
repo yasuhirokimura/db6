@@ -441,7 +441,7 @@ retry:	if ((ret = __bam_get_root(dbc, start_pgno, slevel, flags, &stack)) != 0)
 			*exactp = 0;
 
 			if (LF_ISSET(SR_EXACT)) {
-				ret = DB_NOTFOUND;
+				ret = DBC_ERR(dbc, DB_NOTFOUND);
 				goto err;
 			}
 
@@ -464,13 +464,13 @@ get_next:			/*
 				 * at the root if the tree recently collapsed.
 				 */
 				if (PGNO(h) == root_pgno) {
-					ret = DB_NOTFOUND;
+					ret = DBC_ERR(dbc, DB_NOTFOUND);
 					goto err;
 				}
 
 				indx = cp->sp->indx + 1;
 				if (indx == NUM_ENT(cp->sp->page)) {
-					ret = DB_NOTFOUND;
+					ret = DBC_ERR(dbc, DB_NOTFOUND);
 					cp->csp++;
 					goto err;
 				}
@@ -883,7 +883,7 @@ found:	*exactp = 1;
 		 * DB_NOTFOUND.
 		 */
 		if (B_DISSET(GET_BKEYDATA(dbp, h, indx + deloffset)->type)) {
-			ret = DB_NOTFOUND;
+			ret = DBC_ERR(dbc, DB_NOTFOUND);
 			goto err;
 		}
 

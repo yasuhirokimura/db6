@@ -7,8 +7,10 @@ backup
 
 	Do all the of the following tests with and without 
 	the -c (checkpoint) option; and with and without the
-	transactional bulk loading optimization.  Make sure
-	that -c and -d (data_dir) are not allowed together. 
+	transactional bulk loading optimization; and with
+	and without BLOB. Make sure that -c and -d (data_dir)
+	are not allowed together; and backing up with BLOB
+	but without -log_blob is not allowed.
 
 	(1) Test that plain and simple hotbackup works. 
 	(2) Test with -data_dir (-d). 
@@ -37,15 +39,17 @@ bigfile002
 
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 bigfile003
-	1. Create a blob database.
-	2. Create an empty blob.
-	3. Append 5 GB data into the blob by database stream.
+	1. Create two databases.  One will hold a very large (5 GB)
+	blob and the other a relatively small one (5 MB) to test some 
+	functionality that is punishingly slow on the 5 GB blob.
+	2. Add empty blobs.
+	3. Append data into the blobs by database stream.
 	4. Verify the blob size and data. For txn env, verify it with
 	txn commit/abort.
 	5. Verify getting the blob by database/cursor get method returns
 	the error DB_BUFFER_SMALL.
-	6. Run verify_dir.
-	7. Run salvage_dir.
+	6. Run verify_dir and a regular db_dump on both databases.
+	7. Run db_dump -r and -R on the small blob only.
 
 	This test requires a platform that supports 5 GB files and
 	64-bit integers.
@@ -248,6 +252,9 @@ env014
 	Make sure that the attempt to change subsystems when
 	joining an env fails with the appropriate messages.
 
+	Make sure that full blob logging is enabled when replication
+	is enabled, and that it cannot be disabled.
+
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 env015
 	Rename the underlying directory of an env, make sure everything
@@ -329,6 +336,34 @@ env021
 	In these operations, we only support the following:
 	$txn id
 	$txn commit
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+env022
+	Test db_archive and db_checkpoint with all allowed options.
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+env023
+	Test db_deadlock options. For each option, generate a deadlock
+	then call db_deadlock.
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+env024
+	Test db_hotbackup with all allowed option combinations.
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+env025
+	Test db_recover with all allowed option combinations.
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+env026
+	Test reopening an environment after a panic.
+
+	Repeatedly panic the environment, close & reopen it in order to
+	verify that a process is able to reopen the env and there are no
+	major shmem/mmap "leaks"; malloc leaks will occur, and that's ok.
+
+	Since this test leaks memory, it is meant to be run standalone
+	and should not be added to the automated Tcl test suite.
 
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 fail001
@@ -551,6 +586,13 @@ memp007
 	Tests the mpool methods in the mpool file handle.
 	(1) -clear_len, -lsn_offset and -pgcookie.
 	(2) set_maxsize, get_maxsize and get_last_pgno.
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+memp008
+	Test for MPOOL multi-process operation.
+
+	This test stress tests MPOOL by creating frozen buckets and 
+	then resizing.
 
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 mut001
@@ -1836,6 +1878,21 @@ rep115
 
 
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+rep116
+	Test of instant internal initialization, where internal init is started
+	instantly if a file delete is found while walking back through the
+	logs during the verify step.
+
+	One master, one client.
+	Generate several log files.
+	Remove old master and client log files.
+	Create a network partition between the master and client,
+	and restart the client as a master.
+	Delete a database or blob file on the client, then close the client and
+	have it rejoin the master.  Assert that the deleted file is present on
+	the client.
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 repmgr001
 	Basic repmgr test.
 
@@ -1858,12 +1915,15 @@ repmgr003
 
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 repmgr004
-	Test undocumented incoming queue maximum number of messages.
+	Test the repmgr incoming queue limit.
 
-	Test that limiting the number of messages that the repmgr incoming
-	queue can hold has the expected side-effect of causing rerequests.
-	Also test the interface defaults and the associated undocumented
-	stat.
+	Test that setting the repmgr incoming queue limit works.
+	We create a master and a client, and set a small client
+	incoming queue limit.  We verify this limit works on the
+	client side for full and abbreviated internal init and 
+	for regular processing.  In addition to the default case, 
+	we will also test cases using bulk transfer and blob
+	databases.
 
 	Run for btree only because access method shouldn't matter.
 
@@ -1898,6 +1958,9 @@ repmgr010
 	nsites running. Verify that "all" acknowledgement policy results in 
 	ack failures with fewer than nsites running.  Make sure the presence
 	of more views than participants doesn't cause incorrect ack behavior.
+	Make sure unelectable master requires more acks for "quorum" policy.
+	Test that an unelectable client joining the group doesn't cause
+	PERM_FAILs.
 
 	Run for btree only because access method shouldn't matter.
 
@@ -2105,6 +2168,84 @@ repmgr038
 	Create a replication group of a master and two clients.  Demote
 	the second client to a view, then check site statistics, transaction
 	apply and election behavior for demoted view.
+
+	Run for btree only because access method shouldn't matter.
+
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+repmgr039
+	repmgr duplicate master test.
+
+	This test verifies repmgr's automatic dupmaster resolution.  It
+	uses the repmgr test hook to prevent sending heartbeats and
+	2SITE_STRICT=off to enable the client to become a master in
+	parallel with the already-established master.  After rescinding
+	the test hook, it makes sure repmgr performs its dupmaster resolution
+	process resulting in the expected winner.
+
+	This test runs in the following configurations:
+	Default elections where master generation helps determine winner
+	The undocumented DB_REP_CONF_ELECT_LOGLENGTH election option
+	A Preferred Master replication group
+
+	Run for btree only because access method shouldn't matter.
+
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+repmgr040
+	repmgr preferred master basic configuration test.
+
+	This test verifies repmgr's preferred master mode, including
+	basic operation and configuration errors.
+
+	Run for btree only because access method shouldn't matter.
+
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+repmgr041
+	repmgr preferred master basic resync and take over test.
+
+	Creates a preferred master replication group and shuts down the master
+	site so that the client site takes over as temporary master.  Then
+	it restarts the preferred master site, which synchronizes with the
+	temporary master and takes over as preferred master again.  Verifies
+	that temporary master transactions are retained.
+
+	Run for btree only because access method shouldn't matter.
+
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+repmgr042
+	repmgr preferred master client startup test.
+
+	Test various preferred master client start up and shut down cases.
+	Verify replication group continued operation without a client.
+	Verify client site's startup as the temporary master and the
+	ability of the preferred master site to resync and take over
+	afterwards.
+
+	Run for btree only because access method shouldn't matter.
+
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+repmgr043
+	repmgr preferred master transaction retention test.
+
+	Test various cases that create continuous or conflicting sets of
+	transactions across the two sites.  Verify that unique preferred
+	master transactions are never rolled back and that unique temporary
+	master transactions are kept when possible.
+
+	Run for btree only because access method shouldn't matter.
+
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+repmgr044
+	repmgr preferred master replication group size test.
+
+	Test preferred master behavior when sites are removed from or added
+	to the replication group.  Also test permanent transfer of preferred
+	mastership to the client site.
 
 	Run for btree only because access method shouldn't matter.
 
@@ -3820,6 +3961,14 @@ test149
 
 	In each test case, verify database stream read/size/write/close
 	operations work as expected with transaction commit/abort.
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+test150
+	Test db_verify and db_log_verify with all allowed options.
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+test151
+	Test db_dump and db_load with all allowed options.
 
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 txn001

@@ -475,7 +475,7 @@ db_stat_usage()
 	    "-d file [-fN] [-h home] [-P password] [-s database]");
 	fprintf(stderr, "usage: %s %s\n\t%s\n", progname,
 	    "[-cEelmrtVx] [-C Aclop]",
-	    "[-h home] [-L A] [-M A] [-P password] [-R A] [-X A] [-aNZ]");
+	    "[-h home] [-L A] [-M Ah] [-P password] [-R A] [-X A] [-aNZ]");
 	return (EXIT_FAILURE);
 }
 

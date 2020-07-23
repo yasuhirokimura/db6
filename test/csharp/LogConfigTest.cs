@@ -61,6 +61,7 @@ namespace CsharpAPITest
 			cfg.LogSystemCfg.BufferSize = 409600;
 			cfg.LogSystemCfg.MaxFileSize = 10480;
 			cfg.LogSystemCfg.NoBuffer = false;
+			cfg.LogSystemCfg.NoSync = true;
 			cfg.LogSystemCfg.ZeroOnCreate = true;
 			cfg.LogSystemCfg.InMemory = true;
 			cfg.LogSystemCfg.LogBlobContent = true;
@@ -150,12 +151,14 @@ namespace CsharpAPITest
 			cfg.LogSystemCfg.LogBlobContent = false;
 			cfg.LogSystemCfg.MaxFileSize = 1048576;
 			cfg.LogSystemCfg.NoBuffer = false;
+			cfg.LogSystemCfg.NoSync = true;
 			cfg.LogSystemCfg.RegionSize = 204800;
 			cfg.LogSystemCfg.ZeroOnCreate = true;
 
 			DatabaseEnvironment env = DatabaseEnvironment.Open(testHome, cfg);
 
 			LogStats stats = env.LoggingSystemStats();
+			env.Msgfile = testHome + "/" + testName+ ".log";
 			env.PrintLoggingSystemStats();
 			Assert.AreEqual(10240, stats.BufferSize);
 			Assert.AreEqual(1, stats.CurrentFile);
@@ -218,6 +221,98 @@ namespace CsharpAPITest
 			db.Close();
 			env.Close();
 		}
+	
+		[Test]
+		public void TestLogStatPrint()
+		{
+			testName = "TestLogStatPrint";
+			SetUpTest(true);
+
+			string[] messageInfo = new string[]
+			{
+			  "Log magic number",
+			  "Log version number",
+			  "Log record cache size",
+			  "Log file mode",
+			  "Current log file size",
+			  "Initial fileid allocation",
+			  "Current fileids in use",
+			  "Maximum fileids used",
+			  "Records entered into the log",
+			  "Log bytes written",
+			  "Log bytes written since last checkpoint",
+			  "Total log file I/O writes",
+			  "Total log file I/O writes due to overflow",
+			  "Total log file flushes",
+			  "Total log file I/O reads",
+			  "Current log file number",
+			  "Current log file offset",
+			  "On-disk log file number",
+			  "On-disk log file offset",
+			  "Maximum commits in a log flush",
+			  "Minimum commits in a log flush",
+			  "Region size",
+			  "The number of region locks that required waiting (0%)"
+			};
+
+			string logDir = "./";
+			Directory.CreateDirectory(testHome + "/" + logDir);
+
+			// Configure and open an environment.
+			DatabaseEnvironmentConfig envConfig =
+			    new DatabaseEnvironmentConfig();
+			envConfig.Create = true;
+			envConfig.UseTxns = true;
+
+			envConfig.LogSystemCfg = new LogConfig();
+			envConfig.LogSystemCfg.AutoRemove = false;
+			envConfig.LogSystemCfg.BufferSize = 10240;
+			envConfig.LogSystemCfg.Dir = logDir;
+			envConfig.LogSystemCfg.FileMode = 755;
+			envConfig.LogSystemCfg.ForceSync = true;
+			envConfig.LogSystemCfg.InMemory = false;
+			envConfig.LogSystemCfg.LogBlobContent = false;
+			envConfig.LogSystemCfg.MaxFileSize = 1048576;
+			envConfig.LogSystemCfg.NoBuffer = false;
+			envConfig.LogSystemCfg.NoSync = true;
+			envConfig.LogSystemCfg.RegionSize = 204800;
+			envConfig.LogSystemCfg.ZeroOnCreate = true;
+
+			DatabaseEnvironment env =
+			    DatabaseEnvironment.Open(testHome, envConfig);
+
+			// Confirm message file does not exist.
+			string messageFile = testHome + "/" + "msgfile";
+			Assert.AreEqual(false, File.Exists(messageFile));
+
+			// Call set_msgfile() of env.
+			env.Msgfile = messageFile;
+
+			// Print env statistic to message file.
+			env.PrintLoggingSystemStats();
+
+			// Confirm message file exists now.
+			Assert.AreEqual(true, File.Exists(messageFile));
+
+			env.Msgfile = "";
+			int counter = 0;
+			string line;
+			line = null;
+
+			// Read the message file line by line.
+			System.IO.StreamReader file = new System.IO.StreamReader(@"" + messageFile);
+			while ((line = file.ReadLine()) != null)
+			{
+				string[] tempStr = line.Split('\t');
+				// Confirm the content of the message file.
+				Assert.AreEqual(tempStr[1], messageInfo[counter]);
+				counter++;
+			}
+			Assert.AreNotEqual(counter, 0);
+
+			file.Close();
+			env.Close();
+		}
 
 		[Test]
 		public void TestLsn()
@@ -255,6 +350,8 @@ namespace CsharpAPITest
 			    logConfig.MaxFileSize, compulsory);
 			Configuration.ConfirmBool(xmlElement, "NoBuffer",
 			    logConfig.NoBuffer, compulsory);
+			Configuration.ConfirmBool(xmlElement, "NoSync",
+			    logConfig.NoSync, compulsory);
 			Configuration.ConfirmUint(xmlElement, "RegionSize",
 			    logConfig.RegionSize, compulsory);
 			Configuration.ConfirmBool(xmlElement, "ZeroOnCreate",
@@ -288,6 +385,8 @@ namespace CsharpAPITest
 				logConfig.MaxFileSize = uintValue;
 			Configuration.ConfigBool(xmlElement, "NoBuffer",
 			    ref logConfig.NoBuffer, compulsory);
+			Configuration.ConfigBool(xmlElement, "NoSync",
+			    ref logConfig.NoSync, compulsory);
 			if (Configuration.ConfigUint(xmlElement, "RegionSize",
 			    ref uintValue, compulsory))
 				logConfig.RegionSize = uintValue;

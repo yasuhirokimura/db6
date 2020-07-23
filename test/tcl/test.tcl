@@ -261,6 +261,7 @@ proc run_std { { testname ALL } args } {
 	{"locking"		"lock"}
 	{"logging"		"log"}
 	{"memory pool"		"memp"}
+	{"multiversion"		"multiversion"}
 	{"mutex"		"mutex"}
 	{"transaction"		"txn"}
 	{"deadlock detection"	"dead"}
@@ -273,9 +274,9 @@ proc run_std { { testname ALL } args } {
 	{"secondary index"	"sindex"}
 	{"partition"		"partition"}
 	{"compression"		"compressed"}
-	{"automated repmgr tests" 	"auto_repmgr"}
-	{"other repmgr tests" 	"other_repmgr"}
-	{"repmgr multi-process"	"multi_repmgr"}
+	{"automated repmgr tests" 	"repmgr_auto"}
+	{"repmgr multi-process"	"repmgr_multiproc"}
+	{"other repmgr tests" 	"repmgr_other"}
 	{"expected failures"	"fail"}
 	}
 
@@ -586,7 +587,6 @@ proc r { args } {
 		set sub [ lindex $args 0 ]
 		set starttest [lindex $args 1]
 		switch $sub {
-			auto_repmgr -
 			bigfile -
 			dead -
 			env -
@@ -594,9 +594,10 @@ proc r { args } {
 			lock -
 			log -
 			memp -
-			multi_repmgr -
 			mutex -
-			other_repmgr -
+			repmgr_auto -
+			repmgr_multiproc -
+			repmgr_other -
 			rsrc -
 			sdbtest -
 			txn {
@@ -631,10 +632,10 @@ proc r { args } {
 				}
 			}
 			compact -
-			elect -
+			fop -
 			inmemdb -
-			init -
-			fop {
+			rep_elect -
+			rep_init {
 				set tindx [lsearch $test_names($sub) $starttest]
 				if { $tindx == -1 } {
 					set tindx 0
@@ -724,6 +725,18 @@ proc r { args } {
 					eval jointest 512 3
 				}
 			}
+			multiversion {
+				if { $one_test == "ALL" } {
+					if { $display } { 
+						puts "eval rep065 -btree"
+						puts "eval repmgr035"
+					}
+					if { $run } {
+						eval rep065 -btree
+						eval repmgr035
+					}
+				}
+			}
 			partition {
 				foreach method { btree hash } {
 					foreach test "$test_names(recd)\
@@ -744,8 +757,8 @@ proc r { args } {
 				    $display $run $args
 			}
 			repmgr {
-				r other_repmgr
-				foreach test $test_names(basic_repmgr) {
+				r repmgr_other
+				foreach test $test_names(repmgr_basic) {
 					$test 100 1 1 1 1 1 
 					$test 100 1 0 0 0 0 
 					$test 100 0 1 0 0 0
