@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -13,11 +13,12 @@ import com.sleepycat.thrift.THashStat;
 /**
  * The SHashStats object is used to return Hash database statistics.
  */
-public class SHashStats extends ThriftWrapper<THashStat, THashStat._Fields>
-        implements SDatabaseStats {
+public class SHashStats implements SDatabaseStats {
+    /** The Thrift object. */
+    private final THashStat stat;
 
     SHashStats(THashStat stat) {
-        super(stat);
+        this.stat = stat;
     }
 
     /**
@@ -25,9 +26,11 @@ public class SHashStats extends ThriftWrapper<THashStat, THashStat._Fields>
      * <p>
      * The information is only included if the {@link SDatabase#getStats} call
      * was not configured by the {@link SStatsConfig#setFast} method.
+     *
+     * @return the number of bytes free on bucket pages
      */
     public long getBFree() {
-        return (long) getField(THashStat._Fields.BFREE);
+        return this.stat.BFree;
     }
 
     /**
@@ -35,9 +38,11 @@ public class SHashStats extends ThriftWrapper<THashStat, THashStat._Fields>
      * <p>
      * The information is only included if the {@link SDatabase#getStats} call
      * was not configured by the {@link SStatsConfig#setFast} method.
+     *
+     * @return the number of bytes free on hash overflow pages
      */
     public long getBigBFree() {
-        return (long) getField(THashStat._Fields.BIG_BFREE);
+        return this.stat.bigBFree;
     }
 
     /**
@@ -46,16 +51,20 @@ public class SHashStats extends ThriftWrapper<THashStat, THashStat._Fields>
      * <p>
      * The information is only included if the {@link SDatabase#getStats} call
      * was not configured by the {@link SStatsConfig#setFast} method.
+     *
+     * @return the number of hash overflow pages
      */
     public int getBigPages() {
-        return (int) getField(THashStat._Fields.BIG_PAGES);
+        return this.stat.bigPages;
     }
 
     /**
      * The number of hash buckets.
+     *
+     * @return the number of hash bucketes
      */
     public int getBuckets() {
-        return (int) getField(THashStat._Fields.BUCKETS);
+        return this.stat.buckets;
     }
 
     /**
@@ -63,9 +72,11 @@ public class SHashStats extends ThriftWrapper<THashStat, THashStat._Fields>
      * <p>
      * The information is only included if the {@link SDatabase#getStats} call
      * was not configured by the {@link SStatsConfig#setFast} method.
+     *
+     * @return the number of duplicate pages
      */
     public int getDup() {
-        return (int) getField(THashStat._Fields.DUP);
+        return this.stat.dup;
     }
 
     /**
@@ -73,16 +84,20 @@ public class SHashStats extends ThriftWrapper<THashStat, THashStat._Fields>
      * <p>
      * The information is only included if the {@link SDatabase#getStats} call
      * was not configured by the {@link SStatsConfig#setFast} method.
+     *
+     * @return the number of bytes free on duplicate pages
      */
     public long getDupFree() {
-        return (long) getField(THashStat._Fields.DUP_FREE);
+        return this.stat.dupFree;
     }
 
     /**
      * The desired fill factor specified at database-creation time.
+     *
+     * @return the desired fill factor specified at database-creation time
      */
     public int getFfactor() {
-        return (int) getField(THashStat._Fields.FFACTOR);
+        return this.stat.ffactor;
     }
 
     /**
@@ -90,23 +105,29 @@ public class SHashStats extends ThriftWrapper<THashStat, THashStat._Fields>
      * <p>
      * The information is only included if the {@link SDatabase#getStats} call
      * was not configured by the {@link SStatsConfig#setFast} method.
+     *
+     * @return the number of pages on the free list
      */
     public int getFree() {
-        return (int) getField(THashStat._Fields.FREE);
+        return this.stat.free;
     }
 
     /**
      * The magic number that identifies the file as a Hash file.
+     *
+     * @return the magic number that identifies the file as a Hash file
      */
     public int getMagic() {
-        return (int) getField(THashStat._Fields.MAGIC);
+        return this.stat.magic;
     }
 
     /**
-     * The number of blob records.
+     * The number of external files.
+     *
+     * @return the number of external files
      */
-    public int getNumBlobs() {
-        return (int) getField(THashStat._Fields.NUM_BLOBS);
+    public int getExtFiles() {
+        return this.stat.numBlobs;
     }
 
     /**
@@ -115,9 +136,11 @@ public class SHashStats extends ThriftWrapper<THashStat, THashStat._Fields>
      * If the {@link SDatabase#getStats} call was configured by the {@link
      * SStatsConfig#setFast} method, the count will be the last saved value
      * unless it has never been calculated, in which case it will be 0.
+     *
+     * @return the number of key/data pairs in the database
      */
     public int getNumData() {
-        return (int) getField(THashStat._Fields.NUM_DATA);
+        return this.stat.numData;
     }
 
     /**
@@ -126,9 +149,11 @@ public class SHashStats extends ThriftWrapper<THashStat, THashStat._Fields>
      * If the {@link SDatabase#getStats} call was configured by the {@link
      * SStatsConfig#setFast} method, the count will be the last saved value
      * unless it has never been calculated, in which case it will be 0.
+     *
+     * @return the number of unique keys in the database
      */
     public int getNumKeys() {
-        return (int) getField(THashStat._Fields.NUM_KEYS);
+        return this.stat.numKeys;
     }
 
     /**
@@ -137,9 +162,11 @@ public class SHashStats extends ThriftWrapper<THashStat, THashStat._Fields>
      * <p>
      * The information is only included if the {@link SDatabase#getStats} call
      * was not configured by the {@link SStatsConfig#setFast} method.
+     *
+     * @return the number of bucket overflow pages
      */
     public int getOverflows() {
-        return (int) getField(THashStat._Fields.OVERFLOWS);
+        return this.stat.overflows;
     }
 
     /**
@@ -147,35 +174,45 @@ public class SHashStats extends ThriftWrapper<THashStat, THashStat._Fields>
      * <p>
      * The information is only included if the {@link SDatabase#getStats} call
      * was not configured by the {@link SStatsConfig#setFast} method.
+     *
+     * @return the number of bytes free on bucket overflow pages
      */
     public long getOvflFree() {
-        return (long) getField(THashStat._Fields.OVFL_FREE);
+        return this.stat.ovflFree;
     }
 
     /**
      * The number of pages in the database.
+     *
+     * @return the number of pages in the database
      */
     public int getPageCount() {
-        return (int) getField(THashStat._Fields.PAGE_COUNT);
+        return this.stat.pageCount;
     }
 
     /**
      * The underlying Hash database page (and bucket) size, in bytes.
+     *
+     * @return the underlying Hash database page size, in bytes
      */
     public int getPageSize() {
-        return (int) getField(THashStat._Fields.PAGE_SIZE);
+        return this.stat.pageSize;
     }
 
     /**
      * The version of the Hash database.
+     *
+     * @return the version of the Hash database
      */
     public int getVersion() {
-        return (int) getField(THashStat._Fields.VERSION);
+        return this.stat.version;
     }
 
     /**
      * For convenience, the SHashStats class has a toString method
      * that lists all the data fields.
+     *
+     * @return a String that lists all fields
      */
     public String toString() {
         return "HashStats:"
@@ -183,7 +220,7 @@ public class SHashStats extends ThriftWrapper<THashStat, THashStat._Fields>
                 + "\n  version=" + getVersion()
                 + "\n  nkeys=" + getNumKeys()
                 + "\n  ndata=" + getNumData()
-                + "\n  nblobs=" + getNumBlobs()
+                + "\n  ext_files=" + getExtFiles()
                 + "\n  pagecnt=" + getPageCount()
                 + "\n  pagesize=" + getPageSize()
                 + "\n  ffactor=" + getFfactor()

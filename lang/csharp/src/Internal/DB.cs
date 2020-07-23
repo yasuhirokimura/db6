@@ -180,6 +180,13 @@ internal class DB : global::System.IDisposable {
     }
   }
 
+  internal int convert(string file, int lorder) {
+		int ret;
+		ret = libdb_csharpPINVOKE.DB_convert(swigCPtr, file, lorder);
+		DatabaseException.ThrowException(ret);
+		return ret;
+}
+
   private DBC cursor(DB_TXN txn, uint flags, ref int err) {
     global::System.IntPtr cPtr = libdb_csharpPINVOKE.DB_cursor(swigCPtr, DB_TXN.getCPtr(txn), flags, ref err);
     DBC ret = (cPtr == global::System.IntPtr.Zero) ? null : new DBC(cPtr, false);

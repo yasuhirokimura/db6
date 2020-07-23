@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -150,6 +150,33 @@ public class SEnvironmentConfig
     }
 
     /**
+     * Always return true. For compatibility with DPL APIs.
+     *
+     * @return always true
+     */
+    public boolean getInitializeCache() {
+        return true;
+    }
+
+    /**
+     * Always return true. For compatibility with DPL APIs.
+     *
+     * @return always true
+     */
+    public boolean getInitializeLocking() {
+        return true;
+    }
+
+    /**
+     * Always return false. For compatibility with DPL APIs.
+     *
+     * @return always false
+     */
+    public boolean getInitializeCDB() {
+        return false;
+    }
+
+    /**
      * Return the policy used by the deadlock detector.
      *
      * @return the deadlock detector policy
@@ -169,6 +196,7 @@ public class SEnvironmentConfig
      * If joining an existing environment, this attribute is ignored.
      *
      * @param lockDetectMode the lock request to be rejected
+     * @return this
      */
     public SEnvironmentConfig setLockDetectMode(
             final SLockDetectMode lockDetectMode) {
@@ -236,10 +264,20 @@ public class SEnvironmentConfig
      *
      * @param runRecovery if true, configure to run normal recovery on this
      * environment before opening it for normal use.
+     * @return this
      */
     public SEnvironmentConfig setRunRecovery(final boolean runRecovery) {
         getThriftObj().setRunRecovery(runRecovery);
         return this;
+    }
+
+    /**
+     * Always return true. For compatibility with DPL APIs.
+     *
+     * @return always true
+     */
+    public boolean getTransactional() {
+        return true;
     }
 
     /**
@@ -309,8 +347,7 @@ public class SEnvironmentConfig
      * synchronously flush the log on transaction commit.
      */
     public boolean getTxnNoSync() {
-        return TDurabilityPolicy.NO_SYNC.equals(getField(
-                TEnvironmentConfig._Fields.DURABILITY));
+        return isDurabilityPolicyEqual(TDurabilityPolicy.NO_SYNC);
 
     }
 
@@ -349,8 +386,7 @@ public class SEnvironmentConfig
      * synchronously flush, the log on transaction commit.
      */
     public boolean getTxnWriteNoSync() {
-        return TDurabilityPolicy.WRITE_NO_SYNC.equals(getField(
-                TEnvironmentConfig._Fields.DURABILITY));
+        return isDurabilityPolicyEqual(TDurabilityPolicy.WRITE_NO_SYNC);
     }
 
     /**
@@ -380,7 +416,8 @@ public class SEnvironmentConfig
     }
 
     private boolean isDurabilityPolicyEqual(TDurabilityPolicy policy) {
-        return policy.equals(getField(TEnvironmentConfig._Fields.DURABILITY));
+        return getThriftObj().isSetDurability() &&
+                policy.equals(getField(TEnvironmentConfig._Fields.DURABILITY));
     }
 
     private void setDurabilityPolicy(TDurabilityPolicy policy, boolean set) {

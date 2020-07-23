@@ -87,11 +87,11 @@ return
    :)
   (
     let $node1 := local:getCopyNodes1($root/Configurations/Configuration[1])
-    let $node2 := local:getCopyNodes2($root/Configurations/Configuration[1])
+    let $node2 := local:getCopyNodes2($root/Configurations/Configuration[2])
     let $node3 := local:getCopyNodes3($root/Configurations/Configuration[1])
-    let $node4 := local:getCopyNodes4($root/Configurations/Configuration[1])
+    let $node4 := local:getCopyNodes4($root/Configurations/Configuration[2])
     let $node5 := local:getCopyNodes5($root/Configurations/Configuration[1])
-    let $node6 := local:getCopyNodes6($root/Configurations/Configuration[1])
+    let $node6 := local:getCopyNodes6($root/Configurations/Configuration[2])
     for $node in ($node1, $node2, $node3, $node4, $node5, $node6)
       return insert node $node as last into $root/Configurations
   )

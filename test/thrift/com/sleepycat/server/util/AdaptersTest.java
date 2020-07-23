@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -154,11 +154,11 @@ public class AdaptersTest {
 
     @Test
     public void testToThriftTypeTDbt() throws Exception {
-        Adapters.toThriftType(new DatabaseEntry(new byte[5]), false);
+        Adapters.toThriftType(new DatabaseEntry(new byte[5]));
         DatabaseEntry entry = new DatabaseEntry(new byte[5]);
         entry.setOffset(2);
         entry.setSize(3);
-        Adapters.toThriftType(entry, false);
+        Adapters.toThriftType(entry);
     }
 
     @Test

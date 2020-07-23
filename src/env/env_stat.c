@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -378,6 +378,7 @@ __env_print_env_all(env, flags)
 	static const FN env_fn[] = {
 		{ ENV_CDB,			"ENV_CDB" },
 		{ ENV_DBLOCAL,			"ENV_DBLOCAL" },
+		{ ENV_LITTLEENDIAN,		"ENV_LITTLEENDIAN" },
 		{ ENV_LOCKDOWN,			"ENV_LOCKDOWN" },
 		{ ENV_NO_OUTPUT_SET,		"ENV_NO_OUTPUT_SET" },
 		{ ENV_OPEN_CALLED,		"ENV_OPEN_CALLED" },
@@ -485,8 +486,6 @@ __env_print_env_all(env, flags)
 		__db_dlbytes(env,
 		    "Size", (u_long)0, (u_long)0, (u_long)rp->size);
 	}
-	__db_prflags(env,
-	    NULL, renv->init_flags, ofn, NULL, "\tInitialization flags");
 	STAT_ULONG("Region slots", renv->region_cnt);
 	__db_prflags(env,
 	    NULL, renv->flags, regenvfn, NULL, "\tReplication flags");
@@ -573,10 +572,11 @@ __env_print_thread(env)
 		SH_TAILQ_FOREACH(ip, &htab[i], dbth_links, __db_thread_info) {
 			if (ip->dbth_state == THREAD_SLOT_NOT_IN_USE)
 				continue;
-			__db_msg(env, "\tprocess/thread %s: %s",
+			__db_msg(env, "\tprocess/thread %s: %s %u mutexes",
 			    dbenv->thread_id_string(
 			    dbenv, ip->dbth_pid, ip->dbth_tid, buf),
-			    __env_thread_state_print(ip->dbth_state));
+			    __env_thread_state_print(ip->dbth_state),
+			    ip->mtx_ctr);
 			if (timespecisset(&ip->dbth_failtime))
 				__db_msg(env, "Crashed at %s",
 				    __db_ctimespec(&ip->dbth_failtime,

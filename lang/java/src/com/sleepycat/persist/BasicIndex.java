@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 
@@ -135,12 +135,14 @@ abstract class BasicIndex<K, E> implements EntityIndex<K, E> {
     public boolean delete(Transaction txn, K key)
         throws DatabaseException {
 
+
         DatabaseEntry keyEntry = new DatabaseEntry();
         keyBinding.objectToEntry(key, keyEntry);
 
         OperationStatus status = db.delete(txn, keyEntry);
         return (status == OperationStatus.SUCCESS);
     }
+
 
     public EntityCursor<K> keys()
         throws DatabaseException {
@@ -244,4 +246,5 @@ abstract class BasicIndex<K, E> implements EntityIndex<K, E> {
     }
 
     abstract boolean isUpdateAllowed();
+
 }

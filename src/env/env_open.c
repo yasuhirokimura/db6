@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -844,6 +844,7 @@ __env_refresh(dbenv, orig_flags, rep_check)
 
 	env = dbenv->env;
 	ret = 0;
+	ip = NULL;
 
 	/*
 	 * Release resources allocated by DB_ENV->open, and return it to the
@@ -977,6 +978,7 @@ __env_refresh(dbenv, orig_flags, rep_check)
 	if (env->thr_hashtab != NULL &&
 	    (t_ret = __env_set_state(env, &ip, THREAD_OUT)) != 0 && ret == 0)
 		ret = t_ret;
+        DB_ASSERT(env, (ip == NULL || ip->mtx_ctr == 0));
 
 	/*
 	 * We are about to detach from the mutex region.  This is the last

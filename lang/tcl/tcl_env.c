@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1999, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1999, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -2775,6 +2775,11 @@ tcl_EnvTest(interp, objc, objv, dbenv)
 		"repmgr_perm",
 		"subdb_lock",
 		"repmgr_heartbeat",
+		"no_mutex",
+		"latch",
+		"exc_latch",
+		"exc_mutex",
+		"failchk",
 		NULL
 	};
 	enum envtestat {
@@ -2792,7 +2797,12 @@ tcl_EnvTest(interp, objc, objv, dbenv)
 		ENVTEST_POSTSYNC,
 		ENVTEST_REPMGR_PERM,
 		ENVTEST_SUBDB_LOCKS,
-		ENVTEST_REPMGR_HEARTBEAT
+		ENVTEST_REPMGR_HEARTBEAT,
+		ENVTEST_NO_MUTEX,
+		ENVTEST_LATCH,
+		ENVTEST_EXC_LATCH,
+		ENVTEST_EXC_MUTEX,
+		ENVTEST_FAILCHK
 	};
 	static const char *envtestforce[] = {
 		"noarchive_timeout",
@@ -2914,6 +2924,26 @@ tcl_EnvTest(interp, objc, objv, dbenv)
 	case ENVTEST_REPMGR_HEARTBEAT:
 		DB_ASSERT(env, loc == &env->test_abort);
 		testval = DB_TEST_REPMGR_HEARTBEAT;
+		break;
+	case ENVTEST_NO_MUTEX:
+		DB_ASSERT(env, loc == &env->test_abort);
+		testval = DB_TEST_NO_MUTEX;
+		break;
+	case ENVTEST_LATCH:
+		DB_ASSERT(env, loc == &env->test_abort);
+		testval = DB_TEST_LATCH;
+		break;
+	case ENVTEST_EXC_LATCH:
+		DB_ASSERT(env, loc == &env->test_abort);
+		testval = DB_TEST_EXC_LATCH;
+		break;
+	case ENVTEST_EXC_MUTEX:
+		DB_ASSERT(env, loc == &env->test_abort);
+		testval = DB_TEST_EXC_MUTEX;
+		break;
+	case ENVTEST_FAILCHK:
+		DB_ASSERT(env, loc == &env->test_abort);
+		testval = DB_TEST_FAILCHK;
 		break;
 	default:
 		Tcl_SetResult(interp, "Illegal test location", TCL_STATIC);

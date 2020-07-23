@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -43,7 +43,8 @@ __db_upgrade_pp(dbp, fname, flags)
 
 #ifdef HAVE_SLICES
 	if (ret == 0)
-		ret = __db_slice_upgrade(dbp, fname, flags);
+		ret = __db_slice_process(dbp, fname, flags,
+		    __db_upgrade_pp, "db_upgrade");
 #endif
 
 	ENV_LEAVE(env, ip);
@@ -122,8 +123,6 @@ static int (* const func_60_list[P_PAGETYPE_MAX])
 	NULL,			/* P_IHEAP */
 };
 
-static int __db_page_pass __P((DB *, char *, u_int32_t, int (* const [])
-	       (DB *, char *, u_int32_t, DB_FH *, PAGE *, int *), DB_FH *));
 static int __db_set_lastpgno __P((DB *, char *, DB_FH *));
 
 /*
@@ -195,8 +194,8 @@ __db_upgrade(dbp, fname, flags)
 			 */
 			memcpy(&dbp->pgsize, mbuf + 20, sizeof(u_int32_t));
 
-			if ((ret = __db_page_pass(
-			    dbp, real_name, flags, func_31_list, fhp)) != 0)
+			if ((ret = __db_page_pass(dbp, real_name, flags,
+			    func_31_list, fhp, DB_UPGRADE)) != 0)
 				goto err;
 			/* FALLTHROUGH */
 		case 8:
@@ -228,8 +227,8 @@ __db_upgrade(dbp, fname, flags)
 			}
 			memcpy(&dbp->pgsize,
 			    &meta->pagesize, sizeof(u_int32_t));
-			if ((ret = __db_page_pass(dbp,
-			    real_name, flags, func_60_list, fhp)) != 0)
+			if ((ret = __db_page_pass(dbp, real_name, flags,
+ 			    func_60_list, fhp, DB_UPGRADE)) != 0)
 				goto err;
 			/* FALLTHROUGH */
 		case 10:
@@ -284,8 +283,8 @@ __db_upgrade(dbp, fname, flags)
 			 */
 			memcpy(&dbp->pgsize, mbuf + 20, sizeof(u_int32_t));
 
-			if ((ret = __db_page_pass(
-			    dbp, real_name, flags, func_31_list, fhp)) != 0)
+			if ((ret = __db_page_pass(dbp, real_name, flags,
+			    func_31_list, fhp, DB_UPGRADE)) != 0)
 				goto err;
 			/* FALLTHROUGH */
 		case 7:
@@ -355,8 +354,8 @@ __db_upgrade(dbp, fname, flags)
 			fhp = dbp->mpf->fhp;
 
 			/* Do the actual conversion pass. */
-			if ((ret = __db_page_pass(
-			    dbp, real_name, flags, func_46_list, fhp)) != 0)
+			if ((ret = __db_page_pass(dbp, real_name, flags,
+			    func_46_list, fhp, DB_UPGRADE)) != 0)
 				goto err;
 
 			/* FALLTHROUGH */
@@ -384,8 +383,8 @@ __db_upgrade(dbp, fname, flags)
 				}
 				F_SET(dbp, DB_AM_ENCRYPT);
 			}
-			if ((ret = __db_page_pass(dbp,
-			    real_name, flags, func_60_list, fhp)) != 0)
+			if ((ret = __db_page_pass(dbp, real_name, flags,
+ 			    func_60_list, fhp, DB_UPGRADE)) != 0)
 				goto err;
 			/* FALLTHROUGH */
 		case 10:
@@ -424,8 +423,8 @@ __db_upgrade(dbp, fname, flags)
 				}
 				F_SET(dbp, DB_AM_ENCRYPT);
 			}
-			if ((ret = __db_page_pass(dbp,
-			    real_name, flags, func_60_list, fhp)) != 0)
+			if ((ret = __db_page_pass(dbp, real_name, flags,
+ 			    func_60_list, fhp, DB_UPGRADE)) != 0)
 				goto err;
 			/* FALLTHROUGH */
 		case 2:
@@ -509,17 +508,56 @@ err:	if (use_mp_open == 0 && fhp != NULL &&
 }
 
 /*
- * __db_page_pass --
- *	Walk the pages of the database, upgrading whatever needs it.
+ * __db_set_lastpgno --
+ *	Update the meta->last_pgno field.
+ *
+ * Code assumes that we do not have checksums/crypto on the page.
  */
 static int
-__db_page_pass(dbp, real_name, flags, fl, fhp)
+__db_set_lastpgno(dbp, real_name, fhp)
+	DB *dbp;
+	char *real_name;
+	DB_FH *fhp;
+{
+	DBMETA meta;
+	ENV *env;
+	int ret;
+	size_t n;
+
+	env = dbp->env;
+	if ((ret = __os_seek(env, fhp, 0, 0, 0)) != 0)
+		return (ret);
+	if ((ret = __os_read(env, fhp, &meta, sizeof(meta), &n)) != 0)
+		return (ret);
+	dbp->pgsize = meta.pagesize;
+	if ((ret = __db_lastpgno(dbp, real_name, fhp, &meta.last_pgno)) != 0)
+		return (ret);
+	if ((ret = __os_seek(env, fhp, 0, 0, 0)) != 0)
+		return (ret);
+	if ((ret = __os_write(env, fhp, &meta, sizeof(meta), &n)) != 0)
+		return (ret);
+
+	return (0);
+}
+#endif /* HAVE_UPGRADE_SUPPORT */
+
+/*
+ * __db_page_pass --
+ *	Walk the pages of the database, doing whatever needs it.
+ *
+ * PUBLIC: int __db_page_pass __P((DB *, char *, u_int32_t, int (* const [])
+ * PUBLIC:     (DB *, char *, u_int32_t, DB_FH *, PAGE *, int *), DB_FH *,
+ * PUBLIC:     int));
+ */
+int
+__db_page_pass(dbp, real_name, flags, fl, fhp, feedback_code)
 	DB *dbp;
 	char *real_name;
 	u_int32_t flags;
 	int (* const fl[P_PAGETYPE_MAX])
 	    __P((DB *, char *, u_int32_t, DB_FH *, PAGE *, int *));
 	DB_FH *fhp;
+	int feedback_code;
 {
 	ENV *env;
 	PAGE *page;
@@ -541,7 +579,7 @@ __db_page_pass(dbp, real_name, flags, fl, fhp)
 	for (i = 0; i < pgno_last; ++i) {
 		if (dbp->db_feedback != NULL)
 			dbp->db_feedback(
-			    dbp, DB_UPGRADE, (int)((i * 100)/pgno_last));
+			    dbp, feedback_code, (int)((i * 100)/pgno_last));
 		if ((ret = __os_seek(env, fhp, i, dbp->pgsize, 0)) != 0)
 			break;
 		if ((ret = __os_read(env, fhp, page, dbp->pgsize, &n)) != 0)
@@ -610,36 +648,3 @@ __db_lastpgno(dbp, real_name, fhp, pgno_lastp)
 	return (0);
 }
 
-/*
- * __db_set_lastpgno --
- *	Update the meta->last_pgno field.
- *
- * Code assumes that we do not have checksums/crypto on the page.
- */
-static int
-__db_set_lastpgno(dbp, real_name, fhp)
-	DB *dbp;
-	char *real_name;
-	DB_FH *fhp;
-{
-	DBMETA meta;
-	ENV *env;
-	int ret;
-	size_t n;
-
-	env = dbp->env;
-	if ((ret = __os_seek(env, fhp, 0, 0, 0)) != 0)
-		return (ret);
-	if ((ret = __os_read(env, fhp, &meta, sizeof(meta), &n)) != 0)
-		return (ret);
-	dbp->pgsize = meta.pagesize;
-	if ((ret = __db_lastpgno(dbp, real_name, fhp, &meta.last_pgno)) != 0)
-		return (ret);
-	if ((ret = __os_seek(env, fhp, 0, 0, 0)) != 0)
-		return (ret);
-	if ((ret = __os_write(env, fhp, &meta, sizeof(meta), &n)) != 0)
-		return (ret);
-
-	return (0);
-}
-#endif /* HAVE_UPGRADE_SUPPORT */

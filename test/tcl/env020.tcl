@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2011, 2016 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2011, 2017 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -869,7 +869,7 @@ proc env020_init { } {
 		"LOG FNAME list"
 		"Fid max"
 		"Log buffer size"
-		{btree\s*\d\s*\d*\s*\d\s*\d\s*\d\s*DBP}
+		{btree\s*\d\s*\d*\s*\d\s*\d*\s*\d\s*DBP}
 		{\(\d [0-9a-fA-F]* \d*\)}
 	}
 

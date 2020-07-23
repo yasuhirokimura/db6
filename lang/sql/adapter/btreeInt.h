@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2010, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2010, 2017 Oracle and/or its affiliates.  All rights reserved.
  */
 
 #include <errno.h>
@@ -241,6 +241,8 @@ int unsetRepVerboseFile(BtShared *pBt, DB_ENV *dbenv, char **msg);
 void *getThreadID(sqlite3 *db);
 /* Checks if the thread id item identifies the current thread. */
 int isCurrentThread(void *tid);
+void btreeHandleDbError(
+    const DB_ENV *dbenv, const char *errpfx, const char *msg);
 
 #define	CLEAR_PWD(pBt)	do {						\
 	memset((pBt)->encrypt_pwd, 0xff, (pBt)->encrypt_pwd_len);	\
@@ -343,6 +345,7 @@ struct BtShared {
 	int single_process; /* If non-zero, keep all environment on the heap. */
 	rep_site_type_t repRole; /* Whether this site is a master, client, unknown. */
 	u_int32_t permFailures; /* Number of perm failures. */
+	char *stat_filename; /* File to which statistics are printed. */
 };
 
 struct BtCursor {

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -31,8 +31,8 @@ public class STransactionTest extends ClientTestBase {
                 new SDatabaseConfig().setAllowCreate(true)
                         .setType(SDatabaseType.BTREE));
         txn = env.beginTransaction(null, null);
-        key = new SDatabaseEntry("key".getBytes());
-        db.put(txn, key, new SDatabaseEntry("data".getBytes()));
+        key = entry("key");
+        db.put(txn, key, entry("data"));
     }
 
     @Test

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -10,7 +10,7 @@ namespace java com.sleepycat.thrift
 
 
 /* Protocol version. */
-const string PROTOCOL_VERSION = "1.0.0";
+const string PROTOCOL_VERSION = "1.1.0";
 
 
 /***************************
@@ -25,8 +25,10 @@ struct TProtocolVersionTestResult {
     1: bool supported;
     // The server's protocol version.
     2: string serverProtocolVersion;
+    // The server's native byte order
+    3: bool serverBigEndian;
     // Error message, if the client protocol version is not supported.
-    3: optional string message;
+    4: optional string message;
 }
 
 enum TLockDetectMode {
@@ -80,7 +82,8 @@ enum TDatabaseType {
 
 enum TFKDeleteAction {
     ABORT = 1,
-    CASCADE = 2
+    CASCADE = 2,
+    NULLIFY = 3
 }
 
 /*
@@ -192,11 +195,10 @@ struct TSequenceConfig {
 
 struct TDbt {
     1: optional binary data;
-    2: optional i32 recordNumber;
-    3: optional i32 partialLength;
-    4: optional i32 partialOffset;
-    5: optional bool partial;
-    6: optional bool blob;
+    2: optional i32 partialLength;
+    3: optional i32 partialOffset;
+    4: optional bool partial;
+    5: optional bool blob;
 }
 
 /*
@@ -339,7 +341,7 @@ enum TDbPutConfig {
  */
 struct TPutResult {
     1: TOperationStatus status;
-    2: optional i32 newRecordNumber;
+    2: optional binary newRecordNumber;
 }
 
 /*

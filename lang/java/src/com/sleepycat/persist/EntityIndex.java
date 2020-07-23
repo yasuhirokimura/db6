@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 
@@ -15,11 +15,11 @@ import com.sleepycat.collections.StoredSortedMap;
 import com.sleepycat.db.CursorConfig;
 import com.sleepycat.db.Database;
 import com.sleepycat.db.DatabaseEntry;
-import com.sleepycat.db.DatabaseException; // for javadoc
+import com.sleepycat.db.DatabaseException;
 import com.sleepycat.db.Environment;
 import com.sleepycat.db.EnvironmentConfig;
 import com.sleepycat.db.LockMode;
-import com.sleepycat.db.SecondaryDatabase; // for javadoc
+import com.sleepycat.db.SecondaryDatabase;
 import com.sleepycat.db.Transaction;
 
 /**
@@ -666,6 +666,7 @@ public interface EntityIndex<K, V> {
     V get(Transaction txn, K key, LockMode lockMode)
         throws DatabaseException;
 
+
     /**
      * Returns a non-transactional count of the entities in this index.
      *
@@ -709,6 +710,7 @@ public interface EntityIndex<K, V> {
      */
     boolean delete(Transaction txn, K key)
         throws DatabaseException;
+
 
     /**
      * Opens a cursor for traversing all keys in this index.

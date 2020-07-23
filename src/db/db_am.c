@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1998, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1998, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -818,6 +818,17 @@ __db_sync(dbp)
 		ret = __partition_sync(dbp);
 	else
 #endif
+
+        /*
+         * No need to sync the top level external file database, since it is
+         * only opened when creating a new external file database, and is
+         * immediately closed after the external file directory id is obtained
+		 * from it.
+         */
+        if (dbp->blob_meta_db != NULL) {
+                if ((t_ret = __db_sync(dbp->blob_meta_db)) != 0 && ret == 0)
+                        ret = t_ret;
+        }
 	if (dbp->type == DB_QUEUE)
 		ret = __qam_sync(dbp);
 	else

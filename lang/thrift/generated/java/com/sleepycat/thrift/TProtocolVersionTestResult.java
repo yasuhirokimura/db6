@@ -45,7 +45,8 @@ public class TProtocolVersionTestResult implements org.apache.thrift.TBase<TProt
 
   private static final org.apache.thrift.protocol.TField SUPPORTED_FIELD_DESC = new org.apache.thrift.protocol.TField("supported", org.apache.thrift.protocol.TType.BOOL, (short)1);
   private static final org.apache.thrift.protocol.TField SERVER_PROTOCOL_VERSION_FIELD_DESC = new org.apache.thrift.protocol.TField("serverProtocolVersion", org.apache.thrift.protocol.TType.STRING, (short)2);
-  private static final org.apache.thrift.protocol.TField MESSAGE_FIELD_DESC = new org.apache.thrift.protocol.TField("message", org.apache.thrift.protocol.TType.STRING, (short)3);
+  private static final org.apache.thrift.protocol.TField SERVER_BIG_ENDIAN_FIELD_DESC = new org.apache.thrift.protocol.TField("serverBigEndian", org.apache.thrift.protocol.TType.BOOL, (short)3);
+  private static final org.apache.thrift.protocol.TField MESSAGE_FIELD_DESC = new org.apache.thrift.protocol.TField("message", org.apache.thrift.protocol.TType.STRING, (short)4);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
@@ -55,13 +56,15 @@ public class TProtocolVersionTestResult implements org.apache.thrift.TBase<TProt
 
   public boolean supported; // required
   public String serverProtocolVersion; // required
+  public boolean serverBigEndian; // required
   public String message; // optional
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
     SUPPORTED((short)1, "supported"),
     SERVER_PROTOCOL_VERSION((short)2, "serverProtocolVersion"),
-    MESSAGE((short)3, "message");
+    SERVER_BIG_ENDIAN((short)3, "serverBigEndian"),
+    MESSAGE((short)4, "message");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -80,7 +83,9 @@ public class TProtocolVersionTestResult implements org.apache.thrift.TBase<TProt
           return SUPPORTED;
         case 2: // SERVER_PROTOCOL_VERSION
           return SERVER_PROTOCOL_VERSION;
-        case 3: // MESSAGE
+        case 3: // SERVER_BIG_ENDIAN
+          return SERVER_BIG_ENDIAN;
+        case 4: // MESSAGE
           return MESSAGE;
         default:
           return null;
@@ -123,6 +128,7 @@ public class TProtocolVersionTestResult implements org.apache.thrift.TBase<TProt
 
   // isset id assignments
   private static final int __SUPPORTED_ISSET_ID = 0;
+  private static final int __SERVERBIGENDIAN_ISSET_ID = 1;
   private byte __isset_bitfield = 0;
   private static final _Fields optionals[] = {_Fields.MESSAGE};
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
@@ -132,6 +138,8 @@ public class TProtocolVersionTestResult implements org.apache.thrift.TBase<TProt
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.BOOL)));
     tmpMap.put(_Fields.SERVER_PROTOCOL_VERSION, new org.apache.thrift.meta_data.FieldMetaData("serverProtocolVersion", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
+    tmpMap.put(_Fields.SERVER_BIG_ENDIAN, new org.apache.thrift.meta_data.FieldMetaData("serverBigEndian", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.BOOL)));
     tmpMap.put(_Fields.MESSAGE, new org.apache.thrift.meta_data.FieldMetaData("message", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
@@ -143,12 +151,15 @@ public class TProtocolVersionTestResult implements org.apache.thrift.TBase<TProt
 
   public TProtocolVersionTestResult(
     boolean supported,
-    String serverProtocolVersion)
+    String serverProtocolVersion,
+    boolean serverBigEndian)
   {
     this();
     this.supported = supported;
     setSupportedIsSet(true);
     this.serverProtocolVersion = serverProtocolVersion;
+    this.serverBigEndian = serverBigEndian;
+    setServerBigEndianIsSet(true);
   }
 
   /**
@@ -160,6 +171,7 @@ public class TProtocolVersionTestResult implements org.apache.thrift.TBase<TProt
     if (other.isSetServerProtocolVersion()) {
       this.serverProtocolVersion = other.serverProtocolVersion;
     }
+    this.serverBigEndian = other.serverBigEndian;
     if (other.isSetMessage()) {
       this.message = other.message;
     }
@@ -174,6 +186,8 @@ public class TProtocolVersionTestResult implements org.apache.thrift.TBase<TProt
     setSupportedIsSet(false);
     this.supported = false;
     this.serverProtocolVersion = null;
+    setServerBigEndianIsSet(false);
+    this.serverBigEndian = false;
     this.message = null;
   }
 
@@ -224,6 +238,29 @@ public class TProtocolVersionTestResult implements org.apache.thrift.TBase<TProt
     }
   }
 
+  public boolean isServerBigEndian() {
+    return this.serverBigEndian;
+  }
+
+  public TProtocolVersionTestResult setServerBigEndian(boolean serverBigEndian) {
+    this.serverBigEndian = serverBigEndian;
+    setServerBigEndianIsSet(true);
+    return this;
+  }
+
+  public void unsetServerBigEndian() {
+    __isset_bitfield = EncodingUtils.clearBit(__isset_bitfield, __SERVERBIGENDIAN_ISSET_ID);
+  }
+
+  /** Returns true if field serverBigEndian is set (has been assigned a value) and false otherwise */
+  public boolean isSetServerBigEndian() {
+    return EncodingUtils.testBit(__isset_bitfield, __SERVERBIGENDIAN_ISSET_ID);
+  }
+
+  public void setServerBigEndianIsSet(boolean value) {
+    __isset_bitfield = EncodingUtils.setBit(__isset_bitfield, __SERVERBIGENDIAN_ISSET_ID, value);
+  }
+
   public String getMessage() {
     return this.message;
   }
@@ -266,6 +303,14 @@ public class TProtocolVersionTestResult implements org.apache.thrift.TBase<TProt
       }
       break;
 
+    case SERVER_BIG_ENDIAN:
+      if (value == null) {
+        unsetServerBigEndian();
+      } else {
+        setServerBigEndian((Boolean)value);
+      }
+      break;
+
     case MESSAGE:
       if (value == null) {
         unsetMessage();
@@ -285,6 +330,9 @@ public class TProtocolVersionTestResult implements org.apache.thrift.TBase<TProt
     case SERVER_PROTOCOL_VERSION:
       return getServerProtocolVersion();
 
+    case SERVER_BIG_ENDIAN:
+      return Boolean.valueOf(isServerBigEndian());
+
     case MESSAGE:
       return getMessage();
 
@@ -303,6 +351,8 @@ public class TProtocolVersionTestResult implements org.apache.thrift.TBase<TProt
       return isSetSupported();
     case SERVER_PROTOCOL_VERSION:
       return isSetServerProtocolVersion();
+    case SERVER_BIG_ENDIAN:
+      return isSetServerBigEndian();
     case MESSAGE:
       return isSetMessage();
     }
@@ -340,6 +390,15 @@ public class TProtocolVersionTestResult implements org.apache.thrift.TBase<TProt
         return false;
     }
 
+    boolean this_present_serverBigEndian = true;
+    boolean that_present_serverBigEndian = true;
+    if (this_present_serverBigEndian || that_present_serverBigEndian) {
+      if (!(this_present_serverBigEndian && that_present_serverBigEndian))
+        return false;
+      if (this.serverBigEndian != that.serverBigEndian)
+        return false;
+    }
+
     boolean this_present_message = true && this.isSetMessage();
     boolean that_present_message = true && that.isSetMessage();
     if (this_present_message || that_present_message) {
@@ -365,6 +424,11 @@ public class TProtocolVersionTestResult implements org.apache.thrift.TBase<TProt
     list.add(present_serverProtocolVersion);
     if (present_serverProtocolVersion)
       list.add(serverProtocolVersion);
+
+    boolean present_serverBigEndian = true;
+    list.add(present_serverBigEndian);
+    if (present_serverBigEndian)
+      list.add(serverBigEndian);
 
     boolean present_message = true && (isSetMessage());
     list.add(present_message);
@@ -398,6 +462,16 @@ public class TProtocolVersionTestResult implements org.apache.thrift.TBase<TProt
     }
     if (isSetServerProtocolVersion()) {
       lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.serverProtocolVersion, other.serverProtocolVersion);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetServerBigEndian()).compareTo(other.isSetServerBigEndian());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetServerBigEndian()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.serverBigEndian, other.serverBigEndian);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -442,6 +516,10 @@ public class TProtocolVersionTestResult implements org.apache.thrift.TBase<TProt
     } else {
       sb.append(this.serverProtocolVersion);
     }
+    first = false;
+    if (!first) sb.append(", ");
+    sb.append("serverBigEndian:");
+    sb.append(this.serverBigEndian);
     first = false;
     if (isSetMessage()) {
       if (!first) sb.append(", ");
@@ -514,7 +592,15 @@ public class TProtocolVersionTestResult implements org.apache.thrift.TBase<TProt
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 3: // MESSAGE
+          case 3: // SERVER_BIG_ENDIAN
+            if (schemeField.type == org.apache.thrift.protocol.TType.BOOL) {
+              struct.serverBigEndian = iprot.readBool();
+              struct.setServerBigEndianIsSet(true);
+            } else { 
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+            }
+            break;
+          case 4: // MESSAGE
             if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
               struct.message = iprot.readString();
               struct.setMessageIsSet(true);
@@ -545,6 +631,9 @@ public class TProtocolVersionTestResult implements org.apache.thrift.TBase<TProt
         oprot.writeString(struct.serverProtocolVersion);
         oprot.writeFieldEnd();
       }
+      oprot.writeFieldBegin(SERVER_BIG_ENDIAN_FIELD_DESC);
+      oprot.writeBool(struct.serverBigEndian);
+      oprot.writeFieldEnd();
       if (struct.message != null) {
         if (struct.isSetMessage()) {
           oprot.writeFieldBegin(MESSAGE_FIELD_DESC);
@@ -576,15 +665,21 @@ public class TProtocolVersionTestResult implements org.apache.thrift.TBase<TProt
       if (struct.isSetServerProtocolVersion()) {
         optionals.set(1);
       }
-      if (struct.isSetMessage()) {
+      if (struct.isSetServerBigEndian()) {
         optionals.set(2);
       }
-      oprot.writeBitSet(optionals, 3);
+      if (struct.isSetMessage()) {
+        optionals.set(3);
+      }
+      oprot.writeBitSet(optionals, 4);
       if (struct.isSetSupported()) {
         oprot.writeBool(struct.supported);
       }
       if (struct.isSetServerProtocolVersion()) {
         oprot.writeString(struct.serverProtocolVersion);
+      }
+      if (struct.isSetServerBigEndian()) {
+        oprot.writeBool(struct.serverBigEndian);
       }
       if (struct.isSetMessage()) {
         oprot.writeString(struct.message);
@@ -594,7 +689,7 @@ public class TProtocolVersionTestResult implements org.apache.thrift.TBase<TProt
     @Override
     public void read(org.apache.thrift.protocol.TProtocol prot, TProtocolVersionTestResult struct) throws org.apache.thrift.TException {
       TTupleProtocol iprot = (TTupleProtocol) prot;
-      BitSet incoming = iprot.readBitSet(3);
+      BitSet incoming = iprot.readBitSet(4);
       if (incoming.get(0)) {
         struct.supported = iprot.readBool();
         struct.setSupportedIsSet(true);
@@ -604,6 +699,10 @@ public class TProtocolVersionTestResult implements org.apache.thrift.TBase<TProt
         struct.setServerProtocolVersionIsSet(true);
       }
       if (incoming.get(2)) {
+        struct.serverBigEndian = iprot.readBool();
+        struct.setServerBigEndianIsSet(true);
+      }
+      if (incoming.get(3)) {
         struct.message = iprot.readString();
         struct.setMessageIsSet(true);
       }

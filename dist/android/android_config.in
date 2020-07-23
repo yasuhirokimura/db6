@@ -254,6 +254,9 @@
 /* Define to 1 to use the GCC compiler and ARM assembly language mutexes. */
 #define HAVE_MUTEX_ARM_GCC_ASSEMBLY 1
 
+/* Define to 1 to use the BSD/Apple/Darwin OSSpinLockTry mutexes. */
+/* #undef HAVE_MUTEX_BSD_OSSPINLOCKTRY */
+
 /* Define to 1 to use the Apple/Darwin _spin_lock_try mutexes. */
 /* #undef HAVE_MUTEX_DARWIN_SPIN_LOCK_TRY */
 

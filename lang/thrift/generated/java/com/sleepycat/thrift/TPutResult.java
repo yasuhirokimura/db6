@@ -39,7 +39,7 @@ public class TPutResult implements org.apache.thrift.TBase<TPutResult, TPutResul
   private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("TPutResult");
 
   private static final org.apache.thrift.protocol.TField STATUS_FIELD_DESC = new org.apache.thrift.protocol.TField("status", org.apache.thrift.protocol.TType.I32, (short)1);
-  private static final org.apache.thrift.protocol.TField NEW_RECORD_NUMBER_FIELD_DESC = new org.apache.thrift.protocol.TField("newRecordNumber", org.apache.thrift.protocol.TType.I32, (short)2);
+  private static final org.apache.thrift.protocol.TField NEW_RECORD_NUMBER_FIELD_DESC = new org.apache.thrift.protocol.TField("newRecordNumber", org.apache.thrift.protocol.TType.STRING, (short)2);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
@@ -52,7 +52,7 @@ public class TPutResult implements org.apache.thrift.TBase<TPutResult, TPutResul
    * @see TOperationStatus
    */
   public TOperationStatus status; // required
-  public int newRecordNumber; // optional
+  public ByteBuffer newRecordNumber; // optional
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -120,8 +120,6 @@ public class TPutResult implements org.apache.thrift.TBase<TPutResult, TPutResul
   }
 
   // isset id assignments
-  private static final int __NEWRECORDNUMBER_ISSET_ID = 0;
-  private byte __isset_bitfield = 0;
   private static final _Fields optionals[] = {_Fields.NEW_RECORD_NUMBER};
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
@@ -129,7 +127,7 @@ public class TPutResult implements org.apache.thrift.TBase<TPutResult, TPutResul
     tmpMap.put(_Fields.STATUS, new org.apache.thrift.meta_data.FieldMetaData("status", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.EnumMetaData(org.apache.thrift.protocol.TType.ENUM, TOperationStatus.class)));
     tmpMap.put(_Fields.NEW_RECORD_NUMBER, new org.apache.thrift.meta_data.FieldMetaData("newRecordNumber", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
-        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I32)));
+        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING        , true)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(TPutResult.class, metaDataMap);
   }
@@ -148,11 +146,12 @@ public class TPutResult implements org.apache.thrift.TBase<TPutResult, TPutResul
    * Performs a deep copy on <i>other</i>.
    */
   public TPutResult(TPutResult other) {
-    __isset_bitfield = other.__isset_bitfield;
     if (other.isSetStatus()) {
       this.status = other.status;
     }
-    this.newRecordNumber = other.newRecordNumber;
+    if (other.isSetNewRecordNumber()) {
+      this.newRecordNumber = org.apache.thrift.TBaseHelper.copyBinary(other.newRecordNumber);
+    }
   }
 
   public TPutResult deepCopy() {
@@ -162,8 +161,7 @@ public class TPutResult implements org.apache.thrift.TBase<TPutResult, TPutResul
   @Override
   public void clear() {
     this.status = null;
-    setNewRecordNumberIsSet(false);
-    this.newRecordNumber = 0;
+    this.newRecordNumber = null;
   }
 
   /**
@@ -198,27 +196,38 @@ public class TPutResult implements org.apache.thrift.TBase<TPutResult, TPutResul
     }
   }
 
-  public int getNewRecordNumber() {
-    return this.newRecordNumber;
+  public byte[] getNewRecordNumber() {
+    setNewRecordNumber(org.apache.thrift.TBaseHelper.rightSize(newRecordNumber));
+    return newRecordNumber == null ? null : newRecordNumber.array();
   }
 
-  public TPutResult setNewRecordNumber(int newRecordNumber) {
-    this.newRecordNumber = newRecordNumber;
-    setNewRecordNumberIsSet(true);
+  public ByteBuffer bufferForNewRecordNumber() {
+    return org.apache.thrift.TBaseHelper.copyBinary(newRecordNumber);
+  }
+
+  public TPutResult setNewRecordNumber(byte[] newRecordNumber) {
+    this.newRecordNumber = newRecordNumber == null ? (ByteBuffer)null : ByteBuffer.wrap(Arrays.copyOf(newRecordNumber, newRecordNumber.length));
+    return this;
+  }
+
+  public TPutResult setNewRecordNumber(ByteBuffer newRecordNumber) {
+    this.newRecordNumber = org.apache.thrift.TBaseHelper.copyBinary(newRecordNumber);
     return this;
   }
 
   public void unsetNewRecordNumber() {
-    __isset_bitfield = EncodingUtils.clearBit(__isset_bitfield, __NEWRECORDNUMBER_ISSET_ID);
+    this.newRecordNumber = null;
   }
 
   /** Returns true if field newRecordNumber is set (has been assigned a value) and false otherwise */
   public boolean isSetNewRecordNumber() {
-    return EncodingUtils.testBit(__isset_bitfield, __NEWRECORDNUMBER_ISSET_ID);
+    return this.newRecordNumber != null;
   }
 
   public void setNewRecordNumberIsSet(boolean value) {
-    __isset_bitfield = EncodingUtils.setBit(__isset_bitfield, __NEWRECORDNUMBER_ISSET_ID, value);
+    if (!value) {
+      this.newRecordNumber = null;
+    }
   }
 
   public void setFieldValue(_Fields field, Object value) {
@@ -235,7 +244,7 @@ public class TPutResult implements org.apache.thrift.TBase<TPutResult, TPutResul
       if (value == null) {
         unsetNewRecordNumber();
       } else {
-        setNewRecordNumber((Integer)value);
+        setNewRecordNumber((ByteBuffer)value);
       }
       break;
 
@@ -248,7 +257,7 @@ public class TPutResult implements org.apache.thrift.TBase<TPutResult, TPutResul
       return getStatus();
 
     case NEW_RECORD_NUMBER:
-      return Integer.valueOf(getNewRecordNumber());
+      return getNewRecordNumber();
 
     }
     throw new IllegalStateException();
@@ -296,7 +305,7 @@ public class TPutResult implements org.apache.thrift.TBase<TPutResult, TPutResul
     if (this_present_newRecordNumber || that_present_newRecordNumber) {
       if (!(this_present_newRecordNumber && that_present_newRecordNumber))
         return false;
-      if (this.newRecordNumber != that.newRecordNumber)
+      if (!this.newRecordNumber.equals(that.newRecordNumber))
         return false;
     }
 
@@ -378,7 +387,11 @@ public class TPutResult implements org.apache.thrift.TBase<TPutResult, TPutResul
     if (isSetNewRecordNumber()) {
       if (!first) sb.append(", ");
       sb.append("newRecordNumber:");
-      sb.append(this.newRecordNumber);
+      if (this.newRecordNumber == null) {
+        sb.append("null");
+      } else {
+        org.apache.thrift.TBaseHelper.toString(this.newRecordNumber, sb);
+      }
       first = false;
     }
     sb.append(")");
@@ -400,8 +413,6 @@ public class TPutResult implements org.apache.thrift.TBase<TPutResult, TPutResul
 
   private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
     try {
-      // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
-      __isset_bitfield = 0;
       read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
     } catch (org.apache.thrift.TException te) {
       throw new java.io.IOException(te);
@@ -435,8 +446,8 @@ public class TPutResult implements org.apache.thrift.TBase<TPutResult, TPutResul
             }
             break;
           case 2: // NEW_RECORD_NUMBER
-            if (schemeField.type == org.apache.thrift.protocol.TType.I32) {
-              struct.newRecordNumber = iprot.readI32();
+            if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+              struct.newRecordNumber = iprot.readBinary();
               struct.setNewRecordNumberIsSet(true);
             } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
@@ -462,10 +473,12 @@ public class TPutResult implements org.apache.thrift.TBase<TPutResult, TPutResul
         oprot.writeI32(struct.status.getValue());
         oprot.writeFieldEnd();
       }
-      if (struct.isSetNewRecordNumber()) {
-        oprot.writeFieldBegin(NEW_RECORD_NUMBER_FIELD_DESC);
-        oprot.writeI32(struct.newRecordNumber);
-        oprot.writeFieldEnd();
+      if (struct.newRecordNumber != null) {
+        if (struct.isSetNewRecordNumber()) {
+          oprot.writeFieldBegin(NEW_RECORD_NUMBER_FIELD_DESC);
+          oprot.writeBinary(struct.newRecordNumber);
+          oprot.writeFieldEnd();
+        }
       }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
@@ -496,7 +509,7 @@ public class TPutResult implements org.apache.thrift.TBase<TPutResult, TPutResul
         oprot.writeI32(struct.status.getValue());
       }
       if (struct.isSetNewRecordNumber()) {
-        oprot.writeI32(struct.newRecordNumber);
+        oprot.writeBinary(struct.newRecordNumber);
       }
     }
 
@@ -509,7 +522,7 @@ public class TPutResult implements org.apache.thrift.TBase<TPutResult, TPutResul
         struct.setStatusIsSet(true);
       }
       if (incoming.get(1)) {
-        struct.newRecordNumber = iprot.readI32();
+        struct.newRecordNumber = iprot.readBinary();
         struct.setNewRecordNumberIsSet(true);
       }
     }

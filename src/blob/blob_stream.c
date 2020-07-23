@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2013, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2013, 2017 Oracle and/or its affiliates.  All rights reserved.
  */
 
 #include "db_config.h"
@@ -274,8 +274,8 @@ __db_stream_write(dbs, data, offset, flags)
 	}
 
 	ENV_ENTER(env, ip);
-	wflags = dbs->flags;
-	if (LF_ISSET(DB_STREAM_SYNC_WRITE))
+	wflags = 0;
+	if (LF_ISSET(DB_STREAM_SYNC_WRITE) || F_ISSET(dbs, DB_FOP_SYNC_WRITE))
 		wflags |= DB_FOP_SYNC_WRITE;
 	file_size = dbs->file_size;
 	if ((ret = __blob_file_write(dbs->dbc, dbs->fhp,

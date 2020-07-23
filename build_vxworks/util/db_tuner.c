@@ -1,7 +1,7 @@
 /* 
  * See the file LICENSE for redistribution information.
  * 
- * Copyright (c) 2011, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2011, 2017 Oracle and/or its affiliates.  All rights reserved.
  * 
  * $Id$
  * 
@@ -54,7 +54,7 @@
 
 #ifndef lint
 static const char copyright[] =
-    "Copyright (c) 2011, 2016 Oracle and/or its affiliates.  All rights reserved.\n";
+    "Copyright (c) 2011, 2017 Oracle and/or its affiliates.  All rights reserved.\n";
 #endif
 
 /*
@@ -129,9 +129,8 @@ int db_tuner_main __P((int, char *[]));
 static int db_tuner_open_db __P((DB **, DB_ENV *, char *, char *));
 static int db_tuner_sum_opd_page_data_entries __P((DB *, PAGE *));
 static int db_tuner_usage __P((void));
-static int db_tuner_version_check __P((void));
 
-const char *progname = "db_tuner";
+const char *progname;
 
 int
 db_tuner(args)
@@ -161,7 +160,9 @@ db_tuner_main(argc, argv)
 	int ch, is_set_dbfile, ret;
 	u_int32_t cachesize, verbose;
 
-	if ((ret = db_tuner_version_check()) != 0)
+	progname = __db_util_arg_progname(argv[0]);
+
+	if ((ret = __db_util_version_check(progname)) != 0)
 		return (ret);
 
 	dbenv = NULL;
@@ -202,14 +203,8 @@ db_tuner_main(argc, argv)
 	if (!is_set_dbfile)
 		db_tuner_usage();
 
-	if ((ret = db_env_create(&dbenv, 0)) != 0) {
-		fprintf(stderr, "%s: db_env_create: %s\n",
-		    progname, db_strerror(ret));
+	if ((ret = __db_util_env_create(&dbenv, progname, NULL, NULL)) != 0)
 		goto err;
-	}
-
-	dbenv->set_errfile(dbenv, stderr);
-	dbenv->set_errpfx(dbenv, progname);
 
 	if ((cachesize != 0) && (ret =
 	    dbenv->set_cachesize(dbenv, (u_int32_t)0, cachesize, 1)) != 0) {
@@ -217,18 +212,9 @@ db_tuner_main(argc, argv)
 		goto err;
 	}
 
-	/*
-	 * If attaching to a pre-existing environment fails, create a
-	 * private one and try again.
-	 */
-	if ((ret = dbenv->open(dbenv, home, DB_USE_ENVIRON, 0)) != 0 &&
-	    (ret == DB_VERSION_MISMATCH || ret == DB_REP_LOCKOUT ||
-	    (ret = dbenv->open(dbenv, home,
-	    DB_CREATE | DB_INIT_MPOOL | DB_USE_ENVIRON | DB_PRIVATE,
-	    0)) != 0)) {
-		dbenv->err(dbenv, ret, "DB_ENV->open:");
+	if ((ret = __db_util_env_open(dbenv, home, 0,
+	    1, DB_INIT_MPOOL, 0, NULL)) != 0)
 		goto err;
-	}
 
 	if ((ret = db_tuner_open_db(&dbp, dbenv, dbname, subdb)) != 0) {
 		dbenv->err(dbenv, ret, "open_db:");
@@ -1329,24 +1315,4 @@ db_tuner_usage()
 	fprintf(stderr, "usage: %s %s\n", progname,
 	    "[-c cachesize] -d file [-h home] [-s database] [-v verbose]");
 	exit(EXIT_FAILURE);
-}
-
-/*Check the verion of Berkeley DB libaray, make sure it is the right version.*/
-static int
-db_tuner_version_check()
-{
-	int v_major, v_minor, v_patch;
-
-	/* Make sure we're loaded with the right version of the DB library. */
-	(void)db_version(&v_major, &v_minor, &v_patch);
-	if (v_major != DB_VERSION_MAJOR || v_minor != DB_VERSION_MINOR) {
-		fprintf(stderr, DB_STR_A("5002",
-		    "%s: version %d.%d doesn't match library version %d.%d\n",
-		    "%s %d %d %d %d"), progname, DB_VERSION_MAJOR,
-		    DB_VERSION_MINOR, v_major, v_minor);
-
-		return (EXIT_FAILURE);
-	}
-
-	return (EXIT_SUCCESS);
 }

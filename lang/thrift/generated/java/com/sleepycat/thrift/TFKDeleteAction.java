@@ -13,7 +13,8 @@ import org.apache.thrift.TEnum;
 
 public enum TFKDeleteAction implements org.apache.thrift.TEnum {
   ABORT(1),
-  CASCADE(2);
+  CASCADE(2),
+  NULLIFY(3);
 
   private final int value;
 
@@ -38,6 +39,8 @@ public enum TFKDeleteAction implements org.apache.thrift.TEnum {
         return ABORT;
       case 2:
         return CASCADE;
+      case 3:
+        return NULLIFY;
       default:
         return null;
     }

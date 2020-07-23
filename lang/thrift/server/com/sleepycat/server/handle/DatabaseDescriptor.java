@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -23,6 +23,12 @@ public class DatabaseDescriptor extends HandleDescriptor<Database> {
     private ConcurrentLinkedDeque<SecondaryDatabaseDescriptor> secondaries;
 
     /**
+     * A list of secondary databases that have foreign key constraints for
+     * this database.
+     */
+    private ConcurrentLinkedDeque<SecondaryDatabaseDescriptor> foreignKeys;
+
+    /**
      * Create a DatabaseDescriptor for a primary database.
      *
      * @param db the BDB database handle
@@ -33,6 +39,7 @@ public class DatabaseDescriptor extends HandleDescriptor<Database> {
             EnvironmentDescriptor env) {
         super(db, key, env);
         this.secondaries = new ConcurrentLinkedDeque<>();
+        this.foreignKeys = new ConcurrentLinkedDeque<>();
     }
 
     /**
@@ -54,6 +61,14 @@ public class DatabaseDescriptor extends HandleDescriptor<Database> {
 
     protected void disassociate(SecondaryDatabaseDescriptor secondary) {
         this.secondaries.remove(secondary);
+    }
+
+    protected void associateForeign(SecondaryDatabaseDescriptor secondary) {
+        this.foreignKeys.add(secondary);
+    }
+
+    protected void disassociateForeign(SecondaryDatabaseDescriptor secondary) {
+        this.foreignKeys.remove(secondary);
     }
 
     @Override
@@ -93,5 +108,16 @@ public class DatabaseDescriptor extends HandleDescriptor<Database> {
      */
     public void forEachSecondary(Consumer<SecondaryDatabaseDescriptor> op) {
         this.secondaries.forEach(op);
+    }
+
+    /**
+     * Perform an operation on each foreign secondary database that have foreign
+     * constraints for this database.
+     *
+     * @param op the operation
+     */
+    public void forEachForeignSecondary(
+            Consumer<SecondaryDatabaseDescriptor> op) {
+        this.foreignKeys.forEach(op);
     }
 }

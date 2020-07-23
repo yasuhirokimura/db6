@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -55,7 +55,6 @@ __db_apprec(env, ip, max_lsn, trunclsn, update, flags)
 	DB_TXNHEAD *txninfo;
 	DB_TXNREGION *region;
 	REGENV *renv;
-	REGINFO *infop;
 	__txn_ckp_args *ckp_args;
 	time_t now, tlow;
 	double nfiles;
@@ -82,14 +81,18 @@ __db_apprec(env, ip, max_lsn, trunclsn, update, flags)
 	 */
 	log_size = ((LOG *)env->lg_handle->reginfo.primary)->log_size;
 
+	/* When truly recovering (i.e., not replication) change the environment
+	 * magic from 0 (newly created) to recovery-in-progress.
+	 */
+	renv = env->reginfo->primary;
+	if (LF_ISSET(DB_RECOVER | DB_RECOVER_FATAL))
+		renv->magic = DB_REGION_MAGIC_RECOVER;
+
 	/*
 	 * If we need to, update the env handle timestamp.
 	 */
-	if (update && REP_ON(env)) {
-		infop = env->reginfo;
-		renv = infop->primary;
+	if (update && REP_ON(env))
 		(void)time(&renv->rep_timestamp);
-	}
 
 	/* Set in-recovery flags. */
 	F_SET(env->lg_handle, DBLOG_RECOVER);

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -28,7 +28,7 @@ public class SSequenceTest extends ClientTestBase {
         db = env.openDatabase(null, "db", "sub-db",
                 new SDatabaseConfig().setAllowCreate(true)
                         .setType(SDatabaseType.BTREE));
-        seq = db.openSequence(null, new SDatabaseEntry("seq".getBytes()),
+        seq = db.openSequence(null, entry("seq"),
                 new SSequenceConfig().setAllowCreate(true).setInitialValue(10)
                         .setRange(10, 100));
     }

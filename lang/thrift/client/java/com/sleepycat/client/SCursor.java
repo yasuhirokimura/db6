@@ -1,13 +1,14 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
 
 package com.sleepycat.client;
 
+import com.sleepycat.client.util.RuntimeExceptionWrapper;
 import com.sleepycat.thrift.BdbService;
 import com.sleepycat.thrift.TCursor;
 import com.sleepycat.thrift.TCursorGetConfig;
@@ -61,13 +62,17 @@ public class SCursor implements GetHelper, PutHelper, AutoCloseable {
     /** The enclosing database. */
     private final SDatabase database;
 
+    /** The enclosing transaction. */
+    private final STransaction txn;
+
     /** The key to which this cursor currently refers. */
     private SDatabaseEntry currentKey;
 
-    protected SCursor(TCursor tCursor, SDatabase database,
+    protected SCursor(TCursor tCursor, SDatabase database, STransaction txn,
             BdbService.Client client) {
         this.tCursor = tCursor;
         this.database = database;
+        this.txn = txn;
         this.client = client;
         this.currentKey = null;
     }
@@ -146,7 +151,8 @@ public class SCursor implements GetHelper, PutHelper, AutoCloseable {
     public SCursor dup(boolean samePosition) throws SDatabaseException {
         return remoteCall(() -> {
             TCursor cursor = this.client.cursorDup(this.tCursor, samePosition);
-            SCursor dup = new SCursor(cursor, this.database, this.client);
+            SCursor dup =
+                    new SCursor(cursor, this.database, this.txn, this.client);
             if (samePosition) {
                 dup.currentKey = this.currentKey;
             }
@@ -206,6 +212,10 @@ public class SCursor implements GetHelper, PutHelper, AutoCloseable {
      */
     public SDatabase getDatabase() {
         return this.database;
+    }
+
+    STransaction getTransaction() {
+        return this.txn;
     }
 
     @Override
@@ -660,7 +670,8 @@ public class SCursor implements GetHelper, PutHelper, AutoCloseable {
     private SOperationStatus cursorGet(SDatabaseEntry key,
             SDatabaseEntryBase data, SLockMode lockMode, TCursorGetMode mode)
             throws SDatabaseException {
-        SOperationStatus status = remoteGet(key, data, searchTerm -> {
+        SDatabaseEntry nonNullKey = key == null ? new SDatabaseEntry() : key;
+        SOperationStatus status = remoteGet(nonNullKey, data, searchTerm -> {
             TCursorGetConfig config = createConfig(data, lockMode);
             config.setMode(mode);
             return this.client.cursorGet(this.tCursor, searchTerm, config);
@@ -669,7 +680,8 @@ public class SCursor implements GetHelper, PutHelper, AutoCloseable {
         if (data instanceof SMultiplePairs) {
             this.currentKey = null;
         } else if (mode != TCursorGetMode.GET_RECNO) {
-            this.currentKey = new SDatabaseEntry(new TDbt(key.getThriftObj()));
+            this.currentKey =
+                    new SDatabaseEntry(new TDbt(nonNullKey.getThriftObj()));
         }
 
         return status;
@@ -682,10 +694,13 @@ public class SCursor implements GetHelper, PutHelper, AutoCloseable {
             switch (lockMode) {
                 case READ_COMMITTED:
                     config.setIsoLevel(TIsolationLevel.READ_COMMITTED);
+                    break;
                 case READ_UNCOMMITTED:
                     config.setIsoLevel(TIsolationLevel.READ_UNCOMMITTED);
+                    break;
                 case RMW:
                     config.setRmw(true);
+                    break;
             }
         }
         if (data instanceof SMultipleDataEntry) {
@@ -712,6 +727,7 @@ public class SCursor implements GetHelper, PutHelper, AutoCloseable {
      *
      * @param key the key entry operated on
      * @param data the data entry stored
+     * @return {@link SOperationStatus#SUCCESS}
      * @throws SDatabaseException if any error occurs
      */
     public SOperationStatus put(SDatabaseEntry key, SDatabaseEntry data)
@@ -741,6 +757,7 @@ public class SCursor implements GetHelper, PutHelper, AutoCloseable {
      *
      * @param key the key entry operated on
      * @param data the data entry stored
+     * @return {@link SOperationStatus#SUCCESS}
      * @throws SDatabaseException if any error occurs
      */
     public SOperationStatus putKeyFirst(SDatabaseEntry key, SDatabaseEntry data)
@@ -770,6 +787,7 @@ public class SCursor implements GetHelper, PutHelper, AutoCloseable {
      *
      * @param key the key entry operated on
      * @param data the data entry stored
+     * @return {@link SOperationStatus#SUCCESS}
      * @throws SDatabaseException if any error occurs
      */
     public SOperationStatus putKeyLast(SDatabaseEntry key, SDatabaseEntry data)
@@ -797,6 +815,9 @@ public class SCursor implements GetHelper, PutHelper, AutoCloseable {
      *
      * @param key the key entry operated on
      * @param data the data entry stored
+     * @return {@link SOperationStatus#KEYEXIST} if a matching key/data pair
+     * already exists in the database; otherwise, {@link
+     * SOperationStatus#SUCCESS}
      * @throws SDatabaseException if any error occurs
      */
     public SOperationStatus putNoDupData(SDatabaseEntry key,
@@ -817,6 +838,9 @@ public class SCursor implements GetHelper, PutHelper, AutoCloseable {
      *
      * @param key the key entry operated on
      * @param data the data entry stored
+     * @return {@link SOperationStatus#KEYEXIST} if a matching key/data pair
+     * already exists in the database; otherwise, {@link
+     * SOperationStatus#SUCCESS}
      * @throws SDatabaseException if any error occurs
      */
     public SOperationStatus putNoOverwrite(SDatabaseEntry key,
@@ -842,18 +866,13 @@ public class SCursor implements GetHelper, PutHelper, AutoCloseable {
      * In the case of the Hash access method, the putAfter method will fail and
      * throw an exception if the current cursor record has already been
      * deleted.
-     * <p>
-     * In the case of the Recno access method, it is an error to call this
-     * method if the underlying Recno database was not configured to have
-     * mutable record numbers. A new key is created, all records after the
-     * inserted item are automatically renumbered, and the key of the new
-     * record is returned in the key parameter. The initial value of the key
-     * parameter is ignored.
-     * <p>
-     * The putAfter method may not be called for the Queue access method.
      *
      * @param key the key entry operated on
      * @param data the data entry stored
+     * @return {@link SOperationStatus#NOTFOUND} if the current cursor has
+     * already been deleted and the underlying access method is Hash;
+     * otherwise,
+     * {@link SOperationStatus#SUCCESS}
      * @throws SDatabaseException if any error occurs
      */
     public SOperationStatus putAfter(SDatabaseEntry key, SDatabaseEntry data)
@@ -864,9 +883,6 @@ public class SCursor implements GetHelper, PutHelper, AutoCloseable {
                     " a MULTIPLE_KEY get operation or a delete operation.");
         }
         key.setDataFromTDbt(this.currentKey.getThriftObj());
-        if (key.getThriftObj().isSetRecordNumber()) {
-            key.setRecordNumber(key.getRecordNumber() + 1);
-        }
         return cursorPut(key, data, TCursorPutConfig.AFTER);
     }
 
@@ -887,18 +903,13 @@ public class SCursor implements GetHelper, PutHelper, AutoCloseable {
      * In the case of the Hash access method, the putBefore method will fail
      * and throw an exception if the current cursor record has already been
      * deleted.
-     * <p>
-     * In the case of the Recno access method, it is an error to call this
-     * method if the underlying Recno database was not configured to have
-     * mutable record numbers. A new key is created, all records after the
-     * inserted item are automatically renumbered, and the key of the new
-     * record is returned in the key parameter. The initial value of the key
-     * parameter is ignored.
-     * <p>
-     * The putBefore method may not be called for the Queue access method.
      *
      * @param key the key entry operated on
      * @param data the data entry stored
+     * @return {@link SOperationStatus#NOTFOUND} if the current cursor has
+     * already been deleted and the underlying access method is Hash;
+     * otherwise,
+     * {@link SOperationStatus#SUCCESS}
      * @throws SDatabaseException if any error occurs
      */
     public SOperationStatus putBefore(SDatabaseEntry key, SDatabaseEntry data)
@@ -933,6 +944,8 @@ public class SCursor implements GetHelper, PutHelper, AutoCloseable {
      * re-insert it.
      *
      * @param data the data entry stored
+     * @return {@link SOperationStatus#NOTFOUND} if the current cursor has
+     * already been deleted; otherwise, {@link SOperationStatus#SUCCESS}
      * @throws SDatabaseException if any error occurs
      */
     public SOperationStatus putCurrent(SDatabaseEntry data)
@@ -966,9 +979,14 @@ public class SCursor implements GetHelper, PutHelper, AutoCloseable {
      * cursor functions expecting the cursor to refer to an existing key will
      * fail.
      *
+     * @return {@link SOperationStatus#KEYEMPTY} if the key/pair at the cursor
+     * position has been deleted; otherwise, {@link SOperationStatus#SUCCESS}
      * @throws SDatabaseException if any error occurs
      */
     public SOperationStatus delete() throws SDatabaseException {
+        getDatabase().updatePrimaryData(this.txn,
+                Collections.singletonList(this.currentKey));
+
         return remoteCall(() -> SOperationStatus
                 .toBdb(this.client.cursorDelete(this.tCursor)));
     }

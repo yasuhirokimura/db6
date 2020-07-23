@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2001, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2001, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -12,7 +12,10 @@
 
 /*
  * __os_ctime --
- *	Format a time-stamp.
+ *	Format a time_t (integer number of seconds) as a date string.
+ *
+ * 	The time_buf must be at least CTIME_BUFLEN (26) bytes long. It includes
+ *	the trailing newline, so most uses of it in an error message use %.24s.
  *
  * PUBLIC: char *__os_ctime __P((const time_t *, char *));
  */

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -93,7 +93,7 @@ __mutex_lock_pp(dbenv, indx)
 		return (EINVAL);
 
 	ENV_ENTER(env, ip);
-	ret = __mutex_lock(env, indx);
+	ret = MUTEX_LOCK_RET(env, indx);
 	ENV_LEAVE(env, ip);
 	return (ret);
 }
@@ -119,7 +119,7 @@ __mutex_unlock_pp(dbenv, indx)
 		return (EINVAL);
 
 	ENV_ENTER(env, ip);
-	ret = __mutex_unlock(env, indx);
+	ret = MUTEX_UNLOCK_RET(env, indx);
 	ENV_LEAVE(env, ip);
 	return (ret);
 }
@@ -424,48 +424,26 @@ static inline db_mutex_t atomic_get_mutex(env, v)
 }
 
 /*
- * __atomic_inc_int
- *	Use a mutex to provide an atomic increment function
+ * __atomic_add_int
+ *	Use a mutex to provide an atomic add function
  *
  * PUBLIC: #if !defined(HAVE_ATOMIC_SUPPORT) && defined(HAVE_MUTEX_SUPPORT)
- * PUBLIC: atomic_value_t __atomic_inc_int __P((ENV *, db_atomic_t *));
+ * PUBLIC: atomic_value_t __atomic_add_int __P((ENV *, db_atomic_t *, int));
  * PUBLIC: #endif
  */
 atomic_value_t
-__atomic_inc_int(env, v)
+__atomic_add_int(env, v, delta)
 	ENV *env;
 	db_atomic_t *v;
+	int delta;
 {
 	db_mutex_t mtx;
 	int ret;
 
 	mtx = atomic_get_mutex(env, v);
 	MUTEX_LOCK(env, mtx);
-	ret = ++v->value;
-	MUTEX_UNLOCK(env, mtx);
-
-	return (ret);
-}
-
-/*
- * __atomic_dec_int
- *	Use a mutex to provide an atomic decrement function
- *
- * PUBLIC: #if !defined(HAVE_ATOMIC_SUPPORT) && defined(HAVE_MUTEX_SUPPORT)
- * PUBLIC: atomic_value_t __atomic_dec_int __P((ENV *, db_atomic_t *));
- * PUBLIC: #endif
- */
-atomic_value_t
-__atomic_dec_int(env, v)
-	ENV *env;
-	db_atomic_t *v;
-{
-	db_mutex_t mtx;
-	int ret;
-
-	mtx = atomic_get_mutex(env, v);
-	MUTEX_LOCK(env, mtx);
-	ret = --v->value;
+	v->value += delta;
+	ret = v->value;
 	MUTEX_UNLOCK(env, mtx);
 
 	return (ret);

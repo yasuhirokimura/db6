@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -15,12 +15,21 @@ import java.io.IOException;
  * A DatabaseFileKey uniquely identifies a database file.
  */
 public class DatabaseFileKey extends FileKey {
-    /** If the database file is an in-memory database. */
-    private boolean inMemory;
+    /** The relative path name. */
+    private final String relativePath;
 
-    public DatabaseFileKey(File dbFile, boolean inMemory) throws IOException {
+    /** If the database file is an in-memory database. */
+    private final boolean inMemory;
+
+    public DatabaseFileKey(File dbFile, String relativePath,
+            boolean inMemory) throws IOException {
         super(dbFile);
+        this.relativePath = relativePath;
         this.inMemory = inMemory;
+    }
+
+    public String getRelativePath() {
+        return relativePath;
     }
 
     public boolean isInMemory() {

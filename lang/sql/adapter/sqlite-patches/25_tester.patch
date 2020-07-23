@@ -251,3 +251,11 @@
    $(TOP)/ext/fts3/fts3_tokenizer.c \
    $(TOP)/ext/fts3/fts3_write.c \
    $(TOP)/ext/async/sqlite3async.c
+@@ -948,7 +948,7 @@
+ TESTFIXTURE_SRC0 = $(TESTSRC2) libsqlite3.la
+ TESTFIXTURE_SRC1 = sqlite3.c
+ TESTFIXTURE_SRC = $(TESTSRC) $(TOP)/src/tclsqlite.c
+-TESTFIXTURE_SRC += $(TESTFIXTURE_SRC$(USE_AMALGAMATION))
++TESTFIXTURE_SRC += $(TESTFIXTURE_SRC1)
+ 
+ testfixture$(TEXE): $(TESTFIXTURE_SRC)

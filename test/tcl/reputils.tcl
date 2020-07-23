@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2001, 2016 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2001, 2017 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -377,7 +377,7 @@ proc repl_envsetup { envargs largs test {nclients 1} {droppct 0} { oob 0 } } {
 	set ma_cmd "berkdb_env_noerr -create -log_max $logmax $envargs \
 	    -cachesize { 0 16777216 1 } -log_regionmax $logregion \
 	    -lock_max_objects $lockmax -lock_max_locks $lockmax \
-	    -errpfx $masterdir $verbargs -pagesize $pagesize \
+	    -errpfx $masterdir $verbargs -log_blob -pagesize $pagesize \
 	    -home $masterdir -txn nosync -rep_master -rep_transport \
 	    \[list 1 replsend\]"
 	set masterenv [eval $ma_cmd]

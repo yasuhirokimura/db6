@@ -118,9 +118,12 @@
     <File RelativePath="..\..\src\common\dbt.c"/>
     <File RelativePath="..\..\src\common\mkpath.c"/>
     <File RelativePath="..\..\src\common\os_method.c"/>
+    <File RelativePath="..\..\src\common\util_arg.c"/>
     <File RelativePath="..\..\src\common\util_cache.c"/>
+    <File RelativePath="..\..\src\common\util_env.c"/>
     <File RelativePath="..\..\src\common\util_log.c"/>
     <File RelativePath="..\..\src\common\util_sig.c"/>
+    <File RelativePath="..\..\src\common\util_ver_check.c"/>
     <File RelativePath="..\..\src\common\zerofill.c"/>
     <File RelativePath="..\..\lang\cxx\cxx_channel.cpp"/>
     <File RelativePath="..\..\lang\cxx\cxx_db.cpp"/>

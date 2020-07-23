@@ -1,13 +1,14 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
 
 package com.sleepycat.server.util;
 
+import com.sleepycat.db.DatabaseEntry;
 import com.sleepycat.db.DatabaseException;
 import com.sleepycat.db.MultipleDataEntry;
 import com.sleepycat.db.MultipleEntry;
@@ -28,17 +29,18 @@ abstract class InputArgs {
      * Converting a list of Thrift key/data pairs to a Bdb MultipleEntry.
      *
      * @param pairs a list of pairs
+     * @param isRecordKey if keys are record numbers
      * @return a MultipleEntry
      * @throws DatabaseException if any error occurs
      */
-    protected MultipleEntry convert(List<TKeyData> pairs)
+    protected MultipleEntry convert(List<TKeyData> pairs, boolean isRecordKey)
             throws DatabaseException {
         if (pairs.isEmpty()) {
             throw new IllegalArgumentException("Pairs cannot be empty.");
         }
 
         TKeyData first = pairs.get(0);
-        if (first.key.isSetRecordNumber()) {
+        if (isRecordKey) {
             return toRecnoData(pairs);
         } else if (!first.isSetData()) {
             return toData(pairs);
@@ -65,12 +67,8 @@ abstract class InputArgs {
     }
 
     private int getTDbtSize(TDbt dbt) {
-        if (dbt.isSetRecordNumber()) {
-            return Integer.BYTES;
-        } else if (dbt.isSetData()) {
-            return dbt.getData().length + Integer.BYTES * 2;
-        }
-        return 0;
+        int size = dbt.isSetData() ? dbt.getData().length : 0;
+        return size + Integer.BYTES * 2;
     }
 
     private MultipleEntry toRecnoData(List<TKeyData> pairs) throws
@@ -78,7 +76,7 @@ abstract class InputArgs {
         MultipleRecnoDataEntry arg =
                 initEntry(pairs, new MultipleRecnoDataEntry());
         for (TKeyData pair : pairs) {
-            arg.append(pair.key.getRecordNumber(),
+            arg.append(new DatabaseEntry(pair.key.getData()).getRecordNumber(),
                     pair.isSetData() ? pair.data.getData() : new byte[0]);
         }
         return arg;

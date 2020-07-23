@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -312,6 +312,61 @@ __partition_set_dirs(dbp, dirp)
 	part->dirs = (const char **)part_dirs;
 
 	return (0);
+}
+
+/*
+ * __partition_extent_names --
+ *	Generate a list of partition extent file names.
+ * PUBLIC: int __partition_extent_names __P((DB *, const char *, char ***));
+ */
+int
+__partition_extent_names(dbp, fname, namelistp)
+	DB *dbp;
+	const char *fname;
+	char ***namelistp;
+{
+	DB_PARTITION *part;
+	ENV *env;
+	char *name, *sp, **cp, *freep;
+	const char *np;
+	u_int32_t part_id, namelen, len;
+	int ret;
+
+	env = dbp->env;
+	part = (DB_PARTITION*)dbp->p_internal;
+	*namelistp = NULL;
+
+	namelen = strlen(fname) + PART_LEN + 1;
+	len = part->nparts * (namelen + sizeof(char*)) + sizeof(char*);
+
+	if ((ret = __os_malloc(env, namelen, &name)) != 0)
+		goto err;
+	if ((ret = __os_malloc(env, len, namelistp)) != 0)
+		goto err;
+
+	sp = name;
+	np = __db_rpath(fname);
+	if (np == NULL)
+		np = fname;
+	else {
+		np++;
+		(void)strncpy(name, fname, (size_t)(np - fname));
+		sp = name + (np - fname);
+	}
+
+	cp = *namelistp;
+	freep = (char*)(cp + part->nparts + 1);
+	for (part_id = 0; part_id < part->nparts; part_id++) {
+		(void)sprintf(sp, PART_NAME, np, part_id);
+		*cp++ = freep;
+		(void)strcpy(freep, name);
+		freep += namelen;
+	}
+	*cp = NULL;
+
+err:	if (name != NULL)
+		__os_free(env, name);
+	return (ret);
 }
 
 /*

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2016, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -1623,8 +1623,8 @@ __db_slice_truncate(dbp, txn, countp, flags)
 }
 
 /*
- * __db_slice_upgrade --
- *	Extra DB->upgrade processing for a possibly sliced database.
+ * __db_slice_process --
+ *	Extra DB->upgrade/convert processing for a possibly sliced database.
  *
  *	The database has not been opened, so we need to create the slices'
  *	handles, and free them when we're done.
@@ -1632,13 +1632,16 @@ __db_slice_truncate(dbp, txn, countp, flags)
  *	Returns:
  *		DB_SLICE_CORRUPT if a slice cannot be found.
  *
- * PUBLIC: int __db_slice_upgrade __P((DB *, const char *, u_int32_t));
+ * PUBLIC: int __db_slice_process __P((DB *, const char *, u_int32_t,
+ * PUBLIC:     int (*)(DB *, const char *, u_int32_t), const char *));
  */
 int
-__db_slice_upgrade(dbp, fname, flags)
+__db_slice_process(dbp, fname, flags, pfunc, msgpfx)
 	DB *dbp;
 	const char *fname;
 	u_int32_t flags;
+	int (*pfunc)(DB *, const char *, u_int32_t);
+	const char *msgpfx;
 {
 	ENV *env;
 	db_slice_t i;
@@ -1667,10 +1670,10 @@ __db_slice_upgrade(dbp, fname, flags)
 		return (ret);
 
 	for (i = 0; i != env->dbenv->slice_cnt; i++) {
-		if ((t_ret = __db_upgrade_pp(dbp->db_slices[i],
-		    fname, flags)) != 0) {
+		if ((t_ret = pfunc(dbp->db_slices[i], fname, flags)) != 0) {
 			__db_err(env, t_ret, DB_STR_A("0785",
-			    "db_upgrade #%u %s", "%d %s"), i, fname);
+			    "%s failed for slice #%u: '%s'", "%s %u %s"),
+			    msgpfx, i, fname);
 			if (ret == 0)
 				ret = USR_ERR(env, DB_SLICE_CORRUPT);
 		}

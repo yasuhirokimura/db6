@@ -1,7 +1,7 @@
 /*
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -68,19 +68,22 @@ static __inline int get_handle(env, mutexp, eventp)
 }
 
 /*
- * __db_win32_mutex_lock_int
+ * __db_win32_mutex_lock --
  *	Internal function to lock a win32 mutex
  *
- *	If the wait parameter is 0, this function will return DB_LOCK_NOTGRANTED
- *	rather than wait.
+ *	If the flags includes MUTEX_WAIT, this function will wait for the mutex
+ *	to become available; without MUTEX_WAIT it returns DB_LOCK_NOTGRANTED.
+ *
+ * PUBLIC: int __db_win32_mutex_lock
+ * PUBLIC:     __P((ENV *, db_mutex_t, db_timeout_t, int));
  *
  */
-static __inline int
-__db_win32_mutex_lock_int(env, mutex, timeout, wait)
+int
+__db_win32_mutex_lock(env, mutex, timeout, flags)
 	ENV *env;
 	db_mutex_t mutex;
 	db_timeout_t timeout;
-	int wait;
+	int flags;
 {
 	DB_ENV *dbenv;
 	DB_MUTEX *mutexp;
@@ -92,9 +95,7 @@ __db_win32_mutex_lock_int(env, mutex, timeout, wait)
 	db_timespec now, tempspec, timeoutspec;
 	db_timeout_t time_left;
 	int ret;
-#ifdef DIAGNOSTIC
 	char buf[DB_THREADID_STRLEN];
-#endif
 #ifdef MUTEX_DIAG
 	LARGE_INTEGER now;
 #endif
@@ -106,8 +107,6 @@ __db_win32_mutex_lock_int(env, mutex, timeout, wait)
 	mtxmgr = env->mutex_handle;
 	mtxregion = mtxmgr->reginfo.primary;
 	mutexp = MUTEXP_SET(env, mutex);
-
-	CHECK_MTX_THREAD(env, mutexp);
 
 	if (timeout != 0) {
 		timespecclear(&timeoutspec);
@@ -126,12 +125,25 @@ __db_win32_mutex_lock_int(env, mutex, timeout, wait)
 	ret = 0;
 
 	/*
-	 * Only check the thread state once, by initializing the thread
-	 * control block pointer to null.  If it is not the failchk
-	 * thread, then ip will have a valid value subsequent times
-	 * in the loop.
+	 * Fetch the current thread's state struct, if there is a thread hash
+	 * table and we are keeping track of this mutex.  We increment the
+	 * mtx_ctr before we know that this call succeeds, and decrement it on
+	 * failure or in __db_pthread_mutex_unlock.  By incrementing it before
+	 * the attempt, we detect crashing that occur during this function.
+	 * A crash while holding a non-counted mutex will not be detected by
+	 * failchk's mtx_ctr code: those have to be detected some other way.
 	 */
 	ip = NULL;
+	if (env->thr_hashtab != NULL && LF_ISSET(MUTEX_CTR)) {
+		if ((ret = __env_set_state(env, &ip, THREAD_CTR_VERIFY)) != 0)
+			return (__env_panic(env, ret)); 
+		if (ip != NULL) {
+			DB_ASSERT(env, ip->mtx_ctr < 20);
+			ip->mtx_ctr++;
+		}
+	}
+	/* All non-successful returns after this point should go to failed. */
+
 
 loop:	/* Attempt to acquire the mutex mutex_tas_spins times, if waiting. */
 	for (nspins =
@@ -141,18 +153,23 @@ loop:	/* Attempt to acquire the mutex mutex_tas_spins times, if waiting. */
 		 * the mutex is already busy.
 		 */
 		if (MUTEXP_IS_BUSY(mutexp) || !MUTEXP_ACQUIRE(mutexp)) {
-			if (F_ISSET(dbenv, DB_ENV_FAILCHK) &&
-			    ip == NULL && dbenv->is_alive(dbenv,
+			if (F_ISSET(dbenv, DB_ENV_FAILCHK) && ip != NULL &&
+			    dbenv->is_alive(dbenv,
 			    mutexp->pid, mutexp->tid, 0) == 0) {
-				ret = __env_set_state(env, &ip, THREAD_VERIFY);
-				if (ret != 0 ||
-				    ip->dbth_state == THREAD_FAILCHK) {
-					ret = DB_RUNRECOVERY;
+				if (ip->dbth_state == THREAD_FAILCHK) {
+					ret = USR_ERR(env, DB_RUNRECOVERY);
+					__db_err(env, ret,
+			    "Failchk blocked by dead process %s on mutex %ld",
+					dbenv->thread_id_string(dbenv,
+					mutexp->pid, mutexp->tid, buf),
+					(u_long)mutex);
 					goto failed;
 				}
 			}
-			if (!wait)
-				return (DB_LOCK_NOTGRANTED);
+			if (!LF_ISSET(MUTEX_WAIT)) {
+				ret = USR_ERR(env, DB_LOCK_NOTGRANTED);
+				goto failed;
+			}
 			/*
 			 * Some systems (notably those with newer Intel CPUs)
 			 * need a small pause before retrying. [#6975]
@@ -208,6 +225,10 @@ loop:	/* Attempt to acquire the mutex mutex_tas_spins times, if waiting. */
 		if (F_ISSET(dbenv, DB_ENV_YIELDCPU))
 			__os_yield(env, 0, 0);
 #endif
+		/*
+		 * On successful returns do not touch mtx_ctr: if it was
+		 * incremented it stays that way.
+		 */
 
 		return (0);
 	}
@@ -221,7 +242,7 @@ loop:	/* Attempt to acquire the mutex mutex_tas_spins times, if waiting. */
 	if (timeout != 0) {
 		timespecclear(&now);
 		if (__clock_expired(env, &now, &timeoutspec)) {
-			ret = DB_TIMEOUT;
+			ret = USR_ERR(env, DB_TIMEOUT);
 			goto failed;
 		}
 		/* Reduce the event wait if the timeout would happen first. */
@@ -246,7 +267,7 @@ loop:	/* Attempt to acquire the mutex mutex_tas_spins times, if waiting. */
 		}
 	}
 	if ((ret = WaitForSingleObject(event, ms)) == WAIT_FAILED) {
-		ret = __os_get_syserr();
+		ret = USR_ERR(env, __os_get_syserr());
 		goto syserr;
 	}
 	if ((ms <<= 1) > MS_PER_SEC)
@@ -257,13 +278,19 @@ loop:	/* Attempt to acquire the mutex mutex_tas_spins times, if waiting. */
 	    !F_ISSET(dbenv, DB_ENV_FAILCHK)) {
 died:
 		ret = __mutex_died(env, mutex);
-		goto failed;
+	    	goto failed;
 	}
 #endif
 	PANIC_CHECK(env);
 	goto loop;
 
+
 failed:
+	/* If this call incremented the counter, decrement it on error. */
+	if (ip != NULL) {
+		DB_ASSERT(env, ip->mtx_ctr > 0);
+		ip->mtx_ctr--;
+	}
 	if (event != NULL) {
 		CloseHandle(event);
 		InterlockedDecrement(&mutexp->nwaiters);
@@ -301,50 +328,25 @@ __db_win32_mutex_init(env, mutex, flags)
 	return (0);
 }
 
-/*
- * __db_win32_mutex_lock
- *	Lock on a mutex, blocking if necessary.
- *
- * PUBLIC: int __db_win32_mutex_lock __P((ENV *, db_mutex_t, db_timeout_t));
- */
-int
-__db_win32_mutex_lock(env, mutex, timeout)
-	ENV *env;
-	db_mutex_t mutex;
-	db_timeout_t timeout;
-{
-	return (__db_win32_mutex_lock_int(env, mutex, timeout, 1));
-}
-
-/*
- * __db_win32_mutex_trylock
- *	Try to lock a mutex, returning without waiting if it is busy
- *
- * PUBLIC: int __db_win32_mutex_trylock __P((ENV *, db_mutex_t));
- */
-int
-__db_win32_mutex_trylock(env, mutex)
-	ENV *env;
-	db_mutex_t mutex;
-{
-	return (__db_win32_mutex_lock_int(env, mutex, 0));
-}
 
 #if defined(HAVE_SHARED_LATCHES)
 /*
- * __db_win32_mutex_readlock_int
+ * __db_win32_mutex_readlock --
  *	Try to lock a mutex, possibly waiting if requested and necessary.
+ *
+ * PUBLIC: int __db_win32_mutex_readlock __P((ENV *, db_mutex_t, u_int32_t));
  */
 int
-__db_win32_mutex_readlock_int(env, mutex, nowait)
+__db_win32_mutex_readlock(env, mutex, flags)
 	ENV *env;
 	db_mutex_t mutex;
-	int nowait;
+	u_int32_t flags;
 {
 	DB_ENV *dbenv;
 	DB_MUTEX *mutexp;
 	DB_MUTEXMGR *mtxmgr;
 	DB_MUTEXREGION *mtxregion;
+	DB_THREAD_INFO *ip;
 	HANDLE event;
 	MUTEX_STATE *state;
 	u_int32_t nspins;
@@ -363,8 +365,6 @@ __db_win32_mutex_readlock_int(env, mutex, nowait)
 	mtxregion = mtxmgr->reginfo.primary;
 	mutexp = MUTEXP_SET(env, mutex);
 
-	CHECK_MTX_THREAD(env, mutexp);
-
 	/*
 	 * See WINCE_ATOMIC_MAGIC definition for details.
 	 * Use sharecount, because the value just needs to be a db_atomic_t
@@ -376,10 +376,17 @@ __db_win32_mutex_readlock_int(env, mutex, nowait)
 	ms = 50;
 	ret = 0;
 
+	ip = NULL;
 	state = NULL;
-	if (env->thr_hashtab != NULL && (ret = __mutex_record_lock(env,
-	    mutex, MUTEX_ACTION_INTEND_SHARE, &state)) != 0)
-		return (ret);
+	if (env->thr_hashtab != NULL) {
+		if ((ret = __env_set_state(env, &ip, THREAD_CTR_VERIFY)) != 0)
+			return (__env_panic(env, ret)); 
+		if (env->thr_hashtab != NULL && (ret = __mutex_record_lock(env,
+		    mutex, ip, MUTEX_ACTION_INTEND_SHARE, &state)) != 0)
+			return (ret);
+	}
+	/* All non-successful returns after this point should go to failed. */
+
 #ifdef HAVE_FAILCHK_BROADCAST
 	/*
 	 * Limit WaitForSingleObject() sleeps to at most the failchk timeout,
@@ -402,8 +409,8 @@ loop:	/* Attempt to acquire the resource for N spins. */
 		 */
 retry:		mtx_val = atomic_read(&mutexp->sharecount);
 		if (mtx_val == MUTEX_SHARE_ISEXCLUSIVE) {
-			if (nowait) {
-				ret = DB_LOCK_NOTGRANTED;
+			if (!LF_ISSET(MUTEX_WAIT)) {
+				ret = USR_ERR(env, DB_LOCK_NOTGRANTED);
 				goto failed;
 			}
 			continue;
@@ -512,54 +519,26 @@ err:	__db_syserr(env, ret, DB_STR("2009",
 	return (__env_panic(env, __os_posix_err(ret)));
 }
 
-/*
- * __db_win32_mutex_readlock
- *	Get a shared lock on a latch
- *
- * PUBLIC: #if defined(HAVE_SHARED_LATCHES)
- * PUBLIC: int __db_win32_mutex_readlock __P((ENV *, db_mutex_t));
- * PUBLIC: #endif
- */
-int
-__db_win32_mutex_readlock(env, mutex)
-	ENV *env;
-	db_mutex_t mutex;
-{
-	return (__db_win32_mutex_readlock_int(env, mutex, 0));
-}
-
-/*
- * __db_win32_mutex_tryreadlock
- *	Try to a shared lock on a latch
- *
- * PUBLIC: #if defined(HAVE_SHARED_LATCHES)
- * PUBLIC: int __db_win32_mutex_tryreadlock __P((ENV *, db_mutex_t));
- * PUBLIC: #endif
- */
-int
-__db_win32_mutex_tryreadlock(env, mutex)
-	ENV *env;
-	db_mutex_t mutex;
-{
-	return (__db_win32_mutex_readlock_int(env, mutex, 1));
-}
 #endif
 
 /*
  * __db_win32_mutex_unlock --
  *	Release a mutex.
  *
- * PUBLIC: int __db_win32_mutex_unlock __P((ENV *, db_mutex_t));
+ * PUBLIC: int __db_win32_mutex_unlock
+ * PUBLIC:     __P((ENV *, db_mutex_t, DB_THREAD_INFO *, u_int32_t));
  */
 int
-__db_win32_mutex_unlock(env, mutex)
+__db_win32_mutex_unlock(env, mutex, ip, flags)
 	ENV *env;
+	DB_THREAD_INFO *ip;
 	db_mutex_t mutex;
+	u_int32_t flags;
 {
 	DB_ENV *dbenv;
 	DB_MUTEX *mutexp;
 	HANDLE event;
-	int ret, sharecount;
+	int ret, sharecount, was_exclusive;
 	char description[DB_MUTEX_DESCRIBE_STRLEN];
 #ifdef MUTEX_DIAG
 	LARGE_INTEGER diag_now;
@@ -570,6 +549,7 @@ __db_win32_mutex_unlock(env, mutex)
 		return (0);
 
 	mutexp = MUTEXP_SET(env, mutex);
+	was_exclusive = F_ISSET(mutexp, DB_MUTEX_LOCKED);
 
 #ifdef DIAGNOSTIC
 	if (!MUTEXP_IS_BUSY(mutexp) || !(F_ISSET(mutexp, DB_MUTEX_SHARED) ||
@@ -580,6 +560,15 @@ __db_win32_mutex_unlock(env, mutex)
 		return (__env_panic(env, EACCES));
 	}
 #endif
+
+	/*
+	 * If the caller hasn't already specified the thread from which to unlock
+	 * this mutex, use the current thread.  Failchk can indicate a dead thread.
+	 */
+	if (env->thr_hashtab != NULL && ip == NULL &&
+	   (ret = __env_set_state(env, &ip, THREAD_CTR_VERIFY)) != 0)
+		return (__env_panic(env, ret));
+
 	/*
 	 * If we have a shared latch, and a read lock (DB_MUTEX_LOCKED is only
 	 * set for write locks), then decrement the latch. If the readlock is
@@ -608,12 +597,9 @@ __db_win32_mutex_unlock(env, mutex)
 				goto err;
 			}
 		} else {
-			if (env->thr_hashtab != NULL &&
-			    (ret = __mutex_record_unlock(env, mutex)) != 0)
-			    return (ret);
 			if (InterlockedDecrement((interlocked_val)
 			    (&atomic_read(&mutexp->sharecount))) > 0)
-				return (0);
+				goto finish_shared;
 		}
 	} else
 #endif
@@ -650,6 +636,18 @@ __db_win32_mutex_unlock(env, mutex)
 		CloseHandle(event);
 	}
 
+	if (was_exclusive) {
+		if (ip != NULL && LF_ISSET(MUTEX_CTR)) {
+			DB_ASSERT(env, ip->mtx_ctr > 0);
+			ip->mtx_ctr--;
+		}
+	} else {
+finish_shared:
+		if (ip != NULL &&
+		    (ret = __mutex_record_unlock(env, mutex, ip)) != 0)
+			return (ret);
+	}
+
 	return (0);
 
 err:	__db_syserr(env, ret, DB_STR("2012", "Win32 unlock failed"));
@@ -672,7 +670,7 @@ __db_win32_mutex_destroy(env, mutex)
 
 #ifndef DB_WINCE
 /*
- * db_env_set_win_security
+ * db_env_set_win_security --
  *
  *	Set the SECURITY_ATTRIBUTES to be used by BDB on Windows.
  *	It should not be called while any BDB mutexes are locked.

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -40,14 +40,15 @@ __env_attach(env, init_flagsp, create_ok, retry_ok)
 	REGION *rp, tregion;
 	size_t max, nrw, size;
 	long segid;
+	time_t create_time;
 	u_int32_t bytes, i, mbytes, nregions, signature;
 	u_int retry_cnt;
 	int majver, minver, patchver, ret;
-	char buf[sizeof(DB_REGION_FMT) + 20];
+	char buf[sizeof(DB_REGION_FMT) + 20], datebuf[CTIME_BUFLEN];
 
-	/* Initialization */
 	dbenv = env->dbenv;
 	retry_cnt = 0;
+	create_time = 0;
 	signature = __env_struct_sig();
 
 	/* Repeated initialization. */
@@ -291,9 +292,20 @@ user_map_functions:
 		ret = __env_panic_msg(env);
 		goto err;
 	}
+	/*
+	 * A bad magic number means that the env is new and not yet available:
+	 * wait a while and try again.  If the magic number says recovery is in
+	 * process, remember the env creation time to record that recovery was
+	 * the reason that the open failed.
+	 */
 	if (renv->magic != DB_REGION_MAGIC) {
-		DB_DEBUG_MSG(env,
-		    "attach sees bad region magic 0x%lx", (u_long)renv->magic);
+		if (renv->magic == DB_REGION_MAGIC_RECOVER)
+			create_time = renv->timestamp;
+		else {
+			DB_DEBUG_MSG(env, "attach sees bad region magic 0x%lx",
+			    (u_long)renv->magic);
+			create_time = 0;
+		}
 		goto retry;
 	}
 
@@ -577,9 +589,14 @@ retry:	/* Close any open file handle. */
 	/* If we had a temporary error, wait awhile and try again. */
 	if (ret == 0) {
 		if (!retry_ok || ++retry_cnt > 3) {
-			__db_errx(env, DB_STR("1546",
-			    "unable to join the environment"));
-			ret = EAGAIN;
+			ret = USR_ERR(env, EAGAIN);
+			if (create_time != 0)
+				__db_errx(env,
+	"Recovery is still running on the newly created (%.24s) environment",
+				    __os_ctime(&create_time, datebuf));
+			else
+				__db_errx(env, DB_STR("1546",
+				    "unable to join the environment"));
 		} else {
 			__os_yield(env, retry_cnt * 3, 0);
 			goto loop;
@@ -763,7 +780,6 @@ __env_ref_decrement(env)
 
 	/* Even if we have an environment, may not have reference counted it. */
 	if (F_ISSET(env, ENV_REF_COUNTED)) {
-		/* Lock the environment, decrement the reference, unlock. */
 		MUTEX_LOCK(env, renv->mtx_regenv);
 		if (renv->refcnt == 0)
 			__db_errx(env, DB_STR("1547",

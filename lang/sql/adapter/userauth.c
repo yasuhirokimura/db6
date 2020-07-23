@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2014, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2014, 2017 Oracle and/or its affiliates.  All rights reserved.
  */
 #include "userauth.h"
 
@@ -11,13 +11,31 @@
  * into this SQLite code to support the key-store based authentication. 
  */
 
+#ifdef SQLITE_USER_AUTHENTICATION
+static DB_ENV* authGetDbEnv(sqlite3 *);
+
+static DB_ENV* authGetDbEnv(sqlite3 *db)
+{
+	struct Btree *pBtree;
+	if (db != NULL && db->nDb > 0 && db->aDb != NULL) {
+		pBtree = db->aDb[0].pBt;
+		if (pBtree->pBt != NULL)
+			return pBtree->pBt->dbenv;
+	}
+
+	return (NULL);
+}
+#endif
+
 /***********************************************************************
  * Key-store based user authentication specific code.
  ***********************************************************************/
 #ifdef BDBSQL_USER_AUTHENTICATION_KEYSTORE
 
-#define AUTH_CLOSE(fhp)							\
-	__os_closehandle(NULL, fhp)
+#define AUTH_CLOSE(fhp)	do {						\
+	__os_closehandle(NULL, fhp);					\
+	(fhp) = NULL;							\
+} while (0)
 
 #define AUTH_EXISTS(filepath)						\
 	!__os_exists(NULL, filepath, NULL)	
@@ -65,7 +83,7 @@ static int authGetKsVersion(const char *, u_int32_t *);
 static void authGetPwdHash(const char *, int, u_int8_t *, u_int8_t *);
 static int authGetSaltFromUserTable(sqlite3 *, const char *, u_int8_t *);
 static int authIncreaseKsVersion(const char *);
-static int authInitEncryptedTmpEnv(const char *, int, DB_ENV **);
+static int authInitEncryptedTmpEnv(const u_int8_t *, int, DB_ENV **);
 static int authProcessKsFile(sqlite3 *, const char *, const char *, int, 
     int (*)(KS_CB_ARG *), u_int32_t);
 static int authUpdateKsChksum(const char *);
@@ -375,6 +393,7 @@ done:
 static int authVerifyKsChksum(sqlite3 *db)
 {
 	DB_FH *fhp;
+	DB_ENV *dbenv;
 	char ksPath[BT_MAX_PATH], ksBakPath[BT_MAX_PATH];
 	u_int8_t chksum[KS_CHKSUM_LEN], oldChksum[KS_CHKSUM_LEN];
 	int rc;
@@ -383,12 +402,14 @@ static int authVerifyKsChksum(sqlite3 *db)
 
 	fhp = NULL;
 	rc = SQLITE_OK;
+	dbenv = authGetDbEnv(db);
 	authGetKsFile(db, ksPath);
 
 again:
 	if (!AUTH_EXISTS(ksPath)) {
 		rc = SQLITE_ERROR;
-		sqlite3ErrorWithMsg(db, rc, "Keystore file missing.");
+		if (dbenv != NULL)
+			dbenv->errx(dbenv, "Keystore file missing.");
 		goto err;
 	}
 
@@ -404,8 +425,9 @@ again:
 
 	if (memcmp(chksum, oldChksum, KS_CHKSUM_LEN) != 0) {
 		rc = SQLITE_ERROR;
-		sqlite3ErrorWithMsg(db, rc, "Keystore file corrupted. Restore "
-		    "it from backup.");
+		if (dbenv != NULL)
+			dbenv->errx(dbenv,
+			"Keystore file corrupted. Restore it from backup.");
 		goto err;
 	}
 
@@ -425,9 +447,9 @@ err:
 		 * keystore file so we will at most retry once.
 		 */
 		if (!AUTH_EXISTS(ksPath) || 
-		    authGetKsVersion(ksPath, &ksVer) == SQLITE_OK &&
+		    (authGetKsVersion(ksPath, &ksVer) == SQLITE_OK &&
 		    authGetKsVersion(ksBakPath, &ksBakVer) == SQLITE_OK &&
-		    ksVer == ksBakVer)
+		    ksVer == ksBakVer))
 			if (AUTH_RENAME(ksBakPath, ksPath) == 0) {
 				rc = SQLITE_OK;
 				goto again;
@@ -443,7 +465,7 @@ done:
  * Create a temporary environment with encryption key as the given password.
  * We use the environment's encryption handler to do the encryption/decryption.
  */
-static int authInitEncryptedTmpEnv(const char *aPW, int nPW, DB_ENV **tEnv)
+static int authInitEncryptedTmpEnv(const u_int8_t *aPW, int nPW, DB_ENV **tEnv)
 {
 	int rc;
 	char *pwd;
@@ -484,7 +506,9 @@ static int authCreateKseHdr(sqlite3 *db, const char *zUsername,
 {
 	int rc, entry_len, username_len;
 	KS_ENTRY_HDR *t_hdr;
+	DB_ENV *dbenv;
 
+	dbenv = authGetDbEnv(db);
 	rc = SQLITE_OK;
 	username_len = strlen(zUsername);
 	entry_len = 0;
@@ -493,7 +517,8 @@ static int authCreateKseHdr(sqlite3 *db, const char *zUsername,
 	entry_len += KSE_DATA_LEN(data);
 	if (entry_len > MAX_KSE_LEN) {
 		rc = SQLITE_ERROR;
-		sqlite3ErrorWithMsg(db, rc, "Username/password too long.");
+		if (dbenv != NULL)
+			dbenv->errx(dbenv, "Username/password too long.");
 		goto err;
 	}
 
@@ -537,9 +562,11 @@ static int authGetSaltFromUserTable(sqlite3 *db, const char *zUsername,
 {
 	sqlite3_stmt *pStmt;
 	char *zSql;
+	DB_ENV *dbenv;
 	int rc;
 	u_int8_t savedAuthLevel;
 
+	dbenv = authGetDbEnv(db);
 	rc = SQLITE_OK;
 	pStmt = NULL;
 	/* Temporarily change the logged user to an admin user. */
@@ -554,8 +581,9 @@ static int authGetSaltFromUserTable(sqlite3 *db, const char *zUsername,
 		rc = SQLITE_OK;
 	} else {
 		rc = SQLITE_ERROR;
-		sqlite3ErrorWithMsg(db, rc, 
-		    "No user %s in sqlite_user table.", zUsername);
+		if (dbenv != NULL)
+			dbenv->errx(dbenv, "No user %s in sqlite_user table.",
+			    zUsername);
 	}
 
 	if (pStmt) 
@@ -665,9 +693,10 @@ static int authProcessKsFile(sqlite3 *db, const char *zUsername,
 	size_t nr;
 	off_t offset;
 	u_int8_t buf[MAX_KSE_LEN];
+	DB_FH *fhp;
+	DB_ENV *dbenv;
 	KS_ENTRY_HDR *hdr;
 	KS_ENTRY_DATA *data;
-	DB_FH *fhp;
 	KS_CB_ARG cb_arg;
 	char ksPath[BT_MAX_PATH], tmpPath[BT_MAX_PATH];
 
@@ -678,6 +707,7 @@ static int authProcessKsFile(sqlite3 *db, const char *zUsername,
 	cb_arg.nPW = nPW;
 	cb_arg.zUsername = zUsername;
 	fhp = NULL;
+	dbenv = authGetDbEnv(db);
 	rc = SQLITE_OK;
 	username_len = strlen(zUsername);
 	readonly = flags & AUTH_KS_READONLY;
@@ -728,7 +758,8 @@ static int authProcessKsFile(sqlite3 *db, const char *zUsername,
 			goto io_err;
 
 		if (username_len == hdr->username_len && 
-		    strncmp(hdr->username, zUsername, username_len) == 0) {
+		    strncmp((char *)hdr->username, zUsername,
+		        username_len) == 0) {
 			/* We have found the user's entry in the keystore. */
 			data = (KS_ENTRY_DATA*)(buf + KSE_HDR_LEN(hdr));
 			cb_arg.hdr = hdr;
@@ -747,8 +778,9 @@ static int authProcessKsFile(sqlite3 *db, const char *zUsername,
 	/* We have not found the user's entry in the keystore file. */
 	rc = SQLITE_ERROR;
 
-	sqlite3ErrorWithMsg(db, rc, 
-	    "No user %s was found in the keystore file.", zUsername);
+	if (dbenv != NULL)
+		dbenv->errx(dbenv,
+		    "No user %s was found in the keystore file.", zUsername);
 	goto err;
 
 update_ks:
@@ -784,12 +816,14 @@ done:
 static int auth_useradd_key(sqlite3 *db, int isAdmin)
 {
 	struct BtShared *pBt;
+	DB_ENV *dbenv;
 	u_int8_t *key;
 	int rc, i, database_existed;
 	u_int8_t key_len;
 
 	assert(db->aDb[0].pBt != NULL);
 	pBt = db->aDb[0].pBt->pBt;
+	dbenv = authGetDbEnv(db);
 	rc = SQLITE_OK;
 	key = NULL;
 	database_existed = AUTH_EXISTS(pBt->full_name);
@@ -805,10 +839,10 @@ static int auth_useradd_key(sqlite3 *db, int isAdmin)
 	 */ 
 	if (database_existed && pBt->encrypt_pwd == NULL) {
 		rc = SQLITE_ERROR;
-		sqlite3ErrorWithMsg(db, rc, 
-		    "Cannot add a user to an existing database environment "
-		    "without an encryption key provided or a valid user "
-		    "authenticated."); 
+		if (dbenv != NULL)
+			dbenv->errx(dbenv,
+"Cannot add a user to an existing database environment without an encryption "
+"key provided or a valid user authenticated."); 
 		goto err;
 	}
 	
@@ -823,8 +857,9 @@ static int auth_useradd_key(sqlite3 *db, int isAdmin)
 		 */
 		if (!isAdmin) {
 			rc = SQLITE_AUTH;
-			sqlite3ErrorWithMsg(db, rc, "The first user must be "
-			    "an admin user.");
+			if (dbenv != NULL)
+				dbenv->errx(dbenv,
+				    "The first user must be an admin user.");
 			goto err;
 		}
 
@@ -856,16 +891,19 @@ err:
 
 static int auth_keystore_create(sqlite3 *db)
 {
+	DB_ENV *dbenv;
 	char ksPath[BT_MAX_PATH];
 	int rc, ret;
 
+	dbenv = authGetDbEnv(db);
 	rc = SQLITE_OK;
 	authGetKsFile(db, ksPath);
 	if ((ret = authCreateOneKsFile(ksPath, NULL)) != 0) { 
 		rc = SQLITE_ERROR;
-		sqlite3ErrorWithMsg(db, rc, 
-		    ret == EEXIST ?  "Keystore file already exists."
-		    : "Keystore file creation failed.");
+		if (dbenv != NULL)
+			dbenv->errx(dbenv,
+			    ret == EEXIST ? "Keystore file already exists." :
+			    "Keystore file creation failed.");
 		goto err;
 	}
 
@@ -889,9 +927,11 @@ static int auth_keystore_lock(sqlite3 *db)
 	int retry, rc;
 	DB_FH *fhp;
 	char ksLckPath[BT_MAX_PATH];
+	DB_ENV *dbenv;
 
 	retry = 5;
 	fhp = NULL;
+	dbenv = authGetDbEnv(db);
 	rc = SQLITE_OK;
 
 	authGetKsLckFile(db, ksLckPath);
@@ -901,8 +941,9 @@ static int auth_keystore_lock(sqlite3 *db)
 
 	if (retry < 0) {
 		rc = SQLITE_ERROR;
-		sqlite3ErrorWithMsg(db, rc, "Cannot lock the keystore file. "
-		    "Check if the lock file: %s already exists.", ksLckPath);
+		if (dbenv != NULL)
+			dbenv->errx(dbenv, "Cannot lock the keystore file. "
+			    "Check if the lock file: %s already exists.", ksLckPath);
 	}
 
 	if (fhp)
@@ -988,6 +1029,7 @@ static int auth_useradd_keystore(sqlite3 *db, const char *zUsername,
 
 static int auth_userlogin_keystore_cb(KS_CB_ARG *arg)
 {
+	DB_ENV *dbenv;
 	KS_ENTRY_DATA *data;
 	sqlite3 *db;
 	int  rc;
@@ -995,6 +1037,7 @@ static int auth_userlogin_keystore_cb(KS_CB_ARG *arg)
 	rc = SQLITE_OK;
 	data = arg->data;
 	db = arg->db;
+	dbenv = authGetDbEnv(db);
 
 	if ((rc = authDecryptKseData(arg->aPW, arg->nPW, data)) != SQLITE_OK)
 		goto err;
@@ -1005,8 +1048,9 @@ static int auth_userlogin_keystore_cb(KS_CB_ARG *arg)
 		 * password.
 		 */
 		rc = SQLITE_ERROR;
-		sqlite3ErrorWithMsg(db, rc, "Fetched an wrong key from "
-		    "keystore. Check if the user's password is correct.");
+		if (dbenv != NULL)
+			dbenv->errx(dbenv, "Fetched an wrong key from "
+			"keystore. Check if the user's password is correct.");
 		goto err;
 	}
 
@@ -1344,11 +1388,11 @@ void sqlite3CryptFunc(
     int NotUsed,
     sqlite3_value **argv)
 {
-	const char *zIn;
+	u_int8_t *zIn;
 	int nIn, nOut;
 	u8 *zOut;
-	char zSalt[AUTH_PW_SALT_LEN];
-	zIn = sqlite3_value_blob(argv[0]);
+	u_int8_t zSalt[AUTH_PW_SALT_LEN];
+	zIn = (u_int8_t *)sqlite3_value_blob(argv[0]);
 	nIn = sqlite3_value_bytes(argv[0]);
 	nOut = AUTH_PW_HASH_LEN + sizeof(zSalt);
 	if (sqlite3_value_type(argv[1]) == SQLITE_BLOB && 
@@ -1361,7 +1405,7 @@ void sqlite3CryptFunc(
 		sqlite3_result_error_nomem(context);
 	else {
 		memcpy(zOut, zSalt, sizeof(zSalt));
-		__db_chksum(NULL, (char*)zIn, nIn, zSalt, zOut + sizeof(zSalt));
+		__db_chksum(NULL, zIn, nIn, zSalt, zOut + sizeof(zSalt));
 		sqlite3_result_blob(context, zOut, nOut, sqlite3_free);
 	}
 }
@@ -1403,9 +1447,11 @@ int sqlite3_user_authenticate(
     const char *zPW,       /* Password or credentials */
     int nPW)               /* Number of bytes in aPW[] */
 {
+	DB_ENV *dbenv;
 	int rc, usrTblExists;
 	u8 authLevel;
 
+	dbenv = authGetDbEnv(db);
 	rc = SQLITE_OK;
 	usrTblExists = 0;
 	authLevel = UAUTH_Fail;
@@ -1423,17 +1469,32 @@ int sqlite3_user_authenticate(
 		rc = SQLITE_AUTH;
 		goto err;
 	}
+#endif
+	/*
+	 * If the database does not require authentication, it is an error to
+	 * call this function. All databases that require authentication are
+	 * encrypted. So if the encryption key is not available now, it is an
+	 * error.
+	 */
+	if (dbenv == NULL || db->aDb[0].pBt->pBt->encrypt_pwd == NULL) {
+		rc = SQLITE_AUTH;
+		if (dbenv != NULL)
+			dbenv->errx(dbenv,
+		"Cannot do authentication to a non-encrypted database.");
+		goto err;
+	}
+
 	db->auth.authLevel = UAUTH_Admin;
 	if ((rc = userTableExists(db, "main", &usrTblExists)) != SQLITE_OK)
 		goto err;
 
 	if (!usrTblExists) {
 		rc = SQLITE_AUTH;
-		sqlite3ErrorWithMsg(db, rc, "Cannot do authentication to a "
-		    "non-authentication-required database.");
+		if (dbenv != NULL)
+			dbenv->errx(dbenv,
+	"Cannot do authentication to a non-authentication-required database.");
 		goto err;
- 	}
-#endif
+	}
 
 	if ((rc = setDbAuth(db, zUsername, zPW, nPW, UAUTH_Unknown)) != 
 	    SQLITE_OK)
@@ -1474,6 +1535,7 @@ int sqlite3_user_add(
     int nPW,               /* Number of bytes in aPW[] */
     int isAdmin)           /* True to give new user admin privilege */
 {
+	DB_ENV *dbenv;
 	sqlite3_stmt *pStmt;
 	int rc, usrTblExists;
 #ifdef BDBSQL_USER_AUTHENTICATION_KEYSTORE
@@ -1481,12 +1543,14 @@ int sqlite3_user_add(
 
 	ks_init = 0;
 #endif
+	dbenv = authGetDbEnv(db);
 	rc = SQLITE_OK;
 	usrTblExists = 0;
 	if (!db->autoCommit) {
 		rc = SQLITE_ERROR;
-		sqlite3ErrorWithMsg(db, rc, 
-		    "Cannot add a user in a transaction.");
+		if (dbenv != NULL)
+			dbenv->errx(dbenv,
+			    "Cannot add a user in a transaction.");
 		return rc;
 	}
 
@@ -1497,6 +1561,20 @@ int sqlite3_user_add(
 	if ((rc = auth_useradd_key(db, isAdmin)) != SQLITE_OK)
 		goto done_no_trans;
 #endif
+	/*
+	 * We're adding a user, so either this database already requires
+	 * authentication or we're going to make it require authentication.
+	 * Authentication requires encryption, so the encryption key must
+	 * be set by now before userTableExists() tries to access the
+	 * database.
+	 */
+	if (dbenv == NULL || db->aDb[0].pBt->pBt->encrypt_pwd == NULL) {
+		rc = SQLITE_ERROR;
+		if (dbenv != NULL)
+			dbenv->errx(dbenv,
+		"The database must be encrypted to enable authentication.");
+		goto done_no_trans;
+	}
 
 	sqlite3UserAuthInit(db);
 	if (db->auth.authLevel < UAUTH_Admin) {
@@ -1572,9 +1650,9 @@ done:
 
 done_no_trans:
 #ifdef BDBSQL_USER_AUTHENTICATION_KEYSTORE
-       if (rc == SQLITE_OK)
-               auth_keystore_backup(db);
-       auth_keystore_unlock(db);
+	if (rc == SQLITE_OK)
+		auth_keystore_backup(db);
+	auth_keystore_unlock(db);
 #endif
 	return rc;
 }
@@ -1593,18 +1671,21 @@ int sqlite3_user_change(
     int nPW,               /* Number of bytes in aPW[] */
     int isAdmin)           /* Modified admin privilege for the user */
 {
+	DB_ENV *dbenv;
 	sqlite3_stmt *pStmt;
 	int rc, usrTblExists;
 	u8 authLevel;
 
+	dbenv = authGetDbEnv(db);
 	rc = SQLITE_OK;
 	usrTblExists = 0;
 	authLevel = db->auth.authLevel;
 
 	if (!db->autoCommit) {
 		rc = SQLITE_ERROR;
-		sqlite3ErrorWithMsg(db, rc, 
-		    "Cannot change a user in a transaction.");
+		if (dbenv != NULL)
+			dbenv->errx(dbenv, 
+			    "Cannot change a user in a transaction.");
 		return rc;
 	}
 
@@ -1677,15 +1758,18 @@ int sqlite3_user_delete(
     sqlite3 *db,           /* Database connection */
     const char *zUsername) /* Username to remove */
 {
+	DB_ENV *dbenv;
 	int rc, usrTblExists;
 	sqlite3_stmt *pStmt;
 
+	dbenv = authGetDbEnv(db);
 	rc = SQLITE_OK;
 	usrTblExists = 0;
 	if (!db->autoCommit) {
 		rc = SQLITE_ERROR;
-		sqlite3ErrorWithMsg(db, rc, 
-		    "Cannot delete a user in a transaction.");
+		if (dbenv != NULL)
+			dbenv->errx(dbenv, 
+			    "Cannot delete a user in a transaction.");
 		return rc;
 	}
 

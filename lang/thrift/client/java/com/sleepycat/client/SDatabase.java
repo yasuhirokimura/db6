@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -22,12 +22,17 @@ import com.sleepycat.thrift.TKeyData;
 import com.sleepycat.thrift.TKeyDataWithSecondaryKeys;
 import com.sleepycat.thrift.TSequence;
 
+import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import static com.sleepycat.client.SLockMode.RMW;
 
 /**
  * Creates a database handle for a single Berkeley DB database. A Berkeley DB
@@ -62,7 +67,8 @@ import java.util.stream.Collectors;
  *  SDatabase myDatabase = env.openDatabase(null, "mydatabase", dbConfig);
  * </pre>
  */
-public class SDatabase implements GetHelper, PutHelper, AutoCloseable {
+public class SDatabase
+        implements GetHelper, PutHelper, TxnHelper, AutoCloseable {
     /** The remote database handle. */
     protected final TDatabase tDb;
 
@@ -81,6 +87,23 @@ public class SDatabase implements GetHelper, PutHelper, AutoCloseable {
     /** The set of secondary databases associated with this primary database. */
     private final Set<SSecondaryDatabase> secondaries;
 
+    /**
+     * The set of secondary databases which use this database as a foreign
+     * key database and which use nullifiers to update data when foreign keys
+     * are deleted.
+     */
+    private final Map<SSecondaryDatabase, SForeignMultiKeyNullifier>
+            fkNullifiers;
+
+    /**
+     * Constructor for subclasses.
+     *
+     * @param tDb the Thrift object
+     * @param fileName the file name
+     * @param databaseName the database name
+     * @param client the Thrift client object
+     * @param env the enclosing environment
+     */
     protected SDatabase(TDatabase tDb, String fileName, String databaseName,
             BdbService.Client client, SEnvironment env) {
         this.tDb = tDb;
@@ -89,6 +112,7 @@ public class SDatabase implements GetHelper, PutHelper, AutoCloseable {
         this.client = client;
         this.env = env;
         this.secondaries = new HashSet<>();
+        this.fkNullifiers = new HashMap<>();
     }
 
     TDatabase getThriftObj() {
@@ -101,6 +125,15 @@ public class SDatabase implements GetHelper, PutHelper, AutoCloseable {
 
     void disassociate(SSecondaryDatabase secondary) {
         this.secondaries.remove(secondary);
+    }
+
+    void associateForeign(SSecondaryDatabase secondary,
+            SForeignMultiKeyNullifier nullifier) {
+        this.fkNullifiers.put(secondary, nullifier);
+    }
+
+    void disassociateForeign(SSecondaryDatabase secondary) {
+        this.fkNullifiers.remove(secondary);
     }
 
     /**
@@ -191,6 +224,7 @@ public class SDatabase implements GetHelper, PutHelper, AutoCloseable {
      * @return the {@link SEnvironment} handle for the database environment
      * underlying this database
      */
+    @Override
     public SEnvironment getEnvironment() {
         return this.env;
     }
@@ -198,6 +232,15 @@ public class SDatabase implements GetHelper, PutHelper, AutoCloseable {
     @Override
     public Set<SSecondaryDatabase> getSecondaryDatabases() {
         return Collections.unmodifiableSet(this.secondaries);
+    }
+
+    /**
+     * Return the native byte order of the connected server.
+     *
+     * @return the native byte order of the connected server
+     */
+    public ByteOrder getServerByteOrder() {
+        return getEnvironment().getServerByteOrder();
     }
 
     /**
@@ -387,6 +430,13 @@ public class SDatabase implements GetHelper, PutHelper, AutoCloseable {
                         key.getThriftObj())));
     }
 
+    boolean isEmpty(STransaction txn) throws SDatabaseException {
+        try (SCursor cursor = openCursor(txn, null)) {
+            return (cursor.getFirst(null, null, null) ==
+                    SOperationStatus.NOTFOUND);
+        }
+    }
+
     /**
      * Return an estimate of the proportion of keys in the database less than,
      * equal to, and greater than the specified key.
@@ -567,8 +617,12 @@ public class SDatabase implements GetHelper, PutHelper, AutoCloseable {
      */
     public SOperationStatus delete(STransaction txn, SDatabaseEntry key)
             throws SDatabaseException {
-        return remoteDelete(txn, Collections
-                .singletonList(new TKeyData().setKey(key.getThriftObj())));
+        return runInSingleTxn(txn, autoTxn -> {
+            updatePrimaryData(autoTxn, Collections.singletonList(key));
+
+            return remoteDelete(autoTxn, Collections
+                    .singletonList(new TKeyData().setKey(key.getThriftObj())));
+        });
     }
 
     /**
@@ -596,8 +650,12 @@ public class SDatabase implements GetHelper, PutHelper, AutoCloseable {
      */
     public SOperationStatus deleteMultiple(STransaction txn,
             SMultipleDataEntry keys) throws SDatabaseException {
-        return remoteDelete(txn,
-                keys.map(k -> new TKeyData().setKey(k.getThriftObj())));
+        return runInSingleTxn(txn, autoTxn -> {
+            updatePrimaryData(autoTxn, keys.map(key -> key));
+
+            return remoteDelete(autoTxn,
+                    keys.map(k -> new TKeyData().setKey(k.getThriftObj())));
+        });
     }
 
     /**
@@ -623,9 +681,53 @@ public class SDatabase implements GetHelper, PutHelper, AutoCloseable {
      */
     public SOperationStatus deleteMultipleKey(STransaction txn,
             SMultiplePairs pairs) throws SDatabaseException {
-        return remoteDelete(txn, pairs.map(
-                (k, d) -> new TKeyData().setKey(k.getThriftObj())
-                        .setData(d.getThriftObj())));
+        return runInSingleTxn(txn, autoTxn -> {
+            updatePrimaryData(autoTxn, pairs.map((key, data) -> key));
+
+            return remoteDelete(autoTxn, pairs.map(
+                    (k, d) -> new TKeyData().setKey(k.getThriftObj())
+                            .setData(d.getThriftObj())));
+        });
+    }
+
+    void updatePrimaryData(STransaction txn, List<SDatabaseEntry> fKeys)
+            throws SDatabaseException {
+        SCursorConfig cursorConfig = new SCursorConfig().setBulkCursor(true);
+        this.fkNullifiers.keySet().forEach(sdb -> {
+            Map<SDatabaseEntry, SDatabaseEntry> nullifiedData;
+            try (SSecondaryCursor cursor = sdb.openCursor(txn, cursorConfig)) {
+                nullifiedData = calculateNullifiedData(cursor, fKeys);
+            }
+            try (SCursor cursor = sdb.getPrimaryDatabase()
+                    .openCursor(txn, new SCursorConfig())) {
+                nullifiedData.forEach(cursor::putKeyFirst);
+            }
+        });
+    }
+
+    private Map<SDatabaseEntry, SDatabaseEntry> calculateNullifiedData(
+            SSecondaryCursor sCursor, List<SDatabaseEntry> fKeys)
+            throws SDatabaseException {
+        SSecondaryDatabase sdb = sCursor.getDatabase();
+        Map<SDatabaseEntry, SDatabaseEntry> nullifiedData = new HashMap<>();
+
+        fKeys.forEach(fKey -> {
+            SDatabaseEntry pKey = new SDatabaseEntry();
+            SDatabaseEntry pData = new SDatabaseEntry();
+
+            SOperationStatus status =
+                    sCursor.getSearchKey(fKey, pKey, pData, RMW);
+            while (status == SOperationStatus.SUCCESS) {
+                pData = nullifiedData.getOrDefault(pKey, pData);
+                if (this.fkNullifiers.get(sdb)
+                        .nullifyForeignKey(sdb, pKey, pData, fKey)) {
+                    nullifiedData.put(pKey.deepCopy(), pData.deepCopy());
+                }
+                status = sCursor.getNextDup(fKey, pKey, pData, RMW);
+            }
+        });
+
+        return nullifiedData;
     }
 
     private SOperationStatus remoteDelete(STransaction txn,
@@ -654,7 +756,7 @@ public class SDatabase implements GetHelper, PutHelper, AutoCloseable {
             TCursor cursor = this.client
                     .openCursor(this.tDb, STransaction.nullSafeGet(txn),
                             SCursorConfig.nullSafeGet(config));
-            return new SCursor(cursor, this, this.client);
+            return new SCursor(cursor, this, txn, this.client);
         });
     }
 
@@ -681,10 +783,11 @@ public class SDatabase implements GetHelper, PutHelper, AutoCloseable {
     public SJoinCursor join(SCursor[] cursors, SJoinConfig config)
             throws SDatabaseException {
         return remoteCall(() -> {
-            List<TCursor> tCursors = Arrays.stream(cursors).map(c -> c.tCursor)
+            List<TCursor> tCursors = Arrays.stream(cursors)
+                    .map(c -> c.tCursor)
                     .collect(Collectors.toList());
-            TJoinCursor joinCursor = this.client
-                    .openJoinCursor(this.tDb, tCursors, !config.getNoSort());
+            TJoinCursor joinCursor = this.client.openJoinCursor(this.tDb,
+                    tCursors, (config == null || !config.getNoSort()));
             return new SJoinCursor(joinCursor, config, this, this.client);
         });
     }
@@ -726,6 +829,9 @@ public class SDatabase implements GetHelper, PutHelper, AutoCloseable {
      * which record in the database stores the persistent sequence data.
      * @param autoCommitNoSync if true, configure auto-commit operations on the
      * sequence to not flush the transaction log
+     * @param force if true all open handles on the sequence are closed and the
+     * sequence is removed; if false the sequence is removed only if there is
+     * no open handle on it
      * @throws SDatabaseException if any error occurs
      */
     public void removeSequence(STransaction txn, SDatabaseEntry key,
@@ -766,6 +872,7 @@ public class SDatabase implements GetHelper, PutHelper, AutoCloseable {
      * stopped.
      * @param config the compaction operation attributes; if null, default
      * attributes are used
+     * @return compaction operation statistics
      * @throws SDatabaseException if any error occurs
      */
     public SCompactStats compact(STransaction txn, SDatabaseEntry start,

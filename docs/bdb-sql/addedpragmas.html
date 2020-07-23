@@ -90,6 +90,16 @@
           </dt>
           <dt>
             <span class="sect2">
+              <a href="addedpragmas.html#statistics">PRAGMA statistics</a>
+            </span>
+          </dt>
+          <dt>
+            <span class="sect2">
+              <a href="addedpragmas.html#statistics_file">PRAGMA statistics_file</a>
+            </span>
+          </dt>
+          <dt>
+            <span class="sect2">
               <a href="addedpragmas.html#trickle">PRAGMA trickle</a>
             </span>
           </dt>
@@ -385,6 +395,41 @@
                     For more information on MVCC and snapshot isolation,
                     see <a class="xref" href="mvcc.html" title="Using Multiversion Concurrency Control">Using Multiversion Concurrency Control</a>
                 </p>
+      </div>
+      <div class="sect2" lang="en" xml:lang="en">
+        <div class="titlepage">
+          <div>
+            <div>
+              <h3 class="title"><a id="statistics"></a>PRAGMA statistics</h3>
+            </div>
+          </div>
+        </div>
+        <pre class="programlisting">PRAGMA statistics [= LOCK|LOG|MEM|MUTEX|REP]</pre>
+        <p>
+                Prints various statistics to the entered subsystem, or 
+                general environment statistics if no subsystem is entered.
+                The subsystems are locking, logging, memory pool, mutex
+                and replication.  The output is printed to stdout, unless
+                the statistics_file PRAGMA is used to set a file to which
+                the output is directed.
+            </p>
+      </div>
+      <div class="sect2" lang="en" xml:lang="en">
+        <div class="titlepage">
+          <div>
+            <div>
+              <h3 class="title"><a id="statistics_file"></a>PRAGMA statistics_file</h3>
+            </div>
+          </div>
+        </div>
+        <pre class="programlisting">PRAGMA statistics_file [= filename]</pre>
+        <p>
+                Sets a file to which the output from the statistics PRAGMA
+                is printed.  Otherwise the output is printed to stdout.  The
+                file will be automatically created if it does not exist, and
+                output will be appended to the end of the file if it does
+                exist.
+            </p>
       </div>
       <div class="sect2" lang="en" xml:lang="en">
         <div class="titlepage">

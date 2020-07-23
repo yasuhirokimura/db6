@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2004, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2004, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -166,6 +166,23 @@ __rep_verify(env, rp, rec, eid, savetime)
 			 */
 			if ((ret = __logc_get(logc,
 			    &prev_ckp, &mylog, DB_SET)) != 0) {
+				if (ret == DB_NOTFOUND)
+					ret = __rep_internal_init(env, 0);
+				goto out;
+			}
+			/* We are about to roll back to prev_ckp.  Check if we
+			 * still have the earliest log record required by
+			 * prev_ckp.
+			 */
+			LOGCOPY_32(env, &rectype, mylog.data);
+			DB_ASSERT(env, rectype == DB___txn_ckp);
+			if ((ret = __txn_ckp_read(env,
+			    mylog.data, &ckp_args)) != 0)
+				goto out;
+			lsn = ckp_args->ckp_lsn;
+			__os_free(env, ckp_args);
+			if ((ret = __logc_get(logc,
+			    &lsn, &mylog, DB_SET)) != 0) {
 				if (ret == DB_NOTFOUND)
 					ret = __rep_internal_init(env, 0);
 				goto out;

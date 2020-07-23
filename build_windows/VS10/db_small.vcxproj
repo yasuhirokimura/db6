@@ -185,9 +185,12 @@
     <ClCompile Include="..\..\src\common\dbt.c"/>
     <ClCompile Include="..\..\src\common\mkpath.c"/>
     <ClCompile Include="..\..\src\common\os_method.c"/>
+    <ClCompile Include="..\..\src\common\util_arg.c"/>
     <ClCompile Include="..\..\src\common\util_cache.c"/>
+    <ClCompile Include="..\..\src\common\util_env.c"/>
     <ClCompile Include="..\..\src\common\util_log.c"/>
     <ClCompile Include="..\..\src\common\util_sig.c"/>
+    <ClCompile Include="..\..\src\common\util_ver_check.c"/>
     <ClCompile Include="..\..\src\common\zerofill.c"/>
     <ClCompile Include="..\..\lang\cxx\cxx_channel.cpp"/>
     <ClCompile Include="..\..\lang\cxx\cxx_db.cpp"/>

@@ -31,7 +31,7 @@ declare function local:getComponents($group)
 
 declare function local:getGroups()
 {
-    ("group_csharp", "group_cxx", "group_devo", "group_doc", "group_examples", "group_java", "group_runtime", "group_sql")
+    ("group_csharp", "group_cxx", "group_devo", "group_doc", "group_examples", "group_java", "group_runtime", "group_sql", "group_thrift")
 };
 
 declare function local:createGroup($group)

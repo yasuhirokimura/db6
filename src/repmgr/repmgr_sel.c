@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2006, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2006, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -14,7 +14,7 @@ typedef int (*HEARTBEAT_ACTION) __P((ENV *));
 
 static int accept_handshake __P((ENV *, REPMGR_CONNECTION *, char *, int *));
 static int accept_v1_handshake __P((ENV *, REPMGR_CONNECTION *, char *));
-static void check_min_log_file __P((ENV *));
+static void check_min_log_file __P((ENV *, DB_LSN *, REPMGR_SITE *));
 static int dispatch_msgin __P((ENV *, REPMGR_CONNECTION *));
 static int prepare_input __P((ENV *, REPMGR_CONNECTION *));
 static int process_own_msg __P((ENV *, REPMGR_CONNECTION *));
@@ -2572,7 +2572,7 @@ record_permlsn(env, conn)
 	    (u_long)ackp->lsn.offset, (u_long)ackp->generation,
 	    __repmgr_format_site_loc(site, location)));
 
-	if (ackp->generation == gen &&
+	if (ackp->generation == gen && ackp->lsn.offset != 0 &&
 	    LOG_COMPARE(&ackp->lsn, &site->max_ack) == 1) {
 		/*
 		 * If file number for this site changed, check lowest log
@@ -2583,11 +2583,16 @@ record_permlsn(env, conn)
 		site->max_ack_gen = ackp->generation;
 		memcpy(&site->max_ack, &ackp->lsn, sizeof(DB_LSN));
 		if (do_log_check)
-			check_min_log_file(env);
+			check_min_log_file(env, &ackp->lsn, site);
 		if ((ret = __repmgr_wake_waiters(env,
 		    &db_rep->ack_waiters)) != 0)
 			return (ret);
 	}
+	/*
+	 * If we received a checkpoint message, check the lowest log file.
+	 */
+	if (ackp->generation == gen && ackp->lsn.offset == 0)
+		check_min_log_file(env, &ackp->lsn, site);
 	return (0);
 }
 
@@ -2598,22 +2603,24 @@ record_permlsn(env, conn)
  * (e.g. a separate db_archive process.)
  */
 static void
-check_min_log_file(env)
+check_min_log_file(env, ack_lsnp, from_site)
 	ENV *env;
+ 	DB_LSN *ack_lsnp;
+ 	REPMGR_SITE *from_site;
 {
 	DB_REP *db_rep;
 	REP *rep;
 	REPMGR_CONNECTION *conn;
 	REPMGR_SITE *site;
-	u_int32_t min_log;
+	DB_LSN min_lsn;
 	int eid;
 
 	db_rep = env->rep_handle;
 	rep = db_rep->region;
-	min_log = 0;
+	ZERO_LSN(min_lsn);
 
 	/*
-	 * Record the lowest log file number from all connected sites.  If this
+	 * Record the lowest LSN from all connected sites.  If this
 	 * is a client, ignore the master because the master does not maintain
 	 * nor send out its repmgr perm LSN in this way.  Consider connections
 	 * so that we don't allow a site that has been down a long time to
@@ -2629,16 +2636,55 @@ check_min_log_file(env)
 		    ((conn = site->ref.conn.out) != NULL &&
 		    conn->state == CONN_READY)) &&
 		    !IS_ZERO_LSN(site->max_ack) &&
-		    (min_log == 0 || site->max_ack.file < min_log))
-			min_log = site->max_ack.file;
+		    (IS_ZERO_LSN(min_lsn) ||
+		    LOG_COMPARE(&site->max_ack, &min_lsn) < 0))
+			min_lsn = site->max_ack;
 	}
 	/*
-	 * During normal operation min_log should increase over time, but it
-	 * is possible if a site returns after being disconnected for a while
-	 * that min_log could decrease.
+ 	 * We need to consider two things here:
+ 	 * 1. We want to keep log records that may still be needed by clients.
+ 	 *    This reduces the chance that a client needs to go through
+ 	 *    internal init because of missing log files.
+ 	 * 2. When master changes, if we can find a log verify match with
+ 	 *    the new master, we want to keep all the log records that are
+ 	 *    necessary to recover to that match point.  This reduces the
+ 	 *    chance that this site needs to go through internal init. 
+ 	 *
+ 	 * To satisfy 1. we only need to set rep->min_log_file to min_lsn.file.
+ 	 * In general, there is no way to satisfy 2. with 100% certainty, so
+ 	 * we will try to do something simple that increases our chance of
+ 	 * meeting 2.  Suppose that when master changes the new master is
+ 	 * one of the above available sites, the new master must have the log
+ 	 * record at min_lsn.  Therefore if there is a common sync point
+ 	 * between this site and the new master, it must have an LSN greater
+ 	 * than or equal to min_lsn.  If we keep all the log records after
+ 	 * the ckp_lsn field of the checkpoint at or right before min_lsn,
+ 	 * we would be able to perform recovery to the common sync point.
+ 	 *
+ 	 * To do this, we broadcast checkpoint messages from clients.  A
+ 	 * checkpoint message is a permlsn message representing a successfully
+ 	 * applied checkpoint.  Its lsn.file is ckp_lsn.file of the checkpoint
+ 	 * record and its lsn.offset is 0.  If we received a checkpoint message
+ 	 * and the sending site has the lowest LSN, we know that every
+ 	 * available site must have processed the checkpoint, so we can use
+ 	 * it as the lower bound.
 	 */
-	if (min_log != 0 && min_log != rep->min_log_file)
-		rep->min_log_file = min_log;
+	if (ack_lsnp->offset == 0) {
+		if (LOG_COMPARE(&from_site->max_ack, &min_lsn) == 0)
+			rep->min_log_file = ack_lsnp->file;
+	} else {
+		/*
+		 * During normal operation, the lower bound determined by the
+		 * above checkpoint message <= LSN of the checkpoint <= LSN
+		 * of the last normal permlsn message.  Therefore, normal
+		 * permlsn messages can be ignored.  However it is possible
+		 * if a site returns after being disconnected for a while
+		 * that min_lsn could decrease and thus provide a new lower
+		 * bound.
+		 */
+		if (!IS_ZERO_LSN(min_lsn) && min_lsn.file < rep->min_log_file)
+			rep->min_log_file = min_lsn.file;
+	}
 }
 
 /*

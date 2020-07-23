@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -32,6 +32,7 @@ public class SDatabaseTest extends ClientTestBase {
                         .setType(SDatabaseType.BTREE)
                         .setPriority(SCacheFilePriority.DEFAULT)
                         .setBtreeRecordNumbers(true));
+        db.put(null, entry("key"), entry("data"));
     }
 
     @Test
@@ -94,62 +95,41 @@ public class SDatabaseTest extends ClientTestBase {
 
     @Test
     public void testGet() throws Exception {
-        SDatabaseEntry key = new SDatabaseEntry("key".getBytes());
+        assertDbGet(db::get, entry("key"), new SDatabaseEntry(), "key", "data");
 
-        db.put(null, key, new SDatabaseEntry("data".getBytes()));
-
-        assertThat(
-                db.get(null, new SDatabaseEntry("bad".getBytes()), null, null),
+        assertThat(db.get(null, entry("bad"), null, null),
                 is(SOperationStatus.NOTFOUND));
-
-        SDatabaseEntry data = new SDatabaseEntry();
-        db.get(null, key, data, null);
-
-        assertThat(new String(data.getData()), is("data"));
     }
 
     @Test
     public void testGetSearchBoth() throws Exception {
-        SDatabaseEntry key = new SDatabaseEntry("key".getBytes());
-        SDatabaseEntry data = new SDatabaseEntry("data".getBytes());
-
-        db.put(null, key, new SDatabaseEntry("data".getBytes()));
-
-        assertThat(db.getSearchBoth(null, key, data, null),
-                is(SOperationStatus.SUCCESS));
+        assertDbGet(db::getSearchBoth, entry("key"), entry("data"),
+                "key", "data");
     }
 
     @Test
     public void testGetSearchRecordNumber() throws Exception {
-        db.put(null, new SDatabaseEntry("key".getBytes()),
-                new SDatabaseEntry("data".getBytes()));
-
-        SDatabaseEntry key = new SDatabaseEntry().setRecordNumber(1);
-        SDatabaseEntry data = new SDatabaseEntry();
-
-        db.getSearchRecordNumber(null, key, data, null);
-
-        assertThat(new String(key.getData()), is("key"));
-        assertThat(new String(data.getData()), is("data"));
+        assertDbGet(db::getSearchRecordNumber,
+                new SDatabaseEntry()
+                        .setRecordNumber(1, connection.getServerByteOrder()),
+                new SDatabaseEntry(),
+                "key", "data");
     }
 
     @Test
     public void testExists() throws Exception {
-        assertThat(db.exists(null, new SDatabaseEntry("bad".getBytes())),
+        assertThat(db.exists(null, entry("bad")),
                 is(SOperationStatus.NOTFOUND));
     }
 
     @Test
     public void testGetKeyRange() throws Exception {
-        SDatabaseEntry key = new SDatabaseEntry("key".getBytes());
-        db.put(null, key, new SDatabaseEntry("data".getBytes()));
-        assertThat(db.getKeyRange(null, key), notNullValue());
+        assertThat(db.getKeyRange(null, entry("key")), notNullValue());
     }
 
     @Test
     public void testPut() throws Exception {
-        assertThat(db.put(null, new SDatabaseEntry("key".getBytes()),
-                        new SDatabaseEntry("data".getBytes())),
+        assertThat(db.put(null, entry("key"), entry("data")),
                 is(SOperationStatus.SUCCESS));
     }
 
@@ -160,9 +140,7 @@ public class SDatabaseTest extends ClientTestBase {
                         .setType(SDatabaseType.BTREE)
                         .setSortedDuplicates(true));
 
-        assertThat(
-                sorted.putNoDupData(null, new SDatabaseEntry("key".getBytes()),
-                        new SDatabaseEntry("data".getBytes())),
+        assertThat(sorted.putNoDupData(null, entry("key1"), entry("data1")),
                 is(SOperationStatus.SUCCESS));
 
         sorted.close();
@@ -170,8 +148,7 @@ public class SDatabaseTest extends ClientTestBase {
 
     @Test
     public void testPutNoOverwrite() throws Exception {
-        assertThat(db.putNoOverwrite(null, new SDatabaseEntry("key".getBytes()),
-                        new SDatabaseEntry("data".getBytes())),
+        assertThat(db.putNoOverwrite(null, entry("key1"), entry("data1")),
                 is(SOperationStatus.SUCCESS));
     }
 
@@ -184,23 +161,20 @@ public class SDatabaseTest extends ClientTestBase {
         assertThat(db.putMultipleKey(null, pairs, true),
                 is(SOperationStatus.SUCCESS));
 
-        assertThat(db.exists(null, new SDatabaseEntry("key1".getBytes())),
+        assertThat(db.exists(null, entry("key1")),
                 is(SOperationStatus.SUCCESS));
-        assertThat(db.exists(null, new SDatabaseEntry("key2".getBytes())),
+        assertThat(db.exists(null, entry("key2")),
                 is(SOperationStatus.SUCCESS));
     }
 
     @Test
     public void testDelete() throws Exception {
-        SDatabaseEntry key = new SDatabaseEntry("key".getBytes());
+        assertThat(db.exists(null, entry("key")), is(SOperationStatus.SUCCESS));
 
-        db.put(null, key, new SDatabaseEntry("data".getBytes()));
+        db.delete(null, entry("key"));
 
-        assertThat(db.exists(null, key), is(SOperationStatus.SUCCESS));
-
-        db.delete(null, key);
-
-        assertThat(db.exists(null, key), is(SOperationStatus.NOTFOUND));
+        assertThat(db.exists(null, entry("key")),
+                is(SOperationStatus.NOTFOUND));
     }
 
     @Test
@@ -217,9 +191,9 @@ public class SDatabaseTest extends ClientTestBase {
 
         db.deleteMultiple(null, keys);
 
-        assertThat(db.exists(null, new SDatabaseEntry("key1".getBytes())),
+        assertThat(db.exists(null, entry("key1")),
                 is(SOperationStatus.NOTFOUND));
-        assertThat(db.exists(null, new SDatabaseEntry("key2".getBytes())),
+        assertThat(db.exists(null, entry("key2")),
                 is(SOperationStatus.NOTFOUND));
     }
 
@@ -233,9 +207,9 @@ public class SDatabaseTest extends ClientTestBase {
 
         db.deleteMultipleKey(null, pairs);
 
-        assertThat(db.exists(null, new SDatabaseEntry("key1".getBytes())),
+        assertThat(db.exists(null, entry("key1")),
                 is(SOperationStatus.NOTFOUND));
-        assertThat(db.exists(null, new SDatabaseEntry("key2".getBytes())),
+        assertThat(db.exists(null, entry("key2")),
                 is(SOperationStatus.NOTFOUND));
     }
 
@@ -248,7 +222,7 @@ public class SDatabaseTest extends ClientTestBase {
     @Test
     public void testOpenSequence() throws Exception {
         SSequence seq =
-                db.openSequence(null, new SDatabaseEntry("seq".getBytes()),
+                db.openSequence(null, entry("seq"),
                         new SSequenceConfig().setAllowCreate(true));
         seq.close();
     }
@@ -256,18 +230,16 @@ public class SDatabaseTest extends ClientTestBase {
     @Test
     public void testRemoveSequence() throws Exception {
         SSequence seq =
-                db.openSequence(null, new SDatabaseEntry("seq".getBytes()),
+                db.openSequence(null, entry("seq"),
                         new SSequenceConfig().setAllowCreate(true));
         seq.close();
-        db.removeSequence(null, new SDatabaseEntry("seq".getBytes()), false,
-                true);
+        db.removeSequence(null, entry("seq"), false, true);
     }
 
     @Test
     public void testCompact() throws Exception {
-        assertThat(db.compact(null, new SDatabaseEntry("start".getBytes()),
-                new SDatabaseEntry("stop".getBytes()), new SDatabaseEntry(),
-                null), notNullValue());
+        assertThat(db.compact(null, entry("start"), entry("stop"),
+                new SDatabaseEntry(), null), notNullValue());
     }
 
     @Test

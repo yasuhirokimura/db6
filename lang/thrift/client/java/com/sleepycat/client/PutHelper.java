@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -62,7 +62,7 @@ interface PutHelper extends RemoteCallHelper {
             TPutResult result = func.applyWithException(pairs);
 
             if (result.isSetNewRecordNumber()) {
-                retKey.setRecordNumber(result.newRecordNumber);
+                retKey.setData(result.getNewRecordNumber());
             }
 
             return SOperationStatus.toBdb(result.status);

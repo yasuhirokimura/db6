@@ -1,6 +1,6 @@
 # DO NOT EDIT: automatically built by dist/s_android.
 # Makefile for building Android.JDBC for DBSQL
-# Berkeley DB 12c Release 1, library version 12.1.6.2.23: (March 28, 2016)
+# Berkeley DB 12c Release 1, library version 12.1.6.2.32: (April  5, 2017)
 #
 # This Makefile will generate 3 files:
 #   1. Static libdb_sql library. An internal library and users don't
@@ -19,6 +19,15 @@ BDB_ENABLE_USERAUTH_KEYSTORE := false
 ###################################################################
 BDB_TOP := ../../..
 BDB_PATH := $(LOCAL_PATH)/$(BDB_TOP)
+
+# Common source files for command line tools
+COMMON_TOOL_SRCS := \
+	$(BDB_TOP)/src/common/util_arg.c \
+	$(BDB_TOP)/src/common/util_cache.c \
+	$(BDB_TOP)/src/common/util_env.c \
+	$(BDB_TOP)/src/common/util_log.c \
+	$(BDB_TOP)/src/common/util_sig.c \
+	$(BDB_TOP)/src/common/util_ver_check.c
 
 # Common include paths
 COMMON_C_INCLUDES := $(BDB_PATH)/build_android $(BDB_PATH)/src \
@@ -390,7 +399,7 @@ LOCAL_ARM_MODE := arm
 LOCAL_STATIC_LIBRARIES := libdb_sql_static # Based on above static library
 LOCAL_SRC_FILES := \
 	$(BDB_TOP)/util/db_archive.c \
-	$(BDB_TOP)/src/common/util_sig.c
+	$(COMMON_TOOL_SRCS)
 
 # Import common flags
 LOCAL_C_INCLUDES += $(COMMON_C_INCLUDES)
@@ -419,8 +428,7 @@ LOCAL_ARM_MODE := arm
 LOCAL_STATIC_LIBRARIES := libdb_sql_static # Based on above static library
 LOCAL_SRC_FILES := \
 	$(BDB_TOP)/util/db_checkpoint.c \
-	$(BDB_TOP)/src/common/util_log.c \
-	$(BDB_TOP)/src/common/util_sig.c
+	$(COMMON_TOOL_SRCS)
 
 # Import common flags
 LOCAL_C_INCLUDES += $(COMMON_C_INCLUDES)
@@ -449,8 +457,7 @@ LOCAL_ARM_MODE := arm
 LOCAL_STATIC_LIBRARIES := libdb_sql_static # Based on above static library
 LOCAL_SRC_FILES := \
 	$(BDB_TOP)/util/db_deadlock.c \
-	$(BDB_TOP)/src/common/util_log.c \
-	$(BDB_TOP)/src/common/util_sig.c
+	$(COMMON_TOOL_SRCS)
 
 # Import common flags
 LOCAL_C_INCLUDES += $(COMMON_C_INCLUDES)
@@ -479,8 +486,7 @@ LOCAL_ARM_MODE := arm
 LOCAL_STATIC_LIBRARIES := libdb_sql_static # Based on above static library
 LOCAL_SRC_FILES := \
 	$(BDB_TOP)/util/db_dump.c \
-	$(BDB_TOP)/src/common/util_cache.c \
-	$(BDB_TOP)/src/common/util_sig.c
+	$(COMMON_TOOL_SRCS)
 
 # Import common flags
 LOCAL_C_INCLUDES += $(COMMON_C_INCLUDES)
@@ -509,7 +515,7 @@ LOCAL_ARM_MODE := arm
 LOCAL_STATIC_LIBRARIES := libdb_sql_static # Based on above static library
 LOCAL_SRC_FILES := \
 	$(BDB_TOP)/util/db_hotbackup.c \
-	$(BDB_TOP)/src/common/util_sig.c
+	$(COMMON_TOOL_SRCS)
 
 # Import common flags
 LOCAL_C_INCLUDES += $(COMMON_C_INCLUDES)
@@ -538,8 +544,7 @@ LOCAL_ARM_MODE := arm
 LOCAL_STATIC_LIBRARIES := libdb_sql_static # Based on above static library
 LOCAL_SRC_FILES := \
 	$(BDB_TOP)/util/db_load.c \
-	$(BDB_TOP)/src/common/util_cache.c \
-	$(BDB_TOP)/src/common/util_sig.c
+	$(COMMON_TOOL_SRCS)
 
 # Import common flags
 LOCAL_C_INCLUDES += $(COMMON_C_INCLUDES)
@@ -568,7 +573,7 @@ LOCAL_ARM_MODE := arm
 LOCAL_STATIC_LIBRARIES := libdb_sql_static # Based on above static library
 LOCAL_SRC_FILES := \
 	$(BDB_TOP)/util/db_printlog.c \
-	$(BDB_TOP)/src/common/util_sig.c \
+	$(COMMON_TOOL_SRCS) \
 	$(BDB_TOP)/src/btree/btree_autop.c \
 	$(BDB_TOP)/src/db/crdel_autop.c \
 	$(BDB_TOP)/src/db/db_autop.c \
@@ -607,7 +612,7 @@ LOCAL_ARM_MODE := arm
 LOCAL_STATIC_LIBRARIES := libdb_sql_static # Based on above static library
 LOCAL_SRC_FILES := \
 	$(BDB_TOP)/util/db_recover.c \
-	$(BDB_TOP)/src/common/util_sig.c
+	$(COMMON_TOOL_SRCS)
 
 # Import common flags
 LOCAL_C_INCLUDES += $(COMMON_C_INCLUDES)
@@ -636,7 +641,7 @@ LOCAL_ARM_MODE := arm
 LOCAL_STATIC_LIBRARIES := libdb_sql_static # Based on above static library
 LOCAL_SRC_FILES := \
 	$(BDB_TOP)/util/db_replicate.c \
-	$(BDB_TOP)/src/common/util_sig.c
+	$(COMMON_TOOL_SRCS)
 
 # Import common flags
 LOCAL_C_INCLUDES += $(COMMON_C_INCLUDES)
@@ -665,8 +670,7 @@ LOCAL_ARM_MODE := arm
 LOCAL_STATIC_LIBRARIES := libdb_sql_static # Based on above static library
 LOCAL_SRC_FILES := \
 	$(BDB_TOP)/util/db_stat.c \
-	$(BDB_TOP)/src/common/util_cache.c \
-	$(BDB_TOP)/src/common/util_sig.c
+	$(COMMON_TOOL_SRCS)
 
 # Import common flags
 LOCAL_C_INCLUDES += $(COMMON_C_INCLUDES)
@@ -695,7 +699,7 @@ LOCAL_ARM_MODE := arm
 LOCAL_STATIC_LIBRARIES := libdb_sql_static # Based on above static library
 LOCAL_SRC_FILES := \
 	$(BDB_TOP)/util/db_tuner.c \
-	$(BDB_TOP)/src/common/util_sig.c
+	$(COMMON_TOOL_SRCS)
 
 # Import common flags
 LOCAL_C_INCLUDES += $(COMMON_C_INCLUDES)
@@ -724,7 +728,7 @@ LOCAL_ARM_MODE := arm
 LOCAL_STATIC_LIBRARIES := libdb_sql_static # Based on above static library
 LOCAL_SRC_FILES := \
 	$(BDB_TOP)/util/db_upgrade.c \
-	$(BDB_TOP)/src/common/util_sig.c
+	$(COMMON_TOOL_SRCS)
 
 # Import common flags
 LOCAL_C_INCLUDES += $(COMMON_C_INCLUDES)
@@ -753,8 +757,7 @@ LOCAL_ARM_MODE := arm
 LOCAL_STATIC_LIBRARIES := libdb_sql_static # Based on above static library
 LOCAL_SRC_FILES := \
 	$(BDB_TOP)/util/db_verify.c \
-	$(BDB_TOP)/src/common/util_cache.c \
-	$(BDB_TOP)/src/common/util_sig.c
+	$(COMMON_TOOL_SRCS)
 
 # Import common flags
 LOCAL_C_INCLUDES += $(COMMON_C_INCLUDES)
@@ -783,8 +786,7 @@ LOCAL_ARM_MODE := arm
 LOCAL_STATIC_LIBRARIES := libdb_sql_static # Based on above static library
 LOCAL_SRC_FILES := \
 	$(BDB_TOP)/util/db_log_verify.c \
-	$(BDB_TOP)/src/common/util_cache.c \
-	$(BDB_TOP)/src/common/util_sig.c
+	$(COMMON_TOOL_SRCS)
 
 # Import common flags
 LOCAL_C_INCLUDES += $(COMMON_C_INCLUDES)

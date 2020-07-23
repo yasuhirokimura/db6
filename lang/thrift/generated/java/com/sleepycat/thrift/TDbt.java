@@ -39,11 +39,10 @@ public class TDbt implements org.apache.thrift.TBase<TDbt, TDbt._Fields>, java.i
   private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("TDbt");
 
   private static final org.apache.thrift.protocol.TField DATA_FIELD_DESC = new org.apache.thrift.protocol.TField("data", org.apache.thrift.protocol.TType.STRING, (short)1);
-  private static final org.apache.thrift.protocol.TField RECORD_NUMBER_FIELD_DESC = new org.apache.thrift.protocol.TField("recordNumber", org.apache.thrift.protocol.TType.I32, (short)2);
-  private static final org.apache.thrift.protocol.TField PARTIAL_LENGTH_FIELD_DESC = new org.apache.thrift.protocol.TField("partialLength", org.apache.thrift.protocol.TType.I32, (short)3);
-  private static final org.apache.thrift.protocol.TField PARTIAL_OFFSET_FIELD_DESC = new org.apache.thrift.protocol.TField("partialOffset", org.apache.thrift.protocol.TType.I32, (short)4);
-  private static final org.apache.thrift.protocol.TField PARTIAL_FIELD_DESC = new org.apache.thrift.protocol.TField("partial", org.apache.thrift.protocol.TType.BOOL, (short)5);
-  private static final org.apache.thrift.protocol.TField BLOB_FIELD_DESC = new org.apache.thrift.protocol.TField("blob", org.apache.thrift.protocol.TType.BOOL, (short)6);
+  private static final org.apache.thrift.protocol.TField PARTIAL_LENGTH_FIELD_DESC = new org.apache.thrift.protocol.TField("partialLength", org.apache.thrift.protocol.TType.I32, (short)2);
+  private static final org.apache.thrift.protocol.TField PARTIAL_OFFSET_FIELD_DESC = new org.apache.thrift.protocol.TField("partialOffset", org.apache.thrift.protocol.TType.I32, (short)3);
+  private static final org.apache.thrift.protocol.TField PARTIAL_FIELD_DESC = new org.apache.thrift.protocol.TField("partial", org.apache.thrift.protocol.TType.BOOL, (short)4);
+  private static final org.apache.thrift.protocol.TField BLOB_FIELD_DESC = new org.apache.thrift.protocol.TField("blob", org.apache.thrift.protocol.TType.BOOL, (short)5);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
@@ -52,7 +51,6 @@ public class TDbt implements org.apache.thrift.TBase<TDbt, TDbt._Fields>, java.i
   }
 
   public ByteBuffer data; // optional
-  public int recordNumber; // optional
   public int partialLength; // optional
   public int partialOffset; // optional
   public boolean partial; // optional
@@ -61,11 +59,10 @@ public class TDbt implements org.apache.thrift.TBase<TDbt, TDbt._Fields>, java.i
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
     DATA((short)1, "data"),
-    RECORD_NUMBER((short)2, "recordNumber"),
-    PARTIAL_LENGTH((short)3, "partialLength"),
-    PARTIAL_OFFSET((short)4, "partialOffset"),
-    PARTIAL((short)5, "partial"),
-    BLOB((short)6, "blob");
+    PARTIAL_LENGTH((short)2, "partialLength"),
+    PARTIAL_OFFSET((short)3, "partialOffset"),
+    PARTIAL((short)4, "partial"),
+    BLOB((short)5, "blob");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -82,15 +79,13 @@ public class TDbt implements org.apache.thrift.TBase<TDbt, TDbt._Fields>, java.i
       switch(fieldId) {
         case 1: // DATA
           return DATA;
-        case 2: // RECORD_NUMBER
-          return RECORD_NUMBER;
-        case 3: // PARTIAL_LENGTH
+        case 2: // PARTIAL_LENGTH
           return PARTIAL_LENGTH;
-        case 4: // PARTIAL_OFFSET
+        case 3: // PARTIAL_OFFSET
           return PARTIAL_OFFSET;
-        case 5: // PARTIAL
+        case 4: // PARTIAL
           return PARTIAL;
-        case 6: // BLOB
+        case 5: // BLOB
           return BLOB;
         default:
           return null;
@@ -132,20 +127,17 @@ public class TDbt implements org.apache.thrift.TBase<TDbt, TDbt._Fields>, java.i
   }
 
   // isset id assignments
-  private static final int __RECORDNUMBER_ISSET_ID = 0;
-  private static final int __PARTIALLENGTH_ISSET_ID = 1;
-  private static final int __PARTIALOFFSET_ISSET_ID = 2;
-  private static final int __PARTIAL_ISSET_ID = 3;
-  private static final int __BLOB_ISSET_ID = 4;
+  private static final int __PARTIALLENGTH_ISSET_ID = 0;
+  private static final int __PARTIALOFFSET_ISSET_ID = 1;
+  private static final int __PARTIAL_ISSET_ID = 2;
+  private static final int __BLOB_ISSET_ID = 3;
   private byte __isset_bitfield = 0;
-  private static final _Fields optionals[] = {_Fields.DATA,_Fields.RECORD_NUMBER,_Fields.PARTIAL_LENGTH,_Fields.PARTIAL_OFFSET,_Fields.PARTIAL,_Fields.BLOB};
+  private static final _Fields optionals[] = {_Fields.DATA,_Fields.PARTIAL_LENGTH,_Fields.PARTIAL_OFFSET,_Fields.PARTIAL,_Fields.BLOB};
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
     tmpMap.put(_Fields.DATA, new org.apache.thrift.meta_data.FieldMetaData("data", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING        , true)));
-    tmpMap.put(_Fields.RECORD_NUMBER, new org.apache.thrift.meta_data.FieldMetaData("recordNumber", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
-        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I32)));
     tmpMap.put(_Fields.PARTIAL_LENGTH, new org.apache.thrift.meta_data.FieldMetaData("partialLength", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I32)));
     tmpMap.put(_Fields.PARTIAL_OFFSET, new org.apache.thrift.meta_data.FieldMetaData("partialOffset", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
@@ -169,7 +161,6 @@ public class TDbt implements org.apache.thrift.TBase<TDbt, TDbt._Fields>, java.i
     if (other.isSetData()) {
       this.data = org.apache.thrift.TBaseHelper.copyBinary(other.data);
     }
-    this.recordNumber = other.recordNumber;
     this.partialLength = other.partialLength;
     this.partialOffset = other.partialOffset;
     this.partial = other.partial;
@@ -183,8 +174,6 @@ public class TDbt implements org.apache.thrift.TBase<TDbt, TDbt._Fields>, java.i
   @Override
   public void clear() {
     this.data = null;
-    setRecordNumberIsSet(false);
-    this.recordNumber = 0;
     setPartialLengthIsSet(false);
     this.partialLength = 0;
     setPartialOffsetIsSet(false);
@@ -227,29 +216,6 @@ public class TDbt implements org.apache.thrift.TBase<TDbt, TDbt._Fields>, java.i
     if (!value) {
       this.data = null;
     }
-  }
-
-  public int getRecordNumber() {
-    return this.recordNumber;
-  }
-
-  public TDbt setRecordNumber(int recordNumber) {
-    this.recordNumber = recordNumber;
-    setRecordNumberIsSet(true);
-    return this;
-  }
-
-  public void unsetRecordNumber() {
-    __isset_bitfield = EncodingUtils.clearBit(__isset_bitfield, __RECORDNUMBER_ISSET_ID);
-  }
-
-  /** Returns true if field recordNumber is set (has been assigned a value) and false otherwise */
-  public boolean isSetRecordNumber() {
-    return EncodingUtils.testBit(__isset_bitfield, __RECORDNUMBER_ISSET_ID);
-  }
-
-  public void setRecordNumberIsSet(boolean value) {
-    __isset_bitfield = EncodingUtils.setBit(__isset_bitfield, __RECORDNUMBER_ISSET_ID, value);
   }
 
   public int getPartialLength() {
@@ -354,14 +320,6 @@ public class TDbt implements org.apache.thrift.TBase<TDbt, TDbt._Fields>, java.i
       }
       break;
 
-    case RECORD_NUMBER:
-      if (value == null) {
-        unsetRecordNumber();
-      } else {
-        setRecordNumber((Integer)value);
-      }
-      break;
-
     case PARTIAL_LENGTH:
       if (value == null) {
         unsetPartialLength();
@@ -402,9 +360,6 @@ public class TDbt implements org.apache.thrift.TBase<TDbt, TDbt._Fields>, java.i
     case DATA:
       return getData();
 
-    case RECORD_NUMBER:
-      return Integer.valueOf(getRecordNumber());
-
     case PARTIAL_LENGTH:
       return Integer.valueOf(getPartialLength());
 
@@ -430,8 +385,6 @@ public class TDbt implements org.apache.thrift.TBase<TDbt, TDbt._Fields>, java.i
     switch (field) {
     case DATA:
       return isSetData();
-    case RECORD_NUMBER:
-      return isSetRecordNumber();
     case PARTIAL_LENGTH:
       return isSetPartialLength();
     case PARTIAL_OFFSET:
@@ -463,15 +416,6 @@ public class TDbt implements org.apache.thrift.TBase<TDbt, TDbt._Fields>, java.i
       if (!(this_present_data && that_present_data))
         return false;
       if (!this.data.equals(that.data))
-        return false;
-    }
-
-    boolean this_present_recordNumber = true && this.isSetRecordNumber();
-    boolean that_present_recordNumber = true && that.isSetRecordNumber();
-    if (this_present_recordNumber || that_present_recordNumber) {
-      if (!(this_present_recordNumber && that_present_recordNumber))
-        return false;
-      if (this.recordNumber != that.recordNumber)
         return false;
     }
 
@@ -523,11 +467,6 @@ public class TDbt implements org.apache.thrift.TBase<TDbt, TDbt._Fields>, java.i
     if (present_data)
       list.add(data);
 
-    boolean present_recordNumber = true && (isSetRecordNumber());
-    list.add(present_recordNumber);
-    if (present_recordNumber)
-      list.add(recordNumber);
-
     boolean present_partialLength = true && (isSetPartialLength());
     list.add(present_partialLength);
     if (present_partialLength)
@@ -565,16 +504,6 @@ public class TDbt implements org.apache.thrift.TBase<TDbt, TDbt._Fields>, java.i
     }
     if (isSetData()) {
       lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.data, other.data);
-      if (lastComparison != 0) {
-        return lastComparison;
-      }
-    }
-    lastComparison = Boolean.valueOf(isSetRecordNumber()).compareTo(other.isSetRecordNumber());
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    if (isSetRecordNumber()) {
-      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.recordNumber, other.recordNumber);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -646,12 +575,6 @@ public class TDbt implements org.apache.thrift.TBase<TDbt, TDbt._Fields>, java.i
       } else {
         org.apache.thrift.TBaseHelper.toString(this.data, sb);
       }
-      first = false;
-    }
-    if (isSetRecordNumber()) {
-      if (!first) sb.append(", ");
-      sb.append("recordNumber:");
-      sb.append(this.recordNumber);
       first = false;
     }
     if (isSetPartialLength()) {
@@ -731,15 +654,7 @@ public class TDbt implements org.apache.thrift.TBase<TDbt, TDbt._Fields>, java.i
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 2: // RECORD_NUMBER
-            if (schemeField.type == org.apache.thrift.protocol.TType.I32) {
-              struct.recordNumber = iprot.readI32();
-              struct.setRecordNumberIsSet(true);
-            } else { 
-              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
-            }
-            break;
-          case 3: // PARTIAL_LENGTH
+          case 2: // PARTIAL_LENGTH
             if (schemeField.type == org.apache.thrift.protocol.TType.I32) {
               struct.partialLength = iprot.readI32();
               struct.setPartialLengthIsSet(true);
@@ -747,7 +662,7 @@ public class TDbt implements org.apache.thrift.TBase<TDbt, TDbt._Fields>, java.i
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 4: // PARTIAL_OFFSET
+          case 3: // PARTIAL_OFFSET
             if (schemeField.type == org.apache.thrift.protocol.TType.I32) {
               struct.partialOffset = iprot.readI32();
               struct.setPartialOffsetIsSet(true);
@@ -755,7 +670,7 @@ public class TDbt implements org.apache.thrift.TBase<TDbt, TDbt._Fields>, java.i
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 5: // PARTIAL
+          case 4: // PARTIAL
             if (schemeField.type == org.apache.thrift.protocol.TType.BOOL) {
               struct.partial = iprot.readBool();
               struct.setPartialIsSet(true);
@@ -763,7 +678,7 @@ public class TDbt implements org.apache.thrift.TBase<TDbt, TDbt._Fields>, java.i
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 6: // BLOB
+          case 5: // BLOB
             if (schemeField.type == org.apache.thrift.protocol.TType.BOOL) {
               struct.blob = iprot.readBool();
               struct.setBlobIsSet(true);
@@ -792,11 +707,6 @@ public class TDbt implements org.apache.thrift.TBase<TDbt, TDbt._Fields>, java.i
           oprot.writeBinary(struct.data);
           oprot.writeFieldEnd();
         }
-      }
-      if (struct.isSetRecordNumber()) {
-        oprot.writeFieldBegin(RECORD_NUMBER_FIELD_DESC);
-        oprot.writeI32(struct.recordNumber);
-        oprot.writeFieldEnd();
       }
       if (struct.isSetPartialLength()) {
         oprot.writeFieldBegin(PARTIAL_LENGTH_FIELD_DESC);
@@ -839,27 +749,21 @@ public class TDbt implements org.apache.thrift.TBase<TDbt, TDbt._Fields>, java.i
       if (struct.isSetData()) {
         optionals.set(0);
       }
-      if (struct.isSetRecordNumber()) {
+      if (struct.isSetPartialLength()) {
         optionals.set(1);
       }
-      if (struct.isSetPartialLength()) {
+      if (struct.isSetPartialOffset()) {
         optionals.set(2);
       }
-      if (struct.isSetPartialOffset()) {
+      if (struct.isSetPartial()) {
         optionals.set(3);
       }
-      if (struct.isSetPartial()) {
+      if (struct.isSetBlob()) {
         optionals.set(4);
       }
-      if (struct.isSetBlob()) {
-        optionals.set(5);
-      }
-      oprot.writeBitSet(optionals, 6);
+      oprot.writeBitSet(optionals, 5);
       if (struct.isSetData()) {
         oprot.writeBinary(struct.data);
-      }
-      if (struct.isSetRecordNumber()) {
-        oprot.writeI32(struct.recordNumber);
       }
       if (struct.isSetPartialLength()) {
         oprot.writeI32(struct.partialLength);
@@ -878,28 +782,24 @@ public class TDbt implements org.apache.thrift.TBase<TDbt, TDbt._Fields>, java.i
     @Override
     public void read(org.apache.thrift.protocol.TProtocol prot, TDbt struct) throws org.apache.thrift.TException {
       TTupleProtocol iprot = (TTupleProtocol) prot;
-      BitSet incoming = iprot.readBitSet(6);
+      BitSet incoming = iprot.readBitSet(5);
       if (incoming.get(0)) {
         struct.data = iprot.readBinary();
         struct.setDataIsSet(true);
       }
       if (incoming.get(1)) {
-        struct.recordNumber = iprot.readI32();
-        struct.setRecordNumberIsSet(true);
-      }
-      if (incoming.get(2)) {
         struct.partialLength = iprot.readI32();
         struct.setPartialLengthIsSet(true);
       }
-      if (incoming.get(3)) {
+      if (incoming.get(2)) {
         struct.partialOffset = iprot.readI32();
         struct.setPartialOffsetIsSet(true);
       }
-      if (incoming.get(4)) {
+      if (incoming.get(3)) {
         struct.partial = iprot.readBool();
         struct.setPartialIsSet(true);
       }
-      if (incoming.get(5)) {
+      if (incoming.get(4)) {
         struct.blob = iprot.readBool();
         struct.setBlobIsSet(true);
       }

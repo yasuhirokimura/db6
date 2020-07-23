@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2005, 2016 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2005, 2017 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -256,11 +256,12 @@ proc test116 { method {tnum "116"} args } {
 			set nodump 0
 		}
 		puts "\tTest$tnum.d: Verify directories with reset LSNs."
-	 	error_check_good \
-		    verify [verify_dir $testdir "\tTest$tnum.d: " 0 0 $nodump] 0
-	 	error_check_good \
-		    verify [verify_dir $newdir "\tTest$tnum.e: " 0 0 $nodump] 0
-
+		if { !$is_hp_test || $number_of_slices == 0 } {
+			error_check_good verify \
+			    [verify_dir $testdir "\tTest$tnum.d: " 0 0 $nodump] 0
+			error_check_good verify \
+			    [verify_dir $newdir "\tTest$tnum.e: " 0 0 $nodump] 0
+		}
 		puts "\tTest$tnum.f: Open new db, check data, close db."
 		if { [is_queue $method] == 1 || $number_of_slices > 0 || \
 		     [is_partitioned $args] == 1 || [is_heap $method] == 1} {

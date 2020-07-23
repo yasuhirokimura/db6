@@ -1752,6 +1752,21 @@ do_test replication-8.14.1 {
   }
 } {1}
 
+# Test the statisics pragma for replication
+do_test replication-8.15 {
+  execsql {
+    pragma statistics_file="rep_stats.txt";
+    pragma statistics=rep;
+  }
+  set fd [open rep_stats.txt r]
+  set res [read $fd]
+  close $fd
+  file delete -force rep_stats.txt
+  set pat {Current master ID}
+  regexp $pat $res
+} {1}
+
+
 catch {db3 close}
 catch {db2 close}
 catch {db close}

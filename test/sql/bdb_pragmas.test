@@ -739,4 +739,97 @@ do_test bdb_pragma-12.1 {
   }
 } {abc}
 
+reset_db
+
+set STATFILE stat_output.txt
+# Test the statistics and statistics_file pragmas
+do_test bdb_pragma-13.0 {
+  execsql {
+    pragma statistics_file="stat_output.txt";
+  }
+} {stat_output.txt}
+
+# Cannot access statistics until the env is opened.
+do_test bdb_pragma-13.1 {
+  catchsql {
+    pragma statistics;
+  } db
+} {1 {Cannot call statistics before accessing the database.}}
+
+# Test invalid input.
+do_test bdb_pragma-13.2 {
+  catchsql {
+    create table t1(a);
+    pragma statistics=bad;
+  } db
+} {1 {Invalid statistics entry: bad.}}
+
+# Test the various statistics types
+do_test bdb_pragma-13.3 {
+  execsql {
+    pragma statistics;
+  } db
+  set fd [open $STATFILE r]
+  set res [read $fd]
+  close $fd
+  file delete -force $STATFILE
+  set pat {Environment version}
+  regexp $pat $res
+} {1}
+
+do_test bdb_pragma-13.4 {
+  execsql {
+    pragma statistics=lock;
+  } db
+  set fd [open $STATFILE r]
+  set res [read $fd]
+  close $fd
+  file delete -force $STATFILE
+  set pat {Number of lock modes}
+  regexp $pat $res
+} {1}
+
+do_test bdb_pragma-13.5 {
+  execsql {
+    pragma statistics=log;
+  } db
+  set fd [open $STATFILE r]
+  set res [read $fd]
+  close $fd
+  file delete -force $STATFILE
+  set pat {Log file mode}
+  regexp $pat $res
+} {1}
+
+do_test bdb_pragma-13.6 {
+  execsql {
+    pragma statistics=memp;
+  } db
+  set fd [open $STATFILE r]
+  set res [read $fd]
+  close $fd
+  file delete -force $STATFILE
+  set pat {Pages read into the cache}
+  regexp $pat $res
+} {1}
+
+do_test bdb_pragma-13.7 {
+  execsql {
+    pragma statistics=mutex;
+  } db
+  set fd [open $STATFILE r]
+  set res [read $fd]
+  close $fd
+  file delete -force $STATFILE
+  set pat {Mutex region size}
+  regexp $pat $res
+} {1}
+
+reset_db
+
 finish_test
+
+file delete -force $STATFILE
+
+
+

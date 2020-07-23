@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -25,7 +25,7 @@ public class SMultipleDataEntry implements SDatabaseEntryBase {
     private int batchSize;
 
     /** The list of data entries. */
-    private List<SDatabaseEntry> entries;
+    private final List<SDatabaseEntry> entries;
 
     /** The iterator indicating the next returned item. */
     private Iterator<SDatabaseEntry> iterator;
@@ -44,7 +44,7 @@ public class SMultipleDataEntry implements SDatabaseEntryBase {
     }
 
     <T> List<T> map(Function<SDatabaseEntry, T> function) {
-        return this.entries.stream().map(function::apply)
+        return this.entries.stream().map(function)
                 .collect(Collectors.toList());
     }
 

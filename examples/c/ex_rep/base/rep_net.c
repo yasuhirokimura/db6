@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2001, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2001, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -23,14 +23,14 @@
 #include "dbinc/queue.h"		/* !!!: for the LIST_XXX macros. */
 #endif
 
-int machtab_add __P((machtab_t *, socket_t, u_int32_t, int, int *));
+int machtab_add __P((machtab_t *, socket_t, struct sockaddr *, int, int *));
 #ifdef DIAGNOSTIC
 void machtab_print __P((machtab_t *));
 #endif
 ssize_t readn __P((socket_t, void *, size_t));
 
 /*
- * This file defines the communication infrastructure for the ex_repquote
+ * This file defines the communication infrastructure for the ex_rep_base
  * sample application.
  *
  * This application uses TCP/IP for its communication.  In an N-site
@@ -42,7 +42,7 @@ ssize_t readn __P((socket_t, void *, size_t));
  * about someone, else it has no idea how to ever get in the game.
  *
  * Communication is handled via a number of different threads.  These
- * thread functions are implemented in rep_util.c  In this file, we
+ * thread functions are implemented in rep_msg.c  In this file, we
  * define the data structures that maintain the state that describes
  * the comm infrastructure, the functions that manipulates this state
  * and the routines used to actually send and receive data over the
@@ -61,6 +61,11 @@ ssize_t readn __P((socket_t, void *, size_t));
 
 #define	MACHID_INVALID	0
 #define	MACHID_SELF	1
+#define	SA_DATA_LEN	14
+#define	FORMAT_SA_DATA(sa, i, str)					\
+	memset(str, 0, sizeof(str));					\
+	for (i = 0; i < SA_DATA_LEN; i++)				\
+		(void)sprintf(str, "%s%x ", str, sa.sa_data[i]);
 
 struct __machtab {
 	LIST_HEAD(__machlist, __member) machlist;
@@ -73,9 +78,14 @@ struct __machtab {
 	socket_t listenfd;
 };
 
-/* Data structure that describes each entry in the machtab. */
+/*
+ * Data structure that describes each entry in the machtab.  Using
+ * struct sockaddr because it can represent either an IPv6 or IPv4
+ * host address.
+ */
 struct __member {
-	u_int32_t hostaddr;	/* Host IP address. */
+	struct sockaddr hostaddr; 
+				/* Host family (IPv4/IPv6) and IP address. */
 	int port;		/* Port number. */
 	int eid;		/* Application-specific machine id. */
 	socket_t fd;		/* File descriptor for the socket. */
@@ -131,7 +141,7 @@ int
 machtab_add(machtab, fd, hostaddr, port, idp)
 	machtab_t *machtab;
 	socket_t fd;
-	u_int32_t hostaddr;
+	struct sockaddr *hostaddr;
 	int port, *idp;
 {
 	int ret;
@@ -144,7 +154,7 @@ machtab_add(machtab, fd, hostaddr, port, idp)
 	}
 
 	member->fd = fd;
-	member->hostaddr = hostaddr;
+	memcpy(&member->hostaddr, hostaddr, sizeof(struct sockaddr));
 	member->port = port;
 
 	if ((ret = mutex_lock(&machtab->mtmutex)) != 0) {
@@ -154,7 +164,8 @@ machtab_add(machtab, fd, hostaddr, port, idp)
 
 	for (m = LIST_FIRST(&machtab->machlist);
 	    m != NULL; m = LIST_NEXT(m, links))
-		if (m->hostaddr == hostaddr && m->port == port)
+		if (memcmp(&(m->hostaddr.sa_data), hostaddr->sa_data,
+		    SA_DATA_LEN) == 0 && m->port == port)
 			break;
 
 	if (m == NULL) {
@@ -190,10 +201,10 @@ machtab_add(machtab, fd, hostaddr, port, idp)
  *	Return host and port information for a particular machine id.
  */
 int
-machtab_getinfo(machtab, eid, hostp, portp)
+machtab_getinfo(machtab, eid, hostaddr, portp)
 	machtab_t *machtab;
 	int eid;
-	u_int32_t *hostp;
+	struct sockaddr *hostaddr;
 	int *portp;
 {
 	int ret;
@@ -208,7 +219,7 @@ machtab_getinfo(machtab, eid, hostp, portp)
 	    member != NULL;
 	    member = LIST_NEXT(member, links))
 		if (member->eid == eid) {
-			*hostp = member->hostaddr;
+			hostaddr = &member->hostaddr;
 			*portp = member->port;
 			break;
 		}
@@ -326,7 +337,9 @@ void
 machtab_print(machtab)
 	machtab_t *machtab;
 {
+	char addrstr[256];
 	member_t *m;
+	int i;
 
 	if (mutex_lock(&machtab->mtmutex) != 0) {
 		fprintf(stderr, "can't lock mutex\n");
@@ -336,8 +349,10 @@ machtab_print(machtab)
 	for (m = LIST_FIRST(&machtab->machlist);
 	    m != NULL; m = LIST_NEXT(m, links)) {
 
-	    printf("IP: %lx Port: %6d EID: %2d FD: %3d\n",
-		(long)m->hostaddr, m->port, m->eid, m->fd);
+		FORMAT_SA_DATA(m->hostaddr, i, addrstr);
+		printf("%s Host: %s Port: %6d EID: %2d FD: %3d\n",
+		    m->hostaddr.sa_family == AF_INET6 ? "IPv6" : "IPv4",
+		    addrstr, m->port, m->eid, m->fd);
 	}
 
 	if (mutex_unlock(&machtab->mtmutex) != 0) {
@@ -353,26 +368,34 @@ machtab_print(machtab)
  *	in a thread that we're happy to let block.
  */
 socket_t
-listen_socket_init(progname, port, machtab)
-	const char *progname;
+listen_socket_init(progname, host, port, machtab)
+	const char *progname, *host;
 	int port;
 	machtab_t *machtab;
 {
+	struct addrinfo hints, *hp;
 	socket_t s;
-	int sockopt;
-	struct sockaddr_in si;
+	char portstr[10];
+	int ret, sockopt;
 
 	COMPQUIET(progname, NULL);
 
-	if ((s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
-		perror("can't create listen socket");
+	/* Look for host address for local site. */
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE;
+	(void)snprintf(portstr, sizeof(portstr), "%d", port);
+	if ((ret = getaddrinfo(host, portstr, &hints, &hp)) != 0) {
+		fprintf(stderr, "%s: host not found: %s\n", progname,
+		    gai_strerror(ret));
 		return (-1);
 	}
 
-	memset(&si, 0, sizeof(si));
-	si.sin_family = AF_INET;
-	si.sin_addr.s_addr = htonl(INADDR_ANY);
-	si.sin_port = htons((unsigned short)port);
+	if ((s = socket(hp->ai_family, hp->ai_socktype, hp->ai_protocol)) < 0) {
+		perror("can't create listen socket");
+		goto err2;
+	}
 
 	/*
 	 * When using this example for testing, it's common to kill and restart
@@ -383,7 +406,7 @@ listen_socket_init(progname, port, machtab)
 	setsockopt(s, SOL_SOCKET, SO_REUSEADDR,
 	    (const char *)&sockopt, sizeof(sockopt));
 
-	if (bind(s, (struct sockaddr *)&si, sizeof(si)) != 0) {
+	if (bind(s, hp->ai_addr, (socklen_t)hp->ai_addrlen) != 0) {
 		perror("can't bind listen socket");
 		goto err;
 	}
@@ -394,9 +417,11 @@ listen_socket_init(progname, port, machtab)
 	}
 
 	machtab->listenfd = s;
+	freeaddrinfo(hp);
 	return (s);
 
 err:	closesocket(s);
+err2:	freeaddrinfo(hp);
 	return (-1);
 }
 
@@ -412,24 +437,24 @@ listen_socket_accept(machtab, progname, s, eidp)
 	socket_t s;
 	int *eidp;
 {
-	struct sockaddr_in si;
-	socklen_t si_len;
-	int host, ret;
+	struct sockaddr sa;
+	char addrstr[256];
+	socklen_t sa_len;
+	int i, ret;
 	socket_t ns;
 	u_int16_t port;
 
 	COMPQUIET(progname, NULL);
 
 accept_wait:
-	memset(&si, 0, sizeof(si));
-	si_len = sizeof(si);
-	ns = accept(s, (struct sockaddr *)&si, &si_len);
+	memset(&sa, 0, sizeof(sa));
+	sa_len = sizeof(sa);
+	ns = accept(s, &sa, &sa_len);
 	if (ns == SOCKET_CREATION_FAILURE) {
 		if (machtab->listenfd != SOCKET_CREATION_FAILURE)
 			fprintf(stderr, "can't accept incoming connection\n");
 		return ns;
 	}
-	host = ntohl(si.sin_addr.s_addr);
 
 	/*
 	 * Sites send their listening port when connections are first
@@ -440,13 +465,16 @@ accept_wait:
 		goto err;
 	port = ntohs(port);
 
-	ret = machtab_add(machtab, ns, host, port, eidp);
+	ret = machtab_add(machtab, ns, &sa, port, eidp);
 	if (ret == EEXIST) {
 		closesocket(ns);
 		goto accept_wait;
 	} else if (ret != 0)
 		goto err;
-	printf("Connected to host %x port %d, eid = %d\n", host, port, *eidp);
+
+	FORMAT_SA_DATA(sa, i, addrstr);
+	printf("Connected to host %s port %d, eid = %d\n",
+	    addrstr, port, *eidp);
 	return (ns);
 
 err:	closesocket(ns);
@@ -467,45 +495,45 @@ get_connected_socket(machtab, progname, remotehost, port, is_open, eidp)
 	const char *progname, *remotehost;
 	int port, *is_open, *eidp;
 {
-	int ret;
+	struct addrinfo hints, *hp;
 	socket_t s;
-	struct hostent *hp;
-	struct sockaddr_in si;
-	u_int32_t addr;
+	char portstr[10];
+	int ret;
 	u_int16_t nport;
 
 	*is_open = 0;
 
-	if ((hp = gethostbyname(remotehost)) == NULL) {
+	/* Look for host address for remote site. */
+	memset(&hp, 0, sizeof(hp));
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	(void)snprintf(portstr, sizeof(portstr), "%d", port);
+	if ((ret = getaddrinfo(remotehost, portstr, &hints, &hp)) != 0) {
 		fprintf(stderr, "%s: host not found: %s\n", progname,
-		    strerror(net_errno));
+		    gai_strerror(ret));
 		return (-1);
 	}
 
-	if ((s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
+	if ((s = socket(hp->ai_family, hp->ai_socktype, hp->ai_protocol)) < 0) {
 		perror("can't create outgoing socket");
-		return (-1);
+		goto err2;
 	}
-	memset(&si, 0, sizeof(si));
-	memcpy((char *)&si.sin_addr, hp->h_addr, hp->h_length);
-	addr = ntohl(si.sin_addr.s_addr);
-	ret = machtab_add(machtab, s, addr, port, eidp);
+
+	ret = machtab_add(machtab, s, hp->ai_addr, port, eidp);
 	if (ret == EEXIST) {
 		*is_open = 1;
 		closesocket(s);
+		freeaddrinfo(hp);
 		return (0);
-	} else if (ret != 0) {
-		closesocket(s);
-		return (-1);
-	}
+	} else if (ret != 0)
+		goto err;
 
-	si.sin_family = AF_INET;
-	si.sin_port = htons((unsigned short)port);
-	if (connect(s, (struct sockaddr *)&si, sizeof(si)) < 0) {
+	if (connect(s, hp->ai_addr, (socklen_t)hp->ai_addrlen) < 0) {
 		fprintf(stderr, "%s: connection failed: %s\n",
 		    progname, strerror(net_errno));
 		(void)machtab_rem(machtab, *eidp, 1);
-		return (-1);
+		goto err;
 	}
 
 	/*
@@ -516,7 +544,12 @@ get_connected_socket(machtab, progname, remotehost, port, is_open, eidp)
 	nport = htons(myport);
 	writesocket(s, &nport, 2);
 
+	freeaddrinfo(hp);
 	return (s);
+
+err:	closesocket(s);
+err2:	freeaddrinfo(hp);
+	return (-1);
 }
 
 /*

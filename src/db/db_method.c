@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1999, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1999, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -255,6 +255,7 @@ __db_init(dbp, flags)
 	dbp->associate_foreign = __db_associate_foreign_pp;
 	dbp->close = __db_close_pp;
 	dbp->compact = __db_compact_pp;
+	dbp->convert = __db_convert_pp;
 	dbp->cursor = __db_cursor_pp;
 	dbp->del = __db_del_pp;
 	dbp->dump = __db_dump_pp;

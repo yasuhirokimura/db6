@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -45,7 +45,7 @@ import com.sleepycat.thrift.TOperationStatus;
  *      OperationStatus status2 =
  *          cursor2.getSearchKey(key, data, SLockMode.DEFAULT);
  *
- *      if (status1 == OperationStatus.SUCCESS &&
+ *      if (status1 == OperationStatus.SUCCESS &amp;&amp;
  *              status2 == OperationStatus.SUCCESS) {
  *          SSecondaryCursor[] cursors = {cursor1, cursor2};
  *          joinCursor = primaryDb.join(cursors, null);

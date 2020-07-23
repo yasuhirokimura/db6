@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2001, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2001, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -20,14 +20,14 @@ static int __rep_collect_txn
     __P((ENV *, DB_LSN *, LSN_COLLECTION *, DELAYED_BLOB_LIST **));
 static int __rep_remove_delayed_blobs
     __P((ENV *, db_seq_t, u_int32_t ,DELAYED_BLOB_LIST **));
-static int __rep_do_ckp __P((ENV *, DBT *, __rep_control_args *));
+static int __rep_do_ckp __P((ENV *, DBT *, __rep_control_args *, DB_LSN *));
 static int __rep_fire_newmaster __P((ENV *, u_int32_t, int));
 static int __rep_fire_startupdone __P((ENV *, u_int32_t, int));
 static int __rep_getnext __P((ENV *, DB_THREAD_INFO *));
 static int __rep_lsn_cmp __P((const void *, const void *));
 static int __rep_newfile __P((ENV *, __rep_control_args *, DBT *));
 static int __rep_process_rec __P((ENV *, DB_THREAD_INFO *, __rep_control_args *,
-    DBT *, db_timespec *, DB_LSN *));
+    DBT *, db_timespec *, DB_LSN *, DB_LSN *));
 static int __rep_remfirst __P((ENV *, DB_THREAD_INFO *, DBT *, DBT *));
 static int __rep_skip_msg __P((ENV *, REP *, int, u_int32_t));
 
@@ -199,7 +199,8 @@ __rep_process_message_pp(dbenv, control, rec, eid, ret_lsnp)
 	}
 
 	ENV_ENTER(env, ip);
-	ret = __rep_process_message_int(env, control, rec, eid, ret_lsnp);
+	ret = __rep_process_message_int(env, control, rec, eid, ret_lsnp,
+	    NULL);
 	ENV_LEAVE(env, ip);
 
 	__dbt_userfree(env, control, rec, NULL);
@@ -212,14 +213,15 @@ __rep_process_message_pp(dbenv, control, rec, eid, ret_lsnp)
  * This routine performs the internal steps to process an incoming message.
  *
  * PUBLIC: int __rep_process_message_int
- * PUBLIC:     __P((ENV *, DBT *, DBT *, int, DB_LSN *));
+ * PUBLIC:     __P((ENV *, DBT *, DBT *, int, DB_LSN *, DB_LSN *));
  */
 int
-__rep_process_message_int(env, control, rec, eid, ret_lsnp)
+__rep_process_message_int(env, control, rec, eid, ret_lsnp, ckp_lsnp)
 	ENV *env;
 	DBT *control, *rec;
 	int eid;
 	DB_LSN *ret_lsnp;
+	DB_LSN *ckp_lsnp;
 {
 	DBT data_dbt;
 	DB_LOG *dblp;
@@ -585,7 +587,8 @@ __rep_process_message_int(env, control, rec, eid, ret_lsnp)
 	case REP_BULK_LOG:
 		RECOVERING_LOG_SKIP;
 		CLIENT_ONLY(rep, rp);
-		ret = __rep_bulk_log(env, ip, rp, rec, savetime, ret_lsnp);
+		ret = __rep_bulk_log(env, ip, rp, rec, savetime, ret_lsnp,
+		    ckp_lsnp);
 		break;
 	case REP_BULK_PAGE:
 		/*
@@ -687,7 +690,8 @@ __rep_process_message_int(env, control, rec, eid, ret_lsnp)
 	case REP_LOG_MORE:
 		RECOVERING_LOG_SKIP;
 		CLIENT_ONLY(rep, rp);
-		ret = __rep_log(env, ip, rp, rec, eid, savetime, ret_lsnp);
+		ret = __rep_log(env, ip, rp, rec, eid, savetime, ret_lsnp,
+		    ckp_lsnp);
 		break;
 	case REP_LOG_REQ:
 		RECOVERING_SKIP;
@@ -844,7 +848,7 @@ __rep_process_message_int(env, control, rec, eid, ret_lsnp)
 		RECOVERING_LOG_SKIP;
 		CLIENT_ONLY(rep, rp);
 		ret = __rep_apply(env,
-		     ip, rp, rec, ret_lsnp, NULL, &last_lsn);
+		     ip, rp, rec, ret_lsnp, NULL, &last_lsn, ckp_lsnp);
 		if (ret == DB_REP_LOGREADY)
 			ret = __rep_logready(env, rep, savetime, &last_lsn);
 		break;
@@ -1058,10 +1062,10 @@ out:
  * we try to process as much as possible from __db.rep.db to catch up.
  *
  * PUBLIC: int __rep_apply __P((ENV *, DB_THREAD_INFO *, __rep_control_args *,
- * PUBLIC:     DBT *, DB_LSN *, int *, DB_LSN *));
+ * PUBLIC:     DBT *, DB_LSN *, int *, DB_LSN *, DB_LSN *));
  */
 int
-__rep_apply(env, ip, rp, rec, ret_lsnp, is_dupp, last_lsnp)
+__rep_apply(env, ip, rp, rec, ret_lsnp, is_dupp, last_lsnp, ckp_lsnp)
 	ENV *env;
 	DB_THREAD_INFO *ip;
 	__rep_control_args *rp;
@@ -1069,6 +1073,7 @@ __rep_apply(env, ip, rp, rec, ret_lsnp, is_dupp, last_lsnp)
 	DB_LSN *ret_lsnp;
 	int *is_dupp;
 	DB_LSN *last_lsnp;
+	DB_LSN *ckp_lsnp;
 {
 	DB *dbp;
 	DBT control_dbt, key_dbt;
@@ -1167,7 +1172,7 @@ __rep_apply(env, ip, rp, rec, ret_lsnp, is_dupp, last_lsnp)
 		if (rp->rectype == REP_NEWFILE)
 			newfile_seen = 1;
 		if ((ret = __rep_process_rec(env, ip,
-		    rp, rec, &max_ts, &max_lsn)) != 0)
+		    rp, rec, &max_ts, &max_lsn, ckp_lsnp)) != 0)
 			goto err;
 		/*
 		 * If we get the record we are expecting, reset
@@ -1200,7 +1205,7 @@ gap_check:
 			if (rp->rectype == REP_NEWFILE)
 				newfile_seen = 1;
 			if ((ret = __rep_process_rec(env, ip,
-			    rp, rec, &max_ts, &max_lsn)) != 0)
+			    rp, rec, &max_ts, &max_lsn, ckp_lsnp)) != 0)
 				goto err;
 
 			STAT(--rep->stat.st_log_queued);
@@ -1993,14 +1998,14 @@ __rep_newfile(env, rp, rec)
  * and must not be holding the region mutex.
  */
 static int
-__rep_do_ckp(env, rec, rp)
+__rep_do_ckp(env, rec, rp, ckp_lsnp)
 	ENV *env;
 	DBT *rec;
 	__rep_control_args *rp;
+	DB_LSN *ckp_lsnp;
 {
 	DB_ENV *dbenv;
 	__txn_ckp_args *ckp_args;
-	DB_LSN ckp_lsn;
 	REP *rep;
 	int ret;
 
@@ -2009,7 +2014,7 @@ __rep_do_ckp(env, rec, rp)
 	/* Crack the log record and extract the checkpoint LSN. */
 	if ((ret = __txn_ckp_read(env, rec->data, &ckp_args)) != 0)
 		return (ret);
-	ckp_lsn = ckp_args->ckp_lsn;
+	*ckp_lsnp = ckp_args->ckp_lsn;
 	__os_free(env, ckp_args);
 
 	rep = env->rep_handle->region;
@@ -2030,7 +2035,7 @@ __rep_do_ckp(env, rec, rp)
 	 */
 	(void)__memp_set_config(dbenv, DB_MEMP_SUPPRESS_WRITE, 1);
 	MUTEX_LOCK(env, rep->mtx_ckp);
-	ret = __memp_sync(env, DB_SYNC_CHECKPOINT, &ckp_lsn);
+	ret = __memp_sync(env, DB_SYNC_CHECKPOINT, ckp_lsnp);
 	MUTEX_UNLOCK(env, rep->mtx_ckp);
 	(void)__memp_set_config(dbenv, DB_MEMP_SUPPRESS_WRITE, 0);
 
@@ -2040,7 +2045,7 @@ __rep_do_ckp(env, rec, rp)
 	else {
 		__db_errx(env, DB_STR_A("3525",
 		    "Error syncing ckp [%lu][%lu]", "%lu %lu"),
-		    (u_long)ckp_lsn.file, (u_long)ckp_lsn.offset);
+		    (u_long)ckp_lsnp->file, (u_long)ckp_lsnp->offset);
 		ret = __env_panic(env, ret);
 	}
 
@@ -2153,13 +2158,14 @@ err:	if ((t_ret = __dbc_close(dbc)) != 0 && ret == 0)
  * the log.
  */
 static int
-__rep_process_rec(env, ip, rp, rec, ret_tsp, ret_lsnp)
+__rep_process_rec(env, ip, rp, rec, ret_tsp, ret_lsnp, ckp_lsnp)
 	ENV *env;
 	DB_THREAD_INFO *ip;
 	__rep_control_args *rp;
 	DBT *rec;
 	db_timespec *ret_tsp;
 	DB_LSN *ret_lsnp;
+	DB_LSN *ckp_lsnp;
 {
 	DB *dbp;
 	DBT control_dbt, key_dbt, rec_dbt;
@@ -2341,7 +2347,7 @@ __rep_process_rec(env, ip, rp, rec, ret_tsp, ret_lsnp)
 		 * will act like we never received the
 		 * checkpoint.
 		 */
-		if ((ret = __rep_do_ckp(env, rec, rp)) == 0)
+		if ((ret = __rep_do_ckp(env, rec, rp, &lsn)) == 0)
 			ret = __log_rep_put(env, &rp->lsn, rec,
 			    DB_LOG_CHKPNT);
 		if ((t_ret = __rep_remfirst(env, ip,
@@ -2353,6 +2359,8 @@ __rep_process_rec(env, ip, rp, rec, ret_tsp, ret_lsnp)
 		 */
 		if (ret == 0) {
 			*ret_lsnp = rp->lsn;
+			if (ckp_lsnp != NULL)
+ 				*ckp_lsnp = lsn;
 			ret = __log_flush(env, NULL);
 			if (ret == 0 && lp->db_log_autoremove)
 				__log_autoremove(env);

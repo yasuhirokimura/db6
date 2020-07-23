@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 
@@ -952,6 +952,7 @@ public class SecondaryIndex<SK, PK, E> extends BasicIndex<SK, E> {
     public E get(Transaction txn, SK key, LockMode lockMode)
         throws DatabaseException {
 
+
         DatabaseEntry keyEntry = new DatabaseEntry();
         DatabaseEntry pkeyEntry = new DatabaseEntry();
         DatabaseEntry dataEntry = new DatabaseEntry();
@@ -966,6 +967,7 @@ public class SecondaryIndex<SK, PK, E> extends BasicIndex<SK, E> {
             return null;
         }
     }
+
 
     public Map<SK, E> map() {
         return sortedMap();

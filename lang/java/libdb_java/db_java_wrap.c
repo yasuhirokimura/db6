@@ -3384,6 +3384,9 @@ SWIGINTERN int Db_close(struct Db *self,u_int32_t flags){
 		errno = self->close(self, flags);
 		return errno;
 	}
+SWIGINTERN db_ret_t Db_convert(struct Db *self,char const *file,int lorder){
+		return self->convert(self, file, lorder);
+	}
 SWIGINTERN DBC *Db_cursor(struct Db *self,DB_TXN *txnid,u_int32_t flags){
 		DBC *cursorp = NULL;
 		errno = self->cursor(self, txnid, &cursorp, flags);
@@ -5028,6 +5031,37 @@ SWIGEXPORT jint JNICALL Java_com_sleepycat_db_internal_db_1javaJNI_Db_1close0(JN
   
   jresult = (jint)result; 
   return jresult;
+}
+
+
+SWIGEXPORT void JNICALL Java_com_sleepycat_db_internal_db_1javaJNI_Db_1convert(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jstring jarg2, jint jarg3) {
+  struct Db *arg1 = (struct Db *) 0 ;
+  char *arg2 = (char *) 0 ;
+  int arg3 ;
+  db_ret_t result;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(struct Db **)&jarg1; 
+  arg2 = 0;
+  if (jarg2) {
+    arg2 = (char *)(*jenv)->GetStringUTFChars(jenv, jarg2, 0);
+    if (!arg2) return ;
+  }
+  arg3 = (int)jarg3; 
+  
+  if (jarg1 == 0) {
+    __dbj_throw(jenv, EINVAL, "call on closed handle", NULL, NULL);
+    return ;
+  }
+  
+  result = (db_ret_t)Db_convert(arg1,(char const *)arg2,arg3);
+  if (!DB_RETOK_STD(result)) {
+    __dbj_throw(jenv, result, NULL, NULL, DB2JDBENV);
+  }
+  
+  if (arg2) (*jenv)->ReleaseStringUTFChars(jenv, jarg2, (const char *)arg2);
 }
 
 

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -25,8 +25,10 @@ public class DelArgs extends InputArgs {
      * Construct the arguments for a Database del call.
      *
      * @param keyOrPairs the list of keys or key/data pairs to be deleted
+     * @param isRecordKey if keys are record numbers
      */
-    public DelArgs(List<TKeyData> keyOrPairs) throws DatabaseException {
-        this.key = convert(keyOrPairs);
+    public DelArgs(List<TKeyData> keyOrPairs, boolean isRecordKey)
+            throws DatabaseException {
+        this.key = convert(keyOrPairs, isRecordKey);
     }
 }

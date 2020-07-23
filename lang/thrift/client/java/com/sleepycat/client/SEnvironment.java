@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -14,6 +14,7 @@ import com.sleepycat.thrift.TEnvironment;
 import com.sleepycat.thrift.TTransaction;
 
 import java.io.IOException;
+import java.nio.ByteOrder;
 import java.util.Objects;
 
 /**
@@ -51,21 +52,39 @@ import java.util.Objects;
  * STransaction). Once SEnvironment.close is called, this object may not be
  * accessed again, regardless of whether or not it throws an exception.
  */
-public class SEnvironment implements RemoteCallHelper, AutoCloseable {
+public class SEnvironment
+        implements RemoteCallHelper, TxnHelper, AutoCloseable {
     /** The remote environment handle. */
     private final TEnvironment tEnv;
 
     /** The home directory. */
     private final String home;
 
+    /** The server connection. */
+    private BdbServerConnection connection;
+
     /** The remote service client. */
     private final BdbService.Client client;
 
     SEnvironment(TEnvironment environment, String home,
-            BdbService.Client client) {
+            BdbServerConnection connection, BdbService.Client client) {
         this.tEnv = Objects.requireNonNull(environment);
         this.home = Objects.requireNonNull(home);
+        this.connection = Objects.requireNonNull(connection);
         this.client = Objects.requireNonNull(client);
+    }
+
+    /**
+     * Create a shallow copy of the given environment. The original environment
+     * handle must not be used anymore after this method returns. This
+     * constructor is reserved for tests.
+     *
+     * @param env the environment
+     */
+    protected SEnvironment(SEnvironment env) {
+        this.tEnv = env.tEnv;
+        this.home = env.home;
+        this.client = env.client;
     }
 
     /**
@@ -99,6 +118,25 @@ public class SEnvironment implements RemoteCallHelper, AutoCloseable {
             this.client.closeEnvironmentHandle(this.tEnv);
             return null;
         });
+    }
+
+    /**
+     * Return this environment.
+     *
+     * @return this environment
+     */
+    @Override
+    public SEnvironment getEnvironment() {
+        return this;
+    }
+
+    /**
+     * Return the native byte order of the connected server.
+     *
+     * @return the native byte order of the connected server
+     */
+    public ByteOrder getServerByteOrder() {
+        return this.connection.getServerByteOrder();
     }
 
     /**
@@ -226,7 +264,7 @@ public class SEnvironment implements RemoteCallHelper, AutoCloseable {
      * is to be indexed
      * @param config the secondary database open attributes; if null, default
      * attributes are used
-     * @return a new secondary daatabase handle
+     * @return a new secondary database handle
      * @throws IOException if the database file cannot be accessed
      * @throws SResourceInUseException if the database is being renamed or
      * removed
@@ -235,15 +273,42 @@ public class SEnvironment implements RemoteCallHelper, AutoCloseable {
     public SSecondaryDatabase openSecondaryDatabase(STransaction txn,
             String fileName, String databaseName, SDatabase primaryDatabase,
             SSecondaryConfig config) throws IOException, SDatabaseException {
+        return runInSingleTxnWithIOException(txn, autoTxn -> {
+            SSecondaryDatabase sdb = remoteOpenSecondary(autoTxn,
+                    fileName, databaseName, primaryDatabase, config);
+
+            if (config.getAllowPopulate() && sdb.isEmpty(autoTxn)) {
+                populateSecondaryDatabase(autoTxn, primaryDatabase);
+            }
+
+            return sdb;
+        });
+    }
+
+    private SSecondaryDatabase remoteOpenSecondary(STransaction txn,
+            String fileName, String dbName, SDatabase pDb,
+            SSecondaryConfig config) throws IOException, SDatabaseException {
         return remoteCallWithIOException(() -> {
             TDatabase sdb = this.client.openSecondaryDatabase(this.tEnv,
                     STransaction.nullSafeGet(txn),
-                    fileName, databaseName, primaryDatabase.getThriftObj(),
-                    config == null ? null : config.getThriftObject());
-            return new SSecondaryDatabase(sdb, fileName, databaseName,
-                    this.client, this, primaryDatabase,
-                    new SSecondaryConfig(config));
+                    fileName, dbName, pDb.getThriftObj(),
+                    SSecondaryConfig.nullSafeGet(config));
+            return new SSecondaryDatabase(sdb, fileName, dbName,
+                    this.client, this, pDb, new SSecondaryConfig(config));
         });
+    }
+
+    private void populateSecondaryDatabase(STransaction txn,
+            SDatabase primaryDatabase) throws SDatabaseException {
+        final int batchSize = 1024;
+        try (SCursor cursor = primaryDatabase.openCursor(txn, null)) {
+            SMultipleKeyDataEntry multiEntry = new SMultipleKeyDataEntry();
+            multiEntry.setBatchSize(batchSize);
+            while (cursor.getNext(null, multiEntry, null) !=
+                    SOperationStatus.NOTFOUND) {
+                primaryDatabase.putMultipleKey(txn, multiEntry, true);
+            }
+        }
     }
 
     /**

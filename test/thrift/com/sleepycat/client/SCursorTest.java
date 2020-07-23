@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -37,10 +37,8 @@ public class SCursorTest extends ClientTestBase {
     }
 
     private SCursor initDb(SDatabase database) throws Exception {
-        SMultipleKeyDataEntry pairs = new SMultipleKeyDataEntry();
-        pairs.append("key1".getBytes(), "data1".getBytes());
-        pairs.append("key2".getBytes(), "data2".getBytes());
-        database.putMultipleKey(null, pairs, true);
+        database.put(null, entry("key1"), entry("data1"));
+        database.put(null, entry("key2"), entry("data2"));
         return database.openCursor(env.beginTransaction(null, null), null);
     }
 
@@ -53,14 +51,14 @@ public class SCursorTest extends ClientTestBase {
     @Test
     public void testCompare() throws Exception {
         SCursor cursor2 = db.openCursor(null, null);
-        cursor.getFirst(new SDatabaseEntry(), new SDatabaseEntry(), null);
-        cursor2.getLast(new SDatabaseEntry(), new SDatabaseEntry(), null);
+        cursor.getFirst(null, null, null);
+        cursor2.getLast(null, null, null);
         assertThat(cursor.compare(cursor2), is(1));
     }
 
     @Test
     public void testCount() throws Exception {
-        cursor.getFirst(new SDatabaseEntry(), new SDatabaseEntry(), null);
+        cursor.getFirst(null, null, null);
         assertThat(cursor.count(), is(1));
     }
 
@@ -92,96 +90,62 @@ public class SCursorTest extends ClientTestBase {
 
     @Test
     public void testGetCurrent() throws Exception {
-        SDatabaseEntry key = new SDatabaseEntry();
-        SDatabaseEntry data = new SDatabaseEntry();
+        cursor.getFirst(null, null, null);
 
-        cursor.getFirst(new SDatabaseEntry(), new SDatabaseEntry(), null);
-
-        assertThat(cursor.getCurrent(key, data, null),
-                is(SOperationStatus.SUCCESS));
-        assertThat(new String(key.getData()), is("key1"));
+        assertCursorGet(cursor::getCurrent,
+                new SDatabaseEntry(), new SDatabaseEntry(), "key1", "data1");
     }
 
     @Test
     public void testGetFirst() throws Exception {
-        SDatabaseEntry key = new SDatabaseEntry();
-        SDatabaseEntry data = new SDatabaseEntry();
-
-        assertThat(cursor.getFirst(key, data, null),
-                is(SOperationStatus.SUCCESS));
-        assertThat(new String(key.getData()), is("key1"));
+        assertCursorGet(cursor::getFirst,
+                new SDatabaseEntry(), new SDatabaseEntry(), "key1", "data1");
     }
 
     @Test
     public void testGetLast() throws Exception {
-        SDatabaseEntry key = new SDatabaseEntry();
-        SDatabaseEntry data = new SDatabaseEntry();
-
-        assertThat(cursor.getLast(key, data, null),
-                is(SOperationStatus.SUCCESS));
-        assertThat(new String(key.getData()), is("key2"));
+        assertCursorGet(cursor::getLast,
+                new SDatabaseEntry(), new SDatabaseEntry(), "key2", "data2");
     }
 
     @Test
     public void testGetNext() throws Exception {
-        SDatabaseEntry key = new SDatabaseEntry();
-        SDatabaseEntry data = new SDatabaseEntry();
-
-        assertThat(cursor.getNext(key, data, null),
-                is(SOperationStatus.SUCCESS));
-        assertThat(new String(key.getData()), is("key1"));
+        assertCursorGet(cursor::getNext,
+                new SDatabaseEntry(), new SDatabaseEntry(), "key1", "data1");
     }
 
     @Test
     public void testGetNextDup() throws Exception {
-        SDatabaseEntry key = new SDatabaseEntry();
-        SDatabaseEntry data = new SDatabaseEntry();
+        cursor.getFirst(null, null, null);
 
-        cursor.getFirst(new SDatabaseEntry(), new SDatabaseEntry(), null);
-
-        assertThat(cursor.getNextDup(key, data, null),
+        assertThat(cursor.getNextDup(null, null, null),
                 is(SOperationStatus.NOTFOUND));
     }
 
     @Test
     public void testGetNextNoDup() throws Exception {
-        SDatabaseEntry key = new SDatabaseEntry();
-        SDatabaseEntry data = new SDatabaseEntry();
-
-        assertThat(cursor.getNextNoDup(key, data, null),
-                is(SOperationStatus.SUCCESS));
-        assertThat(new String(key.getData()), is("key1"));
+        assertCursorGet(cursor::getNextNoDup,
+                new SDatabaseEntry(), new SDatabaseEntry(), "key1", "data1");
     }
 
     @Test
     public void testGetPrev() throws Exception {
-        SDatabaseEntry key = new SDatabaseEntry();
-        SDatabaseEntry data = new SDatabaseEntry();
-
-        assertThat(cursor.getPrev(key, data, null),
-                is(SOperationStatus.SUCCESS));
-        assertThat(new String(key.getData()), is("key2"));
+        assertCursorGet(cursor::getPrev,
+                new SDatabaseEntry(), new SDatabaseEntry(), "key2", "data2");
     }
 
     @Test
     public void testGetPrevDup() throws Exception {
-        SDatabaseEntry key = new SDatabaseEntry();
-        SDatabaseEntry data = new SDatabaseEntry();
+        cursor.getLast(null, null, null);
 
-        cursor.getLast(new SDatabaseEntry(), new SDatabaseEntry(), null);
-
-        assertThat(cursor.getPrevDup(key, data, null),
+        assertThat(cursor.getPrevDup(null, null, null),
                 is(SOperationStatus.NOTFOUND));
     }
 
     @Test
     public void testGetPrevNoDup() throws Exception {
-        SDatabaseEntry key = new SDatabaseEntry();
-        SDatabaseEntry data = new SDatabaseEntry();
-
-        assertThat(cursor.getPrevNoDup(key, data, null),
-                is(SOperationStatus.SUCCESS));
-        assertThat(new String(key.getData()), is("key2"));
+        assertCursorGet(cursor::getPrevNoDup,
+                new SDatabaseEntry(), new SDatabaseEntry(), "key2", "data2");
     }
 
     @Test
@@ -196,42 +160,32 @@ public class SCursorTest extends ClientTestBase {
         c.getFirst(new SDatabaseEntry(), new SDatabaseEntry(), null);
 
         assertThat(c.getRecordNumber(data, null), is(SOperationStatus.SUCCESS));
-        assertThat(data.getRecordNumber(), is(1));
+        assertThat(data.getRecordNumber(connection.getServerByteOrder()),
+                is(1));
     }
 
     @Test
     public void testGetSearchBoth() throws Exception {
-        SDatabaseEntry key = new SDatabaseEntry("key1".getBytes());
-        SDatabaseEntry data = new SDatabaseEntry("data1".getBytes());
-        assertThat(cursor.getSearchBoth(key, data, null),
-                is(SOperationStatus.SUCCESS));
+        assertCursorGet(cursor::getSearchBoth,
+                entry("key1"), entry("data1"), "key1", "data1");
     }
 
     @Test
     public void testGetSearchBothRange() throws Exception {
-        SDatabaseEntry key = new SDatabaseEntry("key1".getBytes());
-        SDatabaseEntry data = new SDatabaseEntry("da".getBytes());
-        assertThat(cursor.getSearchBothRange(key, data, null),
-                is(SOperationStatus.SUCCESS));
-        assertThat(new String(data.getData()), is("data1"));
+        assertCursorGet(cursor::getSearchBothRange,
+                entry("key1"), entry("da"), "key1", "data1");
     }
 
     @Test
     public void testGetSearchKey() throws Exception {
-        SDatabaseEntry key = new SDatabaseEntry("key1".getBytes());
-        SDatabaseEntry data = new SDatabaseEntry();
-        assertThat(cursor.getSearchKey(key, data, null),
-                is(SOperationStatus.SUCCESS));
-        assertThat(new String(data.getData()), is("data1"));
+        assertCursorGet(cursor::getSearchKey,
+                entry("key1"), new SDatabaseEntry(), "key1", "data1");
     }
 
     @Test
     public void testGetSearchKeyRange() throws Exception {
-        SDatabaseEntry key = new SDatabaseEntry("key".getBytes());
-        SDatabaseEntry data = new SDatabaseEntry();
-        assertThat(cursor.getSearchKeyRange(key, data, null),
-                is(SOperationStatus.SUCCESS));
-        assertThat(new String(data.getData()), is("data1"));
+        assertCursorGet(cursor::getSearchKeyRange,
+                entry("key1"), new SDatabaseEntry(), "key1", "data1");
     }
 
     @Test
@@ -242,7 +196,8 @@ public class SCursorTest extends ClientTestBase {
                         .setBtreeRecordNumbers(true));
         SCursor c = initDb(recNum);
 
-        SDatabaseEntry key = new SDatabaseEntry().setRecordNumber(1);
+        SDatabaseEntry key = new SDatabaseEntry();
+        key.setRecordNumber(1, connection.getServerByteOrder());
         SDatabaseEntry data = new SDatabaseEntry();
 
         assertThat(c.getSearchRecordNumber(key, data, null),
@@ -252,36 +207,31 @@ public class SCursorTest extends ClientTestBase {
 
     @Test
     public void testPut() throws Exception {
-        assertThat(cursor.put(new SDatabaseEntry("key".getBytes()),
-                        new SDatabaseEntry("data".getBytes())),
+        assertThat(cursor.put(entry("key"), entry("data")),
                 is(SOperationStatus.SUCCESS));
     }
 
     @Test
     public void testPutKeyFirst() throws Exception {
-        assertThat(cursor.putKeyFirst(new SDatabaseEntry("key".getBytes()),
-                        new SDatabaseEntry("data".getBytes())),
+        assertThat(cursor.putKeyFirst(entry("key"), entry("data")),
                 is(SOperationStatus.SUCCESS));
     }
 
     @Test
     public void testPutKeyLast() throws Exception {
-        assertThat(cursor.putKeyLast(new SDatabaseEntry("key".getBytes()),
-                        new SDatabaseEntry("data".getBytes())),
+        assertThat(cursor.putKeyLast(entry("key"), entry("data")),
                 is(SOperationStatus.SUCCESS));
     }
 
     @Test
     public void testPutNoDupData() throws Exception {
-        assertThat(cursor.putNoDupData(new SDatabaseEntry("key".getBytes()),
-                        new SDatabaseEntry("data".getBytes())),
+        assertThat(cursor.putNoDupData(entry("key"), entry("data")),
                 is(SOperationStatus.SUCCESS));
     }
 
     @Test
     public void testPutNoOverwrite() throws Exception {
-        assertThat(cursor.putNoOverwrite(new SDatabaseEntry("key".getBytes()),
-                        new SDatabaseEntry("data".getBytes())),
+        assertThat(cursor.putNoOverwrite(entry("key"), entry("data")),
                 is(SOperationStatus.SUCCESS));
     }
 
@@ -293,9 +243,8 @@ public class SCursorTest extends ClientTestBase {
                         .setUnsortedDuplicates(true));
         SCursor c = initDb(dup);
 
-        c.getFirst(new SDatabaseEntry(), new SDatabaseEntry(), null);
-        assertThat(c.putAfter(new SDatabaseEntry("key".getBytes()),
-                        new SDatabaseEntry("data".getBytes())),
+        c.getFirst(null, null, null);
+        assertThat(c.putAfter(entry("key"), entry("data")),
                 is(SOperationStatus.SUCCESS));
     }
 
@@ -307,9 +256,8 @@ public class SCursorTest extends ClientTestBase {
                         .setUnsortedDuplicates(true));
         SCursor c = initDb(dup);
 
-        c.getFirst(new SDatabaseEntry(), new SDatabaseEntry(), null);
-        assertThat(c.putBefore(new SDatabaseEntry("key".getBytes()),
-                        new SDatabaseEntry("data".getBytes())),
+        c.getFirst(null, null, null);
+        assertThat(c.putBefore(entry("key"), entry("data")),
                 is(SOperationStatus.SUCCESS));
     }
 
@@ -321,14 +269,13 @@ public class SCursorTest extends ClientTestBase {
                         .setUnsortedDuplicates(true));
         SCursor c = initDb(dup);
 
-        c.getFirst(new SDatabaseEntry(), new SDatabaseEntry(), null);
-        assertThat(c.putCurrent(new SDatabaseEntry("data".getBytes())),
-                is(SOperationStatus.SUCCESS));
+        c.getFirst(null, null, null);
+        assertThat(c.putCurrent(entry("data")), is(SOperationStatus.SUCCESS));
     }
 
     @Test
     public void testDelete() throws Exception {
-        cursor.getFirst(new SDatabaseEntry(), new SDatabaseEntry(), null);
+        cursor.getFirst(null, null, null);
         assertThat(cursor.delete(), is(SOperationStatus.SUCCESS));
     }
 }

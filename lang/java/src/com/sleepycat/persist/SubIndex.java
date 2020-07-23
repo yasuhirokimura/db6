@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 
@@ -14,6 +14,8 @@ import com.sleepycat.bind.EntityBinding;
 import com.sleepycat.bind.EntryBinding;
 import com.sleepycat.collections.StoredSortedMap;
 import com.sleepycat.compat.DbCompat;
+import com.sleepycat.compat.DbCompat.OpResult;
+import com.sleepycat.compat.DbCompat.OpWriteOptions;
 import com.sleepycat.db.Cursor;
 import com.sleepycat.db.CursorConfig;
 import com.sleepycat.db.Database;
@@ -115,6 +117,7 @@ class SubIndex<PK, E> implements EntityIndex<PK, E> {
     public E get(Transaction txn, PK key, LockMode lockMode)
         throws DatabaseException {
 
+
         DatabaseEntry pkeyEntry = new DatabaseEntry();
         DatabaseEntry dataEntry = new DatabaseEntry();
         pkeyBinding.objectToEntry(key, pkeyEntry);
@@ -128,6 +131,7 @@ class SubIndex<PK, E> implements EntityIndex<PK, E> {
             return null;
         }
     }
+
 
     public long count()
         throws DatabaseException {
@@ -156,6 +160,15 @@ class SubIndex<PK, E> implements EntityIndex<PK, E> {
     public boolean delete(Transaction txn, PK key)
         throws DatabaseException {
 
+        return deleteInternal(txn, key, OpWriteOptions.EMPTY).isSuccess();
+    }
+
+
+    private OpResult deleteInternal(Transaction txn,
+                                    PK key,
+                                    OpWriteOptions options)
+        throws DatabaseException {
+
         DatabaseEntry pkeyEntry = new DatabaseEntry();
         DatabaseEntry dataEntry = BasicIndex.NO_RETURN_ENTRY;
         pkeyBinding.objectToEntry(key, pkeyEntry);
@@ -171,7 +184,6 @@ class SubIndex<PK, E> implements EntityIndex<PK, E> {
         }
 
         boolean failed = true;
-        OperationStatus status;
         CursorConfig cursorConfig = null;
         if (concurrentDB) {
             cursorConfig = new CursorConfig();
@@ -179,13 +191,14 @@ class SubIndex<PK, E> implements EntityIndex<PK, E> {
         } 
         SecondaryCursor cursor = db.openSecondaryCursor(txn, cursorConfig);
         try {
-            status = cursor.getSearchBoth
+            OperationStatus status = cursor.getSearchBoth
                 (keyEntry, pkeyEntry, dataEntry,
                  locking ? LockMode.RMW : null);
             if (status == OperationStatus.SUCCESS) {
                 status = cursor.delete();
             }
             failed = false;
+            return OpResult.make(status);
         } finally {
             cursor.close();
             if (autoCommit) {
@@ -196,8 +209,6 @@ class SubIndex<PK, E> implements EntityIndex<PK, E> {
                 }
             }
         }
-
-        return (status == OperationStatus.SUCCESS);
     }
 
     public EntityCursor<PK> keys()

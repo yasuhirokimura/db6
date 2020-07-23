@@ -1,5 +1,6 @@
 package com.sleepycat.server;
 
+import com.sleepycat.db.DatabaseEntry;
 import com.sleepycat.thrift.TDatabase;
 import com.sleepycat.thrift.TDatabaseConfig;
 import com.sleepycat.thrift.TDatabaseType;
@@ -131,7 +132,9 @@ public class DbPutWithSecondaryTest extends BdbServiceHandlerTestBase {
                 new TSecondaryDatabaseConfig().setDbConfig(config));
 
         TKeyDataWithSecondaryKeys pair = new TKeyDataWithSecondaryKeys();
-        pair.setPkey(new TDbt().setRecordNumber(1));
+        DatabaseEntry entry = new DatabaseEntry();
+        entry.setRecordNumber(1);
+        pair.setPkey(new TDbt().setData(entry.getData()));
         pair.setPdata(new TDbt().setData("pData".getBytes()));
         try {
             handler.dbPut(recNum, null, Collections.singletonList(pair),

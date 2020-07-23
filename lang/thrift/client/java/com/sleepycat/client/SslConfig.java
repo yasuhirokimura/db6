@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -15,7 +15,7 @@ import org.apache.thrift.transport.TSSLTransportFactory;
  */
 public class SslConfig {
     /** The parameters. */
-    private TSSLTransportFactory.TSSLTransportParameters parameters =
+    private final TSSLTransportFactory.TSSLTransportParameters parameters =
             new TSSLTransportFactory.TSSLTransportParameters();
 
     /**
@@ -25,6 +25,7 @@ public class SslConfig {
      * @param keyPass the password to access the key store
      * @param keyManagerType the KeyManager type
      * @param keyStoreType the KeyStore type
+     * @return this
      */
     public SslConfig setKeyStore(String keyStore, String keyPass,
             String keyManagerType, String keyStoreType) {
@@ -37,6 +38,7 @@ public class SslConfig {
      *
      * @param keyStore the path to the key store
      * @param keyPass the password to access the key store
+     * @return this
      */
     public SslConfig setKeyStore(String keyStore, String keyPass) {
         parameters.setKeyStore(keyStore, keyPass);
@@ -50,6 +52,7 @@ public class SslConfig {
      * @param trustPass the password to access the trust store
      * @param trustManagerType the TrustManager type
      * @param trustStoreType the TrustStore type
+     * @return this
      */
     public SslConfig setTrustStore(String trustStore, String trustPass,
             String trustManagerType, String trustStoreType) {
@@ -64,6 +67,7 @@ public class SslConfig {
      *
      * @param trustStore the path to the trust store
      * @param trustPass the password to access the trust store
+     * @return this
      */
     public SslConfig setTrustStore(String trustStore, String trustPass) {
         parameters.setTrustStore(trustStore, trustPass);

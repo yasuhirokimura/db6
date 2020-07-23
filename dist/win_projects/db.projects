@@ -2,6 +2,7 @@ php_db4
 db
 db_archive
 db_checkpoint
+db_convert
 db_csharp
 db_deadlock
 db_dump

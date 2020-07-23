@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -10,6 +10,8 @@ package com.sleepycat.client;
 
 import org.junit.Before;
 import org.junit.Test;
+
+import java.nio.ByteOrder;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
@@ -39,8 +41,7 @@ public class SSecondaryDatabaseTest extends ClientTestBase {
         });
         secondary = env.openSecondaryDatabase(null, "secondary", null, primary,
                 config);
-        primary.put(null, new SDatabaseEntry("pKey".getBytes()),
-                new SDatabaseEntry("sKey data".getBytes()));
+        primary.put(null, entry("pKey"), entry("sKey data"));
     }
 
     @Test
@@ -56,35 +57,23 @@ public class SSecondaryDatabaseTest extends ClientTestBase {
 
     @Test
     public void testGet() throws Exception {
-        SDatabaseEntry sKey = new SDatabaseEntry("sKey".getBytes());
-        SDatabaseEntry pKey = new SDatabaseEntry();
-        SDatabaseEntry data = new SDatabaseEntry();
-        assertThat(secondary.get(null, sKey, pKey, data, null),
-                is(SOperationStatus.SUCCESS));
-        assertThat(new String(pKey.getData()), is("pKey"));
-        assertThat(new String(data.getData()), is("sKey data"));
+        assertDbPGet(secondary::get, entry("sKey"), new SDatabaseEntry(),
+                new SDatabaseEntry(), "sKey", "pKey", "sKey data");
     }
 
     @Test
     public void testGetSearchBoth() throws Exception {
-        SDatabaseEntry sKey = new SDatabaseEntry("sKey".getBytes());
-        SDatabaseEntry pKey = new SDatabaseEntry("pKey".getBytes());
-        SDatabaseEntry data = new SDatabaseEntry();
-        assertThat(secondary.getSearchBoth(null, sKey, pKey, data, null),
-                is(SOperationStatus.SUCCESS));
-        assertThat(new String(data.getData()), is("sKey data"));
+        assertDbPGet(secondary::getSearchBoth, entry("sKey"), entry("pKey"),
+                new SDatabaseEntry(), "sKey", "pKey", "sKey data");
     }
 
     @Test
     public void testGetSearchRecordNumber() throws Exception {
-        SDatabaseEntry sKey = new SDatabaseEntry().setRecordNumber(1);
-        SDatabaseEntry pKey = new SDatabaseEntry();
-        SDatabaseEntry data = new SDatabaseEntry();
-        assertThat(
-                secondary.getSearchRecordNumber(null, sKey, pKey, data, null),
-                is(SOperationStatus.SUCCESS));
-        assertThat(new String(pKey.getData()), is("pKey"));
-        assertThat(new String(data.getData()), is("sKey data"));
+        assertDbPGet(secondary::getSearchRecordNumber,
+                new SDatabaseEntry()
+                        .setRecordNumber(1, ByteOrder.nativeOrder()),
+                new SDatabaseEntry(),
+                new SDatabaseEntry(), "sKey", "pKey", "sKey data");
     }
 
     @Test
@@ -94,27 +83,40 @@ public class SSecondaryDatabaseTest extends ClientTestBase {
 
     @Test
     public void testGet1() throws Exception {
-        SDatabaseEntry sKey = new SDatabaseEntry("sKey".getBytes());
-        SDatabaseEntry data = new SDatabaseEntry();
-        assertThat(secondary.get(null, sKey, data, null),
-                is(SOperationStatus.SUCCESS));
-        assertThat(new String(data.getData()), is("sKey data"));
+        assertDbGet(secondary::get, entry("sKey"), new SDatabaseEntry(), "sKey",
+                "sKey data");
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testGetSearchBoth1() throws Exception {
-        SDatabaseEntry sKey = new SDatabaseEntry("sKey".getBytes());
-        SDatabaseEntry data = new SDatabaseEntry("sKey data".getBytes());
+        SDatabaseEntry sKey = entry("sKey");
+        SDatabaseEntry data = entry("sKey data");
         secondary.getSearchBoth(null, sKey, data, null);
     }
 
     @Test
     public void testGetSearchRecordNumber1() throws Exception {
-        SDatabaseEntry sKey = new SDatabaseEntry().setRecordNumber(1);
-        SDatabaseEntry data = new SDatabaseEntry();
-        assertThat(secondary.getSearchRecordNumber(null, sKey, data, null),
-                is(SOperationStatus.SUCCESS));
-        assertThat(new String(data.getData()), is("sKey data"));
+        assertDbGet(secondary::getSearchRecordNumber,
+                new SDatabaseEntry()
+                        .setRecordNumber(1, connection.getServerByteOrder()),
+                new SDatabaseEntry(),
+                "sKey", "sKey data");
     }
 
+    private void assertDbPGet(DbPGetFunc func,
+            SDatabaseEntry sKey, SDatabaseEntry pKey, SDatabaseEntry pData,
+            String expectedSKey, String expectedPKey, String expectedPData)
+            throws Exception {
+        assertThat(func.apply(null, sKey, pKey, pData, null),
+                is(SOperationStatus.SUCCESS));
+        assertThat(new String(sKey.getData()), is(expectedSKey));
+        assertThat(new String(pKey.getData()), is(expectedPKey));
+        assertThat(new String(pData.getData()), is(expectedPData));
+    }
+
+    @FunctionalInterface
+    private interface DbPGetFunc {
+        SOperationStatus apply(STransaction txn, SDatabaseEntry sKey,
+                SDatabaseEntry pKey, SDatabaseEntry pData, SLockMode mode);
+    }
 }

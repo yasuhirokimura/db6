@@ -12,6 +12,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "db_checkpoint", "VS8\db_che
 		{FD045D60-ABAD-4A6C-9794-9BFB085FC3E7} = {FD045D60-ABAD-4A6C-9794-9BFB085FC3E7}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "db_convert", "VS8\db_convert.vcproj", "{D02E4151-D602-44A2-AFB7-7BA1DB253BD4}"
+	ProjectSection(ProjectDependencies) = postProject
+		{FD045D60-ABAD-4A6C-9794-9BFB085FC3E7} = {FD045D60-ABAD-4A6C-9794-9BFB085FC3E7}
+	EndProjectSection
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "db_deadlock", "VS8\db_deadlock.vcproj", "{CD0FD995-B4D1-4907-987B-99CF3304E7E0}"
 	ProjectSection(ProjectDependencies) = postProject
 		{FD045D60-ABAD-4A6C-9794-9BFB085FC3E7} = {FD045D60-ABAD-4A6C-9794-9BFB085FC3E7}

@@ -115,7 +115,7 @@
  
 --- ext/userauth/sqlite3userauth.h	
 +++ ext/userauth/sqlite3userauth.h	
-@@ -19,7 +19,26 @@
+@@ -19,7 +19,30 @@
  ** user-auth.txt file in the same source directory as this file for
  ** additional information.
  */
@@ -127,8 +127,12 @@
 +#endif
 +
 +#if defined(BDBSQL_USER_AUTHENTICATION) || \
-+	defined(BDBSQL_USER_AUTHENTICATION_KEYSTORE)
++ defined(BDBSQL_USER_AUTHENTICATION_KEYSTORE)
 +#define SQLITE_USER_AUTHENTICATION 1
++#endif
++
++#if defined(SQLITE_USER_AUTHENTICATION) && !defined(SQLITE_HAS_CODEC)
++#error Encryption is required when authentication is enabled.
 +#endif
 +
 +#if defined(BDBSQL_USER_AUTHENTICATION_KEYSTORE) && !defined(SQLITE_HAS_CODEC)
@@ -142,7 +146,7 @@
  
  /*
  ** If a database contains the SQLITE_USER table, then the
-@@ -85,4 +104,10 @@
+@@ -85,4 +108,10 @@
    const char *zUsername  /* Username to remove */
  );
  
@@ -153,6 +157,55 @@
  #endif /* SQLITE_USER_AUTHENTICATION */
 +
 +#endif  /* ifndef _SQLITE3USERAUTH_H_ */
+--- ext/userauth/userauth.c	
++++ ext/userauth/userauth.c	
+@@ -148,34 +148,38 @@
+ ** If Y is NULL then generate a new hash for password X and return that
+ ** hash.  If Y is not null, then generate a hash for password X using the
+ ** same salt as the previous hash Y and return the new hash.
++**
++** Note: SQLite uses a simple Ceasar-cypher to compute hash value of passwords.
++** In Berkeley DB we replace this with a stronger password hash function. The 
++** hashed password was stored as 84 bytes(64 bytes of salt + 20 bytes of HMAC). 
+ */
++#include "dbinc/hmac.h"
+ void sqlite3CryptFunc(
+   sqlite3_context *context,
+   int NotUsed,
+   sqlite3_value **argv
+ ){
+   const char *zIn;
+-  int nIn, ii;
++  int nIn, nOut;
+   u8 *zOut;
+-  char zSalt[8];
++  char zSalt[HMAC_BLOCK_SIZE];
+   zIn = sqlite3_value_blob(argv[0]);
+   nIn = sqlite3_value_bytes(argv[0]);
++  nOut = HMAC_OUTPUT_SIZE+sizeof(zSalt);
+   if( sqlite3_value_type(argv[1])==SQLITE_BLOB
+-   && sqlite3_value_bytes(argv[1])==nIn+sizeof(zSalt)
++   && sqlite3_value_bytes(argv[1])==nOut
+   ){
+     memcpy(zSalt, sqlite3_value_blob(argv[1]), sizeof(zSalt));
+   }else{
+     sqlite3_randomness(sizeof(zSalt), zSalt);
+   }
+-  zOut = sqlite3_malloc( nIn+sizeof(zSalt) );
++  zOut = sqlite3_malloc( nOut );
+   if( zOut==0 ){
+     sqlite3_result_error_nomem(context);
+   }else{
+     memcpy(zOut, zSalt, sizeof(zSalt));
+-    for(ii=0; ii<nIn; ii++){
+-      zOut[ii+sizeof(zSalt)] = zIn[ii]^zSalt[ii&0x7];
+-    }
+-    sqlite3_result_blob(context, zOut, nIn+sizeof(zSalt), sqlite3_free);
++    __db_chksum(NULL, zIn, nIn, zSalt, zOut+sizeof(zSalt));
++    sqlite3_result_blob(context, zOut, nOut, sqlite3_free);
+   }
+ }
+ 
 --- src/test_config.c	
 +++ src/test_config.c	
 @@ -621,6 +621,12 @@
@@ -170,7 +223,22 @@
  #else
 --- test/userauth01.test	
 +++ test/userauth01.test	
-@@ -207,7 +207,7 @@
+@@ -31,10 +31,12 @@
+ } {NULL 1 2.5 'three' X'4444' t1}
+ 
+ # Calling sqlite3_user_authenticate() on a no-authentication-required
+-# database connection is a harmless no-op.  
++# database connection is an error.  
+ #
+-do_test userauth01-1.1 {
++do_test userauth01-1.1.1 {
+   sqlite3_user_authenticate db alice pw-4-alice
++} {SQLITE_AUTH}
++do_test userauth01-1.1.2 {
+   execsql {
+     SELECT quote(x) FROM t1 ORDER BY x;
+     SELECT name FROM sqlite_master;
+@@ -207,7 +209,7 @@
  # check fails, then the ATTACH command fails with an SQLITE_AUTH error.
  #
  do_test userauth01-1.60 {

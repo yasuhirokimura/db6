@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -191,7 +191,7 @@ unpin:
 		 */
 		if (F_ISSET(bhp, BH_EXCLUSIVE))
 			F_CLR(bhp, BH_EXCLUSIVE);
-		MUTEX_UNLOCK(env, bhp->mtx_buf);
+		MUTEX_UNLOCK_IP(env, bhp->mtx_buf, ip);
 		return (0);
 	}
 
@@ -260,7 +260,7 @@ unpin:
 	 */
 	if (F_ISSET(bhp, BH_EXCLUSIVE))
 		F_CLR(bhp, BH_EXCLUSIVE);
-	MUTEX_UNLOCK(env, bhp->mtx_buf);
+	MUTEX_UNLOCK_IP(env, bhp->mtx_buf, ip);
 
 	/*
 	 * On every buffer put we update the cache lru priority and check
@@ -337,7 +337,9 @@ __memp_reset_lru(env, infop)
 
 /*
  * __memp_unpin_buffers --
- *	Unpin buffers pinned by a thread.
+ *	Unpin buffers pinned by (some other) thread.  This needs to be called
+ *	before __env_clear_latches() releases any shared mpool buffer latch
+ *	that a dead thread might have.
  *
  * PUBLIC: int __memp_unpin_buffers __P((ENV *, DB_THREAD_INFO *));
  */
@@ -352,6 +354,7 @@ __memp_unpin_buffers(env, ip)
 	PIN_LIST *list, *lp;
 	REGINFO *rinfop, *reginfo;
 	int ret;
+	char *fname;
 
 	memset(&dbmf, 0, sizeof(dbmf));
 	dbmf.env = env;
@@ -366,9 +369,12 @@ __memp_unpin_buffers(env, ip)
 		rinfop = &dbmp->reginfo[lp->region];
 		bhp = R_ADDR(rinfop, lp->b_ref);
 		dbmf.mfp = R_ADDR(dbmp->reginfo, bhp->mf_offset);
-		if ((ret = __memp_fput(&dbmf, ip,
-		    (u_int8_t *)bhp + SSZA(BH, buf),
-		    DB_PRIORITY_UNCHANGED)) != 0)
+		if ((fname = __memp_fn(&dbmf)) == NULL)
+			fname = "in-memory";
+		__db_msg(env, "Unpinning %s: page %lu mutex %lu",
+		    fname, (u_long)bhp->pgno, (u_long)bhp->mtx_buf);
+		if ((ret = __memp_fput(&dbmf,
+		    ip, bhp->buf, DB_PRIORITY_UNCHANGED)) != 0)
 			return (ret);
 	}
 	return (0);

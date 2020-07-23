@@ -462,9 +462,12 @@
       <file name="src/txn/txn_stat.c"/>
       <file name="src/txn/txn_util.c"/>
       <file name="src/common/os_method.c"/>
+      <file name="src/common/util_arg.c"/>
       <file name="src/common/util_cache.c"/>
+      <file name="src/common/util_env.c"/>
       <file name="src/common/util_log.c"/>
       <file name="src/common/util_sig.c"/>
+      <file name="src/common/util_ver_check.c"/>
       <file name="src/common/zerofill.c"/>
       <file name="src/xa/xa.c"/>
       <file name="src/xa/xa_map.c"/>
@@ -519,9 +522,12 @@
       <file name="src\common\dbt.c"/>
       <file name="src\common\mkpath.c"/>
       <file name="src\common\os_method.c"/>
-      <file name="src\common\util_cache.c"/>
-      <file name="src\common\util_log.c"/>
-      <file name="src\common\util_sig.c"/>
+      <file name="src\common/util_arg.c"/>
+      <file name="src\common/util_cache.c"/>
+      <file name="src\common/util_env.c"/>
+      <file name="src\common/util_log.c"/>
+      <file name="src\common/util_sig.c"/>
+      <file name="src\common/util_ver_check.c"/>
       <file name="src\common\zerofill.c"/>
       <file name="lang\cxx\cxx_channel.cpp"/>
       <file name="lang\cxx\cxx_db.cpp"/>
@@ -958,6 +964,17 @@ echo Java build finished</command>
     <include type="ref">all</include>
     <files>
       <file name="util/db_checkpoint.c"/>
+      <file name="src/clib/getopt.c"/>
+    </files>
+  </project>
+  <project name="db_convert" guid="D02E4151-D602-44A2-AFB7-7BA1DB253BD4">
+    <type>app</type>
+    <configuration></configuration>
+    <depends>db</depends>
+    <references>db</references>
+    <include type="ref">all</include>
+    <files>
+      <file name="util/db_convert.c"/>
       <file name="src/clib/getopt.c"/>
     </files>
   </project>

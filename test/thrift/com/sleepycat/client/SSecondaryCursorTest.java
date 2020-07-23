@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -16,10 +16,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 
 public class SSecondaryCursorTest extends ClientTestBase {
 
-    private SDatabase primary;
-
-    private SSecondaryDatabase secondary;
-
     private SSecondaryCursor cursor;
 
     @Before
@@ -27,7 +23,7 @@ public class SSecondaryCursorTest extends ClientTestBase {
         super.setUp();
         SEnvironment env = connection.openEnvironment("env",
                 new SEnvironmentConfig().setAllowCreate(true));
-        primary = env.openDatabase(null, "primary", null,
+        SDatabase primary = env.openDatabase(null, "primary", null,
                 new SDatabaseConfig().setAllowCreate(true)
                         .setType(SDatabaseType.BTREE)
                         .setBtreeRecordNumbers(true));
@@ -39,144 +35,102 @@ public class SSecondaryCursorTest extends ClientTestBase {
             result.setData(new String(data.getData()).split(" ")[0].getBytes());
             return true;
         });
-        secondary = env.openSecondaryDatabase(null, "secondary", null, primary,
-                config);
-        primary.put(null, new SDatabaseEntry("pKey".getBytes()),
-                new SDatabaseEntry("sKey data".getBytes()));
+        SSecondaryDatabase secondary =
+                env.openSecondaryDatabase(null, "secondary", null, primary,
+                        config);
+        primary.put(null, entry("pKey"), entry("sKey data"));
         cursor = secondary.openCursor(env.beginTransaction(null, null), null);
     }
 
     @Test
     public void testGetCurrent() throws Exception {
-        SDatabaseEntry sKey = new SDatabaseEntry();
-        SDatabaseEntry pKey = new SDatabaseEntry();
-        SDatabaseEntry data = new SDatabaseEntry();
-        cursor.getFirst(sKey, pKey, data, null);
-        assertThat(cursor.getCurrent(sKey, pKey, data, null),
-                is(SOperationStatus.SUCCESS));
-        assertThat(new String(sKey.getData()), is("sKey"));
-        assertThat(new String(pKey.getData()), is("pKey"));
-        assertThat(new String(data.getData()), is("sKey data"));
+        cursor.getFirst(null, null, null, null);
+        assertCursorPGet(cursor::getCurrent, new SDatabaseEntry(),
+                new SDatabaseEntry(), new SDatabaseEntry(), "sKey", "pKey",
+                "sKey data");
     }
 
     @Test
     public void testGetFirst() throws Exception {
-        SDatabaseEntry sKey = new SDatabaseEntry();
-        SDatabaseEntry pKey = new SDatabaseEntry();
-        SDatabaseEntry data = new SDatabaseEntry();
-        assertThat(cursor.getFirst(sKey, pKey, data, null),
-                is(SOperationStatus.SUCCESS));
-        assertThat(new String(sKey.getData()), is("sKey"));
-        assertThat(new String(pKey.getData()), is("pKey"));
-        assertThat(new String(data.getData()), is("sKey data"));
+        assertCursorPGet(cursor::getFirst, new SDatabaseEntry(),
+                new SDatabaseEntry(), new SDatabaseEntry(), "sKey", "pKey",
+                "sKey data");
     }
 
     @Test
     public void testGetLast() throws Exception {
-        SDatabaseEntry sKey = new SDatabaseEntry();
-        SDatabaseEntry pKey = new SDatabaseEntry();
-        SDatabaseEntry data = new SDatabaseEntry();
-        assertThat(cursor.getLast(sKey, pKey, data, null),
-                is(SOperationStatus.SUCCESS));
-        assertThat(new String(sKey.getData()), is("sKey"));
-        assertThat(new String(pKey.getData()), is("pKey"));
-        assertThat(new String(data.getData()), is("sKey data"));
+        assertCursorPGet(cursor::getLast, new SDatabaseEntry(),
+                new SDatabaseEntry(), new SDatabaseEntry(), "sKey", "pKey",
+                "sKey data");
     }
 
     @Test
     public void testGetNext() throws Exception {
-        SDatabaseEntry sKey = new SDatabaseEntry();
-        SDatabaseEntry pKey = new SDatabaseEntry();
-        SDatabaseEntry data = new SDatabaseEntry();
-        assertThat(cursor.getNext(sKey, pKey, data, null),
-                is(SOperationStatus.SUCCESS));
-        assertThat(new String(sKey.getData()), is("sKey"));
-        assertThat(new String(pKey.getData()), is("pKey"));
-        assertThat(new String(data.getData()), is("sKey data"));
+        assertCursorPGet(cursor::getNext, new SDatabaseEntry(),
+                new SDatabaseEntry(), new SDatabaseEntry(), "sKey", "pKey",
+                "sKey data");
     }
 
     @Test
     public void testGetNextDup() throws Exception {
-        SDatabaseEntry sKey = new SDatabaseEntry();
-        SDatabaseEntry pKey = new SDatabaseEntry();
-        SDatabaseEntry data = new SDatabaseEntry();
-        cursor.getFirst(sKey, pKey, data, null);
-        assertThat(cursor.getNextDup(sKey, pKey, data, null),
+        cursor.getFirst(null, null, null, null);
+
+        assertThat(cursor.getNextDup(null, null, null, null),
                 is(SOperationStatus.NOTFOUND));
     }
 
     @Test
     public void testGetNextNoDup() throws Exception {
-        SDatabaseEntry sKey = new SDatabaseEntry();
-        SDatabaseEntry pKey = new SDatabaseEntry();
-        SDatabaseEntry data = new SDatabaseEntry();
-        assertThat(cursor.getNextNoDup(sKey, pKey, data, null),
-                is(SOperationStatus.SUCCESS));
-        assertThat(new String(sKey.getData()), is("sKey"));
-        assertThat(new String(pKey.getData()), is("pKey"));
-        assertThat(new String(data.getData()), is("sKey data"));
+        assertCursorPGet(cursor::getNextNoDup, new SDatabaseEntry(),
+                new SDatabaseEntry(), new SDatabaseEntry(), "sKey", "pKey",
+                "sKey data");
     }
 
     @Test
     public void testGetPrev() throws Exception {
-        SDatabaseEntry sKey = new SDatabaseEntry();
-        SDatabaseEntry pKey = new SDatabaseEntry();
-        SDatabaseEntry data = new SDatabaseEntry();
-        assertThat(cursor.getPrev(sKey, pKey, data, null),
-                is(SOperationStatus.SUCCESS));
-        assertThat(new String(sKey.getData()), is("sKey"));
-        assertThat(new String(pKey.getData()), is("pKey"));
-        assertThat(new String(data.getData()), is("sKey data"));
+        assertCursorPGet(cursor::getPrev, new SDatabaseEntry(),
+                new SDatabaseEntry(), new SDatabaseEntry(), "sKey", "pKey",
+                "sKey data");
     }
 
     @Test
     public void testGetPrevDup() throws Exception {
-        SDatabaseEntry sKey = new SDatabaseEntry();
-        SDatabaseEntry pKey = new SDatabaseEntry();
-        SDatabaseEntry data = new SDatabaseEntry();
-        cursor.getFirst(sKey, pKey, data, null);
-        assertThat(cursor.getPrevDup(sKey, pKey, data, null),
+        cursor.getFirst(null, null, null, null);
+
+        assertThat(cursor.getPrevDup(null, null, null, null),
                 is(SOperationStatus.NOTFOUND));
     }
 
     @Test
     public void testGetPrevNoDup() throws Exception {
-        SDatabaseEntry sKey = new SDatabaseEntry();
-        SDatabaseEntry pKey = new SDatabaseEntry();
-        SDatabaseEntry data = new SDatabaseEntry();
-        assertThat(cursor.getPrevNoDup(sKey, pKey, data, null),
-                is(SOperationStatus.SUCCESS));
-        assertThat(new String(sKey.getData()), is("sKey"));
-        assertThat(new String(pKey.getData()), is("pKey"));
-        assertThat(new String(data.getData()), is("sKey data"));
+        assertCursorPGet(cursor::getPrevNoDup, new SDatabaseEntry(),
+                new SDatabaseEntry(), new SDatabaseEntry(), "sKey", "pKey",
+                "sKey data");
     }
 
     @Test
     public void testGetRecordNumber() throws Exception {
         SDatabaseEntry sKey = new SDatabaseEntry();
         SDatabaseEntry pKey = new SDatabaseEntry();
-        SDatabaseEntry data = new SDatabaseEntry();
-        cursor.getFirst(sKey, pKey, data, null);
+        cursor.getFirst(null, null, null, null);
         assertThat(cursor.getRecordNumber(sKey, pKey, null),
                 is(SOperationStatus.SUCCESS));
-        assertThat(sKey.getRecordNumber(), is(1));
-        assertThat(pKey.getRecordNumber(), is(1));
+        assertThat(sKey.getRecordNumber(connection.getServerByteOrder()),
+                is(1));
+        assertThat(pKey.getRecordNumber(connection.getServerByteOrder()),
+                is(1));
     }
 
     @Test
     public void testGetSearchBoth() throws Exception {
-        SDatabaseEntry sKey = new SDatabaseEntry("sKey".getBytes());
-        SDatabaseEntry pKey = new SDatabaseEntry("pKey".getBytes());
-        SDatabaseEntry data = new SDatabaseEntry();
-        assertThat(cursor.getSearchBoth(sKey, pKey, data, null),
-                is(SOperationStatus.SUCCESS));
-        assertThat(new String(data.getData()), is("sKey data"));
+        assertCursorPGet(cursor::getSearchBoth, entry("sKey"), entry("pKey"),
+                new SDatabaseEntry(), "sKey", "pKey", "sKey data");
     }
 
     @Test
     public void testGetSearchBothRange() throws Exception {
-        SDatabaseEntry sKey = new SDatabaseEntry("sKey".getBytes());
-        SDatabaseEntry pKey = new SDatabaseEntry("p".getBytes());
+        SDatabaseEntry sKey = entry("sKey");
+        SDatabaseEntry pKey = entry("p");
         SDatabaseEntry data = new SDatabaseEntry();
         assertThat(cursor.getSearchBothRange(sKey, pKey, data, null),
                 is(SOperationStatus.NOTFOUND));
@@ -184,36 +138,39 @@ public class SSecondaryCursorTest extends ClientTestBase {
 
     @Test
     public void testGetSearchKey() throws Exception {
-        SDatabaseEntry sKey = new SDatabaseEntry("sKey".getBytes());
-        SDatabaseEntry pKey = new SDatabaseEntry();
-        SDatabaseEntry data = new SDatabaseEntry();
-        assertThat(cursor.getSearchKey(sKey, pKey, data, null),
-                is(SOperationStatus.SUCCESS));
-        assertThat(new String(pKey.getData()), is("pKey"));
-        assertThat(new String(data.getData()), is("sKey data"));
+        assertCursorPGet(cursor::getSearchKey, entry("sKey"), entry("pKey"),
+                new SDatabaseEntry(), "sKey", "pKey", "sKey data");
     }
 
     @Test
     public void testGetSearchKeyRange() throws Exception {
-        SDatabaseEntry sKey = new SDatabaseEntry("s".getBytes());
-        SDatabaseEntry pKey = new SDatabaseEntry();
-        SDatabaseEntry data = new SDatabaseEntry();
-        assertThat(cursor.getSearchKeyRange(sKey, pKey, data, null),
-                is(SOperationStatus.SUCCESS));
-        assertThat(new String(sKey.getData()), is("sKey"));
-        assertThat(new String(pKey.getData()), is("pKey"));
-        assertThat(new String(data.getData()), is("sKey data"));
+        assertCursorPGet(cursor::getSearchKeyRange, entry("s"),
+                new SDatabaseEntry(), new SDatabaseEntry(), "sKey", "pKey",
+                "sKey data");
     }
 
     @Test
     public void testGetSearchRecordNumber() throws Exception {
-        SDatabaseEntry sKey = new SDatabaseEntry().setRecordNumber(1);
-        SDatabaseEntry pKey = new SDatabaseEntry();
-        SDatabaseEntry data = new SDatabaseEntry();
-        assertThat(cursor.getSearchRecordNumber(sKey, pKey, data, null),
+        assertCursorPGet(cursor::getSearchRecordNumber,
+                new SDatabaseEntry()
+                        .setRecordNumber(1, connection.getServerByteOrder()),
+                new SDatabaseEntry(),
+                new SDatabaseEntry(), "sKey", "pKey", "sKey data");
+    }
+
+    private void assertCursorPGet(CursorPGetFunc func,
+            SDatabaseEntry sKey, SDatabaseEntry pKey, SDatabaseEntry pData,
+            String expectedSKey, String expectedPKey, String expectedPData)
+            throws Exception {
+        assertThat(func.apply(sKey, pKey, pData, null),
                 is(SOperationStatus.SUCCESS));
-        assertThat(new String(sKey.getData()), is("sKey"));
-        assertThat(new String(pKey.getData()), is("pKey"));
-        assertThat(new String(data.getData()), is("sKey data"));
+        assertThat(new String(sKey.getData()), is(expectedSKey));
+        assertThat(new String(pKey.getData()), is(expectedPKey));
+        assertThat(new String(pData.getData()), is(expectedPData));
+    }
+
+    private interface CursorPGetFunc {
+        SOperationStatus apply(SDatabaseEntry sKey, SDatabaseEntry pKey,
+                SDatabaseEntry pData, SLockMode mode);
     }
 }

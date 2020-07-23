@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -24,6 +24,7 @@ import org.apache.thrift.transport.TTransportException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.ByteOrder;
 import java.util.Objects;
 
 /**
@@ -45,6 +46,9 @@ public class BdbServerConnection implements RemoteCallHelper, AutoCloseable {
     /** The server's listening port. */
     private final int port;
 
+    /** The server's native byte order. */
+    private ByteOrder serverByteOrder;
+
     /** The client instance. */
     private BdbService.Client client;
 
@@ -65,6 +69,7 @@ public class BdbServerConnection implements RemoteCallHelper, AutoCloseable {
         TProtocol protocol = new TCompactProtocol(
                 new TIOStreamTransport(clientIn, clientOut));
         this.client = new BdbService.Client(protocol);
+        this.serverByteOrder = ByteOrder.nativeOrder();
     }
 
     /**
@@ -132,6 +137,8 @@ public class BdbServerConnection implements RemoteCallHelper, AutoCloseable {
                             "server requires drivers with protocol version: " +
                             testResult.serverProtocolVersion, null);
         }
+        this.serverByteOrder = testResult.isServerBigEndian() ?
+                ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN;
     }
 
     /**
@@ -142,6 +149,15 @@ public class BdbServerConnection implements RemoteCallHelper, AutoCloseable {
      */
     public BdbServerAdmin adminService() {
         return new BdbServerAdmin(this.client);
+    }
+
+    /**
+     * Return the native byte order of the connected server.
+     *
+     * @return the native byte order of the connected server
+     */
+    public ByteOrder getServerByteOrder() {
+        return this.serverByteOrder;
     }
 
     /**
@@ -163,7 +179,7 @@ public class BdbServerConnection implements RemoteCallHelper, AutoCloseable {
         return remoteCallWithIOException(() -> {
             TEnvironment env = this.client
                     .openEnvironment(home, ThriftWrapper.nullSafeGet(config));
-            return new SEnvironment(env, home, this.client);
+            return new SEnvironment(env, home, this, this.client);
         });
     }
 

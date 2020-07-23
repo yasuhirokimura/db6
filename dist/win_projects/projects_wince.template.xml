@@ -612,6 +612,17 @@
       <file name="src/clib/getopt.c"/>
     </files>
   </project>
+  <project name="db_convert" guid="D02E4151-D602-44A2-AFB7-7BA1DB253BD4">
+    <type>app</type>
+    <configuration></configuration>
+    <depends>db</depends>
+    <references>db</references>
+    <include type="ref">all</include>
+    <files>
+      <file name="util/db_convert.c"/>
+      <file name="src/clib/getopt.c"/>
+    </files>
+  </project>
   <project name="db_deadlock" guid="CD0FD995-B4D1-4907-987B-99CF3304E7E0">
     <type>app</type>
     <configuration></configuration>

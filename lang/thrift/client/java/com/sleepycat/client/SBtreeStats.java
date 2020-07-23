@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -13,11 +13,12 @@ import com.sleepycat.thrift.TBtreeStat;
 /**
  * The SBtreeStats object is used to return Btree or Recno database statistics.
  */
-public class SBtreeStats extends ThriftWrapper<TBtreeStat, TBtreeStat._Fields>
-        implements SDatabaseStats {
+public class SBtreeStats implements SDatabaseStats {
+    /** The Thrift object. */
+    private final TBtreeStat stat;
 
     SBtreeStats(TBtreeStat stat) {
-        super(stat);
+        this.stat = stat;
     }
 
     /**
@@ -25,9 +26,11 @@ public class SBtreeStats extends ThriftWrapper<TBtreeStat, TBtreeStat._Fields>
      * <p>
      * The information is only included if the {@link SDatabase#getStats} call
      * was not configured by the {@link SStatsConfig#setFast} method.
+     *
+     * @return the number of database duplicate pages
      */
     public int getDupPages() {
-        return (int) getField(TBtreeStat._Fields.DUP_PAGES);
+        return this.stat.dupPages;
     }
 
     /**
@@ -35,9 +38,11 @@ public class SBtreeStats extends ThriftWrapper<TBtreeStat, TBtreeStat._Fields>
      * <p>
      * The information is only included if the {@link SDatabase#getStats} call
      * was not configured by the {@link SStatsConfig#setFast} method.
+     *
+     * @return the number of bytes free in the database duplciate pages
      */
     public long getDupPagesFree() {
-        return (long) getField(TBtreeStat._Fields.DUP_PAGES_FREE);
+        return this.stat.dupPagesFree;
     }
 
     /**
@@ -45,9 +50,11 @@ public class SBtreeStats extends ThriftWrapper<TBtreeStat, TBtreeStat._Fields>
      * <p>
      * The information is only included if the {@link SDatabase#getStats} call
      * was not configured by the {@link SStatsConfig#setFast} method.
+     *
+     * @return the number of empty database pages
      */
     public int getEmptyPages() {
-        return (int) getField(TBtreeStat._Fields.EMPTY_PAGES);
+        return this.stat.emptyPages;
     }
 
     /**
@@ -55,9 +62,11 @@ public class SBtreeStats extends ThriftWrapper<TBtreeStat, TBtreeStat._Fields>
      * <p>
      * The information is only included if the {@link SDatabase#getStats} call
      * was not configured by the {@link SStatsConfig#setFast} method.
+     *
+     * @return the number of pages on the free list
      */
     public int getFree() {
-        return (int) getField(TBtreeStat._Fields.FREE);
+        return this.stat.free;
     }
 
     /**
@@ -65,9 +74,11 @@ public class SBtreeStats extends ThriftWrapper<TBtreeStat, TBtreeStat._Fields>
      * <p>
      * The information is only included if the {@link SDatabase#getStats} call
      * was not configured by the {@link SStatsConfig#setFast} method.
+     *
+     * @return the number of database internal pages
      */
     public int getIntPages() {
-        return (int) getField(TBtreeStat._Fields.INT_PAGES);
+        return this.stat.intPages;
     }
 
     /**
@@ -75,9 +86,11 @@ public class SBtreeStats extends ThriftWrapper<TBtreeStat, TBtreeStat._Fields>
      * <p>
      * The information is only included if the {@link SDatabase#getStats} call
      * was not configured by the {@link SStatsConfig#setFast} method.
+     *
+     * @return the number of bytes free in database internal pages
      */
     public long getIntPagesFree() {
-        return (long) getField(TBtreeStat._Fields.INT_PAGES_FREE);
+        return this.stat.intPagesFree;
     }
 
     /**
@@ -85,9 +98,11 @@ public class SBtreeStats extends ThriftWrapper<TBtreeStat, TBtreeStat._Fields>
      * <p>
      * The information is only included if the {@link SDatabase#getStats} call
      * was not configured by the {@link SStatsConfig#setFast} method.
+     *
+     * @return the number of database leaf pages
      */
     public int getLeafPages() {
-        return (int) getField(TBtreeStat._Fields.LEAF_PAGES);
+        return this.stat.leafPages;
     }
 
     /**
@@ -95,9 +110,11 @@ public class SBtreeStats extends ThriftWrapper<TBtreeStat, TBtreeStat._Fields>
      * <p>
      * The information is only included if the {@link SDatabase#getStats} call
      * was not configured by the {@link SStatsConfig#setFast} method.
+     *
+     * @return the number of bytes free in database leaf pages
      */
     public long getLeafPagesFree() {
-        return (long) getField(TBtreeStat._Fields.LEAF_PAGES_FREE);
+        return this.stat.leafPagesFree;
     }
 
     /**
@@ -105,56 +122,57 @@ public class SBtreeStats extends ThriftWrapper<TBtreeStat, TBtreeStat._Fields>
      * <p>
      * The information is only included if the {@link SDatabase#getStats} call
      * was not configured by the {@link SStatsConfig#setFast} method.
+     *
+     * @return the number of levels in the database
      */
     public int getLevels() {
-        return (int) getField(TBtreeStat._Fields.LEVELS);
+        return this.stat.levels;
     }
 
     /**
      * The magic number that identifies the file as a Btree database.
+     *
+     * @return the magic number that identifies the file as a Btree database
      */
     public int getMagic() {
-        return (int) getField(TBtreeStat._Fields.MAGIC);
+        return this.stat.magic;
     }
 
     /**
      * The minimum keys per page.
+     *
+     * @return the minimum keys per page
      */
     public int getMinKey() {
-        return (int) getField(TBtreeStat._Fields.MIN_KEY);
+        return this.stat.minKey;
     }
 
     /**
-     * The number of blob records.
+     * The number of external files.
+     *
+     * @return the number of external files
      */
-    public int getNumBlobs() {
-        return (int) getField(TBtreeStat._Fields.NUM_BLOBS);
+    public int getExtFiles() {
+        return this.stat.numBlobs;
     }
 
     /**
-     * The number of key/data pairs or records in the database.
+     * The number of key/data pairs in the database.
      * <p>
      * For the Btree Access Method, the number of key/data pairs in the
      * database. If the {@link SDatabase#getStats} call was not configured by
      * the {@link SStatsConfig#setFast} method, the count will be exact.
      * Otherwise, the count will be the last saved value unless it has never
      * been calculated, in which case it will be 0.
-     * <p>
-     * For the Recno Access Method, the number of records in the database. If
-     * the database was configured with mutable record numbers, the count will
-     * be exact. Otherwise, if the {@link SDatabase#getStats} call was
-     * configured by the {@link SStatsConfig#setFast} method, the count will be
-     * exact but will include deleted records; if the {@link
-     * SDatabase#getStats} call was not configured by the {@link
-     * SStatsConfig#setFast} method, the count will be exact and will not
-     * include deleted records.
+     *
+     * @return the number of key/data pairs in the database
      */
     public int getNumData() {
-        return (int) getField(TBtreeStat._Fields.NUM_DATA);
+        return this.stat.numData;
     }
 
     /**
-     * The number of keys or records in the database.
+     * The number of keys in the database.
      * <p>
      * For the Btree Access Method, the number of keys in the database. If the
      * {@link SDatabase#getStats} call was not configured by the {@link
@@ -162,18 +180,11 @@ public class SBtreeStats extends ThriftWrapper<TBtreeStat, TBtreeStat._Fields>
      * retrieval by record number, the count will be exact. Otherwise, the
      * count will be the last saved value unless it has never been calculated,
      * in which case it will be 0.
-     * <p>
-     * For the Recno Access Method, the number of records in the database. If
-     * the database was configured with mutable record numbers, the count will
-     * be exact. Otherwise, if the {@link SDatabase#getStats} call was
-     * configured by the {@link SStatsConfig#setFast} method, the count will be
-     * exact but will include deleted records; if the {@link
-     * SDatabase#getStats} call was not configured by the {@link
-     * SStatsConfig#setFast} method, the count will be exact and will not
-     * include deleted records.
+     *
+     * @return the number of keys in the database
      */
     public int getNumKeys() {
-        return (int) getField(TBtreeStat._Fields.NUM_KEYS);
+        return this.stat.numKeys;
     }
 
     /**
@@ -181,9 +192,11 @@ public class SBtreeStats extends ThriftWrapper<TBtreeStat, TBtreeStat._Fields>
      * <p>
      * The information is only included if the {@link SDatabase#getStats} call
      * was not configured by the {@link SStatsConfig#setFast} method.
+     *
+     * @return the number of database overflow pages
      */
     public int getOverPages() {
-        return (int) getField(TBtreeStat._Fields.OVER_PAGES);
+        return this.stat.overPages;
     }
 
     /**
@@ -191,49 +204,63 @@ public class SBtreeStats extends ThriftWrapper<TBtreeStat, TBtreeStat._Fields>
      * <p>
      * The information is only included if the {@link SDatabase#getStats} call
      * was not configured by the {@link SStatsConfig#setFast} method.
+     *
+     * @return the number of bytes free in database overflow pages
      */
     public long getOverPagesFree() {
-        return (long) getField(TBtreeStat._Fields.OVER_PAGES_FREE);
+        return this.stat.overPagesFree;
     }
 
     /**
      * The number of pages in the database.
+     *
+     * @return the number of pages in the database
      */
     public int getPageCount() {
-        return (int) getField(TBtreeStat._Fields.PAGE_COUNT);
+        return this.stat.pageCount;
     }
 
     /**
      * The underlying database page size, in bytes.
+     *
+     * @return the underlying database page size, in bytes
      */
     public int getPageSize() {
-        return (int) getField(TBtreeStat._Fields.PAGE_SIZE);
+        return this.stat.pageSize;
     }
 
     /**
      * The length of fixed-length records.
+     *
+     * @return the length of fixed-length records
      */
     public int getReLen() {
-        return (int) getField(TBtreeStat._Fields.RE_LEN);
+        return this.stat.reLen;
     }
 
     /**
      * The padding byte value for fixed-length records.
+     *
+     * @return the padding byte value for fixed-length records
      */
     public int getRePad() {
-        return (int) getField(TBtreeStat._Fields.RE_PAD);
+        return this.stat.rePad;
     }
 
     /**
      * The version of the Btree database.
+     *
+     * @return the version of the Btree database
      */
     public int getVersion() {
-        return (int) getField(TBtreeStat._Fields.VERSION);
+        return this.stat.version;
     }
 
     /**
      * For convenience, the SBtreeStats class has a toString method
      * that lists all the data fields.
+     *
+     * @return a String that lists all the data fields
      */
     public String toString() {
         return "BtreeStats:"
@@ -244,7 +271,7 @@ public class SBtreeStats extends ThriftWrapper<TBtreeStat, TBtreeStat._Fields>
                 + "\n  pagecnt=" + getPageCount()
                 + "\n  pagesize=" + getPageSize()
                 + "\n  minkey=" + getMinKey()
-                + "\n  nblobs=" + getNumBlobs()
+                + "\n  ext_files=" + getExtFiles()
                 + "\n  re_len=" + getReLen()
                 + "\n  re_pad=" + getRePad()
                 + "\n  levels=" + getLevels()

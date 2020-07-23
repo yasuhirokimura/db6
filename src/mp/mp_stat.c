@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -677,7 +677,7 @@ __memp_print_all(env, flags)
 		STAT_ULONG("Cache priority", dbmfp->priority);
 		STAT_POINTER("mmap address", dbmfp->addr);
 		STAT_ULONG("mmap length", dbmfp->len);
-		__db_prflags(env, NULL, dbmfp->flags, cfn, NULL, "\tFlags");
+		__db_prflags(env, NULL, dbmfp->config_flags, cfn, NULL, "\tFlags");
 		__db_print_fh(env, "File handle", dbmfp->fhp, flags);
 	}
 

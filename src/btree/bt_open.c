@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.
  */
 /*
  * Copyright (c) 1990, 1993, 1994, 1995, 1996
@@ -343,8 +343,23 @@ __bam_read_root(dbp, ip, txn, base_pgno, flags)
 	    F_ISSET(dbp, DB_AM_RECOVER) ? DB_RECOVER : 0)) != 0)
 		return (ret);
 
-	/* Get the metadata page. */
-	if ((ret =
+	/*
+	 * Copy a few fields from the metadata page into our bt_internal.  If
+	 * this is the first page of the file (PGNO_BASE_MD) we do not need to
+	 * lock it: these particular fields never change. Even for subdatabases,
+	 * the shared latch that __memp_fget() obtains on the page prevents any
+	 * changes from being made while we are looking at the fields:
+	 *	base_pgno itself - changeable by compact, but only for a subdb
+	 *	meta->root	 - changeable by compact, but only for a subdb
+	 *	meta->minkey	 - settable only before the database is created.
+	 *	meta->re_pad	 - settable only before the database is created.
+	 *	meta->re_len	 - settable only before the database is created.
+	 * The file's revsion count is saved here, to detect when a subdb's root
+	 * or base_pgno is changed by compact. We go to this trouble to allow
+	 * opening a database while a long running update which allocates or
+	 * frees pages has the metadata page write-locked. 
+	 */
+	if (base_pgno != PGNO_BASE_MD && (ret =
 	    __db_lget(dbc, 0, base_pgno, DB_LOCK_READ, 0, &metalock)) != 0)
 		goto err;
 	if ((ret = __memp_fget(mpf, &base_pgno, ip, dbc->txn, 0, &meta)) != 0)

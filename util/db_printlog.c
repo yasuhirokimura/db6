@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -21,7 +21,7 @@
 
 #ifndef lint
 static const char copyright[] =
-    "Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.\n";
+    "Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.\n";
 #endif
 
 int db_printlog_print_app_record __P((DB_ENV *, DBT *, DB_LSN *, db_recops));
@@ -37,7 +37,6 @@ int lsn_arg __P((char *, DB_LSN *));
 int main __P((int, char *[]));
 int open_rep_db __P((DB_ENV *, DB **, DBC **));
 void usage __P((void));
-int version_check __P((void));
 
 const char *progname;
 
@@ -61,12 +60,9 @@ main(argc, argv)
 	int ch, cmp, exitval, i, nflag, rflag, ret, repflag;
 	char *data_len, *home, *passwd;
 
-	if ((progname = __db_rpath(argv[0])) == NULL)
-		progname = argv[0];
-	else
-		++progname;
+	progname = __db_util_arg_progname(argv[0]);
 
-	if ((ret = version_check()) != 0)
+	if ((ret = __db_util_version_check(progname)) != 0)
 		return (ret);
 
 	dbp = NULL;
@@ -105,19 +101,9 @@ main(argc, argv)
 			nflag = 1;
 			break;
 		case 'P':
-			if (passwd != NULL) {
-				fprintf(stderr, DB_STR("5138",
-					"Password may not be specified twice"));
-				goto err;
-			}
-			passwd = strdup(optarg);
-			memset(optarg, 0, strlen(optarg));
-			if (passwd == NULL) {
-				fprintf(stderr, DB_STR_A("5010",
-				    "%s: strdup: %s\n", "%s %s\n"),
-				    progname, strerror(errno));
-				goto err;
-			}
+			if (__db_util_arg_password(progname, 
+ 			    optarg, &passwd) != 0)
+  				goto err;
 			break;
 		case 'r':
 			rflag = 1;
@@ -141,18 +127,8 @@ main(argc, argv)
 	/* Handle possible interruptions. */
 	__db_util_siginit();
 
-	/*
-	 * Create an environment object and initialize it for error
-	 * reporting.
-	 */
-	if ((ret = db_env_create(&dbenv, 0)) != 0) {
-		fprintf(stderr,
-		    "%s: db_env_create: %s\n", progname, db_strerror(ret));
+	if (__db_util_env_create(&dbenv, progname, passwd, NULL) != 0)
 		goto err;
-	}
-
-	dbenv->set_errfile(dbenv, stderr);
-	dbenv->set_errpfx(dbenv, progname);
 
 	if (nflag) {
 		if ((ret = dbenv->set_flags(dbenv, DB_NOLOCKING, 1)) != 0) {
@@ -163,12 +139,6 @@ main(argc, argv)
 			dbenv->err(dbenv, ret, "set_flags: DB_NOPANIC");
 			goto err;
 		}
-	}
-
-	if (passwd != NULL && (ret = dbenv->set_encrypt(dbenv,
-	    passwd, DB_ENCRYPT_AES)) != 0) {
-		dbenv->err(dbenv, ret, "set_passwd");
-		goto err;
 	}
 
 	/*
@@ -189,22 +159,12 @@ main(argc, argv)
 	 * with logging, because we don't want to log the opens.
 	 */
 	if (repflag) {
-		if ((ret = dbenv->open(dbenv, home,
-		    DB_INIT_MPOOL | DB_USE_ENVIRON, 0)) != 0 &&
-		    (ret == DB_VERSION_MISMATCH || ret == DB_REP_LOCKOUT ||
-		    (ret = dbenv->open(dbenv, home,
-		    DB_CREATE | DB_INIT_MPOOL | DB_PRIVATE | DB_USE_ENVIRON, 0))
-		    != 0)) {
-			dbenv->err(dbenv, ret, "DB_ENV->open");
+		if (__db_util_env_open(dbenv, home, DB_INIT_MPOOL,
+		    1, DB_INIT_MPOOL, 0, NULL) != 0)
 			goto err;
-		}
-	} else if ((ret = dbenv->open(dbenv, home, DB_USE_ENVIRON, 0)) != 0 &&
-	    (ret == DB_VERSION_MISMATCH || ret == DB_REP_LOCKOUT ||
-	    (ret = dbenv->open(dbenv, home,
-	    DB_CREATE | DB_INIT_LOG | DB_PRIVATE | DB_USE_ENVIRON, 0)) != 0)) {
-		dbenv->err(dbenv, ret, "DB_ENV->open");
+	} else if (__db_util_env_open(dbenv, home, 0,
+	    1, DB_INIT_LOG, 0, NULL) != 0)
 		goto err;
-	}
 
 	/*
 	 * Set data_len after environment opens.  The value passed
@@ -654,24 +614,6 @@ usage()
 	fprintf(stderr, "usage: %s %s%s\n", progname,
 	    "[-NrV] [-b file/offset] [-D data_len] ",
 	    "[-e file/offset] [-h home] [-P password]");
-}
-
-int
-version_check()
-{
-	int v_major, v_minor, v_patch;
-
-	/* Make sure we're loaded with the right version of the DB library. */
-	(void)db_version(&v_major, &v_minor, &v_patch);
-	if (v_major != DB_VERSION_MAJOR || v_minor != DB_VERSION_MINOR) {
-		fprintf(stderr, DB_STR_A("5015",
-		    "%s: version %d.%d doesn't match library version %d.%d\n",
-		    "%s %d %d %d %d\n"), progname,
-		    DB_VERSION_MAJOR, DB_VERSION_MINOR,
-		    v_major, v_minor);
-		return (EXIT_FAILURE);
-	}
-	return (0);
 }
 
 /* Print an unknown, application-specific log record as best we can. */

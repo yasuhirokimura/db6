@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2001, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2001, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -2643,7 +2643,7 @@ __rep_notify_threads(env, wake_reason)
 		}
 
 		if (wake) {
-			MUTEX_UNLOCK(env, waiter->mtx_repwait);
+			MUTEX_UNLOCK_NO_CTR(env, waiter->mtx_repwait);
 			SH_TAILQ_REMOVE(&rep->waiters,
 			    waiter, links, __rep_waiter);
 			F_SET(waiter, REP_F_WOKEN);

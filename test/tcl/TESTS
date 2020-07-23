@@ -400,6 +400,22 @@ env029
 	that tests them when they are not enabled.
 
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+env030
+	Test failchk.
+
+	Tests that failchk is able to recover the environment after a crash,
+	or returns RUNRECOVERY when appropriate.
+
+	1. Open environment with is_alive function and failchk.
+	2. Open database and insert a record.
+	3. Test that failchk works when another process: exits cleanly,
+	crashes outside the API, crashes inside the API but holds no
+	latches, and crashes inside the API while holding latches.
+	4. Test that failchk returns RUNRECOVER when another process:
+	crashes while holding an exclusive latch, crashes while holding
+	a mutex, and crashes while performing failchk.
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 fail001
 	Test database compaction errors.
 
@@ -638,6 +654,10 @@ memp008
 	then resizing.
 
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+memp009
+	Dead files and their buffers are removed when the mutex usage is high.
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 mut001
 	Exercise the mutex API.
 
@@ -660,6 +680,11 @@ mut002
 mut003
 	Try doing mutex operations out of order.  Make sure 
 	we get appropriate errors.
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+mut004
+	Try setting various mutex number configurations. Make sure the
+	mutex region has a reasonable size.
 
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 plat001
@@ -4119,6 +4144,10 @@ test154
 test155
 	Make sure DB_AFTER works properly after DBcursor->next(DB_MULTIPLE_KEY)
 	has returned the last item.
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+test156
+	Test byte order conversions.
 
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 txn001

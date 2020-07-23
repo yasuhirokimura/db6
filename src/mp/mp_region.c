@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -669,11 +669,8 @@ __memp_region_bhfree(infop)
 				SH_TAILQ_REMOVE(&hp->hash_bucket,
 				    bhp, hq, __bh);
 			else {
-				if (F_ISSET(bhp, BH_DIRTY)) {
-					atomic_dec(env, &hp->hash_page_dirty);
-					F_CLR(bhp, BH_DIRTY | BH_DIRTY_CREATE);
-				}
-				atomic_inc(env, &bhp->ref);
+				__memp_bh_clear_dirty(env, hp, bhp);
+				(void)atomic_inc(env, &bhp->ref);
 				if ((t_ret = __memp_bhfree(dbmp, infop,
 				    R_ADDR(dbmp->reginfo, bhp->mf_offset),
 				    hp, bhp, BH_FREE_FREEMEM |

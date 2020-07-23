@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2001, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2001, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -48,12 +48,13 @@ hm_loop(args)
 	DB_LSN permlsn;
 	DBT rec, control;
 	APP_DATA *app;
-	const char *c, *home, *progname;
+	const char *home, *progname;
+	char *last_colon, *portstr;
 	elect_args *ea;
 	hm_loop_args *ha;
 	machtab_t *tab;
 	thread_t elect_thr, *site_thrs, *tmp, tid;
-	repsite_t self;
+	repsite_t newsite;
 	u_int32_t timeout;
 	int eid, n, nsites, nsites_allocd;
 	int already_open, r, ret, t_ret;
@@ -141,17 +142,24 @@ hm_loop(args)
 			if (rec.size == 0)
 				break;
 
-			/* It's me, do nothing. */
-			if (strncmp(myaddr, rec.data, rec.size) == 0)
-				break;
-
-			self.host = (char *)rec.data;
-			self.host = strtok(self.host, ":");
-			if ((c = strtok(NULL, ":")) == NULL) {
+			newsite.host = (char *)rec.data;
+			/*
+			 * Parse for last colon in host:port string to
+			 * allow for IPv6 addresses in which the host
+			 * string itself contains colons.
+			 */
+			if ((last_colon = 
+			    strrchr(newsite.host, ':')) == NULL ) {
 				dbenv->errx(dbenv, "Bad host specification");
 				goto out;
 			}
-			self.port = atoi(c);
+			portstr = last_colon + 1;
+			*last_colon = '\0';
+			newsite.port = atoi(portstr);
+
+			/* It's me, do nothing. */
+			if (strcmp(myaddr, newsite.host) == 0)
+				break;
 
 			/*
 			 * We try to connect to the new site.  If we can't,
@@ -171,7 +179,7 @@ hm_loop(args)
 				nsites_allocd += 10;
 			}
 			if ((ret = connect_site(dbenv, tab, progname,
-			    &self, &already_open, &tid)) != 0)
+			    &newsite, &already_open, &tid)) != 0)
 				goto out;
 			if (!already_open)
 				memcpy(&site_thrs
@@ -254,7 +262,7 @@ connect_thread(args)
 {
 	DB_ENV *dbenv;
 	APP_DATA *app;
-	const char *home, *progname;
+	const char *home, *host, *progname;
 	hm_loop_args *ha;
 	connect_args *cargs;
 	machtab_t *machtab;
@@ -270,6 +278,7 @@ connect_thread(args)
 	home = cargs->home;
 	progname = cargs->progname;
 	machtab = cargs->machtab;
+	host = cargs->host;
 	port = cargs->port;
 	app = dbenv->app_private;
 
@@ -277,7 +286,7 @@ connect_thread(args)
 	 * Loop forever, accepting connections from new machines,
 	 * and forking off a thread to handle each.
 	 */
-	if ((fd = listen_socket_init(progname, port, machtab)) < 0) {
+	if ((fd = listen_socket_init(progname, host, port, machtab)) < 0) {
 		ret = errno;
 		goto err;
 	}

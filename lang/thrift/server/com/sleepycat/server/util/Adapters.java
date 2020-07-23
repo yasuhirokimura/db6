@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -69,7 +69,9 @@ public class Adapters {
         fkDelMap = new TEnumMap<>(Arrays.asList(
                 new Pair<>(TFKDeleteAction.ABORT, ForeignKeyDeleteAction.ABORT),
                 new Pair<>(TFKDeleteAction.CASCADE,
-                        ForeignKeyDeleteAction.CASCADE)));
+                        ForeignKeyDeleteAction.CASCADE),
+                new Pair<>(TFKDeleteAction.NULLIFY,
+                        ForeignKeyDeleteAction.NULLIFY)));
 
         opStatusMap = new TEnumMap<>(Arrays.asList(
                 new Pair<>(TOperationStatus.KEY_EMPTY,
@@ -244,15 +246,14 @@ public class Adapters {
                 TDatabaseConfig._Fields.values(), map);
     }
 
-    public static TDbt toThriftType(DatabaseEntry item,
-            boolean isRecordNumber) {
-        TDbt ret = new TDbt();
-        if (isRecordNumber) {
-            return ret.setRecordNumber(item.getRecordNumber());
+    public static TDbt toThriftType(DatabaseEntry item) {
+        TDbt tValue = new TDbt();
+        if (item.getData() == null) {
+            return tValue.setData((byte[]) null);
         } else {
             int from = item.getOffset();
             int to = from + item.getSize();
-            return ret.setData(Arrays.copyOfRange(item.getData(), from, to));
+            return tValue.setData(Arrays.copyOfRange(item.getData(), from, to));
         }
     }
 
@@ -346,16 +347,16 @@ public class Adapters {
     }
 
     public static TDatabaseStatResult toThriftType(DatabaseStats stats) {
-        TDatabaseStatResult result = new TDatabaseStatResult();
+        TDatabaseStatResult tValue = new TDatabaseStatResult();
         if (stats instanceof BtreeStats)
-            return result.setBtreeStat(toThriftType((BtreeStats) stats));
+            return tValue.setBtreeStat(toThriftType((BtreeStats) stats));
         if (stats instanceof HashStats)
-            return result.setHashStat(toThriftType((HashStats) stats));
+            return tValue.setHashStat(toThriftType((HashStats) stats));
         if (stats instanceof HeapStats)
-            return result.setHeapStat(toThriftType((HeapStats) stats));
+            return tValue.setHeapStat(toThriftType((HeapStats) stats));
         if (stats instanceof QueueStats)
-            return result.setQueueStat(toThriftType((QueueStats) stats));
-        return result;
+            return tValue.setQueueStat(toThriftType((QueueStats) stats));
+        return tValue;
     }
 
     public static TBtreeStat toThriftType(BtreeStats stats) {

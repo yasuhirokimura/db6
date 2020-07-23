@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1999, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1999, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -11,7 +11,7 @@
 #include "db_int.h"
 #include "dbinc/log.h"
 
-static char *__mutex_action_print __P((MUTEX_ACTION));
+static char *__mutex_action_string __P((MUTEX_ACTION));
 
 /*
  * __mutex_alloc --
@@ -340,26 +340,24 @@ __mutex_refresh(env, mutex)
  *	the right slot to clear. The caller has already checked that thread
  *	tracking is enabled.
  *
- * PUBLIC: int __mutex_record_lock
- * PUBLIC:     __P((ENV *, db_mutex_t, MUTEX_ACTION, MUTEX_STATE **));
+ * PUBLIC: int __mutex_record_lock __P((ENV *,
+ * PUBLIC:     db_mutex_t, DB_THREAD_INFO *, MUTEX_ACTION, MUTEX_STATE **));
  */
 int
-__mutex_record_lock(env, mutex, action, retp)
+__mutex_record_lock(env, mutex, ip, action, retp)
 	ENV *env;
 	db_mutex_t mutex;
+	DB_THREAD_INFO *ip;
 	MUTEX_ACTION action;
 	MUTEX_STATE **retp;
 {
 	DB_MUTEX *mutexp;
-	DB_THREAD_INFO *ip;
-	int i, ret;
+	int i;
 
 	*retp = NULL;
 	mutexp = MUTEXP_SET(env, mutex);
 	if (!F_ISSET(mutexp, DB_MUTEX_SHARED))
 		return (0);
-	if ((ret = __env_set_state(env, &ip, THREAD_VERIFY)) != 0)
-		return (ret);
 	for (i = 0; i != MUTEX_STATE_MAX; i++) {
 		if (ip->dbth_latches[i].action == MUTEX_ACTION_UNLOCKED) {
 			ip->dbth_latches[i].mutex = mutex;
@@ -379,26 +377,19 @@ __mutex_record_lock(env, mutex, action, retp)
 
 /*
  * __mutex_record_unlock --
- *	Verify that this thread owns the mutex it is about to unlock.
+ *	Clear the record that ip's thread has a shared latch for shared access.
  *
- * PUBLIC: int __mutex_record_unlock __P((ENV *, db_mutex_t));
+ * PUBLIC: int __mutex_record_unlock
+ * PUBLIC:     __P((ENV *, db_mutex_t, DB_THREAD_INFO *));
  */
 int
-__mutex_record_unlock(env, mutex)
+__mutex_record_unlock(env, mutex, ip)
 	ENV *env;
 	db_mutex_t mutex;
-{
-	DB_MUTEX *mutexp;
 	DB_THREAD_INFO *ip;
+{
 	int i, ret;
 
-	if (env->thr_hashtab == NULL)
-		return (0);
-	mutexp = MUTEXP_SET(env, mutex);
-	if (!F_ISSET(mutexp, DB_MUTEX_SHARED))
-		return (0);
-	if ((ret = __env_set_state(env, &ip, THREAD_VERIFY)) != 0)
-		return (ret);
 	for (i = 0; i != MUTEX_STATE_MAX; i++) {
 		if (ip->dbth_latches[i].mutex == mutex &&
 		    ip->dbth_latches[i].action != MUTEX_ACTION_UNLOCKED) {
@@ -406,19 +397,32 @@ __mutex_record_unlock(env, mutex)
 			return (0);
 		}
 	}
-	(void)__mutex_record_print(env, ip);
-	if (ip->dbth_state == THREAD_FAILCHK) {
+	/*
+	 * It wasn't there. Panic unless this is the failchk thread.
+	 * It is hard to tell whether this is a dead thread's lock. Fix?
+	 */
+	if (F_ISSET(env->dbenv, DB_ENV_FAILCHK) &&
+	    ip->dbth_state == THREAD_FAILCHK) {
 		DB_DEBUG_MSG(env, "mutex_record_unlock %lu by failchk thread",
 		    (u_long)mutex);
 		return (0);
+
+	} else {
+		ret = USR_ERR(env, DB_RUNRECOVERY);
+		(void)__mutex_record_print(env, ip);
+		__db_errx(env, DB_STR_A("2075",
+		    "Latch %lu was not held", "%lu"), (u_long)mutex);
+		return (__env_panic(env, ret));
 	}
-	__db_errx(env, DB_STR_A("2075",
-	    "Latch %lu was not held", "%lu"), (u_long)mutex);
-	return (__env_panic(env, USR_ERR(env, DB_RUNRECOVERY)));
 }
 
+
+/*
+ * __mutex_action_string --
+ *	Map a MUTEX_ACTION_XXX enum to its string description.
+ */
 static char *
-__mutex_action_print(action)
+__mutex_action_string(action)
 	MUTEX_ACTION action;
 {
 	switch (action) {
@@ -447,6 +451,7 @@ __mutex_record_print(env, ip)
 	DB_THREAD_INFO *ip;
 {
 	DB_MSGBUF mb, *mbp;
+	MUTEX_STATE *state;
 	db_mutex_t mutex;
 	int i;
 	char desc[DB_MUTEX_DESCRIBE_STRLEN];
@@ -455,23 +460,19 @@ __mutex_record_print(env, ip)
 	DB_MSGBUF_INIT(&mb);
 	mbp = &mb;
 	for (i = 0; i != MUTEX_STATE_MAX; i++) {
-		if (ip->dbth_latches[i].action == MUTEX_ACTION_UNLOCKED)
+		state = &ip->dbth_latches[i];
+		if (state->action == MUTEX_ACTION_UNLOCKED ||
+		    (mutex = state->mutex) == MUTEX_INVALID)
 			continue;
-		if ((mutex = ip->dbth_latches[i].mutex) ==
-		    MUTEX_INVALID)
-			continue;
-		time_buf[4] = '\0';
+		time_buf[0] = '\0';
 #ifdef DIAGNOSTIC
-		if (timespecisset(&ip->dbth_latches[i].when))
-			(void)__db_ctimespec(&ip->dbth_latches[i].when,
-			    time_buf);
-		else
+		if (timespecisset(&state->when))
+			(void)__db_ctimespec(&state->when, time_buf);
 #endif
-			time_buf[0] = '\0';
 
 		__db_msgadd(env, mbp, "%s %s %s ",
 		    __mutex_describe(env, mutex, desc),
-		    __mutex_action_print(ip->dbth_latches[i].action), time_buf);
+		    __mutex_action_string(state->action), time_buf);
 #ifdef HAVE_STATISTICS
 		__mutex_print_debug_stats(env, mbp, mutex, 0);
 #endif

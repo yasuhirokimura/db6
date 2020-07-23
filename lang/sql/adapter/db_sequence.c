@@ -1,7 +1,7 @@
 /*
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2010, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2010, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -130,7 +130,7 @@ static void db_seq_create_func(
 	memset(&cookie, 0, sizeof(SEQ_COOKIE));
 	cookie.incr = 1;
 
-	btreeSeqSetSeqName(&cookie, sqlite3_value_text(argv[0]));
+	btreeSeqSetSeqName(&cookie, (const char*)sqlite3_value_text(argv[0]));
 	log_msg(LOG_NORMAL, "db_seq_drop_func(%s)", cookie.name);
 	if (pBt->dbStorage == DB_STORE_NAMED && btreeSeqExists(context, p,
 	    cookie.name) == 1) {
@@ -293,7 +293,7 @@ static void db_seq_drop_func(
 		return;
 	}
 
-	btreeSeqSetSeqName(&cookie, sqlite3_value_text(argv[0]));
+	btreeSeqSetSeqName(&cookie, (const char*)sqlite3_value_text(argv[0]));
 	log_msg(LOG_NORMAL, "db_seq_drop_func(%s)", cookie.name);
 	rc = btreeSeqGetHandle(context, p, SEQ_HANDLE_OPEN, &cookie);
 	

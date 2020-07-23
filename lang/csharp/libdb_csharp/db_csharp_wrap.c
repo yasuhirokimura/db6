@@ -196,6 +196,9 @@ SWIGINTERN int DB_close(DB *self,u_int32_t flags){
 SWIGINTERN int DB_compact(DB *self,DB_TXN *txn,DBT *start,DBT *stop,DB_COMPACT *cdata,u_int32_t flags,DBT *end){
 		return self->compact(self, txn, start, stop, cdata, flags, end);
 	}
+SWIGINTERN int DB_convert(DB *self,char const *file,int lorder){
+		return self->convert(self, file, lorder);
+	}
 SWIGINTERN DBC *DB_cursor(DB *self,DB_TXN *txn,u_int32_t flags,int *err){
 		DBC *cursor = NULL;
 		
@@ -1954,6 +1957,22 @@ SWIGEXPORT int SWIGSTDCALL CSharp_DB_compact(void * jarg1, void * jarg2, void * 
   arg6 = (u_int32_t)jarg6; 
   arg7 = (DBT *)jarg7; 
   result = (int)DB_compact(arg1,arg2,arg3,arg4,arg5,arg6,arg7);
+  jresult = result; 
+  return jresult;
+}
+
+
+SWIGEXPORT int SWIGSTDCALL CSharp_DB_convert(void * jarg1, char * jarg2, int jarg3) {
+  int jresult ;
+  DB *arg1 = (DB *) 0 ;
+  char *arg2 = (char *) 0 ;
+  int arg3 ;
+  int result;
+  
+  arg1 = (DB *)jarg1; 
+  arg2 = (char *)jarg2; 
+  arg3 = (int)jarg3; 
+  result = (int)DB_convert(arg1,(char const *)arg2,arg3);
   jresult = result; 
   return jresult;
 }

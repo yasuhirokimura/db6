@@ -63,7 +63,7 @@
      in the WiX manual and can be safely ignored.  Errors cannot be 
      ignored.
     -->
-    <DirectoryRef Id="INSTALLDIR">
+    <DirectoryRef Id="TARGETDIR">
       <Merge Id="VCRedist" SourceFile="C:\Program Files (x86)\Common Files\Merge Modules\@MERGE_MODULES_LOCATION@" DiskId="1" Language="0"/>
     </DirectoryRef>
     <!-- Features:
@@ -76,6 +76,7 @@
 	o C# runtime
 	o C/C++ devo
 	o examples
+  o Thrift server/client
     -->
     <Feature Id="Complete" Title="@PRODUCT_NAME@ @PROD_WIX_VERSION@" Description="Complete installation"
 	      Display="expand" Level="1" ConfigurableDirectory="INSTALLDIR">
@@ -118,6 +119,11 @@
 	<ComponentGroupRef Id="group_examples"/>
 	<ComponentGroupRef Id="group_devo"/>
 	<ComponentGroupRef Id="group_runtime"/>
+    </Feature>
+    <Feature Id="Thrift" Title="Server/Client runtime and configuration files" Description="Thrift .jar and configuration files required for running a BDB Server and Client.  This option includes the Core Runtime and Java Runtime." AllowAdvertise="no" Display="expand" Level="1" InstallDefault="source" ConfigurableDirectory="INSTALLDIR">
+      <ComponentGroupRef Id="group_thrift"/>
+      <ComponentGroupRef Id="group_java"/>
+      <ComponentGroupRef Id="group_runtime"/>
     </Feature>
     </Feature> <!-- end of all Features -->
 

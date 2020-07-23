@@ -169,27 +169,28 @@ t1 </pre>
           </li>
           <li>
             <p>
-             Enable user authentication if required. 
-             </p>
+                Enable user authentication if required. 
+            </p>
             <p>
-             By default, user authentication is disabled. To enable it, edit
-             <code class="literal">&lt;db&gt;/build_android/jdbc/jni/Android.mk</code> and
-             change <code class="literal">BDB_ENABLE_USERAUTH</code> from false to true.
-             </p>
+                By default, user authentication is disabled. To enable it, edit
+                <code class="literal">&lt;db&gt;/build_android/jdbc/jni/Android.mk</code> and
+                change <code class="literal">BDB_ENABLE_USERAUTH</code> from false to true.
+                BDB encryption must also be enabled.
+            </p>
             <p>
-                For more information, see "User Authentication" section in
+                For more information, see the "User Authentication" section in
                 <em class="citetitle">Berkeley DB Getting Started with the SQL APIs</em>.
             </p>
           </li>
           <li>
             <p>
-             Enable key-store based user authentication if required.
-             </p>
+                Enable key-store based user authentication if required.
+            </p>
             <p>
-             By default, key-store based user authentication is disabled. To enable it,
-             edit <code class="literal">&lt;db&gt;/build_android/jdbc/jni/Android.mk</code> and
-             change <code class="literal">BDB_ENABLE_USERAUTH_KEYSTORE</code> from false to true. 
-             The BDB encryption must also be enabled. 
+                By default, key-store based user authentication is disabled. To enable it,
+                edit <code class="literal">&lt;db&gt;/build_android/jdbc/jni/Android.mk</code> and
+                change <code class="literal">BDB_ENABLE_USERAUTH_KEYSTORE</code> from false to true. 
+                BDB encryption must also be enabled. 
             </p>
             <p>
                 For more information, see "Key-store Based User Authentication" section in

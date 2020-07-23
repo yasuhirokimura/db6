@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2000, 2016 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2000, 2017 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 
@@ -35,7 +35,7 @@ set test_names(rep_elect)	[list rep002 rep005 rep016 rep020 rep022 \
 set test_names(env)	[list env001 env002 env003 env004 env005 env006 \
     env007 env008 env009 env010 env011 env012 env013 env014 env015 env016 \
     env017 env018 env019 env020 env021 env022 env023 env024 env025 env027 \
-    env028 env029]
+    env028 env029 env030]
 set test_names(fail)	[list fail001]
 set test_names(fop)	[list fop001 fop002 fop003 fop004 fop005 fop006 \
     fop007 fop008 fop009 fop010 fop011 fop012]
@@ -46,8 +46,8 @@ set test_names(lock)    [list lock001 lock002 lock003 lock004 lock005 lock006]
 set test_names(log)     [list log001 log002 log003 log004 log005 log006 \
     log007 log008 log009 log010]
 set test_names(memp)	[list memp001 memp002 memp003 memp004 memp005 memp006 \
-    memp007]
-set test_names(mutex)	[list mut001 mut002]
+    memp007 memp009]
+set test_names(mutex)	[list mut001 mut002 mut004]
 set test_names(plat)	[list plat001]
 set test_names(recd)	[list recd001 recd002 recd003 recd004 recd005 recd006 \
     recd007 recd008 recd009 recd010 recd011 recd012 recd013 recd014 recd015 \
@@ -116,7 +116,7 @@ set test_names(test)	[list test001 test002 test003 test004 test005 \
     test128 test129 test130 test131 test132 test133 test134 test135 test136 \
     test137 test138 test139 test140 test141 test142 test143 test144 test145 \
     test146 test147 test148 test149 test150 test151 test152 test153 test154 \
-    test155]
+    test155 test156]
 
 set test_names(txn)	[list txn001 txn002 txn003 txn004 txn005 txn006 \
     txn007 txn008 txn009 txn010 txn011 txn012 txn013 txn014]
@@ -542,6 +542,7 @@ set parms(test152) {10000 "152"}
 set parms(test153) {"153"}
 set parms(test154) {"154"}
 set parms(test155) ""
+set parms(test156) 10000
 
 # Shell script tests.  Each list entry is a {directory filename rundir} list,
 # invoked with "/bin/sh filename".

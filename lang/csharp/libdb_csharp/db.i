@@ -520,7 +520,11 @@ typedef struct
 	int compact(DB_TXN *txn, DBT *start, DBT *stop, DB_COMPACT *cdata, u_int32_t flags, DBT *end) {
 		return self->compact(self, txn, start, stop, cdata, flags, end);
 	}
-	
+
+	int convert(const char *file, int lorder) {
+		return self->convert(self, file, lorder);
+	}
+
 	%csmethodmodifiers cursor "private"
 	DBC *cursor(DB_TXN *txn, u_int32_t flags, int *err) {
 		DBC *cursor = NULL;
@@ -910,7 +914,7 @@ typedef struct
 	int upgrade(const char *file, u_int32_t flags) {
 		return self->upgrade(self, file, flags);
 	}
-	
+
 	%typemap(cstype) FILE * "System.IO.TextWriter"
 	%typemap(imtype) FILE * "System.IO.TextWriter"
 	%typemap(csin) FILE * "$csinput"

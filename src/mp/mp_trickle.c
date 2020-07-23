@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -66,6 +66,10 @@ __memp_trickle(env, pct, nwrotep)
 		    "%d"), pct);
 		return (EINVAL);
 	}
+
+	/* First we purge all dead files and their buffers. */
+	if ((ret = __memp_purge_dead_files(env)) != 0)
+		return (ret);
 
 	/*
 	 * Loop through the caches counting total/dirty buffers.

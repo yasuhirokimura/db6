@@ -81,6 +81,7 @@ class db_javaJNI {
   public final static native void Db_associate_foreign(long jarg1, Db jarg1_, long jarg2, Db jarg2_, boolean jarg3, int jarg4) throws com.sleepycat.db.DatabaseException;
   public final static native void Db_compact(long jarg1, Db jarg1_, long jarg2, DbTxn jarg2_, com.sleepycat.db.DatabaseEntry jarg3, com.sleepycat.db.DatabaseEntry jarg4, com.sleepycat.db.CompactStats jarg5, int jarg6, com.sleepycat.db.DatabaseEntry jarg7) throws com.sleepycat.db.DatabaseException;
   /* package */ final static native int Db_close0(long jarg1, Db jarg1_, int jarg2);
+  public final static native void Db_convert(long jarg1, Db jarg1_, String jarg2, int jarg3) throws com.sleepycat.db.DatabaseException;
   public final static native long Db_cursor(long jarg1, Db jarg1_, long jarg2, DbTxn jarg2_, int jarg3) throws com.sleepycat.db.DatabaseException;
   public final static native int Db_del(long jarg1, Db jarg1_, long jarg2, DbTxn jarg2_, com.sleepycat.db.DatabaseEntry jarg3, int jarg4) throws com.sleepycat.db.DatabaseException;
   public final static native void Db_err(long jarg1, Db jarg1_, int jarg2, String jarg3) /* no exception */;

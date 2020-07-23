@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -14,6 +14,14 @@ package com.sleepycat.client;
 public class SDatabaseException extends RuntimeException {
 
     private final int errno;
+
+    public SDatabaseException(String message) {
+        this(message, 0);
+    }
+
+    public SDatabaseException(Exception cause) {
+        this(cause == null ? null : cause.toString(), cause, 0);
+    }
 
     public SDatabaseException(String message, int errno) {
         this(message, null, errno);

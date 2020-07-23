@@ -1,7 +1,7 @@
 /*
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2009, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2009, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -24,6 +24,9 @@ extern "C" {
  *
  *	 atomic_dec(env, valueptr)
  *	    Subtracts 1 from the db_atomic_t value, returning the new value.
+ *
+ *	 atomic_add(env, valueptr, delta)
+ *	    Add delta to the db_atomic_t value, returning the new value.
  *
  *	 atomic_compare_exchange(env, valueptr, oldval, newval)
  *	    If the db_atomic_t's value is still oldval, set it to newval.
@@ -113,6 +116,9 @@ typedef LONG volatile *interlocked_val;
 #define	atomic_dec(env, p)						\
 	(WINCE_ATOMIC_MAGIC(p),						\
 	InterlockedDecrement((interlocked_val)(&(p)->value)))
+#define	atomic_add(env, p, val)						\
+	(WINCE_ATOMIC_MAGIC(p),						\
+	InterlockedExchangeAdd((interlocked_val)(&(p)->value), (val)) + (val))
 #if defined(_MSC_VER) && _MSC_VER < 1300
 #define	atomic_compare_exchange(env, p, oldval, newval)			\
 	(WINCE_ATOMIC_MAGIC(p),						\
@@ -133,6 +139,8 @@ typedef LONG volatile *interlocked_val;
 	atomic_inc_uint_nv((volatile unsigned int *) &(p)->value)
 #define	atomic_dec(env, p)	\
 	atomic_dec_uint_nv((volatile unsigned int *) &(p)->value)
+#define	atomic_add(env, p, val)	\
+	atomic_add_int_nv((volatile unsigned int *) &(p)->value, (val))
 #define	atomic_compare_exchange(env, p, oval, nval)		\
 	(atomic_cas_32((volatile unsigned int *) &(p)->value,	\
 	    (oval), (nval)) == (oval))
@@ -143,6 +151,8 @@ typedef LONG volatile *interlocked_val;
 	__atomic_add_fetch(&(p)->value, 1, __ATOMIC_SEQ_CST)
 #define atomic_dec(env, p)	\
 	__atomic_sub_fetch(&(p)->value, 1, __ATOMIC_SEQ_CST)
+#define atomic_add(env, p, val)	\
+	__atomic_add_fetch(&(p)->value, (val), __ATOMIC_SEQ_CST)
 #define atomic_compare_exchange(env, p, oval, nval)	\
 	__atomic_compare_exchange_int((p), (oval), (nval))
 static inline int __atomic_compare_exchange_int(
@@ -160,30 +170,20 @@ static inline int __atomic_compare_exchange_int(
 
 #if defined(HAVE_ATOMIC_X86_GCC_ASSEMBLY)
 /* x86/x86_64 gcc  */
-#define	atomic_inc(env, p)	__atomic_inc(p)
-#define	atomic_dec(env, p)	__atomic_dec(p)
+#define	atomic_inc(env, p)	__atomic_add(p, (1))
+#define	atomic_dec(env, p)	__atomic_add(p, (-1))
+#define	atomic_add(env, p, val)	__atomic_add(p, (val))
 #define	atomic_compare_exchange(env, p, o, n)	\
 	__atomic_compare_exchange_int((p), (o), (n))
-static inline int __atomic_inc(db_atomic_t *p)
+static inline int __atomic_add(db_atomic_t *p, int val)
 {
 	int	temp;
 
-	temp = 1;
+	temp = val;
 	__asm__ __volatile__("lock; xadd %0, (%1)"
 		: "+r"(temp)
 		: "r"(p));
-	return (temp + 1);
-}
-
-static inline int __atomic_dec(db_atomic_t *p)
-{
-	int	temp;
-
-	temp = -1;
-	__asm__ __volatile__("lock; xadd %0, (%1)"
-		: "+r"(temp)
-		: "r"(p));
-	return (temp - 1);
+	return (temp + val);
 }
 
 /*
@@ -223,12 +223,14 @@ static inline int __atomic_compare_exchange_int(
  */
 #define	atomic_inc(env, p)	(++(p)->value)
 #define	atomic_dec(env, p)	(--(p)->value)
+#define	atomic_add(env, p, val)	((p)->value += (val))
 #define	atomic_compare_exchange(env, p, oldval, newval)		\
 	(DB_ASSERT(env, atomic_read(p) == (oldval)),		\
 	atomic_init(p, (newval)), 1)
 #else
-#define	atomic_inc(env, p)	__atomic_inc_int(env, p)
-#define	atomic_dec(env, p)	__atomic_dec_int(env, p)
+#define	atomic_inc(env, p)	__atomic_add_int(env, p, 1)
+#define	atomic_dec(env, p)	__atomic_add_int(env, p, -1)
+#define	atomic_add(env, p, val)	__atomic_add_int(env, p, (val))
 #define atomic_compare_exchange(env, p, oldval, newval)	\
 	__atomic_compare_exchange_int(env, p, oldval, newval)
 #endif

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2006, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2006, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -170,7 +170,7 @@ free_old:
 				 */
 				DB_ASSERT(env, !F_ISSET(bhp, BH_DIRTY) &&
 				    atomic_read(&bhp->ref) == 0);
-				atomic_inc(env, &bhp->ref);
+				(void)atomic_inc(env, &bhp->ref);
 				mfp = R_ADDR(dbmp->reginfo, bhp->mf_offset);
 				if ((ret = __memp_bhfree(dbmp, new_infop,
 				    mfp, new_hp, bhp, BH_FREE_FREEMEM)) != 0) {
@@ -203,7 +203,7 @@ retry:	MUTEX_LOCK(env, old_hp->mtx_hash);
 			__os_yield(env, 0, 0);
 			goto retry;
 		} else if (bucket == new_bucket && F_ISSET(bhp, BH_FROZEN)) {
-			atomic_inc(env, &bhp->ref);
+			(void)atomic_inc(env, &bhp->ref);
 			/*
 			 * We need to drop the hash bucket mutex to avoid
 			 * self-blocking when we allocate a new buffer.
@@ -239,7 +239,7 @@ retry:	MUTEX_LOCK(env, old_hp->mtx_hash);
 			 * the buffers we care about are still unlocked and
 			 * unreferenced.
 			 */
-err:			atomic_dec(env, &bhp->ref);
+err:			(void)atomic_dec(env, &bhp->ref);
 			F_CLR(bhp, BH_EXCLUSIVE);
 			MUTEX_UNLOCK(env, bhp->mtx_buf);
 			if (ret != 0)
@@ -318,11 +318,11 @@ err:			atomic_dec(env, &bhp->ref);
 		MUTEX_LOCK(env, new_hp->mtx_hash);
 		SH_TAILQ_INSERT_TAIL(&new_hp->hash_bucket, new_bhp, hq);
 		if (F_ISSET(new_bhp, BH_DIRTY))
-			atomic_inc(env, &new_hp->hash_page_dirty);
+			(void)atomic_inc(env, &new_hp->hash_page_dirty);
 
 		if (F_ISSET(bhp, BH_DIRTY)) {
 			F_CLR(bhp, BH_DIRTY);
-			atomic_dec(env, &old_hp->hash_page_dirty);
+			(void)atomic_dec(env, &old_hp->hash_page_dirty);
 		}
 		MUTEX_UNLOCK(env, new_hp->mtx_hash);
 	}

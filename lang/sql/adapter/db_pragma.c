@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2010, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2010, 2017 Oracle and/or its affiliates.  All rights reserved.
  */
 
 /*
@@ -48,6 +48,56 @@ static const u32 DEFINED_PRAGMAS = 8;
 
 #define	dbExists (pDb->pBt->pBt->full_name != NULL && \
     !__os_exists(NULL, pDb->pBt->pBt->full_name, NULL))
+
+
+/*
+ * Print statistics to the set statistics file, or stdout if none has been set.
+ */
+static void printStatistics(const DB_ENV *dbenv,
+	const char *msgpfx,
+	const char *msg
+) {
+	BtShared *pBt;
+	FILE *fp;
+
+	pBt = (BtShared *)dbenv->app_private;
+	
+	if (pBt->stat_filename == NULL)
+		fp = stdout;
+	else {
+		fp = fopen(pBt->stat_filename, "a");
+		if (fp == NULL)
+			fp = stdout;
+	}
+	
+	fprintf(fp, "%s %s\n", msgpfx, msg);
+	if (fp != stdout) {
+		fflush(fp);
+		fclose(fp);
+	}
+}
+
+/*
+ * Print verbose replication messages to a file, or stdout if no file has been
+ * set.
+ */
+static void printRepVerbose(const DB_ENV *dbenv,
+	const char *msgpfx,
+	const char *msg
+) {
+	BtShared *pBt;
+	FILE *fp;
+
+	pBt = (BtShared *)dbenv->app_private;
+	
+	if (pBt->repVerbFile == NULL)
+		fp = stdout;
+	else
+		fp = pBt->repVerbFile;
+	
+	fprintf(fp, "%s %s\n", msgpfx, msg);
+	fflush(fp);
+}
 
 /* Translates a text ack policy to its DB value. */
 static int textToAckPolicy(const char *policy) 
@@ -746,12 +796,24 @@ int bdbsqlPragma(Parse *pParse, char *zLeft, char *zRight, int iDb)
 				}
 
 				dbenv = pDb->pBt->pBt->dbenv;
-				if (isVerb && dbExists &&
-				    dbenv->set_verbose(dbenv,
-					DB_VERB_REPLICATION, turningOn) != 0) {
-					sqlite3ErrorMsg(pParse, "Error "
-					    "in replication set_verbose call");
-					rc = SQLITE_ERROR;
+				if (isVerb && dbExists) {
+					if (dbenv->set_verbose(dbenv,
+					    DB_VERB_REPLICATION,
+					    turningOn) != 0) {
+						sqlite3ErrorMsg(pParse,
+						    "Error "
+					"in replication set_verbose call");
+						rc = SQLITE_ERROR;
+					} else {
+						if (turningOn)
+							dbenv->set_msgcall(
+						    	    dbenv, 
+							    printRepVerbose);
+						else
+							dbenv->set_msgcall(
+							    dbenv,
+							    btreeHandleDbError);
+					}
 				}
 			}
 		} else
@@ -1407,6 +1469,104 @@ int bdbsqlPragma(Parse *pParse, char *zLeft, char *zRight, int iDb)
 		else
 			sqlite3VdbeAddOp4(pParse->pVdbe, OP_String8, 0, 1, 0, "NULL", 0);
 		sqlite3VdbeAddOp2(pParse->pVdbe, OP_ResultRow, 1, 1);
+		parsed = 1;
+	/*
+	 * PRAGMA statistics_file; -- Returns the file to which the PRAGMA
+	 *  statistics prints its output.
+	 * PRAGMA statistics_file=filename -- Sets the file to which the PRAGMA
+	 *  statistics prints its output.
+	 */
+	} else if (sqlite3StrNICmp(zLeft, "statistics_file", 15) == 0) {
+		char *dirPathName, dirPathBuf[BT_MAX_PATH], *stat_file;
+
+		btreeUpdateBtShared(pDb->pBt, 1);
+		dirPathName = dirPathBuf;
+		stat_file = NULL;
+
+		if (zRight) {
+			FILE *tmpfile;
+			if (sqlite3OsFullPathname(db->pVfs,
+			    zRight, sizeof(dirPathBuf), dirPathName) != SQLITE_OK) {
+				sqlite3ErrorMsg(pParse, "Out of memory");
+				return (1);
+			}
+			tmpfile = fopen(dirPathName, "a");
+			if (tmpfile == NULL)
+				sqlite3ErrorMsg(pParse,
+				    "Can't open error file %s", dirPathName);
+			else {
+				fclose(tmpfile);
+				sqlite3_mutex_enter(pBt->pBt->mutex);
+				if (pBt->pBt->stat_filename != NULL)
+					sqlite3_free(pBt->pBt->stat_filename);
+				pBt->pBt->stat_filename =
+				    sqlite3_mprintf("%s", dirPathName);
+				sqlite3_mutex_leave(pBt->pBt->mutex);
+				stat_file = zRight;
+			}
+		}
+
+		if (stat_file == NULL) {
+			sqlite3_mutex_enter(pBt->pBt->mutex);
+			stat_file = pBt->pBt->stat_filename;
+			sqlite3_mutex_leave(pBt->pBt->mutex);
+		}
+		sqlite3VdbeSetNumCols(pParse->pVdbe, 1);
+		sqlite3VdbeSetColName(pParse->pVdbe, 0, COLNAME_NAME,
+		    zLeft, SQLITE_STATIC);
+		if (stat_file)
+			sqlite3VdbeAddOp4(pParse->pVdbe, OP_String8, 0, 1, 0,
+			    stat_file, 0);
+		else 
+			sqlite3VdbeAddOp4(pParse->pVdbe, OP_String8, 0, 1, 0,
+			    "NULL", 0);
+		sqlite3VdbeAddOp2(pParse->pVdbe, OP_ResultRow, 1, 1);
+		parsed = 1;
+	/*
+	 * PRAGMA statistics; -- Prints statistics about the database.
+	 * PRAGMA statistics=[LOCK|LOG|MEM|MUTEX|REP] -- Prints statistics
+	 *  about the specified subsystem. 
+	 */
+	} else if (sqlite3StrNICmp(zLeft, "statistics", 10) == 0) {
+		DB_ENV *dbenv;
+		int err;
+
+		err = 0;
+		if (!pDb->pBt->pBt->env_opened) {
+			sqlite3ErrorMsg(pParse,
+			    "Cannot call %s before accessing the database.",
+			    zLeft);
+		} else {
+			dbenv = pDb->pBt->pBt->dbenv;
+			dbenv->set_msgcall(dbenv, printStatistics);
+			if (!zRight) {
+				err = dbenv->stat_print(dbenv, 0);
+			} else if (sqlite3StrNICmp(zRight, "LOCK", 4) == 0) {
+				err = dbenv->lock_stat_print(dbenv, 0);
+			} else if (sqlite3StrNICmp(zRight, "LOG", 3) == 0) {
+				err = dbenv->log_stat_print(dbenv, 0);
+			} else if (sqlite3StrNICmp(zRight, "MEM", 3) == 0) {
+				err = dbenv->memp_stat_print(dbenv, 0);
+			} else if (sqlite3StrNICmp(zRight, "MUTEX", 5) == 0) {
+				err = dbenv->mutex_stat_print(dbenv, 0);
+			} else if (sqlite3StrNICmp(zRight, "REP", 3) == 0) {
+				err = dbenv->rep_stat_print(dbenv, 0);
+				if (err == 0)
+					err = dbenv->repmgr_stat_print(dbenv, 0);
+				else if (err == EINVAL) {
+					sqlite3ErrorMsg(pParse,
+					    "Replication not enabled.");
+					err = 0;
+				}
+			} else
+				sqlite3ErrorMsg(pParse,
+				    "Invalid statistics entry: %s.", zRight);
+			dbenv->set_msgcall(dbenv, btreeHandleDbError);
+			if (err != 0)
+				sqlite3ErrorMsg(pParse,
+				    "Error getting statistics: %s.",
+				    db_strerror(err));
+		}
 		parsed = 1;
 	}
 #ifdef SQLITE_USER_AUTHENTICATION

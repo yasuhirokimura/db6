@@ -97,6 +97,11 @@ struct Db
 		return errno;
 	}
 
+	JAVA_EXCEPT(DB_RETOK_STD, DB2JDBENV)
+	db_ret_t convert(const char *file, int lorder) {
+		return self->convert(self, file, lorder);
+	}
+
 	JAVA_EXCEPT_ERRNO(DB_RETOK_STD, DB2JDBENV)
 	DBC *cursor(DB_TXN *txnid, u_int32_t flags) {
 		DBC *cursorp = NULL;

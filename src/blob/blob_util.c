@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2013, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2013, 2017 Oracle and/or its affiliates.  All rights reserved.
  */
 
 #include "db_config.h"
@@ -217,14 +217,6 @@ __blob_open_meta_db(dbp, txn, meta_db, seq, file, create, force_txn)
 		goto err;
 
 	path = fullname;
-#ifdef DB_WIN32
-	/*
-	 * Absolute paths on windows can result in it creating a "C" or "D"
-	 * directory in the working directory.
-	 */
-	if (__os_abspath(path))
-		path += 2;
-#endif
 	/*
 	 * Create the blob, database file, and database name directories. The
 	 * mkdir isn't logged, so __fop_create_recover needs to do this as well.
@@ -518,14 +510,16 @@ __blob_calculate_dirs(blob_id, path, len, depth)
  * blob_id. The __db_appname API is used to generate a fully qualified path.
  * The caller must deallocate the path.
  *
- * PUBLIC: int __blob_id_to_path __P((ENV *, const char *, db_seq_t, char **));
+ * PUBLIC: int __blob_id_to_path __P((ENV *,
+ * PUBLIC:	 const char *, db_seq_t, char **, int));
  */
 int
-__blob_id_to_path(env, blob_sub_dir, blob_id, ppath)
+__blob_id_to_path(env, blob_sub_dir, blob_id, ppath, create)
 	ENV *env;
 	const char *blob_sub_dir;
 	db_seq_t blob_id;
 	char **ppath;
+	int create;
 {
 	char *path, *tmp_path;
 	int depth, name_len, ret;
@@ -556,7 +550,7 @@ __blob_id_to_path(env, blob_sub_dir, blob_id, ppath)
 	    BLOB_FILE_PREFIX, (depth + 1) * 3, (unsigned long long)blob_id);
 
 	/* If this is the first file in the directory, ensure it exists. */
-	if (blob_id % BLOB_DIR_ELEMS == 0 && depth > 0) {
+	if (blob_id % BLOB_DIR_ELEMS == 0 && depth > 0 && create) {
 		if ((ret = __db_appname(
 		    env, DB_APP_BLOB, path, NULL, &tmp_path)) != 0 )
 			goto err;
@@ -697,26 +691,35 @@ __blob_salvage(env, blob_id, offset, size, file_id, sdb_id, dbt)
 {
 	DB_FH *fhp;
 	char *blob_sub_dir, *dir, *path;
-	int ret;
+	int isdir, ret;
 	size_t bytes;
 
 	blob_sub_dir = dir = path = NULL;
 	fhp = NULL;
 
-	if (file_id == 0 && sdb_id == 0) {
+	if (blob_id < 1 || file_id < 0 || 
+	    sdb_id < 0 || (file_id == 0 && sdb_id == 0)) {
 		ret = USR_ERR(env, ENOENT);
 		goto err;
 	}
 
-	if ((ret = __blob_make_sub_dir(
-	    env, &blob_sub_dir, file_id, sdb_id)) != 0)
+	if ((ret = __blob_make_sub_dir(env, &blob_sub_dir,
+	    file_id, sdb_id)) != 0 || blob_sub_dir == NULL) {
+	  	if (ret == 0)
+			ret = USR_ERR(env, ENOENT);
 		goto err;
+	}
 
-	if ((ret = __blob_id_to_path(env, blob_sub_dir, blob_id, &dir)) != 0)
+	if ((ret = __blob_id_to_path(env, blob_sub_dir, blob_id, &dir, 0)) != 0)
 		goto err;
 
 	if ((ret = __db_appname(env, DB_APP_BLOB, dir, NULL, &path)) != 0)
 		goto err;
+
+	if ((__os_exists(env, path, &isdir)) != 0 || isdir != 0) {
+	  	ret = USR_ERR(env, ENOENT);
+	    	goto err;
+	}
 
 	if ((ret = __os_open(env, path, 0, DB_OSO_RDONLY, 0, &fhp)) != 0)
 		goto err;
@@ -769,13 +772,17 @@ __blob_vrfy(env, blob_id, blob_size, file_id, sdb_id, pgno, flags)
 	blob_sub_dir = dir = path = NULL;
 	fhp = NULL;
 	isdir = 0;
-	ret = DB_VERIFY_BAD;
 
 	if ((ret = __blob_make_sub_dir(
-	    env, &blob_sub_dir, file_id, sdb_id)) != 0)
+	    env, &blob_sub_dir, file_id, sdb_id)) != 0 || blob_sub_dir == NULL) {
+		if (ret != ENOMEM)
+			ret = DB_VERIFY_BAD;
 		goto err;
+	}
 
-	if (__blob_id_to_path(env, blob_sub_dir, blob_id, &dir) != 0) {
+	ret = DB_VERIFY_BAD;
+
+	if (__blob_id_to_path(env, blob_sub_dir, blob_id, &dir, 0) != 0) {
 		EPRINT((env, DB_STR_A("0222",
 		    "Page %lu: Error getting path to external file for %llu",
 		    "%lu %llu"), (u_long)pgno, (unsigned long long)blob_id));
@@ -1082,14 +1089,7 @@ int __blob_copy_all(dbp, target, flags)
 	    target, PATH_SEPARATOR[0], LF_ISSET(DB_BACKUP_SINGLE_DIR) ?
 	    BLOB_DEFAULT_DIR : path, PATH_SEPARATOR[0], '\0');
 	path = new_target;
-#ifdef DB_WIN32
-	/*
-	 * Absolute paths on windows can result in it creating a "C" or "D"
-	 * directory in the working directory.
-	 */
-	if (__os_abspath(path))
-		path += 2;
-#endif
+
 	if ((ret = __db_mkpath(env, path)) != 0)
 		goto err;
 

@@ -50,9 +50,12 @@ case "$host_os" in
 			if test -d "$_JTOPDIR/include"; then
 				_JINC="$_JTOPDIR/include"
 			else
-				_JINC="$_JTOPDIR/Headers"
+				_JINC="`$_JTOPDIR/Commands/java_home`/include"
 			fi;;
-	*)		_JINC="$_JTOPDIR/include";;
+	*)		if test ! -r "$_JTOPDIR/include/jni.h"; then
+				_JTOPDIR=`echo "$_JTOPDIR" | sed -e 's:/[[^/]]*$::'`
+			fi
+			_JINC="$_JTOPDIR/include";;
 esac
 
 # If we find jni.h in /usr/include, then it's not a java-only tree, so
@@ -64,13 +67,6 @@ esac
 if test -r "$_JINC/jni.h"; then
 	if test "$_JINC" != "/usr/include"; then
 		JNI_INCLUDE_DIRS="$JNI_INCLUDE_DIRS $_JINC"
-	fi
-else
-	_JTOPDIR=`echo "$_JTOPDIR" | sed -e 's:/[[^/]]*$::'`
-	if test -r "$_JTOPDIR/include/jni.h"; then
-		if test "$_JTOPDIR" != "/usr"; then
-			JNI_INCLUDE_DIRS="$JNI_INCLUDE_DIRS $_JTOPDIR/include"
-		fi
 	fi
 fi
 
@@ -93,8 +89,8 @@ fi
 # add any subdirectories that are present
 for _JINCSUBDIR in $_JNI_INC_SUBDIRS
 do
-	if test -d "$_JTOPDIR/include/$_JINCSUBDIR"; then
-		JNI_INCLUDE_DIRS="$JNI_INCLUDE_DIRS $_JTOPDIR/include/$_JINCSUBDIR"
+	if test -d "$_JINC/$_JINCSUBDIR"; then
+		JNI_INCLUDE_DIRS="$JNI_INCLUDE_DIRS $_JINC/$_JINCSUBDIR"
 	fi
 done
 ])

@@ -85,7 +85,8 @@
                     user must be logged into the database connection first. 
                     Once a BDB database is marked as authentication-required,
                     it cannot be converted back into a no-authentication-required
-                    database.
+                    database. Encryption is mandatory if user authentication
+                    is activated.
                  </p>
         <p>
                     By default a database does not require authentication.
@@ -244,8 +245,8 @@
           <p>
                     You can use the sqlite3_user_authenticate() interface to log in a
                     user into the database connection. Calling sqlite3_user_authenticate()
-                    on a no-authentication-required database connection is a harmless
-                    no-operation.  
+                    on a no-authentication-required database connection will return an
+                    error. This is different from the original SQLite behavior.  
                 </p>
           <p>
                     You can use the sqlite3_user_add()/sqlite3_user_delete() interfaces
@@ -336,11 +337,11 @@
             </ul>
           </div>
           <p>
-                           It is recommended that the BDB encryption has to be turned
+                           Due to the above issues BDB encryption has to be turned
                            on when BDB user authentication is used. This requires the
-                           user to provide encryption key before the
-                           sqlite3_user_authentication call every time. If the database
-                           is encrypted, then sqlite3_key_v2() must be called first,
+                           user to provide an encryption key before calling any of
+                           the authentication functions. If the database
+                           is encrypted, sqlite3_key_v2() must be called first,
                            with the correct decryption key, prior to invoking
                            sqlite3_user_authenticate()/sqlite3_user_add().
                         </p>
@@ -439,13 +440,8 @@ sqlite3_user_add();</pre>
           </div>
           <p> 
                          The key-store user authentication APIs work the same
-                         with the non-keystore user authentication with only
-                         one difference:
-                        </p>
-          <p>
-                          Calling sqlite_user_authenticate to a
-                          non-authentication-required database will return an error.
-                        </p>
+                         with the non-keystore user authentication.
+                       </p>
         </div>
         <div class="sect3" lang="en" xml:lang="en">
           <div class="titlepage">

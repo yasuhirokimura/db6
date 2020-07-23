@@ -6,6 +6,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "db_archive", "VS10\db_archi
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "db_checkpoint", "VS10\db_checkpoint.vcxproj", "{A3BE0163-1E6C-4235-9B6B-3A36ABB5E285}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "db_convert", "VS10\db_convert.vcxproj", "{D02E4151-D602-44A2-AFB7-7BA1DB253BD4}"
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "db_deadlock", "VS10\db_deadlock.vcxproj", "{CD0FD995-B4D1-4907-987B-99CF3304E7E0}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "db_dump", "VS10\db_dump.vcxproj", "{DB067D2C-7163-428B-AAF8-642316AB173B}"

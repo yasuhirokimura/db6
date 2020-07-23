@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2001, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2001, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -24,6 +24,7 @@ static int  __rep_check_applied __P((ENV *,
 static void __rep_config_map __P((ENV *, u_int32_t *, u_int32_t *));
 static u_int32_t __rep_conv_vers __P((ENV *, u_int32_t));
 static int  __rep_defview __P((DB_ENV *, const char *, int *, u_int32_t));
+static void __rep_openfiles __P((ENV*, DB_THREAD_INFO *));
 static int  __rep_restore_prepared __P((ENV *));
 static int  __rep_save_lsn_hist __P((ENV *, DB_THREAD_INFO *, DB_LSN *));
 /*
@@ -924,6 +925,15 @@ __rep_start_int(env, dbt, flags, startopts)
 		if (role_chg) {
 			pending_event = DB_EVENT_REP_MASTER;
 			/*
+ 			 * We were a client but we didn't complete our initial
+ 			 * sync.  We may be in an inconsistent state.  In
+ 			 * particular, files that are supposed to be open
+ 			 * during recover may not have been opened.  Go
+ 			 * through the log and make sure they are opened.
+ 			 */
+ 			if (rep->stat.st_startup_complete == 0)
+ 				__rep_openfiles(env, ip);
+			/*
 			 * If prepared transactions have not been restored
 			 * look to see if there are any.  If there are,
 			 * then mark the open files, otherwise close them.
@@ -975,6 +985,7 @@ __rep_start_int(env, dbt, flags, startopts)
 		 * Start a non-client as a client.
 		 */
 		rep->master_id = DB_EID_INVALID;
+		rep->stat.st_startup_complete = 0;
 		/*
 		 * A non-client should not have been participating in an
 		 * election, so most election flags should be off.  The TALLY
@@ -1144,6 +1155,52 @@ out:
 		MUTEX_UNLOCK(env, rep->mtx_repstart);
 	__dbt_userfree(env, dbt, NULL, NULL);
 	return (ret);
+}
+
+/*
+ * Recover all open files to make sure all files that should remain
+ * open at the end of the log are opened.
+ */
+static void
+__rep_openfiles(env, ip)
+	ENV *env;
+	DB_THREAD_INFO *ip;
+{
+	DBT data;
+	DB_LOGC *logc;
+	DB_LSN first_lsn, last_lsn, ckp_lsn;
+	DB_TXNHEAD *txninfo;
+	__txn_ckp_args *ckp_args;
+
+	logc = NULL;
+	txninfo = NULL;
+	ckp_args = NULL;
+	memset(&data, 0, sizeof(data));
+
+	if (__log_cursor(env, &logc) != 0)
+		return;
+	if (__logc_get(logc, &last_lsn, &data, DB_LAST) != 0)
+		goto err;
+	/* If we can find a recent checkpoint use it. */
+	if (__txn_getckp(env, &ckp_lsn) == 0 &&
+	    __logc_get(logc, &ckp_lsn, &data, DB_SET) == 0 &&
+	    __txn_ckp_read(env, data.data, &ckp_args) == 0 &&
+	    __logc_get(logc, &ckp_args->ckp_lsn, &data, DB_SET) == 0)
+		first_lsn = ckp_args->ckp_lsn;
+	else if (__logc_get(logc, &first_lsn, &data, DB_FIRST) != 0)
+		goto err;
+
+	if (__db_txnlist_init(env, ip, 0, 0, NULL, &txninfo) != 0)
+		goto err;
+
+	(void)__env_openfiles(env, logc, txninfo, &data,
+	    &first_lsn, &last_lsn, 1.0, 0);
+	
+err:	if (txninfo != NULL)
+		__db_txnlist_end(env, txninfo);
+	if (ckp_args != NULL)
+		__os_free(env, ckp_args);
+	(void)__logc_close(logc);
 }
 
 /*
@@ -3115,7 +3172,7 @@ __rep_await_condition(env, reasonp, duration)
 		if (ret != 0)
 			return (ret);
 
-		MUTEX_LOCK(env, waiter->mtx_repwait);
+		MUTEX_LOCK_NO_CTR(env, waiter->mtx_repwait);
 	} else
 		SH_TAILQ_REMOVE(&rep->free_waiters,
 		    waiter, links, __rep_waiter);
@@ -3128,7 +3185,7 @@ __rep_await_condition(env, reasonp, duration)
 	    "waiting for condition %d", (int)reasonp->why));
 	REP_SYSTEM_UNLOCK(env);
 	/* Wait here for conditions to become more favorable. */
-	MUTEX_WAIT(env, waiter->mtx_repwait, duration);
+	MUTEX_LOCK_TIMEOUT(env, waiter->mtx_repwait, duration);
 	REP_SYSTEM_LOCK(env);
 
 	if (!F_ISSET(waiter, REP_F_WOKEN))

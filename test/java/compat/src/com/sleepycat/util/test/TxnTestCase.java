@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 
@@ -53,7 +53,7 @@ public abstract class TxnTestCase extends DualTestCase {
     protected boolean isTransactional;
 
     public static List<Object[]> getTxnParams(String[] txnTypes, boolean rep) {
-        final List<Object[]> list = new ArrayList<Object[]>();
+        final List<Object[]> list = new ArrayList<>();
         for (final String type : getTxnTypes(txnTypes, rep)) {
             list.add(new Object[] {type});
         }
@@ -80,7 +80,7 @@ public abstract class TxnTestCase extends DualTestCase {
             if (!DbCompat.CDB) {
                 /* Remove TxnTestCase.TXN_CDB, if there is any. */
                 final ArrayList<String> tmp =
-                    new ArrayList<String>(Arrays.asList(txnTypes));
+                    new ArrayList<>(Arrays.asList(txnTypes));
                 tmp.remove(TxnTestCase.TXN_CDB);
                 txnTypes = new String[tmp.size()];
                 tmp.toArray(txnTypes);

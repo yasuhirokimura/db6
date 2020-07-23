@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2005, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2005, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -342,6 +342,7 @@ process_message(env, control, rec, eid)
 	int eid;
 {
 	DB_LSN lsn;
+	DB_LSN ckp_lsn;
 	DB_REP *db_rep;
 	REP *rep;
 	int dirty, ret, t_ret;
@@ -349,6 +350,7 @@ process_message(env, control, rec, eid)
 
 	db_rep = env->rep_handle;
 	rep = db_rep->region;
+	ZERO_LSN(ckp_lsn);
 
 	/*
 	 * Save initial generation number, in case it changes in a close race
@@ -358,7 +360,7 @@ process_message(env, control, rec, eid)
 
 	ret = 0;
 	switch (t_ret =
-	    __rep_process_message_int(env, control, rec, eid, &lsn)) {
+	    __rep_process_message_int(env, control, rec, eid, &lsn, &ckp_lsn)) {
 	case 0:
 		if (db_rep->takeover_pending)
 			ret = __repmgr_claim_victory(env);
@@ -427,6 +429,35 @@ process_message(env, control, rec, eid)
 #endif
 		DB_TEST_SET(env->test_abort, DB_TEST_REPMGR_PERM);
 		ret = send_permlsn(env, generation, &lsn);
+		/*
+		 * If we just applied a checkpoint, send a checkpoint message.
+		 * A checkpoint message is a permlsn message whose offset is
+		 * zero.
+		 *
+		 * The idea of checkpoint message is to keep log files that are
+		 * needed to perform initial sync.  Suppose we become the new
+		 * master, and a client wants to sync with us.  If the common
+		 * sync point found with the client is the permlsn message sent
+		 * above, the client needs to keep the log file indicated by
+		 * ckp_lsn.file to be able to recover to the sync point.  The
+		 * message below tells that client to keep that file.
+		 *
+		 * We need to send this message after the normal permlsn
+		 * message above.  On the receiver site, if the above permlsn
+		 * is lowest among all sites, we know every site must have
+		 * processed the checkpoint so it is safe to use it as a lower
+		 * bound.  If the above message is sent after the checkpoint
+		 * message, this site might be mistakenly treated as having
+		 * the lowest permlsn.  We might use the below message as a
+		 * lower bound even if some other site might not have processed
+		 * the checkpoint.
+		 */
+		if (!IS_ZERO_LSN(ckp_lsn)) {
+			ckp_lsn.offset = 0;
+			if ((ret = send_permlsn(env, generation,
+			    &ckp_lsn)) != 0)
+				return (ret);
+		}
 DB_TEST_RECOVERY_LABEL
 		break;
 
@@ -612,6 +643,11 @@ send_permlsn(env, generation, lsn)
 		}
 		db_rep->perm_lsn = *lsn;
 	}
+	/*
+	 * Checkpoint message should be sent to everyone.
+	 */
+	if (lsn->offset == 0)
+		bcast = TRUE;
 	if (IS_KNOWN_REMOTE_SITE(master)) {
 		site = SITE_FROM_EID(master);
 		/*

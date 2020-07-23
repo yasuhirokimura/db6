@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1999, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1999, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -645,10 +645,14 @@ tcl_RepNoarchiveTimeout(interp, dbenv)
 	_debug_check();
 	infop = env->reginfo;
 	renv = infop->primary;
-	REP_SYSTEM_LOCK(env);
+	/*
+	 * Since this function is only used in testing, skip the 
+	 * mutex counter.
+	 */
+	MUTEX_LOCK_NO_CTR(env, env->rep_handle->region->mtx_region);
 	F_CLR(renv, DB_REGENV_REPLOCKED);
 	renv->op_timestamp = 0;
-	REP_SYSTEM_UNLOCK(env);
+	MUTEX_UNLOCK_NO_CTR(env, env->rep_handle->region->mtx_region);
 
 	return (_ReturnSetup(interp,
 	    0, DB_RETOK_STD(0), "env test force noarchive_timeout"));

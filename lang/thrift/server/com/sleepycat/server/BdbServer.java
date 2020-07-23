@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -34,7 +34,7 @@ import static java.lang.System.out;
  */
 public class BdbServer {
     /** Version number. */
-    public static final String VERSION = "6.2.23";
+    public static final String VERSION = "6.2.32";
 
     public static void main(String[] args) {
         try {

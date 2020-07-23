@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 
@@ -430,6 +430,7 @@ public class PrimaryIndex<PK, E> extends BasicIndex<PK, E> {
     public void putNoReturn(Transaction txn, E entity)
         throws DatabaseException {
 
+
         DatabaseEntry keyEntry = new DatabaseEntry();
         DatabaseEntry dataEntry = new DatabaseEntry();
         assignKey(entity, keyEntry);
@@ -484,6 +485,7 @@ public class PrimaryIndex<PK, E> extends BasicIndex<PK, E> {
     public boolean putNoOverwrite(Transaction txn, E entity)
         throws DatabaseException {
 
+
         DatabaseEntry keyEntry = new DatabaseEntry();
         DatabaseEntry dataEntry = new DatabaseEntry();
         assignKey(entity, keyEntry);
@@ -493,6 +495,7 @@ public class PrimaryIndex<PK, E> extends BasicIndex<PK, E> {
 
         return (status == OperationStatus.SUCCESS);
     }
+
 
     /**
      * If we are assigning primary keys from a sequence, assign the next key
@@ -524,6 +527,7 @@ public class PrimaryIndex<PK, E> extends BasicIndex<PK, E> {
     public E get(Transaction txn, PK key, LockMode lockMode)
         throws DatabaseException {
 
+
         DatabaseEntry keyEntry = new DatabaseEntry();
         DatabaseEntry dataEntry = new DatabaseEntry();
         keyBinding.objectToEntry(key, keyEntry);
@@ -531,15 +535,21 @@ public class PrimaryIndex<PK, E> extends BasicIndex<PK, E> {
         OperationStatus status = db.get(txn, keyEntry, dataEntry, lockMode);
 
         if (status == OperationStatus.SUCCESS) {
-            if (entityBinding instanceof PersistEntityBinding) {
-                return (E)((PersistEntityBinding) entityBinding).
-                           entryToObjectWithPriKey(key, dataEntry);
-            } else {
-                return entityBinding.entryToObject(keyEntry, dataEntry);
-            }
+            return makeEntity(key, keyEntry, dataEntry);
         } else {
             return null;
         }
+    }
+
+
+    private E makeEntity(PK key,
+                         DatabaseEntry keyEntry,
+                         DatabaseEntry dataEntry) {
+
+        return (entityBinding instanceof PersistEntityBinding) ?
+            (E)((PersistEntityBinding) entityBinding).
+                entryToObjectWithPriKey(key, dataEntry) :
+            entityBinding.entryToObject(keyEntry, dataEntry);
     }
 
     public Map<PK, E> map() {

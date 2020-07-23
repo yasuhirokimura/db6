@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -16,7 +16,6 @@ import java.nio.file.Files;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.fail;
 
 public class BdbServerAdminTest extends ClientTestBase {
 
@@ -68,29 +67,25 @@ public class BdbServerAdminTest extends ClientTestBase {
 
     @Test
     public void testDeleteEnvironmentAndDatabasesBusy() throws Exception {
-        SEnvironment env = connection.openEnvironment("env",
-                new SEnvironmentConfig().setAllowCreate(true));
+        try (SEnvironment ignored = connection.openEnvironment("env",
+                new SEnvironmentConfig().setAllowCreate(true))) {
 
-        try {
+            thrown.expect(SResourceInUseException.class);
             admin.deleteEnvironmentAndDatabases("env", false);
-            fail();
-        } catch (SResourceInUseException e) {
-            env.close();
         }
     }
 
     @Test
     public void testCloseDatabaseHandles() throws Exception {
-        SEnvironment env = connection.openEnvironment("env",
-                new SEnvironmentConfig().setAllowCreate(true));
-        SDatabase db = env.openDatabase(null, "db", null,
-                new SDatabaseConfig().setAllowCreate(true)
-                        .setType(SDatabaseType.BTREE));
+        try (SEnvironment env = connection.openEnvironment("env",
+                new SEnvironmentConfig().setAllowCreate(true))) {
+            SDatabase db = env.openDatabase(null, "db", null,
+                    new SDatabaseConfig().setAllowCreate(true)
+                            .setType(SDatabaseType.BTREE));
 
-        admin.closeDatabaseHandles("env", "db", null, 0);
+            admin.closeDatabaseHandles("env", "db", null, 0);
 
-        assertClosed(db);
-
-        env.close();
+            assertClosed(db);
+        }
     }
 }

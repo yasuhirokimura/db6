@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2009, 2016 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2009, 2017 Oracle and/or its affiliates.  All rights reserved.
 #
 # TEST repmgr106
 # TEST Simple smoke test for repmgr elections with multi-process envs.

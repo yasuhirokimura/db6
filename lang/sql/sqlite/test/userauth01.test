@@ -31,10 +31,12 @@ do_execsql_test userauth01-1.0 {
 } {NULL 1 2.5 'three' X'4444' t1}
 
 # Calling sqlite3_user_authenticate() on a no-authentication-required
-# database connection is a harmless no-op.  
+# database connection is an error.  
 #
-do_test userauth01-1.1 {
+do_test userauth01-1.1.1 {
   sqlite3_user_authenticate db alice pw-4-alice
+} {SQLITE_AUTH}
+do_test userauth01-1.1.2 {
   execsql {
     SELECT quote(x) FROM t1 ORDER BY x;
     SELECT name FROM sqlite_master;

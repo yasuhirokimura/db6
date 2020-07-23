@@ -1,14 +1,45 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
 
 package com.sleepycat.server;
 
-import com.sleepycat.db.*;
+import com.sleepycat.db.CacheFileStats;
+import com.sleepycat.db.CheckpointConfig;
+import com.sleepycat.db.CompactConfig;
+import com.sleepycat.db.Cursor;
+import com.sleepycat.db.CursorConfig;
+import com.sleepycat.db.Database;
+import com.sleepycat.db.DatabaseConfig;
+import com.sleepycat.db.DatabaseEntry;
+import com.sleepycat.db.DatabaseException;
+import com.sleepycat.db.DatabaseType;
+import com.sleepycat.db.Environment;
+import com.sleepycat.db.EnvironmentConfig;
+import com.sleepycat.db.ForeignKeyDeleteAction;
+import com.sleepycat.db.JoinConfig;
+import com.sleepycat.db.JoinCursor;
+import com.sleepycat.db.KeyRange;
+import com.sleepycat.db.LockDetectMode;
+import com.sleepycat.db.LockMode;
+import com.sleepycat.db.MemoryException;
+import com.sleepycat.db.MultipleDataEntry;
+import com.sleepycat.db.MultipleEntry;
+import com.sleepycat.db.MultipleKeyDataEntry;
+import com.sleepycat.db.MultipleRecnoDataEntry;
+import com.sleepycat.db.OperationStatus;
+import com.sleepycat.db.SecondaryConfig;
+import com.sleepycat.db.SecondaryCursor;
+import com.sleepycat.db.SecondaryDatabase;
+import com.sleepycat.db.Sequence;
+import com.sleepycat.db.SequenceConfig;
+import com.sleepycat.db.StatsConfig;
+import com.sleepycat.db.Transaction;
+import com.sleepycat.db.TransactionConfig;
 import com.sleepycat.server.callbacks.ServerKeyCreator;
 import com.sleepycat.server.config.BdbServiceConfig;
 import com.sleepycat.server.config.EnvDirType;
@@ -37,7 +68,46 @@ import com.sleepycat.server.util.FileUtils;
 import com.sleepycat.server.util.GetArgs;
 import com.sleepycat.server.util.KeyDataPair;
 import com.sleepycat.server.util.PutArgs;
-import com.sleepycat.thrift.*;
+import com.sleepycat.thrift.BdbService;
+import com.sleepycat.thrift.TCachePriority;
+import com.sleepycat.thrift.TCompactConfig;
+import com.sleepycat.thrift.TCompactResult;
+import com.sleepycat.thrift.TCursor;
+import com.sleepycat.thrift.TCursorConfig;
+import com.sleepycat.thrift.TCursorGetConfig;
+import com.sleepycat.thrift.TCursorGetMode;
+import com.sleepycat.thrift.TCursorPutConfig;
+import com.sleepycat.thrift.TDatabase;
+import com.sleepycat.thrift.TDatabaseConfig;
+import com.sleepycat.thrift.TDatabaseStatResult;
+import com.sleepycat.thrift.TDbGetConfig;
+import com.sleepycat.thrift.TDbGetMode;
+import com.sleepycat.thrift.TDbPutConfig;
+import com.sleepycat.thrift.TDbt;
+import com.sleepycat.thrift.TDurabilityPolicy;
+import com.sleepycat.thrift.TEnvStatConfig;
+import com.sleepycat.thrift.TEnvStatOption;
+import com.sleepycat.thrift.TEnvStatResult;
+import com.sleepycat.thrift.TEnvironment;
+import com.sleepycat.thrift.TEnvironmentConfig;
+import com.sleepycat.thrift.TGetResult;
+import com.sleepycat.thrift.TGetWithPKeyResult;
+import com.sleepycat.thrift.TJoinCursor;
+import com.sleepycat.thrift.TJoinCursorGetConfig;
+import com.sleepycat.thrift.TKeyData;
+import com.sleepycat.thrift.TKeyDataWithPKey;
+import com.sleepycat.thrift.TKeyDataWithSecondaryKeys;
+import com.sleepycat.thrift.TKeyRangeResult;
+import com.sleepycat.thrift.TOperationStatus;
+import com.sleepycat.thrift.TProtocolVersionTestResult;
+import com.sleepycat.thrift.TPutResult;
+import com.sleepycat.thrift.TResourceInUseException;
+import com.sleepycat.thrift.TSecondaryDatabaseConfig;
+import com.sleepycat.thrift.TSequence;
+import com.sleepycat.thrift.TSequenceConfig;
+import com.sleepycat.thrift.TTransaction;
+import com.sleepycat.thrift.TTransactionConfig;
+import com.sleepycat.thrift.dbConstants;
 import org.apache.thrift.TException;
 import org.apache.thrift.server.TServer;
 import org.slf4j.Logger;
@@ -46,6 +116,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -108,7 +179,8 @@ public class BdbServiceHandler implements BdbService.Iface {
             String clientVersion) {
         String serverVersion = dbConstants.PROTOCOL_VERSION;
         boolean supported = clientVersion.equals(serverVersion);
-        return new TProtocolVersionTestResult(supported, serverVersion);
+        return new TProtocolVersionTestResult(supported, serverVersion,
+                ByteOrder.nativeOrder().equals(ByteOrder.BIG_ENDIAN));
     }
 
     @Override
@@ -198,7 +270,7 @@ public class BdbServiceHandler implements BdbService.Iface {
                     envConfig.setLogDirectory(dir);
                     break;
                 case BLOB:
-                    envConfig.setBlobDir(dir);
+                    envConfig.setExternalFileDir(dir);
                     break;
             }
         });
@@ -477,7 +549,7 @@ public class BdbServiceHandler implements BdbService.Iface {
             FileUtils.createDirectories(
                     Collections.singleton(dbFile.getParentFile()));
         }
-        return new DatabaseFileKey(dbFile, inMemory);
+        return new DatabaseFileKey(dbFile, fileName, inMemory);
     }
 
     @Override
@@ -486,6 +558,7 @@ public class BdbServiceHandler implements BdbService.Iface {
             TSecondaryDatabaseConfig sdbConfig) throws TException {
         return transactionalDescOp(tEnv.handle, tTxn, (ed, td) -> {
             DatabaseDescriptor primaryDesc = null;
+            DatabaseDescriptor foreignDesc = null;
             try {
                 primaryDesc = (DatabaseDescriptor) this.handleManager
                         .readLockHandle(primaryDb.handle);
@@ -495,17 +568,30 @@ public class BdbServiceHandler implements BdbService.Iface {
                             "secondary databases on a Heap database is not" +
                             "supported.");
                 }
+                if (sdbConfig.isSetForeignDb()) {
+                    foreignDesc = (DatabaseDescriptor) this.handleManager
+                            .readLockHandle(sdbConfig.getForeignDb().handle);
+                }
 
                 EnvironmentDescriptor envDesc = (EnvironmentDescriptor) ed;
                 SecondaryConfig config = Adapters.toBdbType(sdbConfig);
 
                 final DatabaseDescriptor pdb = primaryDesc;
+                final DatabaseDescriptor fdb = foreignDesc;
                 return createDatabaseHandle(envDesc, td, fileName, databaseName,
                         config, (e, txn, dbKey, conf) -> {
                             Environment env = e.getHandle();
                             ServerKeyCreator keyCreator =
                                     new ServerKeyCreator(env, dbKey);
                             conf.setMultiKeyCreator(keyCreator);
+                            if (fdb != null) {
+                                conf.setForeignKeyDatabase(fdb.getHandle());
+                            }
+                            if (conf.getForeignKeyDeleteAction() ==
+                                    ForeignKeyDeleteAction.NULLIFY) {
+                                conf.setForeignMultiKeyNullifier(
+                                        (sdb, pKey, pData, fKey) -> false);
+                            }
 
                             return runWithAutoTxn(env, txn, autoTxn -> {
                                 SecondaryDatabase sdb =
@@ -515,10 +601,11 @@ public class BdbServiceHandler implements BdbService.Iface {
                                 keyCreator.setTransaction(autoTxn);
                                 keyCreator.openAuxiliaryDb();
                                 return new SecondaryDatabaseDescriptor(sdb,
-                                        dbKey, e, pdb, keyCreator);
+                                        dbKey, e, pdb, fdb, keyCreator);
                             });
                         });
             } finally {
+                this.handleManager.unlockHandle(foreignDesc);
                 this.handleManager.unlockHandle(primaryDesc);
             }
         }, () -> buildLogMsg("openSecondaryDatabase", tEnv.handle, tTxn,
@@ -617,15 +704,15 @@ public class BdbServiceHandler implements BdbService.Iface {
 
     private List<TKeyData> createPairs(GetArgs getArgs, Database db)
             throws DatabaseException {
-        boolean isRecord = isRecordKey(db);
         List<TKeyData> list = new LinkedList<>();
         if (getArgs.data instanceof MultipleKeyDataEntry) {
             DatabaseEntry key = new DatabaseEntry();
             DatabaseEntry item = new DatabaseEntry();
             while (((MultipleKeyDataEntry) getArgs.data).next(key, item)) {
                 TKeyData pair = new TKeyData();
-                pair.setKey(Adapters.toThriftType(key, false));
-                pair.setData(Adapters.toThriftType(item, false));
+                pair.setKey(Adapters.toThriftType(key));
+                pair.setData(Adapters.toThriftType(item));
+                pair.getData().setPartial(false);
                 list.add(pair);
             }
         } else if (getArgs.data instanceof MultipleRecnoDataEntry) {
@@ -633,28 +720,30 @@ public class BdbServiceHandler implements BdbService.Iface {
             DatabaseEntry item = new DatabaseEntry();
             while (((MultipleRecnoDataEntry) getArgs.data).next(rec, item)) {
                 TKeyData pair = new TKeyData();
-                pair.setKey(Adapters.toThriftType(rec, true));
-                pair.setData(Adapters.toThriftType(item, false));
+                pair.setKey(Adapters.toThriftType(rec));
+                pair.setData(Adapters.toThriftType(item));
+                pair.getData().setPartial(false);
                 list.add(pair);
             }
         } else if (getArgs.data instanceof MultipleDataEntry) {
             TKeyData pair = new TKeyData();
             if (getArgs.key != null) {
-                pair.setKey(Adapters.toThriftType(getArgs.key, isRecord));
+                pair.setKey(Adapters.toThriftType(getArgs.key));
             }
             DatabaseEntry item = new DatabaseEntry();
             while (((MultipleDataEntry) getArgs.data).next(item)) {
-                pair.setData(Adapters.toThriftType(item, false));
+                pair.setData(Adapters.toThriftType(item));
+                pair.getData().setPartial(false);
                 list.add(pair);
                 pair = new TKeyData();
             }
         } else {
             TKeyData pair = new TKeyData();
             if (getArgs.key != null) {
-                pair.setKey(Adapters.toThriftType(getArgs.key, isRecord));
+                pair.setKey(Adapters.toThriftType(getArgs.key));
             }
             if (getArgs.data != null) {
-                pair.setData(Adapters.toThriftType(getArgs.data, false));
+                pair.setData(Adapters.toThriftType(getArgs.data));
             }
             list.add(pair);
         }
@@ -702,7 +791,7 @@ public class BdbServiceHandler implements BdbService.Iface {
                     new TGetWithPKeyResult(Adapters.toThriftType(opResult));
             if (opResult == OperationStatus.SUCCESS) {
                 result.setTuple(createTuple(
-                        filterDbPGetOutput(getArgs, config.mode), sdb));
+                        filterDbPGetOutput(getArgs, config.mode)));
             }
             return result;
         }, () -> buildLogMsg("dbGetWithPKey", tSdb.handle, txn, keyPKey,
@@ -734,19 +823,17 @@ public class BdbServiceHandler implements BdbService.Iface {
         return getArgs;
     }
 
-    private TKeyDataWithPKey createTuple(GetArgs getArgs, SecondaryDatabase sdb)
+    private TKeyDataWithPKey createTuple(GetArgs getArgs)
             throws DatabaseException {
-        boolean isSecRecord = isRecordKey(sdb);
-        boolean isPriRecord = isRecordKey(sdb.getPrimaryDatabase());
         TKeyDataWithPKey tuple = new TKeyDataWithPKey();
         if (getArgs.key != null) {
-            tuple.setSkey(Adapters.toThriftType(getArgs.key, isSecRecord));
+            tuple.setSkey(Adapters.toThriftType(getArgs.key));
         }
         if (getArgs.pKey != null) {
-            tuple.setPkey(Adapters.toThriftType(getArgs.pKey, isPriRecord));
+            tuple.setPkey(Adapters.toThriftType(getArgs.pKey));
         }
         if (getArgs.data != null) {
-            tuple.setPdata(Adapters.toThriftType(getArgs.data, false));
+            tuple.setPdata(Adapters.toThriftType(getArgs.data));
         }
         return tuple;
     }
@@ -767,10 +854,11 @@ public class BdbServiceHandler implements BdbService.Iface {
                         "supported for databases having secondary databases.");
             }
 
-            Environment env = primaryDesc.getHandle().getEnvironment();
+            Database pDb = primaryDesc.getHandle();
+            Environment env = pDb.getEnvironment();
             Map<Long, Map<KeyDataPair, List<DatabaseEntry>>> secondaryKeys =
                     groupSecondaryKeysByDatabase(pairs);
-            PutArgs putArgs = new PutArgs(pairs, config);
+            PutArgs putArgs = new PutArgs(pairs, isRecordKey(pDb), config);
 
             Transaction t = td == null ? null : td.getHandle();
             OperationStatus opResult;
@@ -793,7 +881,9 @@ public class BdbServiceHandler implements BdbService.Iface {
             TPutResult result = new TPutResult();
             result.setStatus(Adapters.toThriftType(opResult));
             if (config == TDbPutConfig.APPEND) {
-                result.setNewRecordNumber(putArgs.key.getRecordNumber());
+                DatabaseEntry recordNum = new DatabaseEntry();
+                recordNum.setRecordNumber(putArgs.key.getRecordNumber());
+                result.setNewRecordNumber(recordNum.getData());
             }
             return result;
         }, () -> buildLogMsg("dbPut", db.handle, txn, "pairs", config));
@@ -839,19 +929,20 @@ public class BdbServiceHandler implements BdbService.Iface {
     public TOperationStatus dbDelete(TDatabase tDb, TTransaction tTxn,
             List<TKeyData> keyOrPairs) throws TException {
         return transactionalDescOp(tDb.handle, tTxn, (dd, td) -> {
-            DatabaseDescriptor primaryDesc = (DatabaseDescriptor) dd;
-            DelArgs delArgs = new DelArgs(keyOrPairs);
-
-            Environment env = primaryDesc.getHandle().getEnvironment();
+            DatabaseDescriptor dbDesc = (DatabaseDescriptor) dd;
+            Database db = dbDesc.getHandle();
+            Environment env = db.getEnvironment();
             Transaction t = td == null ? null : td.getHandle();
+
+            DelArgs delArgs = new DelArgs(keyOrPairs, isRecordKey(db));
             OperationStatus opResult;
             opResult = runWithAutoTxn(env, t, autoTxn -> {
-                primaryDesc.forEachSecondary(sd -> sd.setCurrentTxn(autoTxn));
-                Database primary = primaryDesc.getHandle();
+                dbDesc.forEachSecondary(sd -> sd.setCurrentTxn(autoTxn));
+                dbDesc.forEachForeignSecondary(sd -> sd.setCurrentTxn(autoTxn));
                 if (keyOrPairs.get(0).isSetData()) {
-                    return primary.deleteMultipleKey(autoTxn, delArgs.key);
+                    return db.deleteMultipleKey(autoTxn, delArgs.key);
                 } else {
-                    return primary.deleteMultiple(autoTxn, delArgs.key);
+                    return db.deleteMultiple(autoTxn, delArgs.key);
                 }
             });
             return Adapters.toThriftType(opResult);
@@ -990,11 +1081,6 @@ public class BdbServiceHandler implements BdbService.Iface {
                 result.setPairs(createPairs(
                         filterCursorGetOutput(getArgs, config.mode),
                         cursor.getDatabase()));
-                if (config.mode == TCursorGetMode.GET_RECNO) {
-                    TDbt data = result.pairs.get(0).data;
-                    data.unsetData();
-                    data.setRecordNumber(getArgs.data.getRecordNumber());
-                }
             }
             return result;
         }, () -> buildLogMsg("cursorGet", tCursor.handle, keyData, config));
@@ -1069,16 +1155,7 @@ public class BdbServiceHandler implements BdbService.Iface {
                     new TGetWithPKeyResult(Adapters.toThriftType(opResult));
             if (opResult == OperationStatus.SUCCESS) {
                 result.setTuple(createTuple(
-                        filterCursorPGetOutput(getArgs, config.mode),
-                        cursor.getSecondaryDatabase()));
-                if (config.mode == TCursorGetMode.GET_RECNO) {
-                    TDbt pData = result.tuple.pdata;
-                    pData.unsetData();
-                    pData.setRecordNumber(getArgs.data.getRecordNumber());
-                    TDbt pKey = result.tuple.pkey;
-                    pKey.unsetData();
-                    pKey.setRecordNumber(getArgs.pKey.getRecordNumber());
-                }
+                        filterCursorPGetOutput(getArgs, config.mode)));
             }
             return result;
         }, () -> buildLogMsg("cursorGetWithPKey", tCursor.handle, keyPKey,
@@ -1163,7 +1240,9 @@ public class BdbServiceHandler implements BdbService.Iface {
             if (dbType == DatabaseType.RECNO &&
                     (config == TCursorPutConfig.AFTER ||
                             config == TCursorPutConfig.BEFORE)) {
-                result.setNewRecordNumber(putArgs.key.getRecordNumber());
+                DatabaseEntry recordNum = new DatabaseEntry();
+                recordNum.setRecordNumber(putArgs.key.getRecordNumber());
+                result.setNewRecordNumber(recordNum.getData());
             }
             return result;
         }, () -> buildLogMsg("cursorPut", tCursor.handle, pair, config));
@@ -1196,7 +1275,9 @@ public class BdbServiceHandler implements BdbService.Iface {
     @Override
     public TOperationStatus cursorDelete(TCursor cursor) throws TException {
         return cursorOp(cursor, (cursorDesc, txn) -> {
-            cursorDesc.getDb().forEachSecondary(sd -> sd.setCurrentTxn(txn));
+            DatabaseDescriptor dbDesc = cursorDesc.getDb();
+            dbDesc.forEachSecondary(sd -> sd.setCurrentTxn(txn));
+            dbDesc.forEachForeignSecondary(sd -> sd.setCurrentTxn(txn));
             return Adapters.toThriftType(cursorDesc.getHandle().delete());
         }, () -> buildLogMsg("cursorDelete", cursor.handle));
     }

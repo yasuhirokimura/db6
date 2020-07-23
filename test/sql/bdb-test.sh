@@ -53,8 +53,6 @@ bdb_pragmas.test
 bdb_rdonly.test
 bdb_replication.test
 bdb_sequence.test
-bdb_userauth_keystore.test
-bdb_userauth_pragma.test
 between.test
 bigrow.test
 bigsort.test
@@ -641,12 +639,6 @@ rtree4.test
 rtree5.test
 rtree6.test"
 
-BDB_USERAUTH_TESTS="\
-userauth01.test
-bdb_userauth_keystore.test
-bdb_userauth_pragma.test
-"
-
 exe_suffix=""
 cygwin=`uname | grep -i "cygwin"`
 if [ "$cygwin" != "" ]; then
@@ -683,7 +675,6 @@ fts3)	    TEST_CASES="$BDB_FTS3_TESTS"
 rtree)	    TEST_CASES="$BDB_RTREE_TESTS"
 	    TIMEOUT=7200
 	    ;;
-userauth)   TEST_CASES="$BDB_USERAUTH_TESTS";;
 *)       TEST_CASES="$BDB_TESTS_ALL";;
 esac
 

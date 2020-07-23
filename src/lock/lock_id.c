@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -408,7 +408,7 @@ __lock_getlocker_int(lt, locker, create, ip, retp)
 				    sh_locker, links, __db_locker);
 				return (ret);
 			}
-			MUTEX_LOCK(env, sh_locker->mtx_locker);
+			MUTEX_LOCK_NO_CTR(env, sh_locker->mtx_locker);
 		}
 
 		++region->nlockers;

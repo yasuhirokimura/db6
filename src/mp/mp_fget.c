@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -298,7 +298,7 @@ retry:		MUTEX_LOCK(env, hp->mtx_hash);
 			ret = __env_panic(env, EINVAL);
 			goto err;
 		}
-		atomic_inc(env, &bhp->ref);
+		(void)atomic_inc(env, &bhp->ref);
 		b_incr = 1;
 
 		/*
@@ -321,6 +321,7 @@ xlatch:
 		} else if (LF_ISSET(DB_MPOOL_TRY)) {
 			if ((ret = MUTEX_TRY_READLOCK(env, bhp->mtx_buf)) != 0)
 				goto err;
+			DB_TEST_CRASH(env->test_abort, DB_TEST_LATCH);
 		} else
 			MUTEX_READLOCK(env, bhp->mtx_buf);
 
@@ -374,7 +375,7 @@ thawed:			need_free = (atomic_dec(env, &bhp->ref) == 0);
 		    (SH_CHAIN_NEXTP(bhp, vc, __bh)->td_off == bhp->td_off ||
 		    (!dirty && read_lsnp == NULL))) {
 			DB_ASSERT(env, b_incr && BH_REFCOUNT(bhp) != 0);
-			atomic_dec(env, &bhp->ref);
+			(void)atomic_dec(env, &bhp->ref);
 			b_incr = 0;
 			MUTEX_UNLOCK(env, bhp->mtx_buf);
 			b_lock = 0;
@@ -447,12 +448,7 @@ thawed:			need_free = (atomic_dec(env, &bhp->ref) == 0);
 		if (flags == DB_MPOOL_FREE) {
 freebuf:		MUTEX_LOCK(env, hp->mtx_hash);
 			h_locked = 1;
-			if (F_ISSET(bhp, BH_DIRTY)) {
-				F_CLR(bhp, BH_DIRTY | BH_DIRTY_CREATE);
-				DB_ASSERT(env,
-				   atomic_read(&hp->hash_page_dirty) > 0);
-				atomic_dec(env, &hp->hash_page_dirty);
-			}
+			__memp_bh_clear_dirty(env, hp, bhp);
 
 			/*
 			 * If the buffer we found is already freed, we're done.
@@ -541,7 +537,7 @@ reuse:			if ((makecopy || F_ISSET(bhp, BH_FROZEN)) &&
 				if (oldest_bhp != NULL) {
 					DB_ASSERT(env,
 					    !F_ISSET(oldest_bhp, BH_DIRTY));
-					atomic_inc(env, &oldest_bhp->ref);
+					(void)atomic_inc(env, &oldest_bhp->ref);
 #ifdef HAVE_STATISTICS
 					if (SH_CHAIN_HASPREV(oldest_bhp, vc))
 						c_mp->stat.st_mvcc_reused++;
@@ -766,7 +762,7 @@ alloc:		/* Allocate a new buffer header and data space. */
 		 */
 		if (flags == DB_MPOOL_NEW) {
 			DB_ASSERT(env, b_incr && BH_REFCOUNT(bhp) != 0);
-			atomic_dec(env, &bhp->ref);
+			(void)atomic_dec(env, &bhp->ref);
 			b_incr = 0;
 			if (F_ISSET(bhp, BH_EXCLUSIVE))
 				F_CLR(bhp, BH_EXCLUSIVE);
@@ -815,7 +811,7 @@ alloc:		/* Allocate a new buffer header and data space. */
 
 		/* We created a new page, it starts dirty. */
 		if (extending) {
-			atomic_inc(env, &hp->hash_page_dirty);
+			(void)atomic_inc(env, &hp->hash_page_dirty);
 			F_SET(bhp, BH_DIRTY | BH_DIRTY_CREATE);
 		}
 
@@ -1096,7 +1092,7 @@ alloc:		/* Allocate a new buffer header and data space. */
 			MUTEX_LOCK(env, hp->mtx_hash);
 #endif
 			DB_ASSERT(env, !SH_CHAIN_HASNEXT(bhp, vc));
-			atomic_inc(env, &hp->hash_page_dirty);
+			(void)atomic_inc(env, &hp->hash_page_dirty);
 			F_SET(bhp, BH_DIRTY);
 #ifdef DIAGNOSTIC
 			MUTEX_UNLOCK(env, hp->mtx_hash);
@@ -1112,7 +1108,7 @@ alloc:		/* Allocate a new buffer header and data space. */
 		 * switched locks, we have to go through it all again.
 		 */
 		if (SH_CHAIN_HASNEXT(bhp, vc) && read_lsnp == NULL) {
-			atomic_dec(env, &bhp->ref);
+			(void)atomic_dec(env, &bhp->ref);
 			b_incr = 0;
 			MUTEX_UNLOCK(env, bhp->mtx_buf);
 			b_lock = 0;
@@ -1241,7 +1237,7 @@ err:	/*
 
 	if (bhp != NULL) {
 		if (b_incr)
-			atomic_dec(env, &bhp->ref);
+			(void)atomic_dec(env, &bhp->ref);
 		if (b_lock) {
 			F_CLR(bhp, BH_EXCLUSIVE);
 			MUTEX_UNLOCK(env, bhp->mtx_buf);

@@ -429,9 +429,12 @@
     <ClCompile Include="..\..\src\txn\txn_stat.c"/>
     <ClCompile Include="..\..\src\txn\txn_util.c"/>
     <ClCompile Include="..\..\src\common\os_method.c"/>
+    <ClCompile Include="..\..\src\common\util_arg.c"/>
     <ClCompile Include="..\..\src\common\util_cache.c"/>
+    <ClCompile Include="..\..\src\common\util_env.c"/>
     <ClCompile Include="..\..\src\common\util_log.c"/>
     <ClCompile Include="..\..\src\common\util_sig.c"/>
+    <ClCompile Include="..\..\src\common\util_ver_check.c"/>
     <ClCompile Include="..\..\src\common\zerofill.c"/>
     <ClCompile Include="..\..\src\xa\xa.c"/>
     <ClCompile Include="..\..\src\xa\xa_map.c"/>

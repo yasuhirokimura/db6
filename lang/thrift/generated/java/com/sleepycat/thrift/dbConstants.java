@@ -36,6 +36,6 @@ import org.slf4j.LoggerFactory;
 @SuppressWarnings({"cast", "rawtypes", "serial", "unchecked"})
 public class dbConstants {
 
-  public static final String PROTOCOL_VERSION = "1.0.0";
+  public static final String PROTOCOL_VERSION = "1.1.0";
 
 }

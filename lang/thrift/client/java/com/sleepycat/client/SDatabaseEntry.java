@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -9,6 +9,10 @@
 package com.sleepycat.client;
 
 import com.sleepycat.thrift.TDbt;
+
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.Arrays;
 
 /**
  * Encodes database key and data items as a byte array.
@@ -29,7 +33,6 @@ import com.sleepycat.thrift.TDbt;
  * Access to SDatabaseEntry objects is not re-entrant. In particular, if
  * multiple threads simultaneously access the same SDatabaseEntry object using
  * {@link SDatabase} or {@link SCursor} methods, the results are undefined.
- * <p>
  * <h3>Input and Output Parameters</h3>
  * <p>
  * SDatabaseEntry objects are used for both input data (when writing to a
@@ -43,7 +46,6 @@ import com.sleepycat.thrift.TDbt;
  * For SDatabaseEntry input parameters, the caller is responsible for
  * initializing the data array of the SDatabaseEntry. For SDatabaseEntry output
  * parameters, the method called will initialize the data array.
- * <p>
  * <h3>Partial Offset and Length Properties</h3>
  * <p>
  * By default the specified data (byte array, offset and size) corresponds to
@@ -72,7 +74,19 @@ public class SDatabaseEntry extends ThriftWrapper<TDbt, TDbt._Fields>
      * @param data byte array wrapped by the SDatabaseEntry
      */
     public SDatabaseEntry(byte[] data) {
-        super(new TDbt().setData(data));
+        this(data, 0, data == null ? 0 : data.length);
+    }
+
+    /**
+     * Construct a DatabaseEntry with a given byte array, offset and size.
+     *
+     * @param data byte array wrapped by the SDatabaseEntry.
+     * @param offset offset in the first byte in the byte array to be included.
+     * @param size number of bytes in the byte array to be included.
+     */
+    public SDatabaseEntry(byte[] data, int offset, int size) {
+        super(new TDbt().setData(
+                data == null ? null : ByteBuffer.wrap(data, offset, size)));
         setPartial(0, 0, false);
     }
 
@@ -81,33 +95,48 @@ public class SDatabaseEntry extends ThriftWrapper<TDbt, TDbt._Fields>
     }
 
     void setDataFromTDbt(TDbt dbt) {
-        if (dbt != null) {
-            if (dbt.isSetData()) {
-                setData(dbt.getData());
-            } else if (dbt.isSetRecordNumber()) {
-                setRecordNumber(dbt.getRecordNumber());
-            }
+        if (dbt != null && dbt.isSetData()) {
+            getThriftObj().setData(dbt.data);
         }
     }
 
+    SDatabaseEntry deepCopy() {
+        return new SDatabaseEntry(getData());
+    }
+
+    @Override
+    public int hashCode() {
+        return getThriftObj().hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof SDatabaseEntry) {
+            return getThriftObj().equals(((SDatabaseEntry) obj).getThriftObj());
+        }
+        return false;
+    }
+
     /**
-     * Return whether this SDatabaseEntry is configured to be stored as a blob.
+     * Return whether this SDatabaseEntry is configured to be stored as an
+     * external file.
      *
-     * @return whether this SDatabaseEntry is configured to be stored as a blob
+     * @return whether this SDatabaseEntry is configured to be stored as an
+     * external file
      */
-    public boolean getBlob() {
+    public boolean getExternalFile() {
         return (boolean) getField(TDbt._Fields.BLOB);
     }
 
     /**
-     * Configure this SDatabaseEntry to be stored as a blob.
+     * Configure this SDatabaseEntry to be stored as an external file.
      *
-     * @param blob whether this SDatabaseEntry is configured to be stored as a
-     * blob
+     * @param externalFile whether this SDatabaseEntry is configured to be
+     * stored as an external file
      * @return this
      */
-    public SDatabaseEntry setBlob(final boolean blob) {
-        getThriftObj().setBlob(blob);
+    public SDatabaseEntry setExternalFile(final boolean externalFile) {
+        getThriftObj().setBlob(externalFile);
         return this;
     }
 
@@ -118,27 +147,37 @@ public class SDatabaseEntry extends ThriftWrapper<TDbt, TDbt._Fields>
      * array will always be a newly allocated array. The byte array specified
      * by the caller will not be used and may be null.
      * <p>
-     * It is an error to get the record number using this method. Record
-     * numbers must be get using {@link #getRecordNumber}.
      *
      * @return the byte array
      */
     public byte[] getData() {
-        return (byte[]) getField(TDbt._Fields.DATA);
+        return getThriftObj().getData();
     }
 
     /**
-     * Sets the byte array.
+     * Sets the data byte array. The array is copied into this entry.
      * <p>
-     * It is an error to set a record number using this method. Record numbers
-     * must be set using {@link #setRecordNumber}.
      *
-     * @param data byte array wrapped by the SDatabaseEntry
+     * @param data byte array
      * @return this
      */
     public SDatabaseEntry setData(final byte[] data) {
-        getThriftObj().unsetRecordNumber();
         getThriftObj().setData(data);
+        return this;
+    }
+
+    /**
+     * Sets the data byte array. The specified range of the specified array is
+     * copied into this entry.
+     * <p>
+     *
+     * @param data byte array
+     * @param offset the start of the range to be copied
+     * @param size the length of the range to be copied
+     * @return this
+     */
+    public SDatabaseEntry setData(final byte[] data, int offset, int size) {
+        getThriftObj().setData(ByteBuffer.wrap(data, offset, size));
         return this;
     }
 
@@ -244,12 +283,16 @@ public class SDatabaseEntry extends ThriftWrapper<TDbt, TDbt._Fields>
     }
 
     /**
-     * Return the record number in this entry.
+     * Return the record number encoded in this entry's buffer.
      *
-     * @return the decoded record number
+     * @param byteOrder the byte order used to decode the record number. If
+     * this entry is retrieved from or will be sent to a server, this must be
+     * the server's byte order. See
+     * {@link BdbServerConnection#getServerByteOrder()}.
+     * @return the record number encoded in this entry's buffer
      */
-    public int getRecordNumber() {
-        return (int) getField(TDbt._Fields.RECORD_NUMBER);
+    public int getRecordNumber(ByteOrder byteOrder) {
+        return getThriftObj().bufferForData().order(byteOrder).getInt();
     }
 
     /**
@@ -257,11 +300,36 @@ public class SDatabaseEntry extends ThriftWrapper<TDbt, TDbt._Fields>
      * are integer keys starting at 1.
      *
      * @param recno the record number to be encoded
+     * @param byteOrder the byte order used to decode the record number. If
+     * this entry is retrieved from or will be sent to a server, this must be
+     * the server's byte order. See
+     * {@link BdbServerConnection#getServerByteOrder()}.
      * @return this
      */
-    public SDatabaseEntry setRecordNumber(final int recno) {
-        getThriftObj().unsetData();
-        getThriftObj().setRecordNumber(recno);
+    public SDatabaseEntry setRecordNumber(int recno, ByteOrder byteOrder) {
+        getThriftObj().setData(
+                ByteBuffer.allocate(4).order(byteOrder).putInt(recno).array());
         return this;
+    }
+
+    /**
+     * Always return zero. For compatibility with DPL APIs.
+     *
+     * @return always zero
+     */
+    public int getOffset() {
+        return 0;
+    }
+
+    /**
+     * Return the byte size of the data array.
+     * <p>
+     * It is an error to call this method if this entry contains a record
+     * number.
+     *
+     * @return number of bytes in the data array
+     */
+    public int getSize() {
+        return getData().length;
     }
 }

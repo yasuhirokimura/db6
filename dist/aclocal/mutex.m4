@@ -439,7 +439,19 @@ AC_TRY_LINK([
 ], [db_cv_mutex=AIX/_check_lock])
 fi
 
-# _spin_lock_try/_spin_unlock: Apple/Darwin
+# OSSpinLockTry/OSSpinLockUnlock: Initially from BSD, also used in Apple/Darwin.
+if test "$db_cv_mutex" = no; then
+AC_TRY_LINK([
+#include <libkern/OSAtomic.h>],[
+	OSSpinLock x;
+	OsSpinLockTry(&x);
+	OsSpinLockUnLock(&x);
+], [db_cv_mutex=BSD/OSSpinLockTry])
+fi
+
+# _spin_lock_try/_spin_unlock: This BSD/Apple/Darwin interface is not
+# documented, and so is not allowed for iOS applications. Usually
+# BSD/OSSpinLockTry will be used instead of this one.
 if test "$db_cv_mutex" = no; then
 AC_TRY_LINK(,[
 	int x;
@@ -667,6 +679,10 @@ AIX/_check_lock)	ADDITIONAL_OBJS="mut_tas${o} $ADDITIONAL_OBJS"
 			AC_DEFINE(HAVE_MUTEX_AIX_CHECK_LOCK)
 			AH_TEMPLATE(HAVE_MUTEX_AIX_CHECK_LOCK,
 			    [Define to 1 to use the AIX _check_lock mutexes.]);;
+BSD/OSSpinLockTry)	ADDITIONAL_OBJS="mut_tas${o} $ADDITIONAL_OBJS"
+			AC_DEFINE(HAVE_MUTEX_BSD_OSSPINLOCKTRY)
+			AH_TEMPLATE(HAVE_MUTEX_BSD_OSSPINLOCKTRY,
+			    [Define to 1 to use the BSD/Apple/Darwin OSSpinLockTry mutexes.]);;
 Darwin/_spin_lock_try)	ADDITIONAL_OBJS="mut_tas${o} $ADDITIONAL_OBJS"
 			AC_DEFINE(HAVE_MUTEX_DARWIN_SPIN_LOCK_TRY)
 			AH_TEMPLATE(HAVE_MUTEX_DARWIN_SPIN_LOCK_TRY,
@@ -925,16 +941,16 @@ if test "$db_cv_mingw" = yes; then
 fi
 
 if test "$db_cv_atomic" = no; then
-	AC_RUN_IFELSE([AC_LANG_PROGRAM([], [
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([], [
 		int val;
 		val = -1;
 		return __atomic_add_fetch(&val, 1, __ATOMIC_SEQ_CST);
 	])], [db_cv_atomic="gcc-builtin"], [db_cv_atomic="no"])
 
-	if test "$db_cv_atomic" = "gcc-builtin"; then
+	if test "$db_cv_cxx" = "yes" -a "$db_cv_atomic" = "gcc-builtin"; then
 		# Check if the C++ compiler supports built-in atomic functions
 		AC_LANG_PUSH(C++)
-		AC_RUN_IFELSE([AC_LANG_PROGRAM([], [
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([], [
 			int val;
 			val = -1;
 			return __atomic_add_fetch(&val, 1, __ATOMIC_SEQ_CST);

@@ -159,11 +159,16 @@ __db_relink_desc						db db_small
 __db_rpath						db db_small 
 __db_stat_pp						db db_small 
 __db_stat_print_pp						db db_small 
-__db_util_cache						db db_small 
+__db_util_arg_progname						db db_small 
+__db_util_arg_password						db db_small
+__db_util_cache							db db_small 
+__db_util_env_create						db db_small 
+__db_util_env_open						db db_small 
 __db_util_interrupted						db db_small 
 __db_util_logset						db db_small 
 __db_util_siginit						db db_small 
 __db_util_sigresend						db db_small 
+__db_util_version_check						db db_small 
 __db_verify_internal						db db_small 
 __dbreg_register_desc						db db_small
 __dbreg_register_42_desc					db db_small

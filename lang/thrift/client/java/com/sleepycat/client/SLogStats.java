@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -23,6 +23,8 @@ public class SLogStats {
 
     /**
      * The magic number that identifies a file as a log file.
+     *
+     * @return the magic number that identifies a file as a log file
      */
     public int getMagic() {
         return this.stat.magic;
@@ -30,6 +32,8 @@ public class SLogStats {
 
     /**
      * The version of the log file type.
+     *
+     * @return the version of the log file type
      */
     public int getVersion() {
         return this.stat.version;
@@ -37,6 +41,8 @@ public class SLogStats {
 
     /**
      * The mode of any created log files.
+     *
+     * @return the mode of any created log files
      */
     public int getMode() {
         return this.stat.mode;
@@ -44,6 +50,8 @@ public class SLogStats {
 
     /**
      * The in-memory log record cache size.
+     *
+     * @return the in-memory log record cache size
      */
     public int getLgBSize() {
         return this.stat.lgBSize;
@@ -51,6 +59,8 @@ public class SLogStats {
 
     /**
      * The current log file size.
+     *
+     * @return the current log file size
      */
     public int getLgSize() {
         return this.stat.lgSize;
@@ -59,6 +69,9 @@ public class SLogStats {
     /**
      * The number of bytes over and above {@link #getWcMbytes} written to
      * this log since the last checkpoint.
+     *
+     * @return the number of bytes over and above {@link #getWcMbytes} written
+     * to this log since the last checkpoint
      */
     public int getWcBytes() {
         return this.stat.wcBytes;
@@ -66,27 +79,46 @@ public class SLogStats {
 
     /**
      * The number of megabytes written to this log since the last checkpoint.
+     *
+     * @return the number of megabytes written to this log since the last
+     * checkpoint
      */
     public int getWcMbytes() {
         return this.stat.wcMbytes;
     }
 
-    /** The initial allocated file logging identifiers. */
+    /**
+     * The initial allocated file logging identifiers.
+     *
+     * @return the initial allocated file logging identifiers
+     */
     public int getFileidInit() {
         return this.stat.fileidInit;
     }
 
-    /** The current number of file logging identifiers. */
+    /**
+     * The current number of file logging identifiers.
+     *
+     * @return the current number of file logging identifiers
+     */
     public int getNumFileId() {
         return this.stat.numFileId;
     }
 
-    /** The maximum number of file logging identifiers used. */
+    /**
+     * The maximum number of file logging identifiers used.
+     *
+     * @return the maximum number of file logging identifiers used
+     */
     public int getMaxNfileId() {
         return this.stat.maxNfileId;
     }
 
-    /** The number of records written to this log. **/
+    /**
+     * The number of records written to this log.
+     *
+     * @return the number of records written to this log
+     */
     public long getRecord() {
         return this.stat.record;
     }
@@ -94,6 +126,9 @@ public class SLogStats {
     /**
      * The number of bytes over and above {@link #getWMbytes} written to this
      * log.
+     *
+     * @return The number of bytes over and above {@link #getWMbytes} written to
+     * this log
      */
     public int getWBytes() {
         return this.stat.WBytes;
@@ -101,6 +136,8 @@ public class SLogStats {
 
     /**
      * The number of megabytes written to this log.
+     *
+     * @return the number of megabytes written to this log
      */
     public int getWMbytes() {
         return this.stat.WMbytes;
@@ -108,6 +145,8 @@ public class SLogStats {
 
     /**
      * The number of times the log has been written to disk.
+     *
+     * @return the number of times the log has been written to disk
      */
     public long getWCount() {
         return this.stat.WCount;
@@ -116,18 +155,27 @@ public class SLogStats {
     /**
      * The number of times the log has been written to disk because the
      * in-memory log record cache filled up.
+     *
+     * @return the number of times the log has been written to disk because the
+     * in-memory log record cache filled up
      */
     public long getWCountFill() {
         return this.stat.WCountFill;
     }
 
-    /** The number of times the log has been read from disk. **/
+    /**
+     * The number of times the log has been read from disk.
+     *
+     * @return the number of times the log has been read from disk
+     */
     public long getRCount() {
         return this.stat.RCount;
     }
 
     /**
      * The number of times the log has been flushed to disk.
+     *
+     * @return the number of times the log has been flushed to disk
      */
     public long getSCount() {
         return this.stat.SCount;
@@ -136,6 +184,9 @@ public class SLogStats {
     /**
      * The number of times that a thread of control was forced to wait
      * before obtaining the log region mutex.
+     *
+     * @return the number of times that a thread of control was forced to wait
+     * before obtaining the log region mutex
      */
     public long getRegionWait() {
         return this.stat.regionWait;
@@ -144,6 +195,9 @@ public class SLogStats {
     /**
      * The number of times that a thread of control was able to obtain
      * the log region mutex without waiting.
+     *
+     * @return the number of times that a thread of control was able to obtain
+     * the log region mutex without waiting
      */
     public long getRegionNowait() {
         return this.stat.regionNowait;
@@ -151,6 +205,8 @@ public class SLogStats {
 
     /**
      * The current log file number.
+     *
+     * @return the current log file number
      */
     public int getCurFile() {
         return this.stat.curFile;
@@ -158,6 +214,8 @@ public class SLogStats {
 
     /**
      * The byte offset in the current log file.
+     *
+     * @return the byte offset in the current log file
      */
     public int getCurOffset() {
         return this.stat.curOffset;
@@ -165,6 +223,8 @@ public class SLogStats {
 
     /**
      * The log file number of the last record known to be on disk.
+     *
+     * @return the log file number of the last record known to be on disk
      */
     public int getDiskFile() {
         return this.stat.diskFile;
@@ -172,6 +232,8 @@ public class SLogStats {
 
     /**
      * The byte offset of the last record known to be on disk.
+     *
+     * @return the byte offset of the last record known to be on disk
      */
     public int getDiskOffset() {
         return this.stat.diskOffset;
@@ -179,6 +241,8 @@ public class SLogStats {
 
     /**
      * The maximum number of commits contained in a single log flush.
+     *
+     * @return the maximum number of commits contained in a single log flush
      */
     public int getMaxCommitperflush() {
         return this.stat.maxCommitperflush;
@@ -187,6 +251,9 @@ public class SLogStats {
     /**
      * The minimum number of commits contained in a single log flush that
      * contained a commit.
+     *
+     * @return the minimum number of commits contained in a single log flush
+     * that contained a commit
      */
     public int getMinCommitperflush() {
         return this.stat.minCommitperflush;
@@ -194,6 +261,8 @@ public class SLogStats {
 
     /**
      * The size of the region.
+     *
+     * @return the size of the region
      */
     public long getRegSize() {
         return this.stat.regSize;
@@ -202,6 +271,8 @@ public class SLogStats {
     /**
      * For convenience, the SLogStats class has a toString method that lists
      * all the data fields.
+     *
+     * @return a String that lists all fields
      */
     public String toString() {
         return "LogStats:"

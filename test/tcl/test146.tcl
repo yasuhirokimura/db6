@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2012, 2016 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2012, 2017 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -120,29 +120,33 @@ proc test146 { method {tnum "146"} args } {
 	# We're going to get a warning message out this -- 
 	# redirect to a file so it won't be tagged as unexpected
 	# output. 
-	set env1 [eval {berkdb env} -create -home $testdir $earg \
-	    -blob_threshold $threshold3 -msgfile $testdir/msgfile]
-	error_check_good is_valid_env [is_valid_env $env1] TRUE
-	error_check_good env_get_blobthreshold \
-	    [$env1 get_blob_threshold] $threshold2
+	# Skip this portion of the test for HP-UX, where we
+	# can't open a second handle on an env.
+	if { $is_hp_test == 0 } {
+		set env1 [eval {berkdb env} -create -home $testdir $earg \
+		    -blob_threshold $threshold3 -msgfile $testdir/msgfile]
+		error_check_good is_valid_env [is_valid_env $env1] TRUE
+		error_check_good env_get_blobthreshold \
+		    [$env1 get_blob_threshold] $threshold2
 
-	# Open the db with no blob threshold value.
-	set db2 [eval {berkdb_open_noerr} -env $env1 $oflags $testfile-2]
-	error_check_good db_open [is_valid_db $db2] TRUE
+		# Open the db with no blob threshold value.
+		set db2 [eval {berkdb_open_noerr} -env $env1 $oflags $testfile-2]
+		error_check_good db_open [is_valid_db $db2] TRUE
 
-	# Verify the db blob threshold value.
-	error_check_good db_get_blobthreshold \
-	    [$db2 get_blob_threshold] $threshold2
+		# Verify the db blob threshold value.
+		error_check_good db_get_blobthreshold \
+		    [$db2 get_blob_threshold] $threshold2
 
-	# Check for the expected message.
-	set msg "Ignoring blob_threshold size when joining environment"
-	set messagefound [eval findstring {$msg} $testdir/msgfile]
-	error_check_bad found_msg $messagefound ""
+		# Check for the expected message.
+		set msg "Ignoring blob_threshold size when joining environment"
+		set messagefound [eval findstring {$msg} $testdir/msgfile]
+		error_check_bad found_msg $messagefound ""
 
-	error_check_good db_close [$db2 close] 0
+		error_check_good db_close [$db2 close] 0
+		error_check_good env_close [$env1 close] 0
+	}
 	error_check_good db_close [$db1 close] 0
 	error_check_good db_close [$db close] 0
-	error_check_good env_close [$env1 close] 0
 	error_check_good env_close [$env close] 0
 
 	env_cleanup $testdir

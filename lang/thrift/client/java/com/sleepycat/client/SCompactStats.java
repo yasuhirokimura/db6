@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -13,60 +13,78 @@ import com.sleepycat.thrift.TCompactResult;
 /**
  * Statistics returned by a {@link SDatabase#compact} operation.
  */
-public class SCompactStats
-        extends ThriftWrapper<TCompactResult, TCompactResult._Fields> {
+public class SCompactStats {
+    /** The Thrift object. */
+    private final TCompactResult result;
 
     SCompactStats(TCompactResult result) {
-        super(result);
+        this.result = result;
     }
 
     /**
-     * The number of empty hash buckets that were found the compaction phase.
+     * The number of empty hash buckets that were found during the compaction
+     * phase.
+     *
+     * @return the number of empty hash buckets that were found during the
+     * compaction phase
      */
     public int getEmptyBuckets() {
-        return (int) getField(TCompactResult._Fields.EMPTY_BUCKETS);
+        return this.result.emptyBuckets;
     }
 
     /**
      * The number of database pages freed during the compaction phase.
+     *
+     * @return the number of database pages freed during the compaction phase
      */
     public int getPagesFree() {
-        return (int) getField(TCompactResult._Fields.PAGES_FREE);
+        return this.result.pagesFree;
     }
 
     /**
      * The number of database pages reviewed during the compaction phase.
+     *
+     * @return the number of database pages reviewed during the compaction phase
      */
     public int getPagesExamine() {
-        return (int) getField(TCompactResult._Fields.PAGES_EXAMINE);
+        return this.result.pagesExamine;
     }
 
     /**
-     * The number of levels removed from the Btree or Recno database during the
+     * The number of levels removed from the Btree database during the
      * compaction phase.
+     *
+     * @return the number of levels removed from the Btree database during the
+     * compaction phase
      */
     public int getLevels() {
-        return (int) getField(TCompactResult._Fields.LEVELS);
+        return this.result.levels;
     }
 
     /**
      * If no transaction parameter was specified to {@link SDatabase#compact},
      * the number of deadlocks which occurred.
+     *
+     * @return the number of deadlocks occurred
      */
     public int getDeadlock() {
-        return (int) getField(TCompactResult._Fields.DEADLOCK);
+        return this.result.deadlock;
     }
 
     /**
      * The number of database pages returned to the filesystem.
+     *
+     * @return the number of database pages returned to the filesystem
      */
     public int getPagesTruncated() {
-        return (int) getField(TCompactResult._Fields.PAGES_TRUNCATED);
+        return this.result.pagesTruncated;
     }
 
     /**
      * For convenience, the SCompactStats class has a toString method that
      * lists all the data fields.
+     *
+     * @return a String that lists all fields
      */
     public String toString() {
         return "CompactStats:"

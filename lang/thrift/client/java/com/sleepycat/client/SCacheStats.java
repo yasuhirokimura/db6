@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -23,6 +23,8 @@ public class SCacheStats {
 
     /**
      * Gigabytes of cache (total cache size is gbytes + bytes).
+     *
+     * @return gigabytes of cache
      */
     public int getGbytes() {
         return this.stat.gbytes;
@@ -30,6 +32,8 @@ public class SCacheStats {
 
     /**
      * Bytes of cache (total cache size is gbytes + bytes).
+     *
+     * @return bytes of cache
      */
     public int getBytes() {
         return this.stat.bytes;
@@ -37,6 +41,8 @@ public class SCacheStats {
 
     /**
      * Number of caches.
+     *
+     * @return number of caches
      */
     public int getNumCache() {
         return this.stat.numCache;
@@ -44,6 +50,8 @@ public class SCacheStats {
 
     /**
      * Maximum number of caches.
+     *
+     * @return maximum number of caches
      */
     public int getMaxNumCache() {
         return this.stat.maxNumCache;
@@ -51,6 +59,8 @@ public class SCacheStats {
 
     /**
      * Maximum file size for mmap.
+     *
+     * @return maximum file size for mmap
      */
     public long getMmapSize() {
         return this.stat.mmapSize;
@@ -58,6 +68,8 @@ public class SCacheStats {
 
     /**
      * Maximum number of open file descriptors.
+     *
+     * @return maximum number of open file descriptors
      */
     public int getMaxOpenfd() {
         return this.stat.maxOpenfd;
@@ -66,6 +78,9 @@ public class SCacheStats {
     /**
      * The maximum number of sequential write operations scheduled by the
      * library when flushing dirty pages from the cache.
+     *
+     * @return the maximum number of sequential write operations scheduled by
+     * the library when flushing dirty pages from the cache
      */
     public int getMaxWrite() {
         return this.stat.maxWrite;
@@ -74,6 +89,9 @@ public class SCacheStats {
     /**
      * The number of microseconds the thread of control should pause before
      * scheduling further write operations.
+     *
+     * @return the number of microseconds the thread of control should pause
+     * before scheduling further write operations
      */
     public int getMaxWriteSleep() {
         return this.stat.maxWriteSleep;
@@ -81,6 +99,8 @@ public class SCacheStats {
 
     /**
      * Pages in the cache.
+     *
+     * @return pages in the cache
      */
     public int getPages() {
         return this.stat.pages;
@@ -90,6 +110,8 @@ public class SCacheStats {
      * Requested pages mapped into the process' address space (there is no
      * available information about whether or not this request caused disk I/O,
      * although examining the application page fault rate may be helpful).
+     *
+     * @return requested pages mapped into the process' address space
      */
     public int getMap() {
         return this.stat.pageMapped;
@@ -97,6 +119,8 @@ public class SCacheStats {
 
     /**
      * Requested pages found in the cache.
+     *
+     * @return requested pages found in the cache
      */
     public long getCacheHit() {
         return this.stat.cacheHit;
@@ -104,6 +128,8 @@ public class SCacheStats {
 
     /**
      * Requested pages not found in the cache.
+     *
+     * @return requested pages not found in the cache
      */
     public long getCacheMiss() {
         return this.stat.cacheMiss;
@@ -111,6 +137,8 @@ public class SCacheStats {
 
     /**
      * Pages created in the cache.
+     *
+     * @return pages created in the cache
      */
     public long getPageCreate() {
         return this.stat.pageCreate;
@@ -118,6 +146,8 @@ public class SCacheStats {
 
     /**
      * Pages read into the cache.
+     *
+     * @return pages read into the cache
      */
     public long getPageIn() {
         return this.stat.pageIn;
@@ -125,6 +155,8 @@ public class SCacheStats {
 
     /**
      * Pages written from the cache to the backing file.
+     *
+     * @return pages written from the cache to the backing file
      */
     public long getPageOut() {
         return this.stat.pageOut;
@@ -132,6 +164,8 @@ public class SCacheStats {
 
     /**
      * Clean pages forced from the cache.
+     *
+     * @return clean pages forced from the cache
      */
     public long getRoEvict() {
         return this.stat.roEvict;
@@ -139,6 +173,8 @@ public class SCacheStats {
 
     /**
      * Dirty pages forced from the cache.
+     *
+     * @return dirty pages forced from the cache
      */
     public long getRwEvict() {
         return this.stat.rwEvict;
@@ -146,6 +182,8 @@ public class SCacheStats {
 
     /**
      * Dirty pages written as explicitly requested.
+     *
+     * @return dirty pages written as explicitly requested
      */
     public long getPageTrickle() {
         return this.stat.pageTrickle;
@@ -153,6 +191,8 @@ public class SCacheStats {
 
     /**
      * Clean pages currently in the cache.
+     *
+     * @return clean pages currently in the cache
      */
     public int getPageClean() {
         return this.stat.pageClean;
@@ -160,6 +200,8 @@ public class SCacheStats {
 
     /**
      * Dirty pages currently in the cache.
+     *
+     * @return dirty pages currently in the cache
      */
     public int getPageDirty() {
         return this.stat.pageDirty;
@@ -167,18 +209,26 @@ public class SCacheStats {
 
     /**
      * Number of hash buckets in the buffer hash table.
+     *
+     * @return number of hash buckets in the buffer hash table
      */
     public int getHashBuckets() {
         return this.stat.hashBuckets;
     }
 
-    /** The number of hash bucket mutexes in the buffer hash table. */
+    /**
+     * The number of hash bucket mutexes in the buffer hash table.
+     *
+     * @return the number of hash bucket mutexes in the buffer hash table
+     */
     public int getHashMutexes() {
         return this.stat.hashMutexes;
     }
 
     /**
      * Page size in bytes.
+     *
+     * @return page size in bytes
      */
     public int getPageSize() {
         return this.stat.pageSize;
@@ -186,6 +236,8 @@ public class SCacheStats {
 
     /**
      * Total number of buffer hash table lookups.
+     *
+     * @return total number of buffer hash table lookups
      */
     public int getHashSearches() {
         return this.stat.hashSearches;
@@ -193,6 +245,8 @@ public class SCacheStats {
 
     /**
      * The longest chain ever encountered in buffer hash table lookups.
+     *
+     * @return the longest chain ever encountered in buffer hash table lookups
      */
     public int getHashLongest() {
         return this.stat.hashLongest;
@@ -200,6 +254,8 @@ public class SCacheStats {
 
     /**
      * Total number of hash elements traversed during hash table lookups.
+     *
+     * @return total number of hash elements traversed during hash table lookups
      */
     public long getHashExamined() {
         return this.stat.hashExamined;
@@ -208,6 +264,9 @@ public class SCacheStats {
     /**
      * The number of times that a thread of control was able to obtain a
      * hash bucket lock without waiting.
+     *
+     * @return the number of times that a thread of control was able to obtain a
+     * hash bucket lock without waiting
      */
     public long getHashNowait() {
         return this.stat.hashNowait;
@@ -216,6 +275,9 @@ public class SCacheStats {
     /**
      * The number of times that a thread of control was forced to wait
      * before obtaining a hash bucket lock.
+     *
+     * @return the number of times that a thread of control was forced to wait
+     * before obtaining a hash bucket lock
      */
     public long getHashWait() {
         return this.stat.hashWait;
@@ -225,6 +287,10 @@ public class SCacheStats {
      * The number of times a thread of control was able to obtain the
      * hash bucket lock without waiting on the bucket which had the
      * maximum number of times that a thread of control needed to wait.
+     *
+     * @return the number of times a thread of control was able to obtain the
+     * hash bucket lock without waiting on the bucket which had the
+     * maximum number of times that a thread of control needed to wait
      */
     public long getHashMaxNowait() {
         return this.stat.hashMaxNowait;
@@ -233,6 +299,9 @@ public class SCacheStats {
     /**
      * The maximum number of times any hash bucket lock was waited for by
      * a thread of control.
+     *
+     * @return the maximum number of times any hash bucket lock was waited for
+     * by a thread of control
      */
     public long getHashMaxWait() {
         return this.stat.hashMaxWait;
@@ -241,6 +310,9 @@ public class SCacheStats {
     /**
      * The number of times that a thread of control was able to obtain a
      * cache region mutex without waiting.
+     *
+     * @return the number of times that a thread of control was able to obtain a
+     * cache region mutex without waiting
      */
     public long getRegionNowait() {
         return this.stat.regionNowait;
@@ -249,6 +321,9 @@ public class SCacheStats {
     /**
      * The number of times that a thread of control was forced to wait
      * before obtaining a cache region mutex.
+     *
+     * @return the number of times that a thread of control was forced to wait
+     * before obtaining a cache region mutex
      */
     public long getRegionWait() {
         return this.stat.regionWait;
@@ -256,6 +331,8 @@ public class SCacheStats {
 
     /**
      * Number of buffers frozen.
+     *
+     * @return number of buffers frozen
      */
     public long getMultiversionFrozen() {
         return this.stat.multiversionFrozen;
@@ -263,6 +340,8 @@ public class SCacheStats {
 
     /**
      * Number of buffers thawed.
+     *
+     * @return number of buffers thawed
      */
     public long getMultiversionThawed() {
         return this.stat.multiversionThawed;
@@ -270,6 +349,8 @@ public class SCacheStats {
 
     /**
      * Number of frozen buffers freed.
+     *
+     * @return number of frozen buffers freed
      */
     public long getMultiversionFreed() {
         return this.stat.multiversionFreed;
@@ -277,6 +358,8 @@ public class SCacheStats {
 
     /**
      * Number of outdated intermediate versions reused.
+     *
+     * @return number of outdated intermediate versions reused
      */
     public long getMultiversionReused() {
         return this.stat.multiversionReused;
@@ -284,6 +367,8 @@ public class SCacheStats {
 
     /**
      * Number of page allocations.
+     *
+     * @return number of page allocations
      */
     public long getAlloc() {
         return this.stat.alloc;
@@ -291,6 +376,8 @@ public class SCacheStats {
 
     /**
      * Number of hash buckets checked during allocation.
+     *
+     * @return number of hash buckets checked during allocation
      */
     public long getAllocBuckets() {
         return this.stat.allocBuckets;
@@ -298,6 +385,8 @@ public class SCacheStats {
 
     /**
      * Maximum number of hash buckets checked during an allocation.
+     *
+     * @return maximum number of hash buckets checked during an allocation
      */
     public long getAllocMaxBuckets() {
         return this.stat.allocMaxBuckets;
@@ -305,6 +394,8 @@ public class SCacheStats {
 
     /**
      * Number of pages checked during allocation.
+     *
+     * @return number of pages checked during allocation
      */
     public long getAllocPages() {
         return this.stat.allocPages;
@@ -312,6 +403,8 @@ public class SCacheStats {
 
     /**
      * Maximum number of pages checked during an allocation.
+     *
+     * @return maximum number of pages checked during an allocation
      */
     public long getAllocMaxPages() {
         return this.stat.allocMaxPages;
@@ -319,6 +412,8 @@ public class SCacheStats {
 
     /**
      * Number of operations blocked waiting for I/O to complete.
+     *
+     * @return number of operations blocked waiting for I/O to complete
      */
     public long getIoWait() {
         return this.stat.ioWait;
@@ -326,6 +421,8 @@ public class SCacheStats {
 
     /**
      * Number of mpool sync operations interrupted.
+     *
+     * @return number of mpool sync operations interrupted
      */
     public long getSyncInterrupted() {
         return this.stat.syncInterrupted;
@@ -333,12 +430,18 @@ public class SCacheStats {
 
     /**
      * Individual cache size.
+     *
+     * @return individual cache size
      */
     public long getRegSize() {
         return this.stat.regSize;
     }
 
-    /** The maximum size, in bytes, of the mutex region. */
+    /**
+     * The maximum size, in bytes, of the mutex region.
+     *
+     * @return the maximum size, in bytes, of the mutex region
+     */
     public long getRegmax() {
         return this.stat.regmax;
     }
@@ -346,6 +449,8 @@ public class SCacheStats {
     /**
      * For convenience, the SCacheStats class has a toString method that
      * lists all the data fields.
+     *
+     * @return a String that lists all fields
      */
     public String toString() {
         return "CacheStats:"

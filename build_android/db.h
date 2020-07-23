@@ -2,7 +2,7 @@
 /*
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  *
@@ -46,9 +46,9 @@ extern "C" {
 #define	DB_VERSION_RELEASE	1
 #define	DB_VERSION_MAJOR	6
 #define	DB_VERSION_MINOR	2
-#define	DB_VERSION_PATCH	23
-#define	DB_VERSION_STRING	"Berkeley DB 6.2.23: (March 28, 2016)"
-#define	DB_VERSION_FULL_STRING	"Berkeley DB 12c Release 1, library version 12.1.6.2.23: (March 28, 2016)"
+#define	DB_VERSION_PATCH	32
+#define	DB_VERSION_STRING	"Berkeley DB 6.2.32: (April  5, 2017)"
+#define	DB_VERSION_FULL_STRING	"Berkeley DB 12c Release 1, library version 12.1.6.2.32: (April  5, 2017)"
 
 /*
  * !!!
@@ -1723,6 +1723,7 @@ struct __db {
 	int  (*close) __P((DB *, u_int32_t));
 	int  (*compact) __P((DB *,
 		DB_TXN *, DBT *, DBT *, DB_COMPACT *, u_int32_t, DBT *));
+	int  (*convert) __P((DB *, const char *, u_int32_t));
 	int  (*cursor) __P((DB *, DB_TXN *, DBC **, u_int32_t));
 	int  (*del) __P((DB *, DB_TXN *, DBT *, u_int32_t));
 	void (*err) __P((DB *, int, const char *, ...));
@@ -2405,7 +2406,8 @@ struct __db_qam_stat { /* SHARED */
 /*******************************************************
  * Environment.
  *******************************************************/
-#define	DB_REGION_MAGIC	0x120897	/* Environment magic number. */
+#define	DB_REGION_MAGIC		0x120897 /* The environment is available. */
+#define	DB_REGION_MAGIC_RECOVER	0xeeeccc /* Recovery is running. */
 
 /*
  * Database environment structure.
@@ -3028,6 +3030,7 @@ typedef struct entry {
 #define	DB_CDB_ALLDB				0x00000040
 #define	DB_CHKSUM				0x00000008
 #define	DB_CKP_INTERNAL				0x00000002
+#define	DB_CONVERT				0x00000001
 #define	DB_CREATE				0x00000001
 #define	DB_CURSOR_BULK				0x00000001
 #define	DB_CURSOR_TRANSIENT			0x00000008
@@ -3225,7 +3228,7 @@ typedef struct entry {
 #define	DB_TXN_WAIT				0x00000080
 #define	DB_TXN_WRITE_NOSYNC			0x00000020
 #define	DB_UNREF				0x00020000
-#define	DB_UPGRADE				0x00000001
+#define	DB_UPGRADE				0x00000002
 #define	DB_USE_ENVIRON				0x00000004
 #define	DB_USE_ENVIRON_ROOT			0x00000008
 #define	DB_VERB_BACKUP				0x00000001
@@ -3247,7 +3250,7 @@ typedef struct entry {
 #define	DB_VERB_REP_TEST			0x00010000
 #define	DB_VERB_SLICE				0x00020000
 #define	DB_VERB_WAITSFOR			0x00040000
-#define	DB_VERIFY				0x00000002
+#define	DB_VERIFY				0x00000004
 #define	DB_VERIFY_PARTITION			0x00040000
 #define	DB_WRITECURSOR				0x00000010
 #define	DB_WRITELOCK				0x00000020

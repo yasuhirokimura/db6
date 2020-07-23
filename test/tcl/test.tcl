@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 
@@ -1406,7 +1406,11 @@ proc run_in_sliced_env { method test {display 0} {run 1} {largs ""} } {
 			flush stderr
 			set largs $save_largs
 			error_check_good envclose [$env close] 0
-			verify_dir $testdir "" 1 0 0
+			set nodump 0
+			if { $is_hp_test } {
+				set nodump 1
+			}
+			verify_dir $testdir "" 1 0 $nodump
 			salvage_dir $testdir 1
 			env_cleanup $testdir
 		} res]
@@ -1519,7 +1523,8 @@ proc run_replicate_test { method test {nsites 2} {largs "" } } {
 		set envcmd($i) "berkdb_env_noerr -create -log_max $logmax \
 		    $envargs -rep -home $repdir($i) -txn -thread -pagesize $pg \
 		    -log_regionmax $logregion -lock_max_objects $lockmax \
-		    -lock_max_locks $lockmax -errpfx $repdir($i) $verbargs"
+		    -lock_max_locks $lockmax -errpfx $repdir($i) $verbargs \
+		    -log_blob"
 		set env($i) [eval $envcmd($i)]
 		error_check_good env_open($i) [is_valid_env $env($i)] TRUE
 	}

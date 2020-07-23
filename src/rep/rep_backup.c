@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2004, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2004, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -149,6 +149,7 @@ __rep_update_req(env, rp)
 	 */
 	db_rep = env->rep_handle;
 	rep = db_rep->region;
+	memset(&context, 0, sizeof(FILE_LIST_CTX));
 
 	REP_SYSTEM_LOCK(env);
 	if (F_ISSET(rep, REP_F_INUPDREQ)) {
@@ -161,22 +162,26 @@ __rep_update_req(env, rp)
 	dblp = env->lg_handle;
 	logc = NULL;
 
-	/* Reserve space for the update_args, and fill in file info. */
-	if ((ret = __rep_init_file_list_context(env, rp->rep_version,
-	    F_ISSET(rp, REPCTL_INMEM_ONLY) ? FILE_CTX_INMEM_ONLY : 0,
-	    1, &context)) != 0)
-		goto err_noalloc;
-	if ((ret = __rep_find_dbs(env, &context)) != 0)
-		goto err;
-
 	/*
-	 * Now get our first LSN.  We send the lsn of the first
+	 * Get our first LSN.  We send the lsn of the first
 	 * non-archivable log file.
+	 *
+	 * We must get the first LSN before getting database file
+	 * information.  If we get the database file information first,
+	 * we risk a situation where the stable_lsn moves forward during
+	 * the time we are getting the file information.  If the
+	 * stable_lsn advances by more than a log file or two, it can
+	 * prevent the client from requesting all the needed log files for
+	 * a correct recovery after copying all the database pages.  A
+	 * symptom of this situation is that some client database files
+	 * have a contiguous set of empty pages in the middle that show up
+	 * in a db_dump as page 0's.  These empty pages eventually lead to
+	 * a log sequence error or other failures.
 	 */
 	flag = DB_SET;
 	if ((ret = __log_get_stable_lsn(env, &lsn, 0)) != 0) {
 		if (ret != DB_NOTFOUND)
-			goto err;
+			goto err_noalloc;
 		/*
 		 * If ret is DB_NOTFOUND then there is no checkpoint
 		 * in this log, that is okay, just start at the beginning.
@@ -189,7 +194,7 @@ __rep_update_req(env, rp)
 	 * Now get the version number of the log file of that LSN.
 	 */
 	if ((ret = __log_cursor(env, &logc)) != 0)
-		goto err;
+		goto err_noalloc;
 
 	memset(&vdbt, 0, sizeof(vdbt));
 	/*
@@ -203,13 +208,22 @@ __rep_update_req(env, rp)
 		 * log version.
 		 */
 		if (ret != DB_NOTFOUND)
-			goto err;
+			goto err_noalloc;
 		INIT_LSN(lsn);
 		version = DB_LOGVERSION;
 	} else {
 		if ((ret = __logc_version(logc, &version)) != 0)
-			goto err;
+			goto err_noalloc;
 	}
+
+	/* Reserve space for the update_args, and fill in file info. */
+	if ((ret = __rep_init_file_list_context(env, rp->rep_version,
+	    F_ISSET(rp, REPCTL_INMEM_ONLY) ? FILE_CTX_INMEM_ONLY : 0,
+	    1, &context)) != 0)
+		goto err_noalloc;
+	if ((ret = __rep_find_dbs(env, &context)) != 0)
+		goto err;
+
 	/*
 	 * Package up the update information.
 	 */
@@ -232,7 +246,9 @@ __rep_update_req(env, rp)
 	(void)__rep_send_message(
 	    env, DB_EID_BROADCAST, REP_UPDATE, &lsn, &updbt, 0, 0);
 
-err:	__os_free(env, context.buf);
+err:
+	if (context.buf != NULL)
+		__os_free(env, context.buf);
 err_noalloc:
 	if (logc != NULL && (t_ret = __logc_close(logc)) != 0 && ret == 0)
 		ret = t_ret;
@@ -1173,24 +1189,20 @@ __rep_get_fileinfo(env, file, subdb, rfp, uid)
 	u_int8_t *uid;
 {
 	DB *dbp;
-	DBC *dbc;
-	DBMETA *dbmeta;
 	DB_THREAD_INFO *ip;
-	PAGE *pagep;
 	int lorder, ret, t_ret;
 	u_int32_t flags;
 
 	dbp = NULL;
-	dbc = NULL;
-	pagep = NULL;
 
 	ENV_GET_THREAD_INFO(env, ip);
 
 	if ((ret = __db_create_internal(&dbp, env, 0)) != 0)
 		goto err;
 	/*
-	 * Use DB_AM_RECOVER to prevent getting locks, otherwise exclusive
-	 * database handles would block the master from handling UPDATE_REQ.
+	 * Use DB_AM_RECOVER to prevent getting handle locks during the open,
+	 * otherwise exclusive database handles would block the master from
+	 * handling UPDATE_REQ.
 	 */
 	F_SET(dbp, DB_AM_RECOVER);
 	flags = DB_RDONLY | (F_ISSET(env, ENV_THREAD) ? DB_THREAD : 0);
@@ -1202,16 +1214,8 @@ __rep_get_fileinfo(env, file, subdb, rfp, uid)
 
 	SET_LO_HI_VAR(dbp->blob_file_id, rfp->blob_fid_lo, rfp->blob_fid_hi);
 
-	if ((ret = __db_cursor(dbp, ip, NULL, &dbc, 0)) != 0)
-		goto err;
-	if ((ret = __memp_fget(dbp->mpf, &dbp->meta_pgno, ip, dbc->txn,
-	    0, &pagep)) != 0)
-		goto err;
-	/*
-	 * We have the meta page.  Set up our information.
-	 */
-	dbmeta = (DBMETA *)pagep;
 	rfp->pgno = 0;
+	
 	/*
 	 * Queue is a special-case.  We need to set max_pgno to 0 so that
 	 * the client can compute the pages from the meta-data.
@@ -1219,33 +1223,20 @@ __rep_get_fileinfo(env, file, subdb, rfp, uid)
 	if (dbp->type == DB_QUEUE)
 		rfp->max_pgno = 0;
 	else
-		rfp->max_pgno = dbmeta->last_pgno;
+		rfp->max_pgno = dbp->mpf->mfp->last_pgno;
 	rfp->pgsize = dbp->pgsize;
 	memcpy(uid, dbp->fileid, DB_FILE_ID_LEN);
 	rfp->type = (u_int32_t)dbp->type;
 	rfp->db_flags = dbp->flags;
 	rfp->finfo_flags = 0;
-	/*
-	 * Send the lorder of this database.
-	 */
+	/* Remember the byte order of this database. */
 	(void)__db_get_lorder(dbp, &lorder);
 	if (lorder == 1234)
 		FLD_SET(rfp->finfo_flags, REPINFO_DB_LITTLEENDIAN);
 	else
 		FLD_CLR(rfp->finfo_flags, REPINFO_DB_LITTLEENDIAN);
 
-	ret = __memp_fput(dbp->mpf, ip, pagep, dbc->priority);
-	pagep = NULL;
-	if (ret != 0)
-		goto err;
 err:
-	/*
-	 * Check status of pagep in case any new error paths out leave
-	 * a valid page.  All current paths out have pagep NULL.
-	 */
-	DB_ASSERT(env, pagep == NULL);
-	if (dbc != NULL && (t_ret = __dbc_close(dbc)) != 0 && ret == 0)
-		ret = t_ret;
 	if (dbp != NULL && (t_ret = __db_close(dbp, NULL, 0)) != 0 && ret == 0)
 		ret = t_ret;
 	return (ret);
@@ -3048,7 +3039,7 @@ __rep_blob_chunk(env, eid, ip, rec)
 		if ((ret = __dbc_close(dbc)) != 0)
 			goto err;
 #ifdef	CONFIG_TEST
-		STAT_INC(env, db_rep->region, ext_truncated,
+		STAT_INC(env, rep, ext_truncated,
 		    db_rep->region->stat.st_ext_truncated, eid);
 #endif
 		dbc = NULL;
@@ -3065,7 +3056,7 @@ __rep_blob_chunk(env, eid, ip, rec)
 		goto err;
 
 	if ((ret = __blob_id_to_path(
-	    env, blob_sub_dir, (db_seq_t)rbc.blob_id, &name)) != 0)
+	    env, blob_sub_dir, (db_seq_t)rbc.blob_id, &name, 1)) != 0)
 		goto err;
 
 	if ((ret = __db_appname(env, DB_APP_BLOB, name, NULL, &path)) != 0 )
@@ -3182,15 +3173,7 @@ __rep_write_page(env, ip, rep, msgfp)
 				    (const char **)&rfp->dir.data,
 				    &blob_path)) != 0)
 					goto err;
-#ifdef DB_WIN32
-				/*
-				 * Absolute paths on windows can result in
-				 * it creating a "C" or "D"
-				 * directory in the working directory.
-				 */
-				if (__os_abspath(blob_path))
-					blob_path += 2;
-#endif
+
 				if ((ret = __db_mkpath(env, blob_path)) != 0)
 					goto err;
 			}
@@ -4167,7 +4150,7 @@ __rep_blob_chunk_req(env, eid, rec)
 			(void)__rep_send_message(
 			    env, eid, REP_BLOB_CHUNK, NULL, &msg, 0, 0);
 #ifdef	CONFIG_TEST
-			STAT_INC(env, db_rep->region, ext_deleted,
+			STAT_INC(env, rep, ext_deleted,
 			    db_rep->region->stat.st_ext_deleted, eid);
 #endif
 			goto err;
@@ -4186,7 +4169,7 @@ __rep_blob_chunk_req(env, eid, rec)
 	if (rbc.data.size == 0) {
 		F_SET(&rbc, BLOB_CHUNK_FAIL);
 #ifdef	CONFIG_TEST
-		STAT_INC(env, db_rep->region, ext_truncated,
+		STAT_INC(env, rep, ext_truncated,
 		    db_rep->region->stat.st_ext_truncated, eid);
 #endif
 	}

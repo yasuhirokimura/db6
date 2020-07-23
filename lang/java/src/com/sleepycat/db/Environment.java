@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -365,10 +365,27 @@ Queue format.
                                  DatabaseConfig config)
         throws DatabaseException, java.io.FileNotFoundException {
 
-        return new Database(
+        Database newDb = null;    
+
+        newDb = new Database(
             DatabaseConfig.checkNull(config).openDatabase(dbenv,
                 (txn == null) ? null : txn.txn,
                 fileName, databaseName));
+
+	if (newDb == null)
+	    return newDb;
+
+	/* 
+	 * Initializes the slices so that dbt_usercopy is properly
+	 * set in the C library.
+	 */
+	if (Environment.slices_enabled()) {
+	    if (newDb.getConfig().getSliced()) {
+	        newDb.getSlices();
+	    }
+	}
+
+	return newDb;
     }
 
     /**

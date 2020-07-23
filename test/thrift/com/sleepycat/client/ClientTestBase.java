@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -18,6 +18,8 @@ import org.apache.thrift.server.TServer;
 import org.apache.thrift.server.TSimpleServer;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
+import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,6 +28,7 @@ import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Properties;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -36,6 +39,9 @@ import static org.junit.Assert.fail;
 
 public class ClientTestBase {
 
+    @Rule
+    public ExpectedException thrown = ExpectedException.none();
+
     protected Path testRoot;
 
     protected BdbServiceHandler handler;
@@ -44,7 +50,7 @@ public class ClientTestBase {
 
     @Before
     public void setUp() throws Exception {
-        testRoot = Files.createTempDirectory("BdbClientTest");
+        testRoot = createTestRoot();
         handler = new BdbServiceHandler();
 
         PipedInputStream serverIn = new PipedInputStream();
@@ -63,13 +69,23 @@ public class ClientTestBase {
         Executors.newScheduledThreadPool(1).schedule(() -> {
             testThread.interrupt();
             connection.close();
-        }, 1000, TimeUnit.SECONDS);
+        }, 10000, TimeUnit.SECONDS);
     }
 
     @After
     public void tearDown() throws Exception {
         handler.shutdown();
-        FileUtils.deleteFileTree(testRoot.toFile());
+        if (cleanTestRootAfterTests()) {
+            FileUtils.deleteFileTree(testRoot.toFile());
+        }
+    }
+
+    protected Path createTestRoot() throws Exception {
+        return Files.createTempDirectory("BdbClientTest");
+    }
+
+    protected boolean cleanTestRootAfterTests() {
+        return true;
     }
 
     private TServer createServer(BdbServiceHandler handler,
@@ -94,11 +110,55 @@ public class ClientTestBase {
     }
 
     protected void assertClosed(AutoCloseable handle) throws Exception {
-        try {
-            handle.close();
-            fail();
-        } catch (RuntimeException e) {
-            assertThat(e.getMessage(), is("The handle is closed or expired."));
-        }
+        thrown.expect(IllegalArgumentException.class);
+        thrown.expectMessage("The handle is closed or expired.");
+        handle.close();
     }
+
+    protected SDatabaseEntry entry(String value) {
+        return new SDatabaseEntry(value.getBytes());
+    }
+
+    protected void assertCursorGet(CursorGetFunc func,
+            SDatabaseEntry key, SDatabaseEntry data,
+            String expectedKey, String expectedData) throws Exception {
+        assertThat(func.apply(key, data, null), is(SOperationStatus.SUCCESS));
+        assertThat(new String(key.getData()), is(expectedKey));
+        assertThat(new String(data.getData()), is(expectedData));
+    }
+
+    @FunctionalInterface
+    protected interface CursorGetFunc {
+        SOperationStatus apply(SDatabaseEntry key, SDatabaseEntry data,
+                SLockMode mode);
+    }
+
+    protected void assertDbData(SDatabase db, String[][] expectedData) {
+        Arrays.stream(expectedData).forEach(keyData -> {
+            try {
+                assertDbGet(db::getSearchBoth,
+                        entry(keyData[0]), entry(keyData[1]),
+                        keyData[0], keyData[1]);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    protected void assertDbGet(DbGetFunc func,
+            SDatabaseEntry key, SDatabaseEntry data,
+            String expectedKey, String expectedData) throws Exception {
+        assertThat(func.apply(null, key, data, null),
+                is(SOperationStatus.SUCCESS));
+        assertThat(new String(key.getData()), is(expectedKey));
+        assertThat(new String(data.getData()), is(expectedData));
+    }
+
+    @FunctionalInterface
+    protected interface DbGetFunc {
+        SOperationStatus apply(STransaction txn, SDatabaseEntry key,
+                SDatabaseEntry data, SLockMode mode);
+    }
+
+
 }

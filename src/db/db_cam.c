@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2000, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2000, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -540,7 +540,7 @@ __dbc_db_stream(dbc, dbsp, flags)
 	u_int32_t oflags;
 
 	env = dbc->env;
-	oflags = flags;
+	oflags = 0;
 
 	if ((ret = __db_fchk(
 	    env, "DBC->db_stream", flags,
@@ -549,7 +549,7 @@ __dbc_db_stream(dbc, dbsp, flags)
 
 	if (DB_IS_READONLY(dbc->dbp)) {
 		LF_SET(DB_STREAM_READ);
-		oflags |= DB_STREAM_READ;
+		oflags |= DB_FOP_READONLY;
 	}
 	if (LF_ISSET(DB_STREAM_READ) && LF_ISSET(DB_STREAM_WRITE)) {
 		ret = USR_ERR(env, EINVAL);
@@ -558,14 +558,14 @@ __dbc_db_stream(dbc, dbsp, flags)
 		goto err;
 	}
 
-	if (oflags & DB_STREAM_READ)
-		LF_SET(DB_FOP_READONLY);
+	if (flags & DB_STREAM_READ)
+		oflags |= DB_FOP_READONLY;
 	else
-		LF_SET(DB_FOP_WRITE);
-	if (oflags & DB_STREAM_SYNC_WRITE)
-		LF_SET(DB_FOP_SYNC_WRITE);
+		oflags |= DB_FOP_WRITE;
+	if (flags & DB_STREAM_SYNC_WRITE)
+		oflags |= DB_FOP_SYNC_WRITE;
 
-	ret = __db_stream_init(dbc, dbsp, flags);
+	ret = __db_stream_init(dbc, dbsp, oflags);
 
 err:	return (ret);
 }

@@ -485,6 +485,7 @@ Db.set_encrypt
 	DB_ENCRYPT_AES			# AES, assumes SHA1 checksum
 
 Db.set_feedback
+	DB_CONVERT			# Converting
 	DB_UPGRADE			# Upgrading
 	DB_VERIFY			# Verifying
 

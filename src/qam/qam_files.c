@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1999, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1999, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -957,10 +957,9 @@ __qam_backup_extents(dbp, ip, target, flags)
 	u_int32_t flags;
 {
 	DB_FH *filep;
-	QUEUE *qp;
 	QUEUE_FILELIST *fp, *filelist;
 	int ret, t_ret;
-	char buf[DB_MAXPATHLEN];
+	const char *file_name;
 	void *handle;
 
 	if ((ret = __qam_gen_filelist(dbp, ip, &filelist)) != 0)
@@ -969,16 +968,21 @@ __qam_backup_extents(dbp, ip, target, flags)
 	if (filelist == NULL)
 		return (0);
 
-	qp = dbp->q_internal;
-
 	for (fp = filelist; fp->mpf != NULL; fp++) {
-		QAM_EXNAME(qp, fp->id, buf, sizeof(buf));
+		file_name = fp->mpf->fhp->name;
+		if (strstr(file_name, dbp->env->db_home) == file_name) {
+			/*
+			 * Skip the leading environment home directory and the
+			 * path separator.
+			 */
+			file_name = file_name + strlen(dbp->env->db_home) + 1;
+		}
 		if ((ret = __memp_backup_open(dbp->dbenv->env,
-		    fp->mpf, buf, target, flags, &filep, &handle)) == 0)
+		    fp->mpf, file_name, target, flags, &filep, &handle)) == 0)
 			ret = __memp_backup_mpf(dbp->dbenv->env, fp->mpf, ip,
 			    0, fp->mpf->mfp->last_pgno, filep, handle, flags);
 		if ((t_ret = __memp_backup_close(dbp->dbenv->env,
-		    fp->mpf, buf, filep, handle)) != 0 && ret == 0)
+		    fp->mpf, file_name, filep, handle)) != 0 && ret == 0)
 			ret = t_ret;
 		if (ret != 0)
 			break;

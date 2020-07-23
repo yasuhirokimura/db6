@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -845,7 +845,7 @@ upgrade:	lp = R_ADDR(&lt->reginfo, lock->off);
 			goto done;
 		if (lp->status != DB_LSTAT_WAITING) {
 			/* We have already been granted. */
-			MUTEX_LOCK(env, lp->mtx_lock);
+			MUTEX_LOCK_NO_CTR(env, lp->mtx_lock);
 			newl = lp;
 			if (lp->status == DB_LSTAT_EXPIRED)
 				goto expired;
@@ -992,9 +992,12 @@ in_abort:	newl->status = DB_LSTAT_WAITING;
 		 * use the normal MUTEX_LOCK() macro, which would immediately
 		 * return a panic error code. Instead, return the panic after
 		 * restoring the thread state.
+		 * Do not include this mutex in the mutex counter, failchk
+		 * will release this mutex when it releases the associated
+		 * lock.
 		 */
 		PERFMON2(env, lock, suspend, (DBT *) obj, lock_mode);
-		ret = __mutex_lock(env, newl->mtx_lock);
+		ret = __mutex_lock(env, newl->mtx_lock, 0, MUTEX_WAIT);
 		PERFMON2(env, lock, resume, (DBT *) obj, lock_mode);
 
 		if (ip != NULL)
@@ -1425,7 +1428,7 @@ __lock_freelock(lt, lockp, sh_locker, flags)
 		     lockp->status != DB_LSTAT_EXPIRED) {
 			if ((ret = __mutex_refresh(env, lockp->mtx_lock)) != 0)
 				return (ret);
-			MUTEX_LOCK(env, lockp->mtx_lock);
+			MUTEX_LOCK_NO_CTR(env, lockp->mtx_lock);
 		}
 
 		lockp->status = DB_LSTAT_FREE;
@@ -1850,8 +1853,8 @@ __lock_promote(lt, obj, state_changedp, flags)
 		lp_w->status = DB_LSTAT_PENDING;
 		SH_TAILQ_INSERT_TAIL(&obj->holders, lp_w, links);
 
-		/* Wake up waiter. */
-		MUTEX_UNLOCK(lt->env, lp_w->mtx_lock);
+		/* Wake up waiter. This mutex is not counted.*/
+		MUTEX_UNLOCK_NO_CTR(lt->env, lp_w->mtx_lock);
 		state_changed = 1;
 		if (LF_ISSET(DB_LOCK_ONEWAITER))
 			break;
@@ -1918,7 +1921,7 @@ __lock_remove_waiter(lt, sh_obj, lockp, status)
 	 * Wake whoever is waiting on this lock.
 	 */
 	if (do_wakeup)
-		MUTEX_UNLOCK(lt->env, lockp->mtx_lock);
+		MUTEX_UNLOCK_NO_CTR(lt->env, lockp->mtx_lock);
 
 	return (0);
 }

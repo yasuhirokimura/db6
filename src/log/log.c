@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -917,7 +917,7 @@ __log_env_refresh(env)
 	 * closing the env down during a panic. By using MUTEX_LOCK_RET(), we
 	 * continue with the rest of the cleanup.
 	 */
-	if (MUTEX_LOCK_RET(env, lp->mtx_filelist) == 0) {
+	if ((ret = MUTEX_LOCK_RET(env, lp->mtx_filelist)) == 0) {
 		SH_TAILQ_FOREACH(fnp, &lp->fq, q, __fname)
 			if (F_ISSET(fnp, DB_FNAME_NOTLOGGED) &&
 			    (t_ret = __dbreg_close_id_int(
@@ -933,8 +933,7 @@ __log_env_refresh(env)
 	if (F_ISSET(env, ENV_PRIVATE)) {
 	    reginfo->mtx_alloc = MUTEX_INVALID;
 	    /* Discard the flush mutex. */
-	    if ((t_ret =
-		__mutex_free(env, &lp->mtx_flush)) != 0 && ret == 0)
+	    if ((t_ret = __mutex_free(env, &lp->mtx_flush)) != 0 && ret == 0)
 		    ret = t_ret;
 
 	    /* Discard the log buffer. */
@@ -1705,8 +1704,12 @@ __log_get_oldversion(env, ver)
 		goto err;
 	}
 	firstfnum = lsn.file;
-	if ((ret = __logc_get(logc, &lsn, &rec, DB_LAST)) != 0)
-		goto err;
+	/*
+ 	 * Get the last on-disk lsn.
+ 	 */
+ 	LOG_SYSTEM_LOCK(env);
+ 	lsn = lp->s_lsn;
+ 	LOG_SYSTEM_UNLOCK(env);
 	if ((ret = __log_valid(dblp, firstfnum, 0, NULL, 0,
 	    NULL, &oldver)) != 0)
 		goto err;

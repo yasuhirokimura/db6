@@ -81,8 +81,8 @@ CLASS_PATH=$CLASS_PATH:$BUILD_DIR/log4j.jar
 
 # build_jar $src_dir $src_package $jar_name $additional_classpath
 # $src_dir - the root directory of the source code
-# $src_package - the package name of the component
 # $jar_name - the file name of the output jar
+# $manifest - the manifest file
 # $additional_classpath - additional jars added to the classpath
 build_jar()
 {
@@ -92,8 +92,12 @@ build_jar()
 		mkdir $CLASS_DIR
 	fi
 
-	javac -cp $CLASS_PATH:$4 -d $CLASS_DIR -sourcepath $SRC_DIR $SRC_DIR/com/sleepycat/$2/*.java
-	jar cf $BUILD_DIR/$3.jar -C $CLASS_DIR .
+	javac -cp $CLASS_PATH:$4 -d $CLASS_DIR -sourcepath $SRC_DIR `find $SRC_DIR -type f -name *.java`
+	if [ "x$3" == "x" ]; then
+		jar cf $BUILD_DIR/$2.jar -C $CLASS_DIR .
+	else
+		jar cfm $BUILD_DIR/$2.jar $3 -C $CLASS_DIR .
+	fi
 	rm -rf $CLASS_DIR
 }
 
@@ -112,11 +116,11 @@ fi
 
 copy_3rd_jars
 
-build_jar $THRIFT_DIR/generated/java thrift db_thrift_interface
+build_jar $THRIFT_DIR/generated/java db_thrift_interface
 
-build_jar $THRIFT_DIR/server server db_thrift_server $BUILD_DIR/db_thrift_interface.jar
+build_jar $THRIFT_DIR/server db_thrift_server "" $BUILD_DIR/db_thrift_interface.jar
 
-build_jar $THRIFT_DIR/client/java client db_thrift_client $BUILD_DIR/db_thrift_interface.jar
+build_jar $THRIFT_DIR/client/java db_thrift_client $THRIFT_DIR/client/java/jarManifestEntries $BUILD_DIR/db_thrift_interface.jar
 
 
 

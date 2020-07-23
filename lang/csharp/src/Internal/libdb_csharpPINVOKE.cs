@@ -162,6 +162,9 @@ class libdb_csharpPINVOKE {
   [global::System.Runtime.InteropServices.DllImport(libname, EntryPoint="CSharp_DB_compact")]
   public static extern int DB_compact(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, global::System.Runtime.InteropServices.HandleRef jarg3, global::System.Runtime.InteropServices.HandleRef jarg4, global::System.Runtime.InteropServices.HandleRef jarg5, uint jarg6, global::System.Runtime.InteropServices.HandleRef jarg7);
 
+  [global::System.Runtime.InteropServices.DllImport(libname, EntryPoint="CSharp_DB_convert")]
+  public static extern int DB_convert(global::System.Runtime.InteropServices.HandleRef jarg1, string jarg2, int jarg3);
+
   [global::System.Runtime.InteropServices.DllImport(libname, EntryPoint="CSharp_DB_cursor")]
   public static extern global::System.IntPtr DB_cursor(global::System.Runtime.InteropServices.HandleRef jarg1, global::System.Runtime.InteropServices.HandleRef jarg2, uint jarg3, ref int jarg4);
 

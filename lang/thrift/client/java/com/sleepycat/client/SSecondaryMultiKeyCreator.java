@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -24,7 +24,7 @@ import java.util.Set;
  *      public void createSecondaryKeys(SSecondaryDatabase secondary,
  *              SDatabaseEntry key,
  *              SDatabaseEntry data,
- *              Set<SDatabaseEntry> results) throws SDatabaseException {
+ *              Set&lt;SDatabaseEntry&gt; results) throws SDatabaseException {
  *          //
  *          // DO HERE: Extract the secondary keys from the primary key and
  *          // data.  For each key extracted, create a SDatabaseEntry and add
@@ -44,6 +44,7 @@ import java.util.Set;
  * SSecondaryKeyCreator interface instead. The table below summarizes how to
  * create all four variations of relationships.
  * <table border="yes">
+ * <caption>Key creator for different relationships</caption>
  * <tr><th>Relationship</th>
  * <th>Interface</th>
  * <th>Duplicates</th>

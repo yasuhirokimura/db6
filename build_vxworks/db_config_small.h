@@ -267,6 +267,9 @@
 /* Define to 1 to use the GCC compiler and ARM assembly language mutexes. */
 /* #undef HAVE_MUTEX_ARM_GCC_ASSEMBLY */
 
+/* Define to 1 to use the BSD/Apple/Darwin OSSpinLockTry mutexes. */
+/* #undef HAVE_MUTEX_BSD_OSSPINLOCKTRY */
+
 /* Define to 1 to use the Apple/Darwin _spin_lock_try mutexes. */
 /* #undef HAVE_MUTEX_DARWIN_SPIN_LOCK_TRY */
 
@@ -611,16 +614,16 @@
 #define PACKAGE_NAME "Berkeley DB"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "Berkeley DB 6.2.23"
+#define PACKAGE_STRING "Berkeley DB 6.2.32"
 
 /* Define to the one symbol short name of this package. */
-#define PACKAGE_TARNAME "db-6.2.23"
+#define PACKAGE_TARNAME "db-6.2.32"
 
 /* Define to the home page for this package. */
 #define PACKAGE_URL "http://www.oracle.com/technology/software/products/berkeley-db/index.html"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "6.2.23"
+#define PACKAGE_VERSION "6.2.32"
 
 /* The size of a `char', as computed by sizeof. */
 /* #undef SIZEOF_CHAR */

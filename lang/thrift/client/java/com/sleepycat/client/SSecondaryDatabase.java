@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -17,6 +17,8 @@ import com.sleepycat.thrift.TDbGetMode;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+
+import static com.sleepycat.client.SForeignKeyDeleteAction.NULLIFY;
 
 /**
  * A secondary database handle.
@@ -78,11 +80,24 @@ public class SSecondaryDatabase extends SDatabase {
         this.primary = primary;
         this.config = config;
         primary.associate(this);
+        if (config.getForeignKeyDatabase() != null &&
+                config.getForeignKeyDeleteAction() == NULLIFY) {
+            SForeignMultiKeyNullifier nullifier =
+                    config.getForeignMultiKeyNullifier();
+            if (nullifier == null) {
+                nullifier = config.getForeignKeyNullifier();
+            }
+            config.getForeignKeyDatabase().associateForeign(this, nullifier);
+        }
     }
 
     @Override
     public void close() throws SDatabaseException {
         primary.disassociate(this);
+        if (config.getForeignKeyDatabase() != null &&
+                config.getForeignKeyDeleteAction() == NULLIFY) {
+            config.getForeignKeyDatabase().disassociateForeign(this);
+        }
         super.close();
     }
 
@@ -93,6 +108,18 @@ public class SSecondaryDatabase extends SDatabase {
      */
     public SDatabase getPrimaryDatabase() {
         return this.primary;
+    }
+
+    /**
+     * Returns a copy of the secondary configuration of this database.
+     *
+     * @return a copy of the secondary configuration of this database.
+     * @throws SDatabaseException if a failure occurs.
+     */
+    public SSecondaryConfig getSecondaryConfig()
+            throws SDatabaseException {
+        return remoteCall(() -> new SSecondaryConfig(this.config,
+                this.client.getDatabaseConfig(this.tDb)));
     }
 
     /**
@@ -216,7 +243,7 @@ public class SSecondaryDatabase extends SDatabase {
             TCursor cursor = this.client.openCursor(this.tDb,
                     STransaction.nullSafeGet(txn),
                     SCursorConfig.nullSafeGet(config));
-            return new SSecondaryCursor(cursor, this, this.client);
+            return new SSecondaryCursor(cursor, this, txn, this.client);
         });
     }
 

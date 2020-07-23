@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1997, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1997, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -220,6 +220,12 @@ __log_archive(env, listp, flags)
 				goto err;
 		}
 
+/*
+ * On Windows Mobile, pref is always NULL and every path name is treated
+ * as an absolute path, so we should skip __db_rpath and use the name
+ * directly.
+ */
+#ifndef DB_WINCE
 		if (pref != NULL) {
 			if ((ret =
 			    __absname(env, pref, name, &array[n])) != 0)
@@ -230,6 +236,7 @@ __log_archive(env, listp, flags)
 				goto err;
 			__os_free(env, name);
 		} else
+#endif
 			array[n] = name;
 
 		name = NULL;

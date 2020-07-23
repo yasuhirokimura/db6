@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -24,6 +24,38 @@ import com.sleepycat.thrift.TIsolationLevel;
  */
 public class SCursorConfig
         extends ThriftWrapper<TCursorConfig, TCursorConfig._Fields> {
+    /**
+     * Default configuration used if null is passed to methods that create a
+     * cursor.
+     */
+    public static final SCursorConfig DEFAULT = new SCursorConfig();
+
+    /**
+     * A convenience instance to configure a cursor for read committed
+     * isolation.
+     * <p>
+     * This ensures the stability of the current data item read by the
+     * cursor but permits data read by this cursor to be modified or
+     * deleted prior to the commit of the transaction.
+     */
+    public static final SCursorConfig READ_COMMITTED =
+            new SCursorConfig().setReadCommitted(true);
+
+    /**
+     * A convenience instance to configure read operations performed by the
+     * cursor to return modified but not yet committed data.
+     */
+    public static final SCursorConfig READ_UNCOMMITTED =
+            new SCursorConfig().setReadUncommitted(true);
+
+    /**
+     * A convenience instance to configure read operations performed by the
+     * cursor to return values as they were when the cursor was opened, if
+     * {@link SDatabaseConfig#setMultiversion} is configured.
+     */
+    public static final SCursorConfig SNAPSHOT =
+            new SCursorConfig().setSnapshot(true);
+
     /**
      * Create an empty SCursorConfig with no attribute set.
      */
@@ -70,8 +102,7 @@ public class SCursorConfig
      * @return if the cursor is configured for read committed isolation
      */
     public boolean getReadCommitted() {
-        return getField(TCursorConfig._Fields.ISO_LEVEL) ==
-                TIsolationLevel.READ_COMMITTED;
+        return isIsolationLevelEqual(TIsolationLevel.READ_COMMITTED);
     }
 
     /**
@@ -98,8 +129,7 @@ public class SCursorConfig
      * return modified but not yet committed data
      */
     public boolean getReadUncommitted() {
-        return getField(TCursorConfig._Fields.ISO_LEVEL) ==
-                TIsolationLevel.READ_UNCOMMITTED;
+        return isIsolationLevelEqual(TIsolationLevel.READ_UNCOMMITTED);
     }
 
     /**
@@ -123,8 +153,7 @@ public class SCursorConfig
      * return data as it was when the cursor was opened, without locking
      */
     public boolean getSnapshot() {
-        return getField(TCursorConfig._Fields.ISO_LEVEL) ==
-                TIsolationLevel.SNAPSHOT;
+        return isIsolationLevelEqual(TIsolationLevel.SNAPSHOT);
     }
 
     /**
@@ -143,7 +172,8 @@ public class SCursorConfig
     }
 
     private boolean isIsolationLevelEqual(TIsolationLevel level) {
-        return level.equals(getField(TCursorConfig._Fields.ISO_LEVEL));
+        return getThriftObj().isSetIsoLevel() &&
+                level.equals(getField(TCursorConfig._Fields.ISO_LEVEL));
     }
 
     private void setIsolationLevel(TIsolationLevel level, boolean set) {

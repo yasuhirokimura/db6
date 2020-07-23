@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2000, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2000, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -555,6 +555,64 @@ public class DbCompat {
             };
             config.setErrorHandler(handler);
             env.setConfig(config);
+        }
+    }
+
+    public static class OpResult {
+
+        public static final OpResult SUCCESS =
+            new OpResult(OperationStatus.SUCCESS);
+
+        public static final OpResult FAILURE =
+            new OpResult(OperationStatus.NOTFOUND);
+
+        private OperationStatus status;
+
+        private OpResult(OperationStatus result) {
+            status = result;
+        }
+
+        public boolean isSuccess() {
+            return (this == SUCCESS);
+        }
+
+        public OperationStatus status() {
+            return status;
+        }
+
+        public static OpResult make(OperationStatus status) {
+            return (status == OperationStatus.SUCCESS) ?
+                SUCCESS : FAILURE;
+        }
+    }
+
+    public static class OpReadOptions {
+
+        public static final OpReadOptions EMPTY =
+            new OpReadOptions(null);
+
+        private LockMode lockMode;
+
+        private OpReadOptions(LockMode options) {
+            lockMode = options;
+        }
+
+        public LockMode getLockMode() {
+            return lockMode;
+        }
+
+        public static OpReadOptions make(LockMode lockMode) {
+            return (lockMode != null) ?
+                new OpReadOptions(lockMode) : EMPTY;
+        }
+    }
+
+    public static class OpWriteOptions {
+
+        public static final OpWriteOptions EMPTY =
+            new OpWriteOptions();
+
+        private OpWriteOptions() {
         }
     }
 

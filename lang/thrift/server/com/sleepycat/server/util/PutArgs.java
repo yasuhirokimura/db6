@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -30,12 +30,13 @@ public class PutArgs extends InputArgs {
      * Construct the arguments for a Database put call.
      *
      * @param pairs the primary key/data pairs along with their secondary keys
+     * @param isRecordKey if keys are record numbers
      * @param config the configuration
      */
-    public PutArgs(List<TKeyDataWithSecondaryKeys> pairs, TDbPutConfig config)
-            throws DatabaseException {
+    public PutArgs(List<TKeyDataWithSecondaryKeys> pairs, boolean isRecordKey,
+            TDbPutConfig config) throws DatabaseException {
         if (pairs.size() > 1 || config == TDbPutConfig.OVERWRITE_DUP) {
-            constructMultipleKey(pairs);
+            constructMultipleKey(pairs, isRecordKey);
         } else {
             constructSingle(pairs.get(0));
         }
@@ -59,9 +60,9 @@ public class PutArgs extends InputArgs {
         this.data = Adapters.toBdbType(pair.pdata);
     }
 
-    private void constructMultipleKey(List<TKeyDataWithSecondaryKeys> pairs)
-            throws DatabaseException {
-        this.key = convert(extract(pairs));
+    private void constructMultipleKey(List<TKeyDataWithSecondaryKeys> pairs,
+            boolean isRecordKey) throws DatabaseException {
+        this.key = convert(extract(pairs), isRecordKey);
         this.data = null;
     }
 

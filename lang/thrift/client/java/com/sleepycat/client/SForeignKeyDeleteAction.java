@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -33,7 +33,15 @@ public enum SForeignKeyDeleteAction {
      * When a referenced record in the foreign key database is deleted, delete
      * the primary database record that references it.
      */
-    CASCADE;
+    CASCADE,
+    /**
+     * When a referenced record in the foreign key database is deleted, set the
+     * reference to null in the primary database record that references it,
+     * thereby deleting the secondary key.
+     * @see SForeignKeyNullifier
+     * @see SForeignMultiKeyNullifier
+     */
+    NULLIFY;
 
     static TFKDeleteAction toThrift(SForeignKeyDeleteAction action) {
         return TFKDeleteAction.valueOf(action.name());

@@ -31,6 +31,7 @@ public interface DbConstants
     int DB_CHKSUM = 0x00000008;
     int DB_CONSUME = 4;
     int DB_CONSUME_WAIT = 5;
+    int DB_CONVERT = 0x00000001;
     int DB_CREATE = 0x00000001;
     int DB_CURRENT = 6;
     int DB_CURSOR_BULK = 0x00000001;
@@ -249,7 +250,7 @@ public interface DbConstants
     int DB_TXN_WAIT = 0x00000080;
     int DB_TXN_WRITE_NOSYNC = 0x00000020;
     int DB_UNKNOWN = 5;
-    int DB_UPGRADE = 0x00000001;
+    int DB_UPGRADE = 0x00000002;
     int DB_USE_ENVIRON = 0x00000004;
     int DB_USE_ENVIRON_ROOT = 0x00000008;
     int DB_VERB_BACKUP = 0x00000001;
@@ -270,10 +271,10 @@ public interface DbConstants
     int DB_VERB_REP_TEST = 0x00010000;
     int DB_VERB_SLICE = 0x00020000;
     int DB_VERB_WAITSFOR = 0x00040000;
-    int DB_VERIFY = 0x00000002;
+    int DB_VERIFY = 0x00000004;
     int DB_VERSION_MAJOR = 6;
     int DB_VERSION_MINOR = 2;
-    int DB_VERSION_PATCH = 23;
+    int DB_VERSION_PATCH = 32;
     int DB_WRITECURSOR = 0x00000010;
     int DB_YIELDCPU = 0x00080000;
 }

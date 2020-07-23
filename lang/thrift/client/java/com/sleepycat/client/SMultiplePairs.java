@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -26,12 +26,12 @@ import java.util.stream.Collectors;
  * SMultipleRecnoDataEntry}</li>
  * </ul>
  */
-public abstract class SMultiplePairs {
+public abstract class SMultiplePairs implements SDatabaseEntryBase {
     /** The batch size in bytes. */
     private int batchSize;
 
     /** The list of data entries. */
-    private List<Pair> entries;
+    private final List<Pair> entries;
 
     /** The iterator indicating the next returned item. */
     private Iterator<Pair> iterator;
@@ -58,6 +58,7 @@ public abstract class SMultiplePairs {
 
     /**
      * Return the amount of data to be returned in a single get() call.
+     *
      * @return the amount of data to be returned in a single get() call.
      */
     public int getBatchSize() {
@@ -106,8 +107,8 @@ public abstract class SMultiplePairs {
     }
 
     private static class Pair {
-        SDatabaseEntry key;
-        SDatabaseEntry data;
+        final SDatabaseEntry key;
+        final SDatabaseEntry data;
 
         Pair(SDatabaseEntry key, SDatabaseEntry data) {
             this.key = key;

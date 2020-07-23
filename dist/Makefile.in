@@ -851,7 +851,7 @@ TEST_MICRO_OBJS=\
 
 UTIL_PROGS=\
 	@ADDITIONAL_PROGS@ \
-	db_archive db_checkpoint db_deadlock db_dump \
+	db_archive db_checkpoint db_convert db_deadlock db_dump \
 	db_hotbackup db_load db_log_verify db_printlog db_recover \
 	db_replicate db_stat db_tuner db_upgrade db_verify
 
@@ -1063,53 +1063,63 @@ $(libj_demojarfile): $(libj_jarfile) $(JAVA_DEMOSRCS)
 ##################################################
 # Utilities
 ##################################################
-db_archive: db_archive@o@ util_sig@o@ $(DEF_LIB)
+COMMON_UTIL_OBJS=\
+	  util_arg@o@ util_cache@o@ util_env@o@ util_log@o@ util_sig@o@ \
+	  util_ver_check@o@
+
+db_archive: db_archive@o@ $(COMMON_UTIL_OBJS) $(DEF_LIB)
 	$(CCLINK) -o $@ $(LDFLAGS) \
-	    db_archive@o@ util_sig@o@ $(DEF_LIB) $(LIBS)
+	    db_archive@o@ $(COMMON_UTIL_OBJS) $(DEF_LIB) $(LIBS)
 	$(POSTLINK) $@
 
-db_checkpoint: db_checkpoint@o@ util_log@o@ util_sig@o@ $(DEF_LIB)
+db_checkpoint: db_checkpoint@o@ $(COMMON_UTIL_OBJS) $(DEF_LIB)
 	$(CCLINK) -o $@ $(LDFLAGS) \
-	    db_checkpoint@o@ util_log@o@ util_sig@o@ $(DEF_LIB) $(LIBS)
+	    db_checkpoint@o@ $(COMMON_UTIL_OBJS) $(DEF_LIB) $(LIBS)
 	$(POSTLINK) $@
 
-db_deadlock: db_deadlock@o@ util_log@o@ util_sig@o@ $(DEF_LIB)
+db_convert: db_convert@o@ $(COMMON_UTIL_OBJS) $(DEF_LIB)
 	$(CCLINK) -o $@ $(LDFLAGS) \
-	    db_deadlock@o@ util_log@o@ util_sig@o@ $(DEF_LIB) $(LIBS)
+	    db_convert@o@ $(COMMON_UTIL_OBJS) $(DEF_LIB) $(LIBS)
 	$(POSTLINK) $@
 
-db_dump: db_dump@o@ util_cache@o@ util_sig@o@ $(DEF_LIB)
+db_deadlock: db_deadlock@o@ $(COMMON_UTIL_OBJS) $(DEF_LIB)
 	$(CCLINK) -o $@ $(LDFLAGS) \
-	    db_dump@o@ util_cache@o@ util_sig@o@ $(DEF_LIB) $(LIBS)
+	    db_deadlock@o@ $(COMMON_UTIL_OBJS) $(DEF_LIB) $(LIBS)
+	$(POSTLINK) $@
+
+db_dump: db_dump@o@ $(COMMON_UTIL_OBJS) $(DEF_LIB)
+	$(CCLINK) -o $@ $(LDFLAGS) \
+	    db_dump@o@ $(COMMON_UTIL_OBJS) $(DEF_LIB) $(LIBS)
 	$(POSTLINK) $@
 
 db_dump185: db_dump185@o@ @REPLACEMENT_OBJS@
 	$(CCLINK) -o $@ $(LDFLAGS) db_dump185@o@ @REPLACEMENT_OBJS@ $(DB185LIB)
 	$(POSTLINK) $@
 
-db_hotbackup: db_hotbackup@o@ util_sig@o@ $(DEF_LIB)
+db_hotbackup: db_hotbackup@o@ $(COMMON_UTIL_OBJS) $(DEF_LIB)
 	$(CCLINK) -o $@ $(LDFLAGS) \
-	    db_hotbackup@o@ util_sig@o@ $(DEF_LIB) $(LIBS)
+	    db_hotbackup@o@ $(COMMON_UTIL_OBJS) $(DEF_LIB) $(LIBS)
 	$(POSTLINK) $@
 
-db_load: db_load@o@ util_cache@o@ util_sig@o@ $(DEF_LIB)
+db_load: db_load@o@ $(COMMON_UTIL_OBJS) $(DEF_LIB)
 	$(CCLINK) -o $@ $(LDFLAGS) \
-	    db_load@o@ util_cache@o@ util_sig@o@ $(DEF_LIB) $(LIBS)
+	    db_load@o@ $(COMMON_UTIL_OBJS) $(DEF_LIB) $(LIBS)
 	$(POSTLINK) $@
 
-db_printlog: db_printlog@o@ @PRINTLOG_OBJS@ util_sig@o@ $(DEF_LIB)
+db_printlog: db_printlog@o@ @PRINTLOG_OBJS@ $(COMMON_UTIL_OBJS) $(DEF_LIB)
 	$(CCLINK) -o $@ $(LDFLAGS) \
-	    db_printlog@o@ @PRINTLOG_OBJS@ util_sig@o@ $(DEF_LIB) $(LIBS)
+	    db_printlog@o@ @PRINTLOG_OBJS@ $(COMMON_UTIL_OBJS) $(DEF_LIB) \
+	    $(LIBS)
 	$(POSTLINK) $@
 
-db_recover: db_recover@o@ util_sig@o@ $(DEF_LIB)
+db_recover: db_recover@o@ $(COMMON_UTIL_OBJS) $(DEF_LIB)
 	$(CCLINK) -o $@ $(LDFLAGS) \
-	    db_recover@o@ util_sig@o@ $(DEF_LIB) $(LIBS)
+	    db_recover@o@ $(COMMON_UTIL_OBJS) $(DEF_LIB) $(LIBS)
 	$(POSTLINK) $@
 
-db_replicate: db_replicate@o@ util_sig@o@ $(DEF_LIB)
+db_replicate: db_replicate@o@ $(COMMON_UTIL_OBJS) $(DEF_LIB)
 	$(CCLINK) -o $@ $(LDFLAGS) \
-	    db_replicate@o@ util_log@o@ util_sig@o@ $(DEF_LIB) $(LIBS)
+	    db_replicate@o@ $(COMMON_UTIL_OBJS) $(DEF_LIB) $(LIBS)
 	$(POSTLINK) $@
 
 DBSQL_CODEGEN_OBJS=\
@@ -1121,29 +1131,29 @@ db_sql_codegen: $(DBSQL_CODEGEN_OBJS) $(DEF_LIB)
 	$(CCLINK) -o $@ $(LDFLAGS) $(DBSQL_CODEGEN_OBJS) $(DEF_LIB) $(LIBS)
 	$(POSTLINK) $@
 
-db_stat: db_stat@o@ util_cache@o@ util_sig@o@ $(DEF_LIB)
+db_stat: db_stat@o@ $(COMMON_UTIL_OBJS) $(DEF_LIB)
 	$(CCLINK) -o $@ $(LDFLAGS) \
-	    db_stat@o@ util_cache@o@ util_sig@o@ $(DEF_LIB) $(LIBS)
+	    db_stat@o@ $(COMMON_UTIL_OBJS) $(DEF_LIB) $(LIBS)
 	$(POSTLINK) $@
 
-db_tuner: db_tuner@o@ util_sig@o@ $(DEF_LIB)
+db_tuner: db_tuner@o@ $(COMMON_UTIL_OBJS) $(DEF_LIB)
 	$(CCLINK) -o $@ $(LDFLAGS) \
-	    db_tuner@o@ util_sig@o@ $(DEF_LIB) $(LIBS)
+	    db_tuner@o@ $(COMMON_UTIL_OBJS) $(DEF_LIB) $(LIBS)
 	$(POSTLINK) $@
 
-db_upgrade: db_upgrade@o@ util_sig@o@ $(DEF_LIB)
+db_upgrade: db_upgrade@o@ $(COMMON_UTIL_OBJS) $(DEF_LIB)
 	$(CCLINK) -o $@ $(LDFLAGS) \
-	    db_upgrade@o@ util_sig@o@ $(DEF_LIB) $(LIBS)
+	    db_upgrade@o@ $(COMMON_UTIL_OBJS) $(DEF_LIB) $(LIBS)
 	$(POSTLINK) $@
 
-db_verify: db_verify@o@ util_cache@o@ util_sig@o@ $(DEF_LIB)
+db_verify: db_verify@o@ $(COMMON_UTIL_OBJS) $(DEF_LIB)
 	$(CCLINK) -o $@ $(LDFLAGS) \
-	    db_verify@o@ util_cache@o@ util_sig@o@ $(DEF_LIB) $(LIBS)
+	    db_verify@o@ $(COMMON_UTIL_OBJS) $(DEF_LIB) $(LIBS)
 	$(POSTLINK) $@
 
-db_log_verify: db_log_verify@o@ util_cache@o@ util_sig@o@ $(DEF_LIB)
+db_log_verify: db_log_verify@o@ $(COMMON_UTIL_OBJS) $(DEF_LIB)
 	$(CCLINK) -o $@ $(LDFLAGS) \
-	    db_log_verify@o@ util_cache@o@ util_sig@o@ $(DEF_LIB) $(LIBS)
+	    db_log_verify@o@ $(COMMON_UTIL_OBJS) $(DEF_LIB) $(LIBS)
 	$(POSTLINK) $@
 ##################################################
 # Library and standard utilities install.
@@ -2689,9 +2699,13 @@ util_arg@o@: $(srcdir)/common/util_arg.c
 	 $(CC) $(CFLAGS) $?
 util_cache@o@: $(srcdir)/common/util_cache.c
 	 $(CC) $(CFLAGS) $?
+util_env@o@: $(srcdir)/common/util_env.c
+	 $(CC) $(CFLAGS) $?
 util_log@o@: $(srcdir)/common/util_log.c
 	 $(CC) $(CFLAGS) $?
 util_sig@o@: $(srcdir)/common/util_sig.c
+	 $(CC) $(CFLAGS) $?
+util_ver_check@o@: $(srcdir)/common/util_ver_check.c
 	 $(CC) $(CFLAGS) $?
 uts4_cc@o@: $(srcdir)/mutex/uts4_cc.s
 	$(AS) $(ASFLAGS) -o $@ $?
@@ -2798,6 +2812,8 @@ tcl_util@o@: $(TCL_SRCDIR)/tcl_util.c
 db_archive@o@: $(utildir)/db_archive.c
 	$(CC) $(CFLAGS) $?
 db_checkpoint@o@: $(utildir)/db_checkpoint.c
+	$(CC) $(CFLAGS) $?
+db_convert@o@: $(utildir)/db_convert.c
 	$(CC) $(CFLAGS) $?
 db_deadlock@o@: $(utildir)/db_deadlock.c
 	$(CC) $(CFLAGS) $?

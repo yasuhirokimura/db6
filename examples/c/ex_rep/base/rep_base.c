@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2001, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2001, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -47,6 +47,7 @@ main(argc, argv)
 	struct sigaction sigact;
 #endif
 	APP_DATA my_app_data;
+	char localbuf[256];
 	int ret;
 
 	memset(&setup_info, 0, sizeof(SETUP_DATA));
@@ -118,6 +119,7 @@ main(argc, argv)
 	ca.home = setup_info.home;
 	ca.progname = progname;
 	ca.machtab = machtab;
+	ca.host = setup_info.self.host;
 	ca.port = setup_info.self.port;
 	if ((ret = thread_create(&conn_thr, NULL, connect_thread, &ca)) != 0) {
 		dbenv->errx(dbenv, "can't create connect thread");
@@ -153,8 +155,9 @@ main(argc, argv)
 		}
 	} else {
 		memset(&local, 0, sizeof(local));
-		local.data = myaddr;
-		local.size = (u_int32_t)strlen(myaddr) + 1;
+		snprintf(localbuf, sizeof(localbuf), "%s:%u", myaddr, myport);
+		local.data = localbuf;
+		local.size = (u_int32_t)strlen(localbuf) + 1;
 		if ((ret =
 		    dbenv->rep_start(dbenv, &local, DB_REP_CLIENT)) != 0) {
 			dbenv->err(dbenv, ret, "dbenv->rep_start failed");

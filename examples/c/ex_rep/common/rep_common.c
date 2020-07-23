@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2006, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2006, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -46,7 +46,7 @@ common_rep_setup(dbenv, argc, argv, setup_info)
 {
 	repsite_t site;
 	extern char *optarg;
-	char ch, *last_colon, *portstr, *v6_check;
+	char ch, *last_colon, *portstr;
 	int ack_policy, got_self, is_repmgr, maxsites, priority, ret;
 
 	got_self = is_repmgr = maxsites = ret = 0;
@@ -117,13 +117,6 @@ common_rep_setup(dbenv, argc, argv, setup_info)
 			 */
 			portstr = last_colon + 1;
 			*last_colon = '\0';
-			/* ex_rep_base doesn't support use of IPv6. */
-			if (!is_repmgr &&
-			    (v6_check = strrchr(optarg, ':')) != NULL) {
-				fprintf(stderr,
-				    "Cannot accept IPv6 address.\n");
-				goto err;
-			}
 			setup_info->self.port = (unsigned short)atoi(portstr);
 			setup_info->self.peer = 0;
 			got_self = 1;
@@ -174,13 +167,6 @@ common_rep_setup(dbenv, argc, argv, setup_info)
 			 */
 			portstr = last_colon + 1;
 			*last_colon = '\0';
-			/* ex_rep_base doesn't support use of IPv6. */
-			if (!is_repmgr &&
-			    (v6_check = strrchr(site.host, ':')) != NULL) {
-				fprintf(stderr,
-				    "Cannot accept IPv6 address.\n");
-				goto err;
-			}
 			site.port = (unsigned short)atoi(portstr);
 			if (setup_info->site_list == NULL ||
 			    setup_info->remotesites >= maxsites) {

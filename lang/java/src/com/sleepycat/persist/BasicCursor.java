@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 
@@ -9,6 +9,9 @@ package com.sleepycat.persist;
 
 import java.util.Iterator;
 
+import com.sleepycat.compat.DbCompat;
+import com.sleepycat.compat.DbCompat.OpReadOptions;
+import com.sleepycat.compat.DbCompat.OpResult;
 import com.sleepycat.db.DatabaseEntry;
 import com.sleepycat.db.DatabaseException;
 import com.sleepycat.db.LockMode;
@@ -50,7 +53,8 @@ class BasicCursor<V> implements EntityCursor<V> {
     public V first(LockMode lockMode)
         throws DatabaseException {
 
-        return returnValue(cursor.getFirst(key, pkey, data, lockMode));
+        return returnValue(
+            cursor.getFirst(key, pkey, data, OpReadOptions.make(lockMode)));
     }
 
     public V last()
@@ -62,7 +66,8 @@ class BasicCursor<V> implements EntityCursor<V> {
     public V last(LockMode lockMode)
         throws DatabaseException {
 
-        return returnValue(cursor.getLast(key, pkey, data, lockMode));
+        return returnValue(
+            cursor.getLast(key, pkey, data, OpReadOptions.make(lockMode)));
     }
 
     public V next()
@@ -74,7 +79,8 @@ class BasicCursor<V> implements EntityCursor<V> {
     public V next(LockMode lockMode)
         throws DatabaseException {
 
-        return returnValue(cursor.getNext(key, pkey, data, lockMode));
+        return returnValue(
+            cursor.getNext(key, pkey, data, OpReadOptions.make(lockMode)));
     }
 
     public V nextDup()
@@ -87,7 +93,8 @@ class BasicCursor<V> implements EntityCursor<V> {
         throws DatabaseException {
 
         checkInitialized();
-        return returnValue(cursor.getNextDup(key, pkey, data, lockMode));
+        return returnValue(
+            cursor.getNextDup(key, pkey, data, OpReadOptions.make(lockMode)));
     }
 
     public V nextNoDup()
@@ -99,7 +106,9 @@ class BasicCursor<V> implements EntityCursor<V> {
     public V nextNoDup(LockMode lockMode)
         throws DatabaseException {
 
-        return returnValue(cursor.getNextNoDup(key, pkey, data, lockMode));
+        return returnValue(
+            cursor.getNextNoDup(
+                key, pkey, data, OpReadOptions.make(lockMode)));
     }
 
     public V prev()
@@ -111,7 +120,8 @@ class BasicCursor<V> implements EntityCursor<V> {
     public V prev(LockMode lockMode)
         throws DatabaseException {
 
-        return returnValue(cursor.getPrev(key, pkey, data, lockMode));
+        return returnValue(
+            cursor.getPrev(key, pkey, data, OpReadOptions.make(lockMode)));
     }
 
     public V prevDup()
@@ -124,7 +134,8 @@ class BasicCursor<V> implements EntityCursor<V> {
         throws DatabaseException {
 
         checkInitialized();
-        return returnValue(cursor.getPrevDup(key, pkey, data, lockMode));
+        return returnValue(
+            cursor.getPrevDup(key, pkey, data, OpReadOptions.make(lockMode)));
     }
 
     public V prevNoDup()
@@ -136,7 +147,9 @@ class BasicCursor<V> implements EntityCursor<V> {
     public V prevNoDup(LockMode lockMode)
         throws DatabaseException {
 
-        return returnValue(cursor.getPrevNoDup(key, pkey, data, lockMode));
+        return returnValue(
+            cursor.getPrevNoDup(
+                key, pkey, data, OpReadOptions.make(lockMode)));
     }
 
     public V current()
@@ -149,8 +162,10 @@ class BasicCursor<V> implements EntityCursor<V> {
         throws DatabaseException {
 
         checkInitialized();
-        return returnValue(cursor.getCurrent(key, pkey, data, lockMode));
+        return returnValue(
+            cursor.getCurrent(key, pkey, data, OpReadOptions.make(lockMode)));
     }
+
 
     public int count()
         throws DatabaseException {
@@ -172,21 +187,26 @@ class BasicCursor<V> implements EntityCursor<V> {
     public boolean update(V entity)
         throws DatabaseException {
 
+
         if (!updateAllowed) {
-            throw new UnsupportedOperationException
-                ("Update not allowed on a secondary index");
+            throw new UnsupportedOperationException(
+                "Update not allowed on a secondary index");
         }
         checkInitialized();
         adapter.valueToData(entity, data);
-        return cursor.putCurrent(data) == OperationStatus.SUCCESS;
+
+        return cursor.getCursor().putCurrent(data) == OperationStatus.SUCCESS;
     }
+
 
     public boolean delete()
         throws DatabaseException {
 
+
         checkInitialized();
-        return cursor.delete() == OperationStatus.SUCCESS;
+        return cursor.getCursor().delete() == OperationStatus.SUCCESS;
     }
+
 
     public EntityCursor<V> dup()
         throws DatabaseException {
@@ -211,9 +231,9 @@ class BasicCursor<V> implements EntityCursor<V> {
         }
     }
 
-    V returnValue(OperationStatus status) {
+    V returnValue(OpResult opResult) {
         V value;
-        if (status == OperationStatus.SUCCESS) {
+        if (opResult.isSuccess()) {
             value = adapter.entryToValue(key, pkey, data);
         } else {
             value = null;
@@ -222,4 +242,5 @@ class BasicCursor<V> implements EntityCursor<V> {
         adapter.clearEntries(key, pkey, data);
         return value;
     }
+
 }

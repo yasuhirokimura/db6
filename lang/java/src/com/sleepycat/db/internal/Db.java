@@ -362,6 +362,8 @@ public class Db {
     return db_javaJNI.Db_close0(swigCPtr, this, flags);
   }
 
+  public void convert(String file, int lorder) throws com.sleepycat.db.DatabaseException { db_javaJNI.Db_convert(swigCPtr, this, file, lorder); }
+
   public Dbc cursor(DbTxn txnid, int flags) throws com.sleepycat.db.DatabaseException {
     long cPtr = db_javaJNI.Db_cursor(swigCPtr, this, DbTxn.getCPtr(txnid), txnid, flags);
     return (cPtr == 0) ? null : new Dbc(cPtr, false);

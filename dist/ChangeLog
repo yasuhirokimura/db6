@@ -1,5 +1,122 @@
 = Berkeley DB 6.2 Changelog =
 
+== Changes between version 12.1.6.2.23 and version 12.1.6.2.32 ==
+
+Modified the ex_rep_base example to accept IPv6 addresses. [#24371]
+
+Fixed a bug where SQL authentication APIs might raise assertion 
+failures. [#24598]
+
+The SQLite user authentication extension now always requires encryption.
+To build with the authentication extension, encryption must be enabled.
+Otherwise, it results in a compiler error. To convert a database to
+require authentication, the database must be encrypted. 
+sqlite3_user_authenticate() now always returns SQLITE_AUTH if called
+on a database that does not require authentication. [#24598]
+
+Fixed a bug where an application might hang because it could not obtain 
+a TAS lock when running Linux on Sparc architecture. [#24805]
+
+Added tests memp009 and mut004. [#24974]
+
+When the number of free mutexes is low, removed databases and closed unnamed
+in-memory databases are purged from the memory pool to free mutexes. [#24974]
+
+Fixed a bug where built-in atomic functions are used only when --enable-cxx
+is specified. [#24974]
+
+Fixed a possible crash when using the Java API and slices. [#24988]
+
+Added cross-compile support for detecting built-in atomic functions. [#25055]
+
+Fixed undefined symbol errors for configurations including --enable-dtrace and
+-enable-perfmon_statistics when replication is also enabled. [#25061]
+
+Added the db_convert utility program which converts the byte order of all 
+databases in database files. [#25086]
+
+Increased the number of instances in which failchk can successfully
+clean the environment without requiring full recovery after a thread 
+crashes while using Berkeley DB. [#25087]
+
+Added DPL APIs to BDB Java client driver. [#25089]
+
+Attempting to open an environment while it is being recovered now returns a
+new error message, which includes the time. [#25204]
+
+Improved db_verify's handling of corrupted database files. [#25239]
+
+Adjusted configure scripts to handle FreeBSD 10 or greater. [#25251]
+
+Fixed a bug where setting the absolute path of a file on Windows
+could result in the file being created on the wrong disk. [#25284]
+
+Syncing a database with external files will now also sync the
+meta database associated with the external files. [#25284]
+
+Add support for -with-mutex=BSD/OSSpinLockTry, to avoid using the undocumented
+spin_lock_try function, which is not permitted on iOS. [#25342]
+
+Fixed a bug preventing some changes to external files performed through
+the DB_STREAM API from replicating to the clients.  [#25432]
+
+Fixed a bug where automatic log removal did not work on Windows Mobile 
+6.5. [#25449]
+
+Fixed bugs where printed statistics might contain "unknown" flags. [#25461]
+
+Fixed a bug where hot backup of queue extent files did not follow
+the original directory structure. [#25545]
+
+Fixed a bug where ADO .Net package had debug pre-processors for release
+configurations. [#25549]
+
+Added PRAGMA statistics, which prints out statistics about the
+database and its environment.  [#25550]
+
+Added PRAGMA statistics_files, which redirects output from the
+statistics PRAGMA to a file.  [#25550]
+
+Internal Berkeley DB messages are now redirected to the same file where
+internal Berkeley DB error messages are redirected. [#25568]
+
+Fixed a bug that could cause a client undergoing internal initialization
+to fail to request all the necessary logs for a correct recovery.  The
+major symptom of this bug was that some client database files were left
+with empty pages that would later cause log sequence errors or other
+failures. [#25624]
+
+Added a new field in the per-thread statistics output: the number of 
+locked mutexes. [#25690] 
+
+The -c option of db_hotbackup can now work with replication manager
+applications. The -c option cannot be used with base replication
+applications. [#25702]
+
+Fixed a bug where the configure script may fail to find the JNI include
+directories on Mac OS X. [#25713]
+
+Fixed a bug where mutexes could not be acquired on arm64-v8a Android
+systems. [#25752]
+
+Fixed a bug where the JAVACFLAGS environment variable was not passed to the
+JDBC driver. [#25752]
+
+Fixed a bug where clients in the replication group might panic during
+synchronization with the master. [#25800]
+
+Fixed possible segfaults when running db_verify with external files.
+[#25920]
+
+Added Visual Studio 2015 solution files to the SQL ADO.NET package. [#25946]
+
+Fixed a bug where setting initial number of lockers might cause 
+segfault. [#26085]
+
+Fixed a bug where client specific log records resulted in incorrect 
+calculation of subsequent log offset. This would later result in a
+DB panic on master. [#26090]
+
 == Database or Log File On-Disk Format Changes ==
 
 The log file format changed in release 12.1.6.2.
@@ -105,6 +222,9 @@ floating point exception. [#24398]
 
 Removed a potential race condition when three or more threads attempt to split
 adjacent pages in a btree. [#24733]
+
+Improved parallelism of DB->open() calls when the database name is NULL,
+that is, when opening a file that does not contain sub-databases. [#25624]
 
 == API Changes ==
 
@@ -243,6 +363,9 @@ Fixed a bug where the memory pool statistics for the number of caches and
 maximum number of caches were incorrect. [#24758]
 
 == Mutex Subsystem Changes ==
+
+Fixed a bug where an application might fail to obtain a TAS lock when running 
+Linux on Sparc architecture. [#24805]
 
 Added support for built-in atomic (__atomic_*) functions when the compiler
 supports them. [#20943]

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2006, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2006, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -56,6 +56,7 @@ typedef struct {
 #define	WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <winsock2.h>
+#include <ws2tcpip.h>
 #define	snprintf		_snprintf
 #define	sleep(s)		Sleep(1000 * (s))
 

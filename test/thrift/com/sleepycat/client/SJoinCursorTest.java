@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -41,20 +41,15 @@ public class SJoinCursorTest extends ClientTestBase {
         SSecondaryDatabase secondary2 = env.openSecondaryDatabase(null,
                 "secondary2", null, primary, config);
 
-        primary.put(null, new SDatabaseEntry("pKey1".getBytes()),
-                new SDatabaseEntry("key1_1 key2_1".getBytes()));
-        primary.put(null, new SDatabaseEntry("pKey2".getBytes()),
-                new SDatabaseEntry("key1_1 key2_2".getBytes()));
-        primary.put(null, new SDatabaseEntry("pKey3".getBytes()),
-                new SDatabaseEntry("key1_2 key2_1".getBytes()));
+        primary.put(null, entry("pKey1"), entry("key1_1 key2_1"));
+        primary.put(null, entry("pKey2"), entry("key1_1 key2_2"));
+        primary.put(null, entry("pKey3"), entry("key1_2 key2_1"));
 
         SSecondaryCursor cursor1 = secondary1.openCursor(null, null);
-        cursor1.getSearchKey(new SDatabaseEntry("key1_1".getBytes()), null,
-                null);
+        cursor1.getSearchKey(entry("key1_1"), null, null);
 
         SSecondaryCursor cursor2 = secondary2.openCursor(null, null);
-        cursor2.getSearchKey(new SDatabaseEntry("key2_2".getBytes()), null,
-                null);
+        cursor2.getSearchKey(entry("key2_2"), null, null);
 
         joinCursor = primary.join(new SCursor[]{cursor1, cursor2},
                 new SJoinConfig());
@@ -85,17 +80,14 @@ public class SJoinCursorTest extends ClientTestBase {
 
     @Test
     public void testGetNext1() throws Exception {
-        SDatabaseEntry key = new SDatabaseEntry();
-        SDatabaseEntry data = new SDatabaseEntry();
-        assertThat(joinCursor.getNext(key, data, null),
-                is(SOperationStatus.SUCCESS));
-        assertThat(new String(data.getData()), is("key1_1 key2_2"));
+        assertCursorGet(joinCursor::getNext, new SDatabaseEntry(),
+                new SDatabaseEntry(), "pKey2", "key1_1 key2_2");
     }
 
     private static class KeyCreator implements SSecondaryKeyCreator {
         private int index;
 
-        public KeyCreator(int index) {
+        private KeyCreator(int index) {
             this.index = index;
         }
 

@@ -30,6 +30,7 @@ namespace BerkeleyDB.Internal {
         internal const uint DB_CHKSUM = 0x00000008;
         internal const uint DB_CONSUME = 4;
         internal const uint DB_CONSUME_WAIT = 5;
+        internal const uint DB_CONVERT = 0x00000001;
         internal const uint DB_CREATE = 0x00000001;
         internal const uint DB_CURRENT = 6;
         internal const uint DB_CURSOR_BULK = 0x00000001;
@@ -301,7 +302,7 @@ namespace BerkeleyDB.Internal {
         internal const uint DB_TXN_WAIT = 0x00000080;
         internal const uint DB_TXN_WRITE_NOSYNC = 0x00000020;
         internal const uint DB_UNKNOWN = 5;
-        internal const uint DB_UPGRADE = 0x00000001;
+        internal const uint DB_UPGRADE = 0x00000002;
         internal const uint DB_USE_ENVIRON = 0x00000004;
         internal const uint DB_USE_ENVIRON_ROOT = 0x00000008;
         internal const uint DB_VERB_BACKUP = 0x00000001;
@@ -321,7 +322,7 @@ namespace BerkeleyDB.Internal {
         internal const uint DB_VERB_REP_SYSTEM = 0x00008000;
         internal const uint DB_VERB_REP_TEST = 0x00010000;
         internal const uint DB_VERB_WAITSFOR = 0x00040000;
-        internal const uint DB_VERIFY = 0x00000002;
+        internal const uint DB_VERIFY = 0x00000004;
         internal const int DB_VERIFY_BAD = -30968;
         internal const uint DB_VERSION_FAMILY = 12;
         internal const string DB_VERSION_FAMILY_STR = "12";
@@ -332,10 +333,10 @@ namespace BerkeleyDB.Internal {
         internal const uint DB_VERSION_MINOR = 2;
         internal const string DB_VERSION_MINOR_STR = "2";
         internal const int DB_VERSION_MISMATCH = -30967;
-        internal const uint DB_VERSION_PATCH = 23;
-        internal const string DB_VERSION_PATCH_STR = "23";
-        internal const string DB_VERSION_STRING = "Berkeley DB 6.2.23: March 28 2016 ";
-        internal const string DB_VERSION_FULL_STRING = "Berkeley DB 12c Release 1 library version 12.1.6.2.23: March 28 2016 ";
+        internal const uint DB_VERSION_PATCH = 32;
+        internal const string DB_VERSION_PATCH_STR = "32";
+        internal const string DB_VERSION_STRING = "Berkeley DB 6.2.32: April 5 2017 ";
+        internal const string DB_VERSION_FULL_STRING = "Berkeley DB 12c Release 1 library version 12.1.6.2.32: April 5 2017 ";
         internal const uint DB_WRITECURSOR = 0x00000010;
         internal const uint DB_YIELDCPU = 0x00080000;
         internal const uint DB_USERCOPY_GETDATA = 0x00000001;

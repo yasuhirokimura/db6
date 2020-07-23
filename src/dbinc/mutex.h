@@ -1,7 +1,7 @@
 /*
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -41,7 +41,8 @@ extern "C" {
 #define	MUTEX_INVALID	0
 
 /*
- * We track mutex allocations by ID.
+ * We track mutex allocations by ID.  They are stored in the mutex only when
+ * statistics are enabled.
  */
 #define	MTX_APPLICATION		 1
 #define	MTX_ATOMIC_EMULATION	 2
@@ -85,176 +86,226 @@ extern "C" {
 
 #define	MTX_MAX_ENTRY		39
 
+/*
+ * These are the primary macros to lock and unlock a mutex or shared latch:
+ *	void MUTEX_LOCK(env, mutex)
+ *	void MUTEX_READLOCK(env, mutex)
+ *	void MUTEX_UNLOCK(env, mutex)
+ *
+ * These do not wait for the mutex, but return 0 or DB_LOCK_NOTGRANTED
+ *	int MUTEX_TRYLOCK(env, mutex)
+ *	int MUTEX_TRY_READLOCK(env, mutex)
+ *
+ * If 'mutex' is MUTEX_INVALID (0), then syncronization is not required in this
+ * particular instance, and the macros do nothing or, int the _TRY versions,
+ * return 0.  Otherwise they invoke one of the following:
+ *
+ *	__mutex_lock(env, mutex, timeout, flags)
+ *	__mutex_unlock(env, mutex, ip, flags)
+ *	__mutex_rdlock(env, mutex, flags)
+ *
+ * The timeout parameter, if non-zero, limits the duration of the wait for a
+ * busy mutex to at most the specified number of microseconds.
+ *
+ * The ip parameter is NULL or the DB_THREAD_INFO pointer of the thread that
+ * acquired the mutex.  Failchk uses it to clean up after a dead process.
+ *
+ * The flags values are:
+ *   MUTEX_WAIT	- Tell a mutex acquisition call to wait until it is available
+ *		  or, if the timeout parameter is non-zero, until that many
+ *		  microseconds have passed.  If this is not included and the
+ *		  mutex is busy, it will return DB_LOCK_NOTGRANTED.
+ *		  
+ *   MUTEX_CTR	- Tell successful exclusive mutex calls to update failchk's
+ *		  counter (in DB_THREAD_INFO.mtx_ctr) of the number of locked
+ *		  mutexes.  This flag is valid for both locking and unlocking.
+ *		  It has no effect on shared latches.  Most mutexes are locked
+ *		  with this flag.
+ *
+ * If any of these return DB_RUNRECOVERY, then the upper-case macros immediately
+ * return that error code back to their caller.  Thus, functions calling
+ * MUTEX_LOCK() need to return an integer error code.
+ *
+ * Whenever a function has a specific error path on a mutex failure, use
+ *	int MUTEX_LOCK_RET(env, mutex)
+ *	int MUTEX_UNLOCK_RET(env, mutex)
+ * so that it may check for panic and perform some localized cleanup before
+ * returning the DB_RUNRECOVERY.
+ *
+ * In rare circumstances a thread needs to unlock a non-self-blocking mutex that
+ * was locked by another thread.  In particular, this is needed by failchk when
+ * it is trying to perform a "soft" failchk cleanup after a thread has died while
+ * in the Berkeley DB API, but which is not holding any exclusive mutexes.
+ *
+ *	int MUTEX_UNLOCK_IP(env, mutex, ip)
+ */
+#define MUTEX_WAIT		0x0001	/* Wait for it to become available. */
+#define MUTEX_CTR		0x0002	/* Adjust the thread's mtx_ctr. */
+
 /* The following macros are defined on some platforms, e.g. QNX. */
 #undef __mutex_init
 #undef __mutex_lock
-#undef __mutex_timedlock
 #undef __mutex_unlock
 #undef __mutex_destroy
-#undef __mutex_trylock
 
-/* Redirect mutex calls to the correct functions. */
+#ifdef HAVE_MUTEX_SUPPORT
+
+/*
+ * Redirect mutex macros calls to one of the mutex implementation 'classes'.
+ *	pthreads
+ *	win32
+ *	tas (test-and-set)
+ * Hybrid mutexes are a variant of tas mutexes, using pthread condition variables
+ * when busy, instead of a timed wait loop.
+ */
 #if !defined(HAVE_MUTEX_HYBRID) && (					\
     defined(HAVE_MUTEX_PTHREADS) ||					\
     defined(HAVE_MUTEX_SOLARIS_LWP) ||					\
     defined(HAVE_MUTEX_UI_THREADS))
-#define	__mutex_init(a, b, c)		__db_pthread_mutex_init(a, b, c)
-#define	__mutex_lock(a, b)		__db_pthread_mutex_lock(a, b, 0)
-#define	__mutex_timedlock(a, b, c)	__db_pthread_mutex_lock(a, b, c)
-#define	__mutex_unlock(a, b)		__db_pthread_mutex_unlock(a, b)
-#define	__mutex_destroy(a, b)		__db_pthread_mutex_destroy(a, b)
-#define	__mutex_trylock(a, b)		__db_pthread_mutex_trylock(a, b)
-/*
- * These trylock versions do not support DB_ENV_FAILCHK. Callers which loop
- * checking mutexes which are held by dead processes or threads might spin.
- * These have ANSI-style definitions because this file can be included by
- * C++ files, and extern "C" affects linkage only, not argument typing.
- */
-static inline int __db_pthread_mutex_trylock(ENV *env, db_mutex_t mutex)
-{
-	int ret;
-	DB_MUTEX *mutexp;
-	if (!MUTEX_ON(env) || F_ISSET(env->dbenv, DB_ENV_NOLOCKING))
-		return (0);
-	mutexp = MUTEXP_SET(env, mutex);
+#define	__mutex_init(e, m, f)		__db_pthread_mutex_init(e, m, f)
+#define	__mutex_lock(e, m, t, f)	__db_pthread_mutex_lock(e, m, t, f)
+#define	__mutex_unlock(e, m, ip, f)	__db_pthread_mutex_unlock(e, m, ip, f)
+#define	__mutex_destroy(e, m)		__db_pthread_mutex_destroy(e, m)
 #ifdef HAVE_SHARED_LATCHES
-	if (F_ISSET(mutexp, DB_MUTEX_SHARED))
-		ret = pthread_rwlock_trywrlock(&mutexp->u.rwlock);
-	else
-#endif
-		ret = pthread_mutex_trylock(&mutexp->u.m.mutex);
-	if (ret == EBUSY)
-		ret = USR_ERR(env, DB_LOCK_NOTGRANTED);
-	else if (ret == 0) {
-		F_SET(mutexp, DB_MUTEX_LOCKED);
-		env->dbenv->thread_id(env->dbenv, &mutexp->pid, &mutexp->tid);
-		STAT_INC(env,
-		    mutex, set_nowait, mutexp->mutex_set_nowait, mutex);
-	}
-	return (ret);
-}
-#ifdef HAVE_SHARED_LATCHES
-#define	__mutex_rdlock(a, b)		__db_pthread_mutex_readlock(a, b)
-#define	__mutex_tryrdlock(a, b)		__db_pthread_mutex_tryreadlock(a, b)
+#define	__mutex_rdlock(e, m, f)		__db_pthread_mutex_readlock(e, m, f)
 #endif
 #elif defined(HAVE_MUTEX_WIN32) || defined(HAVE_MUTEX_WIN32_GCC)
-#define	__mutex_init(a, b, c)		__db_win32_mutex_init(a, b, c)
-#define	__mutex_lock(a, b)		__db_win32_mutex_lock(a, b, 0)
-#define	__mutex_timedlock(a, b, c)	__db_win32_mutex_lock(a, b, c)
-#define	__mutex_trylock(a, b)		__db_win32_mutex_trylock(a, b)
-#define	__mutex_unlock(a, b)		__db_win32_mutex_unlock(a, b)
-#define	__mutex_destroy(a, b)		__db_win32_mutex_destroy(a, b)
+#define	__mutex_init(e, m, f)		__db_win32_mutex_init(e, m, f)
+#define	__mutex_lock(e, m, t, f)	__db_win32_mutex_lock(e, m, t, f)
+#define	__mutex_unlock(e, m, ip, f)	__db_win32_mutex_unlock(e, m, ip, f)
+#define	__mutex_destroy(e, m)		__db_win32_mutex_destroy(e, m)
 #ifdef HAVE_SHARED_LATCHES
-#define	__mutex_rdlock(a, b)		__db_win32_mutex_readlock(a, b)
-#define	__mutex_tryrdlock(a, b)		__db_win32_mutex_tryreadlock(a, b)
+#define	__mutex_rdlock(e, m, f)		__db_win32_mutex_readlock(e, m, f)
 #endif
 #else
-#define	__mutex_init(a, b, c)		__db_tas_mutex_init(a, b, c)
-#define	__mutex_lock(a, b)		__db_tas_mutex_lock(a, b, 0)
-#define	__mutex_timedlock(a, b, c)	__db_tas_mutex_lock(a, b, c)
-#define	__mutex_trylock(a, b)		__db_tas_mutex_trylock(a, b)
-#define	__mutex_unlock(a, b)		__db_tas_mutex_unlock(a, b)
-#define	__mutex_destroy(a, b)		__db_tas_mutex_destroy(a, b)
+#define	__mutex_init(e, m, f)		__db_tas_mutex_init(e, m, f)
+#define	__mutex_lock(e, m, t, f)	__db_tas_mutex_lock(e, m, t, f)
+#define	__mutex_unlock(e, m, ip, f)	__db_tas_mutex_unlock(e, m, ip, f)
+#define	__mutex_destroy(e, m)		__db_tas_mutex_destroy(e, m)
 #if defined(HAVE_SHARED_LATCHES)
-#define	__mutex_rdlock(a, b)		__db_tas_mutex_readlock(a, b)
-#define	__mutex_tryrdlock(a,b)		__db_tas_mutex_tryreadlock(a, b)
+#define	__mutex_rdlock(e, m, f)		__db_tas_mutex_readlock(e, m, f)
 #endif
 #endif
 
 /*
  * When there is no method to get a shared latch, fall back to implementing
- * __mutex_rdlock() as an exclusive one. This may no longer be supported?
+ * __mutex_rdlock() as an exclusive one.
  */
 #ifndef __mutex_rdlock
-#define	__mutex_rdlock(a, b)		__mutex_lock(a, b)
+#define	__mutex_rdlock(a, b, f)		__mutex_lock(a, b, 0, f)
 #endif
-#ifndef __mutex_tryrdlock
-#define	__mutex_tryrdlock(a, b)		__mutex_trylock(a, b)
-#endif
-
-/*
- * Lock/unlock a mutex.  If the mutex was never required, the thread of
- * control can proceed without it.
- *
- * We rarely fail to acquire or release a mutex without panicing.  Simplify
- * the macros to always return a panic value rather than saving the actual
- * return value of the mutex routine.  Use MUTEX_LOCK_RET() and
- * MUTEX_UNLOCK_RET() when the caller has a code path for a mutex failure,
- * e.g., when cleaning up after a panic.
- */
-#ifdef HAVE_MUTEX_SUPPORT
-#define	MUTEX_LOCK(env, mutex) do {					\
-	if ((mutex) != MUTEX_INVALID &&	__mutex_lock(env, mutex) != 0)	\
-		return (DB_RUNRECOVERY);				\
-} while (0)
-
-#define	MUTEX_UNLOCK(env, mutex) do {					\
-	if ((mutex) != MUTEX_INVALID &&					\
-	    __mutex_unlock(env, mutex) != 0)				\
-		return (DB_RUNRECOVERY);				\
-} while (0)
 
 #define	MUTEX_LOCK_RET(env, mutex)					\
-	((mutex) == MUTEX_INVALID ? 0 : __mutex_lock(env, mutex))
+	((mutex) == MUTEX_INVALID ? 0 :					\
+	__mutex_lock(env, mutex, 0, MUTEX_WAIT | MUTEX_CTR))
 
-#define	MUTEX_UNLOCK_RET(env, mutex)					\
-	((mutex) == MUTEX_INVALID ? 0 : __mutex_unlock(env, mutex))
+#define	MUTEX_LOCK(env, mutex) do {					\
+	if (MUTEX_LOCK_RET((env), (mutex)) != 0)			\
+		return (USR_ERR(env, DB_RUNRECOVERY));			\
+} while (0)
+
+#define	MUTEX_LOCK_NO_CTR(env, mutex) do {				\
+	if ((mutex) != MUTEX_INVALID &&					\
+	    __mutex_lock(env, mutex, 0, MUTEX_WAIT) != 0)		\
+		return (USR_ERR(env, DB_RUNRECOVERY));			\
+} while (0)
 
 /*
- * Always check the return value of MUTEX_TRYLOCK()!  Expect 0 on success,
- * or possibly DB_RUNRECOVERY for failchk.
- */
-
-/*
- * Always check the return value of MUTEX_TRYLOCK()!  Expect 0 on success,
- * or DB_LOCK_NOTGRANTED, or possibly DB_RUNRECOVERY for failchk.
+ * MUTEX_TRYLOCK() --
+ *	Try to exclusively lock a mutex without ever blocking - ever!
+ *
+ *	Returns 0 on success,
+ *		DB_LOCK_NOTGRANTED if it is busy.
+ *		Possibly DB_RUNRECOVERY if DB_ENV_FAILCHK or panic.
+ *
+ *	This can be called on shared latches too, though it always tries
+ *	for exclusive access.
+ * Always check the return value of MUTEX_TRYLOCK()!
  */
 #define	MUTEX_TRYLOCK(env, mutex)					\
-	(((mutex) == MUTEX_INVALID) ? 0 : __mutex_trylock(env, mutex))
+	((mutex) == MUTEX_INVALID ? 0 : __mutex_lock(env, mutex, 0, MUTEX_CTR))
+
+
+/*
+ * MUTEX_LOCK_TIMEOUT - Wait for at most 'timeout' microseconds to get a mutex.
+ *
+ * This call is currently used for a self blocking replication mutex, so it does
+ * not need to be counted.  That may change if another mutex begins to use it.
+ */
+#define	MUTEX_LOCK_TIMEOUT(env, mutex, timeout) do {			\
+	int __ret;							\
+	if ((mutex) != MUTEX_INVALID &&	(__ret =			\
+	    __mutex_lock(env, mutex, timeout, MUTEX_WAIT)) != 0 &&	\
+	    __ret != DB_TIMEOUT)					\
+		return (USR_ERR(env, DB_RUNRECOVERY));			\
+} while (0)
+
+/*
+ * Unlock a mutex which belong to a specific thread, not necessarily the current
+ * one.  This is used in some failchk code paths, specifically __memp_fput().
+ */
+#define	MUTEX_UNLOCK_IP(env, mutex, ip) do {					\
+	if ((mutex) != MUTEX_INVALID &&					\
+	    __mutex_unlock(env, mutex, ip, MUTEX_CTR) != 0)		\
+		return (USR_ERR(env, DB_RUNRECOVERY));			\
+} while (0)
+
+#define	MUTEX_UNLOCK_RET(env, mutex)					\
+    ((mutex) == MUTEX_INVALID ? 0 : __mutex_unlock(env, mutex, NULL, MUTEX_CTR))
+
+#define	MUTEX_UNLOCK(env, mutex)	MUTEX_UNLOCK_IP(env, mutex, NULL)
+
+/*
+ * Used by __lock_promote when when waking up a waiting thread.  The mutex it is
+ * releasing was locked by another thread so the counter does not include it.
+ */
+#define	MUTEX_UNLOCK_NO_CTR(env, mutex) do {				\
+	if ((mutex) != MUTEX_INVALID &&					\
+	    __mutex_unlock(env, mutex, NULL, 0) != 0)			\
+		return (USR_ERR(env, DB_RUNRECOVERY));			\
+} while (0)
+
 
 /* Acquire a latch (a DB_MUTEX_SHARED "mutex") in shared mode. */
 #define	MUTEX_READLOCK(env, mutex) do {					\
 	if ((mutex) != MUTEX_INVALID &&					\
-	    __mutex_rdlock(env, mutex) != 0)				\
-		return (DB_RUNRECOVERY);				\
+	    __mutex_rdlock(env, mutex, MUTEX_WAIT) != 0)		\
+		return (USR_ERR(env, DB_RUNRECOVERY));			\
 } while (0)
-#define	MUTEX_TRY_READLOCK(env, mutex)					\
-	((mutex) != MUTEX_INVALID ? __mutex_tryrdlock(env, mutex) : 0)
 
-#define	MUTEX_WAIT(env, mutex, duration) do {				\
-	int __ret;							\
-	if ((mutex) != MUTEX_INVALID &&					\
-	    (__ret = __mutex_timedlock(env, mutex, duration)) != 0 &&	\
-	    __ret != DB_TIMEOUT)					\
-		return (DB_RUNRECOVERY);				\
-} while (0)
+#define	MUTEX_TRY_READLOCK(env, mutex)					\
+	((mutex) != MUTEX_INVALID ? __mutex_rdlock(env, mutex, 0) : 0)
 
 /*
- * Check that a particular mutex is exclusively held at least by someone, not
- * necessarily the current thread.
+ * Check that a particular mutex isn't missing a MUTEX_LOCK().  This does not
+ * determine whether the current thread is the owner.
  */
 #define	MUTEX_IS_OWNED(env, mutex)					\
 	(mutex == MUTEX_INVALID || !MUTEX_ON(env) ||			\
 	F_ISSET(env->dbenv, DB_ENV_NOLOCKING) ||			\
 	F_ISSET(MUTEXP_SET(env, mutex), DB_MUTEX_LOCKED))
+
 #else
 /*
- * There are calls to lock/unlock mutexes outside of #ifdef's -- replace
- * the call with something the compiler can discard, but which will make
+ * There are calls to lock/unlock mutexes outside of #ifdef HAVE_MUTEX_SUPPORT.
+ * Replace the call with something the compiler can discard, but which will make
  * if-then-else blocks work correctly, and suppress unused variable messages.
  */
 #define	MUTEX_LOCK(env, mutex)		{ env = (env); mutex = (mutex); }
 #define	MUTEX_UNLOCK(env, mutex)	{ env = (env); mutex = (mutex); }
+#define	MUTEX_UNLOCK_IP(env, mutex, ip) { env = (env); mutex = (mutex); ip = (ip); }
+#define	MUTEX_LOCK_NO_CTR(env, mutex)	{ env = (env); mutex = (mutex); }
+#define	MUTEX_UNLOCK_NO_CTR(env, mutex)	{ env = (env); mutex = (mutex); }
 #define	MUTEX_LOCK_RET(env, mutex)	( env = (env), mutex = (mutex), 0)
 #define	MUTEX_UNLOCK_RET(env, mutex)	( env = (env), mutex = (mutex), 0)
+#define	MUTEX_LOCK_TIMEOUT(env, mutex, timeout) \
+	{ env = (env); mutex = (mutex); timeout = (timeout); }
 #define	MUTEX_TRYLOCK(env, mutex)	( env = (env), mutex = (mutex), 0)
 #define	MUTEX_READLOCK(env, mutex)	{ env = (env); mutex = (mutex); }
 #define	MUTEX_TRY_READLOCK(env, mutex)	( env = (env), mutex = (mutex), 0 )
 #define	MUTEX_REQUIRED(env, mutex)	{ env = (env); mutex = (mutex); }
 #define	MUTEX_REQUIRED_READ(env, mutex)	{ env = (env); mutex = (mutex); }
-#define	MUTEX_WAIT(env, mutex, duration)	{			\
-	(env) = (env); (mutex) = (mutex); (duration) = (duration);	\
-}
+#define	__mutex_unlock(env, mutex, ip, f)	( 0 )
 
 /*
  * Every MUTEX_IS_OWNED() caller expects to own it. When there is no mutex

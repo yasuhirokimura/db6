@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -43,8 +43,8 @@ import com.sleepycat.thrift.TCursorGetMode;
 public class SSecondaryCursor extends SCursor {
 
     SSecondaryCursor(TCursor tCursor, SSecondaryDatabase database,
-            BdbService.Client client) {
-        super(tCursor, database, client);
+            STransaction txn, BdbService.Client client) {
+        super(tCursor, database, txn, client);
     }
 
     /**
@@ -76,7 +76,8 @@ public class SSecondaryCursor extends SCursor {
             throws SDatabaseException {
         return remoteCall(() -> {
             TCursor cursor = this.client.cursorDup(this.tCursor, samePosition);
-            return new SSecondaryCursor(cursor, getDatabase(), this.client);
+            return new SSecondaryCursor(cursor, getDatabase(), getTransaction(),
+                    this.client);
         });
     }
 

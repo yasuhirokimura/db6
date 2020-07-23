@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -21,42 +21,75 @@ public class SMutexStats {
         this.stat = stat;
     }
 
-    /** The mutex alignment, in bytes. */
+    /**
+     * The mutex alignment, in bytes.
+     *
+     * @return the mutex alignment, in bytes
+     */
     public int getMutexAlign() {
         return this.stat.mutexAlign;
     }
 
-    /** The number of times test-and-set mutexes will spin without blocking. */
+    /**
+     * The number of times test-and-set mutexes will spin without blocking.
+     *
+     * @return the number of times test-and-set mutexes will spin without
+     * blocking
+     */
     public int getMutexTasSpins() {
         return this.stat.mutexTasSpins;
     }
 
-    /** The initial number of mutexes configured. */
+    /**
+     * The initial number of mutexes configured.
+     *
+     * @return the initial number of mutexes configured
+     */
     public int getMutexInit() {
         return this.stat.mutexInit;
     }
 
-    /** The total number of mutexes configured. */
+    /**
+     * The total number of mutexes configured.
+     *
+     * @return the total number of mutexes configured
+     */
     public int getMutexCount() {
         return this.stat.mutexCount;
     }
 
-    /** The maximum number of mutexes. */
+    /**
+     * The maximum number of mutexes.
+     *
+     * @return the maximum number of mutexes
+     */
     public int getMutexMax() {
         return this.stat.mutexMax;
     }
 
-    /** The number of mutexes currently available. */
+    /**
+     * The number of mutexes currently available.
+     *
+     * @return the number of mutexes currently available
+     */
     public int getMutexFree() {
         return this.stat.mutexFree;
     }
 
-    /** The number of mutexes currently in use. */
+    /**
+     * The number of mutexes currently in use.
+     *
+     * @return the number of mutexes currently in use
+     */
     public int getMutexInuse() {
         return this.stat.mutexInuse;
     }
 
-    /** The maximum number of mutexes ever in use. */
+    /**
+     * The maximum number of mutexes ever in use.
+     *
+     * @return the maximum number of mutexes ever in use
+     */
     public int getMutexInuseMax() {
         return this.stat.mutexInuseMax;
     }
@@ -64,6 +97,9 @@ public class SMutexStats {
     /**
      * The number of times that a thread of control was forced to wait before
      * obtaining the mutex region mutex.
+     *
+     * @return the number of times that a thread of control was forced to wait
+     * before obtaining the mutex region mutex
      */
     public long getRegionWait() {
         return this.stat.regionWait;
@@ -72,17 +108,28 @@ public class SMutexStats {
     /**
      * The number of times that a thread of control was able to obtain
      * the mutex region mutex without waiting.
+     *
+     * @return the number of times that a thread of control was able to obtain
+     * the mutex region mutex without waiting
      */
     public long getRegionNowait() {
         return this.stat.regionNowait;
     }
 
-    /** The size of the mutex region, in bytes. */
+    /**
+     * The size of the mutex region, in bytes.
+     *
+     * @return the size of the mutex region, in bytes
+     */
     public long getRegSize() {
         return this.stat.regSize;
     }
 
-    /** The max size of the mutex region size. */
+    /**
+     * The max size of the mutex region size.
+     *
+     * @return the max size of the mutex region size
+     */
     public long getRegmax() {
         return this.stat.regmax;
     }
@@ -90,6 +137,8 @@ public class SMutexStats {
     /**
      * For convenience, the SMutexStats class has a toString method that lists
      * all the data fields.
+     *
+     * @return a String that lists all fields
      */
     public String toString() {
         return "MutexStats:"

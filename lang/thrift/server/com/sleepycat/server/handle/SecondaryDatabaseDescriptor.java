@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -17,6 +17,7 @@ import com.sleepycat.server.util.KeyDataPair;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * A SecondaryDatabaseDescriptor is a HandleDescriptor for a secondary
@@ -25,6 +26,11 @@ import java.util.Map;
 public class SecondaryDatabaseDescriptor extends DatabaseDescriptor {
     /** The database descriptor of the primary database. */
     private final DatabaseDescriptor primary;
+
+    /**
+     * The foreign database for which this secondary has a foreign constraint.
+     */
+    private final DatabaseDescriptor foreign;
 
     /** The secondary key creator. */
     private final ServerKeyCreator keyCreator;
@@ -40,11 +46,16 @@ public class SecondaryDatabaseDescriptor extends DatabaseDescriptor {
      */
     public SecondaryDatabaseDescriptor(SecondaryDatabase sdb,
             DatabaseKey key, EnvironmentDescriptor env,
-            DatabaseDescriptor primary, ServerKeyCreator keyCreator) {
+            DatabaseDescriptor primary, DatabaseDescriptor foreign,
+            ServerKeyCreator keyCreator) {
         super(sdb, key, env, primary);
         this.primary = primary;
+        this.foreign = foreign;
         this.keyCreator = keyCreator;
         this.primary.associate(this);
+        if (this.foreign != null) {
+            this.foreign.associateForeign(this);
+        }
     }
 
     @Override
@@ -53,8 +64,20 @@ public class SecondaryDatabaseDescriptor extends DatabaseDescriptor {
             this.keyCreator.close();
         } finally {
             this.primary.disassociate(this);
+            if (this.foreign != null) {
+                this.foreign.disassociateForeign(this);
+            }
             super.closeBdbHandle();
         }
+    }
+
+    /**
+     * Return the primary database associated with this secondary database.
+     *
+     * @return the primary database
+     */
+    public DatabaseDescriptor getPrimary() {
+        return this.primary;
     }
 
     /**
@@ -75,5 +98,16 @@ public class SecondaryDatabaseDescriptor extends DatabaseDescriptor {
      */
     public void setCurrentTxn(Transaction txn) {
         this.keyCreator.setTransaction(txn);
+    }
+
+    @Override
+    public void forEachSecondary(Consumer<SecondaryDatabaseDescriptor> op) {
+        getPrimary().forEachSecondary(op);
+    }
+
+    @Override
+    public void forEachForeignSecondary(
+            Consumer<SecondaryDatabaseDescriptor> op) {
+        getPrimary().forEachForeignSecondary(op);
     }
 }

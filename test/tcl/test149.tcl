@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2013, 2016 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2013, 2017 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -455,9 +455,10 @@ proc test149 { method {tnum "149"} args } {
 
 	puts "\tTest$tnum.k3: verify database stream can not write\
 	    with offset + size of data > the maximum blob size."
-	if { $tcl_platform(pointerSize) == 4 } {
+	set os64 [string match *64* $tcl_platform(machine)]
+	if { $tcl_platform(pointerSize) == 4 && !$os64 } {
 		set max_len [expr 0xffffffff / 2]
-	} elseif { $tcl_platform(pointerSize) == 8 } {
+	} elseif { $tcl_platform(pointerSize) == 8 || $os64 } {
 		set max_len [expr 0xffffffffffffffff / 2]
 	} else {
 		error "FAIL: unexpected pointerSize $tcl_platform(pointerSize)"

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -58,6 +58,7 @@ public class SStatsConfig {
      *
      * @param clear if set to true, configure the statistics operation to reset
      * statistics after they are returned.
+     * @return this
      */
     public SStatsConfig setClear(boolean clear) {
         this.clear = clear;
@@ -97,6 +98,7 @@ public class SStatsConfig {
      *
      * @param fast if set to true, configure the statistics operation to return
      * only the values which do not incur some performance penalty.
+     * @return this
      */
     public SStatsConfig setFast(boolean fast) {
         this.fast = fast;

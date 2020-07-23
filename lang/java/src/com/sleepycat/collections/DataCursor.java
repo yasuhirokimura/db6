@@ -1,13 +1,15 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2000, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2000, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  */
 
 package com.sleepycat.collections;
 
 import com.sleepycat.compat.DbCompat;
+import com.sleepycat.compat.DbCompat.OpReadOptions;
+import com.sleepycat.compat.DbCompat.OpResult;
 import com.sleepycat.db.Cursor;
 import com.sleepycat.db.CursorConfig;
 import com.sleepycat.db.DatabaseEntry;
@@ -235,24 +237,24 @@ final class DataCursor implements Cloneable {
                         boolean lockForWrite)
         throws DatabaseException {
 
-        LockMode lockMode = getLockMode(lockForWrite);
-        OperationStatus status = null;
+        OpReadOptions options = OpReadOptions.make(getLockMode(lockForWrite));
+        OpResult result = null;
 
         /* Use the given key/data byte arrays. */
         setThangs(keyBytes, priKeyBytes, valueBytes);
 
         /* Position on or after the given key/data pair. */
         if (view.dupsAllowed) {
-            status = cursor.getSearchBothRange(keyThang, primaryKeyThang,
-                                               valueThang, lockMode);
+            result = cursor.getSearchBothRange(keyThang, primaryKeyThang,
+                                               valueThang, options);
         }
-        if (status != OperationStatus.SUCCESS) {
-            status = cursor.getSearchKeyRange(keyThang, primaryKeyThang,
-                                              valueThang, lockMode);
+        if (result == null || !result.isSuccess()) {
+            result = cursor.getSearchKeyRange(keyThang, primaryKeyThang,
+                                              valueThang, options);
         }
 
         /* Return the result of the operation. */
-        if (status == OperationStatus.SUCCESS) {
+        if (result.isSuccess()) {
             if (!KeyRange.equalBytes(keyBytes, 0, keyBytes.length,
                                      keyThang.getData(),
                                      keyThang.getOffset(),
@@ -291,8 +293,8 @@ final class DataCursor implements Cloneable {
                             boolean lockForWrite)
         throws DatabaseException {
 
-        LockMode lockMode = getLockMode(lockForWrite);
-        OperationStatus status = null;
+        OpReadOptions options = OpReadOptions.make(getLockMode(lockForWrite));
+        OpResult result;
 
         /* Use the given key/data byte arrays. */
         setThangs(keyBytes, priKeyBytes, valueBytes);
@@ -300,14 +302,14 @@ final class DataCursor implements Cloneable {
         /* Position on the given key/data pair. */
         if (view.recNumRenumber) {
             /* getSearchBoth doesn't work with recno-renumber databases. */
-            status = cursor.getSearchKey(keyThang, primaryKeyThang,
-                                         valueThang, lockMode);
+            result = cursor.getSearchKey(keyThang, primaryKeyThang,
+                                         valueThang, options);
         } else {
-            status = cursor.getSearchBoth(keyThang, primaryKeyThang,
-                                          valueThang, lockMode);
+            result = cursor.getSearchBoth(keyThang, primaryKeyThang,
+                                          valueThang, options);
         }
 
-        return (status == OperationStatus.SUCCESS);
+        return result.isSuccess();
     }
 
     /**
@@ -406,8 +408,9 @@ final class DataCursor implements Cloneable {
         throws DatabaseException {
 
         checkNoJoinCursor();
-        return cursor.getCurrent(keyThang, primaryKeyThang, valueThang,
-                                 getLockMode(lockForWrite));
+        return cursor.getCurrent(
+            keyThang, primaryKeyThang, valueThang,
+            OpReadOptions.make(getLockMode(lockForWrite))).status();
     }
 
     /**
@@ -420,8 +423,9 @@ final class DataCursor implements Cloneable {
         if (joinCursor != null) {
             return joinCursor.getNext(keyThang, valueThang, lockMode);
         } else {
-            return cursor.getFirst(keyThang, primaryKeyThang, valueThang,
-                                   lockMode);
+            return cursor.getFirst(
+                keyThang, primaryKeyThang, valueThang,
+                OpReadOptions.make(lockMode)).status();
         }
     }
 
@@ -435,8 +439,9 @@ final class DataCursor implements Cloneable {
         if (joinCursor != null) {
             return joinCursor.getNext(keyThang, valueThang, lockMode);
         } else {
-            return cursor.getNext(keyThang, primaryKeyThang, valueThang,
-                                  lockMode);
+            return cursor.getNext(
+                keyThang, primaryKeyThang, valueThang,
+                OpReadOptions.make(lockMode)).status();
         }
     }
 
@@ -447,14 +452,15 @@ final class DataCursor implements Cloneable {
         throws DatabaseException {
 
         LockMode lockMode = getLockMode(lockForWrite);
+        OpReadOptions options = OpReadOptions.make(lockMode);
         if (joinCursor != null) {
             return joinCursor.getNext(keyThang, valueThang, lockMode);
         } else if (view.dupsView) {
             return cursor.getNext
-                (keyThang, primaryKeyThang, valueThang, lockMode);
+                (keyThang, primaryKeyThang, valueThang, options).status();
         } else {
             return cursor.getNextNoDup
-                (keyThang, primaryKeyThang, valueThang, lockMode);
+                (keyThang, primaryKeyThang, valueThang, options).status();
         }
     }
 
@@ -468,9 +474,9 @@ final class DataCursor implements Cloneable {
         if (view.dupsView) {
             return null;
         } else {
-            return cursor.getNextDup
-                (keyThang, primaryKeyThang, valueThang,
-                 getLockMode(lockForWrite));
+            return cursor.getNextDup(
+                keyThang, primaryKeyThang, valueThang,
+                OpReadOptions.make(getLockMode(lockForWrite))).status();
         }
     }
 
@@ -481,8 +487,9 @@ final class DataCursor implements Cloneable {
         throws DatabaseException {
 
         checkNoJoinCursor();
-        return cursor.getLast(keyThang, primaryKeyThang, valueThang,
-                              getLockMode(lockForWrite));
+        return cursor.getLast(
+            keyThang, primaryKeyThang, valueThang,
+            OpReadOptions.make(getLockMode(lockForWrite))).status();
     }
 
     /**
@@ -492,8 +499,9 @@ final class DataCursor implements Cloneable {
         throws DatabaseException {
 
         checkNoJoinCursor();
-        return cursor.getPrev(keyThang, primaryKeyThang, valueThang,
-                              getLockMode(lockForWrite));
+        return cursor.getPrev(
+            keyThang, primaryKeyThang, valueThang,
+            OpReadOptions.make(getLockMode(lockForWrite))).status();
     }
 
     /**
@@ -504,14 +512,12 @@ final class DataCursor implements Cloneable {
 
         checkNoJoinCursor();
         LockMode lockMode = getLockMode(lockForWrite);
+        OpReadOptions options = OpReadOptions.make(lockMode);
         if (view.dupsView) {
             return null;
-        } else if (view.dupsView) {
-            return cursor.getPrev
-                (keyThang, primaryKeyThang, valueThang, lockMode);
         } else {
-            return cursor.getPrevNoDup
-                (keyThang, primaryKeyThang, valueThang, lockMode);
+            return cursor.getPrevNoDup(
+                keyThang, primaryKeyThang, valueThang, options).status();
         }
     }
 
@@ -525,9 +531,9 @@ final class DataCursor implements Cloneable {
         if (view.dupsView) {
             return null;
         } else {
-            return cursor.getPrevDup
-                (keyThang, primaryKeyThang, valueThang,
-                 getLockMode(lockForWrite));
+            return cursor.getPrevDup(
+                keyThang, primaryKeyThang, valueThang,
+                OpReadOptions.make(getLockMode(lockForWrite))).status();
         }
     }
 
@@ -543,9 +549,9 @@ final class DataCursor implements Cloneable {
         if (view.dupsView) {
             if (view.useKey(key, value, primaryKeyThang, view.dupsRange)) {
                 KeyRange.copy(view.dupsKey, keyThang);
-                return cursor.getSearchBoth
-                    (keyThang, primaryKeyThang, valueThang,
-                     getLockMode(lockForWrite));
+                return cursor.getSearchBoth(
+                    keyThang, primaryKeyThang, valueThang,
+                    OpReadOptions.make(getLockMode(lockForWrite))).status();
             }
         } else {
             if (view.useKey(key, value, keyThang, range)) {
@@ -562,13 +568,13 @@ final class DataCursor implements Cloneable {
     private OperationStatus doGetSearchKey(boolean lockForWrite)
         throws DatabaseException {
 
-        LockMode lockMode = getLockMode(lockForWrite);
+        OpReadOptions options = OpReadOptions.make(getLockMode(lockForWrite));
         if (view.btreeRecNumAccess) {
-            return cursor.getSearchRecordNumber(keyThang, primaryKeyThang,
-                                                valueThang, lockMode);
+            return cursor.getSearchRecordNumber(
+                keyThang, primaryKeyThang, valueThang, options).status();
         } else {
-            return cursor.getSearchKey(keyThang, primaryKeyThang,
-                                       valueThang, lockMode);
+            return cursor.getSearchKey(
+                keyThang, primaryKeyThang, valueThang, options).status();
         }
     }
 
@@ -580,17 +586,17 @@ final class DataCursor implements Cloneable {
         throws DatabaseException {
 
         checkNoJoinCursor();
-        LockMode lockMode = getLockMode(lockForWrite);
+        OpReadOptions options = OpReadOptions.make(getLockMode(lockForWrite));
         if (view.dupsView) {
             if (view.useKey(key, value, primaryKeyThang, view.dupsRange)) {
                 KeyRange.copy(view.dupsKey, keyThang);
-                return cursor.getSearchBothRange
-                    (keyThang, primaryKeyThang, valueThang, lockMode);
+                return cursor.getSearchBothRange(
+                    keyThang, primaryKeyThang, valueThang, options).status();
             }
         } else {
             if (view.useKey(key, value, keyThang, range)) {
-                return cursor.getSearchKeyRange
-                    (keyThang, primaryKeyThang, valueThang, lockMode);
+                return cursor.getSearchKeyRange(
+                    keyThang, primaryKeyThang, valueThang, options).status();
             }
         }
         return OperationStatus.NOTFOUND;
@@ -604,7 +610,7 @@ final class DataCursor implements Cloneable {
         throws DatabaseException {
 
         checkNoJoinCursor();
-        LockMode lockMode = getLockMode(lockForWrite);
+        OpReadOptions options = OpReadOptions.make(getLockMode(lockForWrite));
         view.useValue(value, valueThang, null);
         if (view.dupsView) {
             if (view.useKey(key, value, primaryKeyThang, view.dupsRange)) {
@@ -612,8 +618,8 @@ final class DataCursor implements Cloneable {
                 if (otherThang == null) {
                     otherThang = new DatabaseEntry();
                 }
-                OperationStatus status = cursor.getSearchBoth
-                    (keyThang, primaryKeyThang, otherThang, lockMode);
+                OperationStatus status = cursor.getSearchBoth(
+                    keyThang, primaryKeyThang, otherThang, options).status();
                 if (status == OperationStatus.SUCCESS &&
                     KeyRange.equalBytes(otherThang, valueThang)) {
                     return status;
@@ -624,21 +630,20 @@ final class DataCursor implements Cloneable {
                 if (otherThang == null) {
                     otherThang = new DatabaseEntry();
                 }
-                OperationStatus status = cursor.getSearchKey(keyThang,
-                                                             primaryKeyThang,
-                                                             otherThang,
-                                                             lockMode);
+                OperationStatus status = cursor.getSearchKey(
+                    keyThang, primaryKeyThang, otherThang, options).status();
                 while (status == OperationStatus.SUCCESS) {
                     if (KeyRange.equalBytes(otherThang, valueThang)) {
                         return status;
                     }
-                    status = cursor.getNextDup(keyThang, primaryKeyThang,
-                                               otherThang, lockMode);
+                    status = cursor.getNextDup(
+                        keyThang, primaryKeyThang, otherThang,
+                        options).status();
                 }
                 /* if status != SUCCESS set range cursor to invalid? */
             } else {
-                return cursor.getSearchBoth(keyThang, null, valueThang,
-                                            lockMode);
+                return cursor.getSearchBoth(
+                    keyThang, null, valueThang, options).status();
             }
         }
         return OperationStatus.NOTFOUND;
@@ -705,8 +710,8 @@ final class DataCursor implements Cloneable {
             if (otherThang == null) {
                 otherThang = new DatabaseEntry();
             }
-            cursor.getCurrent(keyThang, primaryKeyThang, otherThang,
-                              LockMode.DEFAULT);
+            cursor.getCurrent(
+                keyThang, primaryKeyThang, otherThang, OpReadOptions.EMPTY);
             if (KeyRange.equalBytes(valueThang, otherThang)) {
                 return OperationStatus.SUCCESS;
             } else {
@@ -778,10 +783,9 @@ final class DataCursor implements Cloneable {
         } else {
             if (view.dupsAllowed) {
                 /* Unordered duplicates. */
-                OperationStatus status =
-                        cursor.getSearchBoth(keyThang, primaryKeyThang,
-                                             valueThang,
-                                             getLockMode(false));
+                OperationStatus status = cursor.getSearchBoth(
+                    keyThang, primaryKeyThang, valueThang,
+                    OpReadOptions.make(getLockMode(false))).status();
                 if (status == OperationStatus.SUCCESS) {
                     return OperationStatus.KEYEXIST;
                 } else {

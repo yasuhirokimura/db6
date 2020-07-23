@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2013, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2013, 2017 Oracle and/or its affiliates.  All rights reserved.
  */
 
 #include "db_config.h"
@@ -46,7 +46,7 @@ __blob_file_create(dbc, fhpp, blob_id)
 		goto err;
 
 	if ((ret = __blob_id_to_path(
-	    env, dbp->blob_sub_dir, *blob_id, &ppath)) != 0)
+	    env, dbp->blob_sub_dir, *blob_id, &ppath, 1)) != 0)
 		goto err;
 
 	if ((ret = __fop_create(env, dbc->txn,
@@ -113,7 +113,7 @@ __blob_file_delete(dbc, blob_id)
 	blob_name = full_path = NULL;
 
 	if ((ret = __blob_id_to_path(
-	    env, dbc->dbp->blob_sub_dir, blob_id, &blob_name)) != 0) {
+	    env, dbc->dbp->blob_sub_dir, blob_id, &blob_name, 0)) != 0) {
 		__db_errx(env, DB_STR_A("0229",
 		   "Failed to construct path for external file %llu.",
 		   "%llu"), (unsigned long long)blob_id);
@@ -170,7 +170,7 @@ __blob_file_open(dbp, fhpp, blob_id, flags, printerr)
 	oflags = 0;
 
 	if ((ret = __blob_id_to_path(
-	    env, dbp->blob_sub_dir, blob_id, &ppath)) != 0)
+	    env, dbp->blob_sub_dir, blob_id, &ppath, 1)) != 0)
 		goto err;
 
 	if ((ret = __db_appname(
@@ -298,7 +298,7 @@ __blob_file_write(dbc, fhp, buf, offset, blob_id, file_size, flags)
 	}
 
 	if ((ret = __blob_id_to_path(
-	    env, dbc->dbp->blob_sub_dir, blob_id, &name)) != 0)
+	    env, dbc->dbp->blob_sub_dir, blob_id, &name, 1)) != 0)
 		goto err;
 
 	if ((ret = __dbt_usercopy(env, buf)) != 0)

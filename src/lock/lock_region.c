@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -333,6 +333,7 @@ __lock_region_init(env, lt)
 
 		region->locker_mem_off = R_OFFSET(&lt->reginfo, lidp);
 		for (i = 0; i < region->stat.st_lockers; ++i) {
+			memset(lidp, 0, sizeof(*lidp));
 			SH_TAILQ_INSERT_HEAD(&region->free_lockers,
 			    lidp, links, __db_locker);
 			++lidp;

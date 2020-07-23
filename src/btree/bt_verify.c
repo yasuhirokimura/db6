@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1999, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1999, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -830,6 +830,14 @@ __bam_vrfy_inp(dbp, vdp, h, pgno, nentriesp, flags)
 			 */
 			memcpy(&bl, bk, BBLOB_SIZE);
 			blob_id = (db_seq_t)bl.id;
+			if (blob_id < 1) {
+				isbad = 1;
+				EPRINT((dbp->env, DB_STR_A("1216",
+			"Page %lu: invalid external file id %lld at item %lu",
+				    "%lu %lld %lu"), (u_long)pip->pgno,
+				    (long long)blob_id, (u_long)i));
+				break;
+			}
 			GET_BLOB_SIZE(env, bl, blob_size, ret);
 			if (ret != 0 || blob_size < 0) {
 				isbad = 1;
@@ -840,13 +848,14 @@ __bam_vrfy_inp(dbp, vdp, h, pgno, nentriesp, flags)
 			}
 			file_id = (db_seq_t)bl.file_id;
 			sdb_id = (db_seq_t)bl.sdb_id;
-			if (file_id == 0 && sdb_id == 0) {
+			if (file_id < 0 || sdb_id < 0 
+			    || (file_id == 0 && sdb_id == 0)) {
 				isbad = 1;
 				EPRINT((dbp->env, DB_STR_A("1195",
-		    "Page %lu: invalid external dir ids %llu %llu at item %lu",
-				    "%lu %llu %llu %lu"), (u_long)pip->pgno,
-				    (unsigned long long)file_id,
-				    (unsigned long long)sdb_id, (u_long)i));
+		    "Page %lu: invalid external dir ids %lld %lld at item %lu",
+				    "%lu %lld %lld %lu"), (u_long)pip->pgno,
+				    (long long)file_id,
+				    (long long)sdb_id, (u_long)i));
 				break;
 			}
 			if ((ret = __blob_vrfy(env, blob_id,
@@ -1169,6 +1178,11 @@ retry:	p1 = &dbta;
 			if (B_TYPE(bi->type) == B_OVERFLOW) {
 				bo = (BOVERFLOW *)(bi->data);
 				goto overflow;
+			} else if (B_TYPE(bi->type) == B_BLOB) {
+				isbad = 1;
+				EPRINT((env, DB_STR_A("1197",
+			    "Page %lu: External file found in key item %lu",
+				    "%lu %lu"), (u_long)pgno, (u_long)i));
 			} else {
 				p2->data = bi->data;
 				p2->size = bi->len;

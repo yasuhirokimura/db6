@@ -1,6 +1,6 @@
 # See the file LICENSE for redistribution information.
 #
-# Copyright (c) 2005, 2016 Oracle and/or its affiliates.  All rights reserved.
+# Copyright (c) 2005, 2017 Oracle and/or its affiliates.  All rights reserved.
 #
 # $Id$
 #
@@ -99,8 +99,10 @@ proc env013 { {args ""} } {
 
 		# Verify and open B.
 		puts "\tEnv013.e: Verify and open database copy."
-	 	error_check_good verify [verify_dir $testdir "\tEnv013.e: " \
-		    0 0 $nodump] 0
+		if { !$is_hp_test || $number_of_slices == 0 } {
+			error_check_good verify [verify_dir $testdir \
+			    "\tEnv013.e: " 0 0 $nodump] 0
+		}
 
 		set db [eval {berkdb_open} -env $env  \
 		    -auto_commit -btree -mode 0644 -rdonly $args $dupfile]

@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -53,6 +53,7 @@ public class SCheckpointConfig {
      *
      * @param force if set to true, force a checkpoint, even if there has been
      * no activity since the last checkpoint.
+     * @return this
      */
     public SCheckpointConfig setForce(boolean force) {
         this.force = force;
@@ -74,6 +75,7 @@ public class SCheckpointConfig {
      * @param kBytes if the {@code kbytes} parameter is non-zero, a checkpoint
      * will be performed if more than {@code kbytes} of log data have been
      * written since the last checkpoint.
+     * @return this
      */
     public SCheckpointConfig setKBytes(int kBytes) {
         this.kBytes = kBytes;
@@ -95,6 +97,7 @@ public class SCheckpointConfig {
      * @param minutes if the {@code minutes} parameter is non-zero, a
      * checkpoint is performed if more than min minutes have passed since the
      * last checkpoint.
+     * @return this
      */
     public SCheckpointConfig setMinutes(int minutes) {
         this.minutes = minutes;

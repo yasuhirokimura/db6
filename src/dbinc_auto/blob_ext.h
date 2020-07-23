@@ -26,7 +26,7 @@ int __blob_generate_dir_ids __P((DB *, DB_TXN *, db_seq_t *));
 int __blob_generate_id __P((DB *, DB_TXN *, db_seq_t *));
 int __blob_highest_id __P((DB *, DB_TXN *, db_seq_t *));
 void __blob_calculate_dirs __P((db_seq_t, char *, int *, int *));
-int __blob_id_to_path __P((ENV *, const char *, db_seq_t, char **));
+int __blob_id_to_path __P((ENV *, const char *, db_seq_t, char **, int));
 int __blob_str_to_id __P((ENV *, const char **, db_seq_t *));
 int __blob_path_to_dir_ids __P((ENV *, const char *, db_seq_t *, db_seq_t *));
 int __blob_salvage __P((ENV *, db_seq_t, off_t, size_t, db_seq_t, db_seq_t, DBT *));

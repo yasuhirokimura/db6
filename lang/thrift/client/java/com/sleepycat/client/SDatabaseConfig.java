@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -11,6 +11,8 @@ package com.sleepycat.client;
 import com.sleepycat.thrift.TCachePriority;
 import com.sleepycat.thrift.TDatabaseConfig;
 import com.sleepycat.thrift.TDatabaseType;
+
+import java.util.Comparator;
 
 /**
  * Specify the attributes of a database.
@@ -33,6 +35,10 @@ public class SDatabaseConfig
      */
     public SDatabaseConfig() {
         super(new TDatabaseConfig());
+        setBtreeRecordNumbers(false);
+        setExclusiveCreate(false);
+        setSortedDuplicates(false);
+        setUnsortedDuplicates(false);
     }
 
     /**
@@ -42,6 +48,15 @@ public class SDatabaseConfig
      */
     SDatabaseConfig(TDatabaseConfig tConfig) {
         super(tConfig);
+    }
+
+    /**
+     * Create a deep copy of this configuration object.
+     *
+     * @return a deep copy of this configuration object
+     */
+    public SDatabaseConfig cloneConfig() {
+        return new SDatabaseConfig(getThriftObj().deepCopy());
     }
 
     /**
@@ -98,10 +113,20 @@ public class SDatabaseConfig
      * @param value The size in bytes which is used to determine when a data
      * item will be stored as a blob; if 0, blob will be never used by the
      * database.
+     * @return this
      */
     public SDatabaseConfig setBlobThreshold(int value) {
         getThriftObj().setBlobThreshold(value);
         return this;
+    }
+
+    /**
+     * Always return null. For compatibility with DPL APIs.
+     *
+     * @return always null
+     */
+    public Comparator<byte[]> getBtreeComparator() {
+        return null;
     }
 
     /**
@@ -860,6 +885,15 @@ public class SDatabaseConfig
     }
 
     /**
+     * Always return true. For compatibility with DPL APIs.
+     *
+     * @return always true
+     */
+    public boolean getTransactional() {
+        return true;
+    }
+
+    /**
      * Return true if the database environment is configured to not write log
      * records for this database.
      *
@@ -916,6 +950,7 @@ public class SDatabaseConfig
      * Configure the type of the database.
      *
      * @param type the type of the database.
+     * @return this
      */
     public SDatabaseConfig setType(final SDatabaseType type) {
         getThriftObj().setType(SDatabaseType.toThrift(type));

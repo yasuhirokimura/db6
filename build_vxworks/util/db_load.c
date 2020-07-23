@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -14,7 +14,7 @@
 
 #ifndef lint
 static const char copyright[] =
-    "Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.\n";
+    "Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.\n";
 #endif
 
 typedef struct {			/* Collect global variables together. */
@@ -49,7 +49,6 @@ int	db_load_main __P((int, char *[]));
 int	db_load_putdata __P((DB *, DBC *, DB_TXN *, DBT *, DBT *, u_int32_t, int));
 int	db_load_rheader __P((DB_ENV *, DB *, DBTYPE *, char **, int *, int *, DBT **));
 int	db_load_usage __P((void));
-int	db_load_version_check __P((void));
 
 const char *progname;
 
@@ -90,10 +89,7 @@ db_load_main(argc, argv)
 	int ch, existed, exitval, ret;
 	char **clist, **clp;
 
-	if ((progname = __db_rpath(argv[0])) == NULL)
-		progname = argv[0];
-	else
-		++progname;
+	progname = __db_util_arg_progname(argv[0]);
 
 	clist = NULL;
 	ldg.progname = progname;
@@ -107,7 +103,7 @@ db_load_main(argc, argv)
 	ldg.blob_dir = NULL;
 	ldg.blob_threshold = 0;
 
-	if ((exitval = db_load_version_check()) != 0)
+	if ((exitval = __db_util_version_check(progname)) != 0)
 		goto done;
 
 	mode = NOTSET;
@@ -187,15 +183,11 @@ db_load_main(argc, argv)
 			ldg.blob_threshold = (u_int32_t)atoi(optarg);
 			break;
 		case 'P':
-			ldg.passwd = strdup(optarg);
-			memset(optarg, 0, strlen(optarg));
-			if (ldg.passwd == NULL) {
-				fprintf(stderr, DB_STR_A("5073",
-				    "%s: strdup: %s\n", "%s %s\n"),
-				    ldg.progname, strerror(errno));
-				exitval = db_load_usage();
-				goto done;
-			}
+			if (__db_util_arg_password(progname,
+ 			    optarg, &ldg.passwd) != 0) {
+  				exitval = db_load_usage();
+  				goto done;
+  			}
 			ldf |= LDF_PASSWORD;
 			break;
 		case 'r':
@@ -295,7 +287,7 @@ db_load_main(argc, argv)
 	if (0) {
 err:		exitval = 1;
 	}
-	if ((ret = dbenv->close(dbenv, 0)) != 0) {
+	if (dbenv != NULL && (ret = dbenv->close(dbenv, 0)) != 0) {
 		exitval = 1;
 		fprintf(stderr,
 		    "%s: dbenv->close: %s\n", ldg.progname, db_strerror(ret));
@@ -779,20 +771,11 @@ db_load_env_create(dbenvp, ldg)
 	DB_ENV *dbenv;
 	int ret;
 
-	if ((ret = db_env_create(dbenvp, 0)) != 0) {
-		fprintf(stderr, "%s: db_env_create: %s\n",
-		    ldg->progname, db_strerror(ret));
+	if ((ret = __db_util_env_create(dbenvp, progname,
+	    ldg->passwd, NULL)) != 0)
 		return (ret);
-	}
-	dbenv = *dbenvp;
-	dbenv->set_errfile(dbenv, stderr);
-	dbenv->set_errpfx(dbenv, ldg->progname);
-	if (ldg->passwd != NULL && (ret = dbenv->set_encrypt(dbenv,
-	    ldg->passwd, DB_ENCRYPT_AES)) != 0) {
-		dbenv->err(dbenv, ret, "set_passwd");
-		return (ret);
-	}
 
+	dbenv = *dbenvp;
 	/* Configure blobs. */
 	if (ldg->blob_threshold != 0 &&
 	    (ret = dbenv->set_blob_threshold(
@@ -824,18 +807,6 @@ db_load_db_init(dbenv, home, cache, is_private)
 	u_int32_t cache;
 	int *is_private;
 {
-	u_int32_t flags;
-	int ret;
-
-	*is_private = 0;
-	/* We may be loading into a live environment.  Try and join. */
-	flags = DB_USE_ENVIRON |
-	    DB_INIT_LOCK | DB_INIT_LOG | DB_INIT_MPOOL | DB_INIT_TXN;
-	if ((ret = dbenv->open(dbenv, home, flags, 0)) == 0)
-		return (0);
-	if (ret == DB_VERSION_MISMATCH || ret == DB_REP_LOCKOUT)
-		goto err;
-
 	/*
 	 * We're trying to load a database.
 	 *
@@ -844,23 +815,13 @@ db_load_db_init(dbenv, home, cache, is_private)
 	 * avoid using an environment iff the -h option wasn't specified,
 	 * but that seems like more work than it's worth.
 	 *
-	 * No environment exists (or, at least no environment that includes
-	 * an mpool region exists).  Create one, but make it private so that
-	 * no files are actually created.
+	 * Try and join a live environment. If no environment exists (or, at
+	 * least no environment that includes an mpool region exists), create
+	 * one, but make it private so that no files are actually created.
 	 */
-	LF_CLR(DB_INIT_LOCK | DB_INIT_LOG | DB_INIT_TXN);
-	LF_SET(DB_CREATE | DB_PRIVATE);
-	*is_private = 1;
-	if ((ret = dbenv->set_cachesize(dbenv, 0, cache, 1)) != 0) {
-		dbenv->err(dbenv, ret, "set_cachesize");
-		return (1);
-	}
-	if ((ret = dbenv->open(dbenv, home, flags, 0)) == 0)
-		return (0);
-
-	/* An environment is required. */
-err:	dbenv->err(dbenv, ret, "DB_ENV->open");
-	return (1);
+	return __db_util_env_open(dbenv, home,
+	    DB_INIT_LOCK | DB_INIT_LOG | DB_INIT_MPOOL | DB_INIT_TXN,
+	    1, DB_INIT_MPOOL, cache, is_private);
 }
 
 #define	FLAG(name, value, keyword, flag)				\
@@ -1661,21 +1622,4 @@ db_load_usage()
 	(void)fprintf(stderr, "usage: %s %s\n",
 	    progname, "-b [blob_dir] -o [blob_threshold] db_file");
 	return (EXIT_FAILURE);
-}
-
-int
-db_load_version_check()
-{
-	int v_major, v_minor, v_patch;
-
-	/* Make sure we're loaded with the right version of the DB library. */
-	(void)db_version(&v_major, &v_minor, &v_patch);
-	if (v_major != DB_VERSION_MAJOR || v_minor != DB_VERSION_MINOR) {
-		fprintf(stderr, DB_STR_A("5091",
-		    "%s: version %d.%d doesn't match library version %d.%d\n",
-		    "%s %d %d %d %d\n"), progname, DB_VERSION_MAJOR,
-		    DB_VERSION_MINOR, v_major, v_minor);
-		return (EXIT_FAILURE);
-	}
-	return (0);
 }

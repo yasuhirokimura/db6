@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -12,12 +12,11 @@
 
 #ifndef lint
 static const char copyright[] =
-    "Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.\n";
+    "Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.\n";
 #endif
 
 int	 db_checkpoint_main __P((int, char *[]));
 void	 db_checkpoint_usage __P((void));
-int	 db_checkpoint_version_check __P((void));
 
 const char *progname;
 
@@ -49,12 +48,9 @@ db_checkpoint_main(argc, argv)
 	int ch, exitval, once, ret, verbose;
 	char *home, *logfile, *msgpfx, *passwd, time_buf[CTIME_BUFLEN];
 
-	if ((progname = __db_rpath(argv[0])) == NULL)
-		progname = argv[0];
-	else
-		++progname;
+	progname = __db_util_arg_progname(argv[0]);
 
-	if ((ret = db_checkpoint_version_check()) != 0)
+	if ((ret = __db_util_version_check(progname)) != 0)
 		return (ret);
 
 	/*
@@ -93,19 +89,9 @@ db_checkpoint_main(argc, argv)
 			msgpfx = optarg;
 			break;
 		case 'P':
-			if (passwd != NULL) {
-				fprintf(stderr, DB_STR("5134",
-					"Password may not be specified twice"));
-				goto err;
-			}
-			passwd = strdup(optarg);
-			memset(optarg, 0, strlen(optarg));
-			if (passwd == NULL) {
-				fprintf(stderr, DB_STR_A("5121",
-				    "%s: strdup: %s\n", "%s %s"),
-				    progname, strerror(errno));
-				goto err;
-			}
+			if (__db_util_arg_password(progname,
+ 			    optarg, &passwd) != 0)
+  				goto err;
 			break;
 		case 'p':
 			if (__db_getlong(NULL, progname,
@@ -143,45 +129,22 @@ db_checkpoint_main(argc, argv)
 	if (logfile != NULL && __db_util_logset(progname, logfile))
 		goto err;
 
-	/*
-	 * Create an environment object and initialize it for error
-	 * reporting.
-	 */
-	if ((ret = db_env_create(&dbenv, 0)) != 0) {
-		fprintf(stderr,
-		    "%s: db_env_create: %s\n", progname, db_strerror(ret));
+	if (__db_util_env_create(&dbenv, progname, passwd, msgpfx) != 0)
 		goto err;
-	}
-
-	dbenv->set_errfile(dbenv, stderr);
-	dbenv->set_errpfx(dbenv, progname);
-	if (msgpfx != NULL)
-		dbenv->set_msgpfx(dbenv, msgpfx);
-
-	if (passwd != NULL && (ret = dbenv->set_encrypt(dbenv,
-	    passwd, DB_ENCRYPT_AES)) != 0) {
-		dbenv->err(dbenv, ret, "set_passwd");
-		goto err;
-	}
 
 	/*
-	 * If attaching to a pre-existing environment fails, create a
-	 * private one and try again.  Turn on DB_THREAD in case a repmgr
-	 * application wants to do checkpointing using this utility: repmgr
-	 * requires DB_THREAD for all env handles.
+	 * Turn on DB_THREAD in case a repmgr application wants to do
+	 * checkpointing using this utility: repmgr requires DB_THREAD
+	 * for all env handles.
 	 */
 #ifdef HAVE_REPLICATION_THREADS
-#define	ENV_FLAGS (DB_THREAD | DB_USE_ENVIRON)
+#define	ENV_FLAGS DB_THREAD
 #else
-#define	ENV_FLAGS DB_USE_ENVIRON
+#define	ENV_FLAGS 0
 #endif
-	if ((ret = dbenv->open(dbenv, home, ENV_FLAGS, 0)) != 0 &&
-	    (!once || ret == DB_VERSION_MISMATCH || ret == DB_REP_LOCKOUT ||
-	    (ret = dbenv->open(dbenv, home,
-	    DB_CREATE | DB_INIT_TXN | DB_PRIVATE | DB_USE_ENVIRON, 0)) != 0)) {
-		dbenv->err(dbenv, ret, "DB_ENV->open");
+	if (__db_util_env_open(dbenv, home, ENV_FLAGS,
+	    once, DB_INIT_TXN, 0, NULL) != 0)
 		goto err;
-	}
 
 	/*
 	 * If we have only a time delay, then we'll sleep the right amount
@@ -247,21 +210,4 @@ db_checkpoint_usage()
 	(void)fprintf(stderr, "usage: %s [-1Vv]\n\t%s %s\n", progname,
 	    "[-h home] [-k kbytes] [-L file] [-m msg_pfx]",
 	    "[-P password] [-p min]");
-}
-
-int
-db_checkpoint_version_check()
-{
-	int v_major, v_minor, v_patch;
-
-	/* Make sure we're loaded with the right version of the DB library. */
-	(void)db_version(&v_major, &v_minor, &v_patch);
-	if (v_major != DB_VERSION_MAJOR || v_minor != DB_VERSION_MINOR) {
-		fprintf(stderr, DB_STR_A("5125",
-		    "%s: version %d.%d doesn't match library version %d.%d\n",
-		    "%s %d %d %d %d\n"), progname, DB_VERSION_MAJOR,
-		    DB_VERSION_MINOR, v_major, v_minor);
-		return (EXIT_FAILURE);
-	}
-	return (0);
 }

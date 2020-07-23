@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -12,12 +12,11 @@
 
 #ifndef lint
 static const char copyright[] =
-    "Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.\n";
+    "Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.\n";
 #endif
 
 int db_verify_main __P((int, char *[]));
 void db_verify_usage __P((void));
-int db_verify_version_check __P((void));
 
 const char *progname;
 
@@ -49,12 +48,9 @@ db_verify_main(argc, argv)
 	int quiet, resize, ret;
 	char *blob_dir, *dname, *fname, *home, *passwd;
 
-	if ((progname = __db_rpath(argv[0])) == NULL)
-		progname = argv[0];
-	else
-		++progname;
+	progname = __db_util_arg_progname(argv[0]);
 
-	if ((ret = db_verify_version_check()) != 0)
+	if ((ret = __db_util_version_check(progname)) != 0)
 		return (ret);
 
 	dbenv = NULL;
@@ -80,18 +76,9 @@ db_verify_main(argc, argv)
 			nflag = 1;
 			break;
 		case 'P':
-			if (passwd != NULL) {
-				fprintf(stderr, DB_STR("5132",
-					"Password may not be specified twice"));
-				goto err;
-			}
-			passwd = strdup(optarg);
-			memset(optarg, 0, strlen(optarg));
-			if (passwd == NULL) {
-				fprintf(stderr, "%s: strdup: %s\n",
-				    progname, strerror(errno));
-				goto err;
-			}
+			if (__db_util_arg_password(progname, 
+ 			    optarg, &passwd) != 0)
+  				goto err;
 			break;
 		case 'o':
 			LF_SET(DB_NOORDERCHK);
@@ -160,24 +147,9 @@ retry:	if ((ret = db_env_create(&dbenv, 0)) != 0) {
 	 * private region.  In the latter case, declare a reasonably large
 	 * cache so that we don't fail when verifying large databases.
 	 */
-	private = 0;
-	if ((ret =
-	    dbenv->open(dbenv, home, DB_INIT_MPOOL | DB_USE_ENVIRON, 0)) != 0) {
-		if (ret != DB_VERSION_MISMATCH && ret != DB_REP_LOCKOUT) {
-			if ((ret =
-			    dbenv->set_cachesize(dbenv, 0, cache, 1)) != 0) {
-				dbenv->err(dbenv, ret, "set_cachesize");
-				goto err;
-			}
-			private = 1;
-			ret = dbenv->open(dbenv, home, DB_CREATE |
-			    DB_INIT_MPOOL | DB_PRIVATE | DB_USE_ENVIRON, 0);
-		}
-		if (ret != 0) {
-			dbenv->err(dbenv, ret, "DB_ENV->open");
-			goto err;
-		}
-	}
+	if (__db_util_env_open(dbenv, home, DB_INIT_MPOOL,
+	    1, DB_INIT_MPOOL, cache, &private) != 0)
+		goto err;
 
 	/*
 	 * Find out if we have a transactional environment so that we can
@@ -293,21 +265,4 @@ db_verify_usage()
 {
 	fprintf(stderr, "usage: %s %s\n", progname,
 	    "[-mNoqV] [-b blob_dir] [-h home] [-P password] db_file ...");
-}
-
-int
-db_verify_version_check()
-{
-	int v_major, v_minor, v_patch;
-
-	/* Make sure we're loaded with the right version of the DB library. */
-	(void)db_version(&v_major, &v_minor, &v_patch);
-	if (v_major != DB_VERSION_MAJOR || v_minor != DB_VERSION_MINOR) {
-		fprintf(stderr, DB_STR_A("5107",
-		    "%s: version %d.%d doesn't match library version %d.%d\n",
-		    "%s %d %d %d %d\n"), progname, DB_VERSION_MAJOR,
-		    DB_VERSION_MINOR, v_major, v_minor);
-		return (EXIT_FAILURE);
-	}
-	return (0);
 }

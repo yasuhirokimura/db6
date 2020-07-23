@@ -7862,6 +7862,10 @@ struct sqlite3_rtree_query_info {
 #define SQLITE_USER_AUTHENTICATION 1
 #endif
 
+#if defined(SQLITE_USER_AUTHENTICATION) && !defined(SQLITE_HAS_CODEC)
+#error Encryption is required when authentication is enabled.
+#endif
+
 #if defined(BDBSQL_USER_AUTHENTICATION_KEYSTORE) && !defined(SQLITE_HAS_CODEC)
 #undef BDBSQL_USER_AUTHENTICATION_KEYSTORE
 #endif

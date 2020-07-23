@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 1996, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 1996, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -14,6 +14,9 @@
 #include "dbinc/db_page.h"
 #include "dbinc/hash.h"
 
+#ifdef HAVE_MUTEX_SUPPORT
+static int __memp_count_dead_mutex __P((DB_MPOOL *, u_int32_t *));
+#endif
 static int __memp_mpf_alloc __P((DB_MPOOL *,
     DB_MPOOLFILE *, const char *, u_int32_t, u_int32_t, MPOOLFILE **));
 static int __memp_mpf_find __P((ENV *,
@@ -229,7 +232,7 @@ __memp_fopen(dbmfp, mfp, path, dirp, flags, mode, pgsize)
 						MUTEX_UNLOCK(env, hp->mtx_hash);
 						goto mvcc_err;
 					}
-					atomic_inc(env, &mfp->multiversion);
+					(void)atomic_inc(env, &mfp->multiversion);
 					F_SET(dbmfp, MP_MULTIVERSION);
 				}
 			}
@@ -255,7 +258,7 @@ mvcc_err:				__db_errx(env, DB_STR("3041",
 					goto err;
 				}
 
-				atomic_inc(env, &mfp->multiversion);
+				(void)atomic_inc(env, &mfp->multiversion);
 				F_SET(dbmfp, MP_MULTIVERSION);
 			}
 			/*
@@ -514,7 +517,7 @@ check:	MUTEX_LOCK(env, hp->mtx_hash);
 			MUTEX_UNLOCK(env, hp->mtx_hash);
 			goto mvcc_err;
 		}
-		atomic_inc(env, &mfp->multiversion);
+		(void)atomic_inc(env, &mfp->multiversion);
 		F_SET(dbmfp, MP_MULTIVERSION);
 	}
 
@@ -565,7 +568,7 @@ alloc:		if ((ret = __memp_mpf_alloc(dbmp,
 		mfp = alloc_mfp;
 
 		if (LF_ISSET(DB_MULTIVERSION)) {
-			atomic_inc(env, &mfp->multiversion);
+			(void)atomic_inc(env, &mfp->multiversion);
 			F_SET(dbmfp, MP_MULTIVERSION);
 		}
 
@@ -745,7 +748,11 @@ __memp_mpf_find(env, dbmfp, hp, path, flags, mfpp)
 		 */
 		if (LF_ISSET(DB_TRUNCATE)) {
 			MUTEX_LOCK(env, mfp->mutex);
-			mfp->deadfile = 1;
+			/*
+			 * We cannot purge dead files here, because the caller
+			 * is holding the mutex of the hash bucket of mfp.
+			 */
+			__memp_mf_mark_dead(dbmp, mfp, NULL);
 			MUTEX_UNLOCK(env, mfp->mutex);
 			continue;
 		}
@@ -937,10 +944,11 @@ __memp_fclose(dbmfp, flags)
 	MPOOLFILE *mfp;
 	char *rpath;
 	u_int32_t ref;
-	int deleted, ret, t_ret;
+	int deleted, purge_dead, ret, t_ret;
 
 	env = dbmfp->env;
 	dbmp = env->mp_handle;
+	purge_dead = 0;
 	ret = 0;
 
 	/*
@@ -1024,7 +1032,7 @@ __memp_fclose(dbmfp, flags)
 	if (!LF_ISSET(DB_MPOOL_NOLOCK))
 		MUTEX_LOCK(env, mfp->mutex);
 	if (F_ISSET(dbmfp, MP_MULTIVERSION))
-		atomic_dec(env, &mfp->multiversion);
+		(void)atomic_dec(env, &mfp->multiversion);
 	if (F_ISSET(dbmfp, MP_READONLY) ||
 	    (LF_ISSET(DB_FLUSH) && F_ISSET(dbmfp, MP_FOR_FLUSH))) {
 		DB_ASSERT(env, mfp->neutral_cnt != 0);
@@ -1034,7 +1042,7 @@ __memp_fclose(dbmfp, flags)
 	if (--mfp->mpf_cnt == 0 || LF_ISSET(DB_MPOOL_DISCARD)) {
 		if (LF_ISSET(DB_MPOOL_DISCARD) ||
 		    F_ISSET(mfp, MP_TEMP) || mfp->unlink_on_close) {
-			mfp->deadfile = 1;
+			__memp_mf_mark_dead(dbmp, mfp, &purge_dead);
 		}
 		if (mfp->unlink_on_close) {
 			if ((t_ret = __db_appname(dbmp->env, DB_APP_DATA,
@@ -1068,6 +1076,8 @@ __memp_fclose(dbmfp, flags)
 	}
 	if (!deleted && !LF_ISSET(DB_MPOOL_NOLOCK))
 		MUTEX_UNLOCK(env, mfp->mutex);
+	if (purge_dead)
+		(void)__memp_purge_dead_files(env);
 
 done:	/* Discard the DB_MPOOLFILE structure. */
 	if (dbmfp->pgcookie != NULL) {
@@ -1123,7 +1133,7 @@ __memp_mf_discard(dbmp, mfp, hp_locked)
 	 * mutex so we don't deadlock.  Make sure nobody ever looks at this
 	 * structure again.
 	 */
-	mfp->deadfile = 1;
+	__memp_mf_mark_dead(dbmp, mfp, NULL);
 
 	/* We should unlink the file if necessary. */
 	if (mfp->block_cnt == 0 && mfp->mpf_cnt == 0 && mfp->unlink_on_close &&
@@ -1142,7 +1152,7 @@ __memp_mf_discard(dbmp, mfp, hp_locked)
 		need_sync = 0;
 	}
 
-	/* Discard the mutex we're holding and return it too the pool. */
+	/* Discard the mutex we're holding and return it to the pool. */
 	MUTEX_UNLOCK(env, mfp->mutex);
 	if ((t_ret = __mutex_free(env, &mfp->mutex)) != 0 && ret == 0)
 		ret = t_ret;
@@ -1265,3 +1275,105 @@ nomem:	MUTEX_UNLOCK(env, hp->mtx_hash);
 	*namesp = NULL;
 	return (ret);
 }
+
+/*
+ * __memp_mf_mark_dead --
+ *	Mark an MPOOLFILE as dead because its contents are no longer necessary.
+ *	This happens when removing, truncation, or closing an unnamed in-memory
+ *	database. Return, in the purgep parameter, whether the caller should
+ *	call __memp_purge_dead_files() after the lock on mfp is released. The
+ *	caller must hold an exclusive lock on the mfp handle.
+ *
+ * PUBLIC: void __memp_mf_mark_dead __P((DB_MPOOL *, MPOOLFILE *, int*));
+ */
+void
+__memp_mf_mark_dead(dbmp, mfp, purgep)
+	DB_MPOOL *dbmp;	
+	MPOOLFILE *mfp;
+	int *purgep;
+{
+	ENV *env;
+#ifdef HAVE_MUTEX_SUPPORT
+	REGINFO *infop;
+	DB_MUTEXREGION *mtxregion;
+	u_int32_t mutex_max, mutex_inuse, dead_mutex;
+#endif
+
+	if (purgep != NULL)
+		*purgep = 0;
+
+	env = dbmp->env;
+
+#ifdef HAVE_MUTEX_SUPPORT
+	MUTEX_REQUIRED(env, mfp->mutex);
+
+	if (MUTEX_ON(env) && mfp->deadfile == 0) {
+		infop = &env->mutex_handle->reginfo;
+		mtxregion = infop->primary;
+
+		mutex_inuse = mtxregion->stat.st_mutex_inuse;
+		if ((mutex_max = env->dbenv->mutex_max) == 0)
+			mutex_max = infop->rp->max / mtxregion->mutex_size;
+
+		/*
+		 * Purging dead pages requires a full scan of the entire cache
+		 * buffer, so it is a slow operation. We only want to do it
+		 * when it is necessary and provides enough benefits. Below is
+		 * a simple heuristic that determines when to purge all dead
+		 * pages.
+		 */
+		if (purgep != NULL && mutex_inuse > mutex_max - 200) {
+			/*
+			 * If the mutex region is almost full and there are
+			 * many mutexes held by dead files, purge dead files.
+			 */
+			(void)__memp_count_dead_mutex(dbmp, &dead_mutex);
+			dead_mutex += mfp->block_cnt + 1;
+
+			if (dead_mutex > mutex_inuse / 20)
+				*purgep = 1;
+		}
+	}
+#endif
+
+	mfp->deadfile = 1;
+}
+
+#ifdef HAVE_MUTEX_SUPPORT
+/*
+ * __memp_count_dead_mutex --
+ *	Estimate the number of mutexes held by dead files.
+ */
+static int
+__memp_count_dead_mutex(dbmp, dead_mutex)
+	DB_MPOOL *dbmp;
+	u_int32_t *dead_mutex;
+{
+	ENV *env;
+	DB_MPOOL_HASH *hp;
+	MPOOL *mp;
+	MPOOLFILE *mfp;
+	u_int32_t mutex_per_file;
+	int i;
+
+	env = dbmp->env;
+	*dead_mutex = 0;
+	mutex_per_file = 1;
+#ifndef HAVE_ATOMICFILEREAD
+	mutex_per_file = 2;
+#endif
+	mp = dbmp->reginfo[0].primary;
+	hp = R_ADDR(dbmp->reginfo, mp->ftab);
+	for (i = 0; i < MPOOL_FILE_BUCKETS; i++, hp++) {
+		if (MUTEX_TRYLOCK(env, hp->mtx_hash) != 0)
+			continue;
+		SH_TAILQ_FOREACH(mfp, &hp->hash_bucket, q, __mpoolfile) {
+			if (mfp->deadfile)
+				*dead_mutex += mfp->block_cnt + mutex_per_file;
+		}
+		MUTEX_UNLOCK(env, hp->mtx_hash);
+	}
+
+	return (0);
+}
+#endif

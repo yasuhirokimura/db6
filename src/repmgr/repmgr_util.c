@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2005, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2005, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -3225,7 +3225,7 @@ __repmgr_msgdispatch(dbenv, ch, request, nseg, flags)
 	 * so use the alternative MUTEX_[UN]LOCK_RET() macros instead.
 	 * We perform special handling for DB_RUNRECOVERY below.
 	 */
-	if (MUTEX_LOCK_RET(env, env->mtx_dblist) != 0) {
+	if ((ret = MUTEX_LOCK_RET(env, env->mtx_dblist)) != 0) {
 		__db_err(env, ret, "repmgr_msgdispatch mutex_lock");
 		goto send_response;
 	}
@@ -3234,7 +3234,7 @@ __repmgr_msgdispatch(dbenv, ch, request, nseg, flags)
 		    ldbp->meta_pgno == metapgno)
 			break;
 	}
-	if (MUTEX_UNLOCK_RET(env, env->mtx_dblist) != 0) {
+	if ((ret = MUTEX_UNLOCK_RET(env, env->mtx_dblist)) != 0) {
 		__db_err(env, ret, "repmgr_msgdispatch mutex_unlock");
 		goto send_response;
 	}

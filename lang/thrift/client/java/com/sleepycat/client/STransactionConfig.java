@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -47,10 +47,9 @@ public class STransactionConfig
      * optimization. When this attribute is set, the transaction will avoid
      * logging the contents of insertions on newly allocated database pages. In
      * a transaction that inserts a large number of new records, the I/O
-     * savings
-     * of choosing this option can be significant. Users of this option should
-     * be aware of several issues. When the optimization is in effect, page
-     * allocations that extend the database file are logged as usual; this
+     * savings of choosing this option can be significant. Users of this option
+     * should be aware of several issues. When the optimization is in effect,
+     * page allocations that extend the database file are logged as usual; this
      * allows transaction aborts to work correctly, both online and during
      * recovery. At commit time, the database's pages are flushed to disk,
      * eliminating the need to roll-forward the transaction during normal
@@ -162,7 +161,8 @@ public class STransactionConfig
     }
 
     private boolean isDurabilityPolicyEqual(TDurabilityPolicy policy) {
-        return policy.equals(getField(TTransactionConfig._Fields.DURABILITY));
+        return getThriftObj().isSetDurability() &&
+                policy.equals(getField(TTransactionConfig._Fields.DURABILITY));
     }
 
     private void setDurabilityPolicy(TDurabilityPolicy policy, boolean set) {
@@ -191,6 +191,7 @@ public class STransactionConfig
      * @param noWait if true, transactions will not wait if a lock request
      * cannot be immediately granted, instead {@link SDeadlockException}
      * will be thrown.
+     * @return this
      */
     public STransactionConfig setNoWait(final boolean noWait) {
         getThriftObj().setWait(!noWait);
@@ -210,11 +211,11 @@ public class STransactionConfig
 
     /**
      * Configure the transaction to wait if a lock request cannot be
-     * immediately
-     * granted.
+     * immediately granted.
      *
      * @param wait if true, transactions will wait if a lock request cannot be
      * immediately granted.
+     * @return this
      */
     public STransactionConfig setWait(final boolean wait) {
         getThriftObj().setWait(wait);
@@ -264,6 +265,7 @@ public class STransactionConfig
      *
      * @param readUncommitted if true, configure read operations performed by
      * the transaction to return modified but not yet committed data.
+     * @return this
      */
     public STransactionConfig setReadUncommitted(
             final boolean readUncommitted) {
@@ -289,6 +291,9 @@ public class STransactionConfig
      * Updates operations performed in the transaction will cause a
      * {@link SDeadlockException} to be thrown if data is modified between
      * reading and writing it.
+     *
+     * @param snapshot if this transaction will execute with snapshot isolation
+     * @return this
      */
     public STransactionConfig setSnapshot(final boolean snapshot) {
         setIsolationLevel(TIsolationLevel.SNAPSHOT, snapshot);

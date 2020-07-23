@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2002, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2002, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -107,7 +107,9 @@ public class ServerKeyCreator implements SecondaryMultiKeyCreator {
             auxDbName = getAuxiliaryName(sdbKey.getDatabaseName());
         } else {
             String auxFile = getAuxiliaryName(sdbFileKey.getCanonicalPath());
-            auxFileKey = new DatabaseFileKey(new File(auxFile), false);
+            String auxRelative = getAuxiliaryName(sdbFileKey.getRelativePath());
+            auxFileKey =
+                    new DatabaseFileKey(new File(auxFile), auxRelative, false);
             auxDbName = sdbKey.getDatabaseName();
         }
         return new DatabaseKey(auxFileKey, auxDbName);
@@ -137,7 +139,7 @@ public class ServerKeyCreator implements SecondaryMultiKeyCreator {
         DatabaseKey auxDbKey = getAuxiliaryDbKey(this.secondaryDbKey);
         DatabaseFileKey auxFileKey = auxDbKey.getDatabaseFile();
         String auxFile =
-                auxFileKey.isInMemory() ? null : auxFileKey.getCanonicalPath();
+                auxFileKey.isInMemory() ? null : auxFileKey.getRelativePath();
 
         this.auxiliaryDb = env.openDatabase(this.operationTxn.get(), auxFile,
                 auxDbKey.getDatabaseName(), config);
@@ -146,7 +148,7 @@ public class ServerKeyCreator implements SecondaryMultiKeyCreator {
     private DatabaseConfig createAuxiliaryDbConfig() {
         DatabaseConfig config = new DatabaseConfig();
         config.setAllowCreate(true);
-        config.setBlobThreshold(0);
+        config.setExternalFileThreshold(0);
         config.setSortedDuplicates(true);
         config.setTransactional(true);
         config.setType(DatabaseType.HASH);
@@ -224,7 +226,7 @@ public class ServerKeyCreator implements SecondaryMultiKeyCreator {
             List<DatabaseEntry> secondaryKeys, Cursor auxCursor)
             throws DatabaseException {
         for (DatabaseEntry sKey : secondaryKeys) {
-            auxCursor.put(auxKey, sKey);
+            auxCursor.putNoDupData(auxKey, sKey);
         }
     }
 

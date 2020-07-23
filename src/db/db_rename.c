@@ -1,7 +1,7 @@
 /*-
  * See the file LICENSE for redistribution information.
  *
- * Copyright (c) 2001, 2016 Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2001, 2017 Oracle and/or its affiliates.  All rights reserved.
  *
  * $Id$
  */
@@ -64,6 +64,12 @@ __env_dbrename_pp(dbenv, txn, name, subdb, newname, flags)
 	handle_check = IS_ENV_REPLICATED(env);
 	if (handle_check && (ret = __env_rep_enter(env, 1)) != 0) {
 		handle_check = 0;
+		goto err;
+	}
+
+	if (handle_check && IS_REP_CLIENT(env)) {
+		__db_errx(env, DB_STR("2589",
+		    "dbrename disallowed on replication client"));
 		goto err;
 	}
 
@@ -186,6 +192,12 @@ __db_rename_pp(dbp, name, subdb, newname, flags)
 	handle_check = IS_ENV_REPLICATED(env);
 	if (handle_check && (ret = __db_rep_enter(dbp, 1, 1, 0)) != 0) {
 		handle_check = 0;
+		goto err;
+	}
+
+	if (handle_check && IS_REP_CLIENT(env)) {
+		__db_errx(env, DB_STR("2589",
+		    "dbrename disallowed on replication client"));
 		goto err;
 	}
 

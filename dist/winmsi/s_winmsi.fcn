@@ -18,6 +18,7 @@ group_doc="group.doc"
 group_csharp="group.csharp"
 group_cxx="group.cxx"
 group_sql="group.sql"
+group_thrift="group.thrift"
 
 Progress()
 {
@@ -456,7 +457,7 @@ StageRuntimeComponents() {
 
     # start clean
     rm -f stage/$group_runtime stage/$group_java stage/$group_csharp \
-	stage/$group_sql
+	stage/$group_sql stage/$group_thrift
 
     for file in `find . -name "*.exe"`; do
 	cp $file stage/bin
@@ -472,6 +473,15 @@ StageRuntimeComponents() {
     for file in `find . -name "*.jar"`; do
 	cp $file stage/jar
     done
+
+    # copy thrift files
+    for file in `find lang/thrift/jars -name "*.jar"`; do
+	cp $file stage/jar
+    done
+    cp lang/thrift/server/bdb.properties stage/bin
+    cp lang/thrift/server/log4j.xml stage/bin
+    cp lang/thrift/bin/start_server.bat stage/bin
+    chmod 400 stage/bin/bdb.properties
 
     # don't need .lib files for Java and C#, nobody
     # links with them other than DB's DLLs.
@@ -539,6 +549,14 @@ StageRuntimeComponents() {
     echo "jar/jdbc.jar" >> $group_sql
     echo "bin/dbsql.exe" >> $group_sql
     echo "include/sqlite3.h" >> $group_sql
+
+    # Thrift
+    find jar -name "*thrift*" >> $group_thrift
+    find jar -name "slf*" >> $group_thrift
+    echo "jar/log4j.jar" >> $group_thrift
+    echo "bin/bdb.properties" >> $group_thrift
+    echo "bin/log4j.xml" >> $group_thrift
+    echo "bin/start_server.bat" >> $group_thrift
     cd ..
 
     cd $here
@@ -585,12 +603,14 @@ CreateMsi() {
 
     if [ "$winbuild" == "Win32" ]; then
         suffix="86"
+	arch="x86"
     else
         suffix="64"
+	arch="x64"
     fi
 
     # Run WiX tools (these commands work with WiX 3.x)
-    candle *.wxs
+    candle -arch ${arch} *.wxs
     light -out ${dbver}_${suffix}.msi -ext WixUIExtension *.wixobj
     cd $here
 }
